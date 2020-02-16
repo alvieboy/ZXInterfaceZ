@@ -1,4 +1,5 @@
 PROJECT_NAME := esp32_interfacez
+
 IDF_PATH ?=/home/alvieboy/Temp/esp-idf
 
 
