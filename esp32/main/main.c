@@ -208,6 +208,65 @@ static void led__set(led_t led, uint8_t on)
 
 }
 
+static void spi__transceivequad(const uint32_t cmd, uint8_t *rxbuffer, unsigned len)
+{
+    spi_transaction_t t;
+
+#if 0
+#define SPI_TRANS_MODE_DIO            (1<<0)  ///< Transmit/receive data in 2-bit mode
+#define SPI_TRANS_MODE_QIO            (1<<1)  ///< Transmit/receive data in 4-bit mode
+#define SPI_TRANS_USE_RXDATA          (1<<2)  ///< Receive into rx_data member of spi_transaction_t instead into memory at rx_buffer.
+#define SPI_TRANS_USE_TXDATA          (1<<3)  ///< Transmit tx_data member of spi_transaction_t instead of data at tx_buffer. Do not set tx_buffer when using this.
+#define SPI_TRANS_MODE_DIOQIO_ADDR    (1<<4)  ///< Also transmit address in mode selected by SPI_MODE_DIO/SPI_MODE_QIO
+#define SPI_TRANS_VARIABLE_CMD        (1<<5)  ///< Use the ``command_bits`` in ``spi_transaction_ext_t`` rather than default value in ``spi_device_interface_config_t``.
+#define SPI_TRANS_VARIABLE_ADDR       (1<<6)  ///< Use the ``address_bits`` in ``spi_transaction_ext_t`` rather than default value in ``spi_device_interface_config_t``.
+#define SPI_TRANS_VARIABLE_DUMMY      (1<<7)  ///< Use the ``dummy_bits`` in ``spi_transaction_ext_t`` rather than default value in ``spi_device_interface_config_t``.
+
+    /**
+     * This structure describes one SPI transaction. The descriptor should not be modified until the transaction finishes.
+     */
+    struct spi_transaction_t {
+        uint32_t flags;                 ///< Bitwise OR of SPI_TRANS_* flags
+        uint16_t cmd;                   /**< Command data, of which the length is set in the ``command_bits`` of spi_device_interface_config_t.
+        *
+        *  <b>NOTE: this field, used to be "command" in ESP-IDF 2.1 and before, is re-written to be used in a new way in ESP-IDF 3.0.</b>
+        *
+        *  Example: write 0x0123 and command_bits=12 to send command 0x12, 0x3_ (in previous version, you may have to write 0x3_12).
+        */
+        uint64_t addr;                  /**< Address data, of which the length is set in the ``address_bits`` of spi_device_interface_config_t.
+        *
+        *  <b>NOTE: this field, used to be "address" in ESP-IDF 2.1 and before, is re-written to be used in a new way in ESP-IDF3.0.</b>
+        *
+        *  Example: write 0x123400 and address_bits=24 to send address of 0x12, 0x34, 0x00 (in previous version, you may have to write 0x12340000).
+        */
+        size_t length;                  ///< Total data length, in bits
+        size_t rxlength;                ///< Total data length received, should be not greater than ``length`` in full-duplex mode (0 defaults this to the value of ``length``).
+        void *user;                     ///< User-defined variable. Can be used to store eg transaction ID.
+        union {
+            const void *tx_buffer;      ///< Pointer to transmit buffer, or NULL for no MOSI phase
+            uint8_t tx_data[4];         ///< If SPI_USE_TXDATA is set, data set here is sent directly from this variable.
+        };
+        union {
+            void *rx_buffer;            ///< Pointer to receive buffer, or NULL for no MISO phase. Written by 4 bytes-unit if DMA is used.
+            uint8_t rx_data[4];         ///< If SPI_USE_RXDATA is set, data is received directly to this variable
+        };
+    } ;        //the rx data should start from a 32-bit aligned address to get around dma issue.
+
+#endif
+
+
+    t.flags = SPI_TRANS_MODE_QIO;
+
+
+        if (len==0) return;             //no need to send anything
+    memset(&t, 0, sizeof(t));       //Zero out the transaction
+    t.length=len*8;                 //Len is in bytes, transaction length is in bits.
+    t.tx_buffer=data;               //Data
+    t.user=(void*)1;                //D/C needs to be set to 1
+    ret=spi_device_polling_transmit(spi, &t);  //Transmit!
+
+}
+
 
 void app_main()
 {
