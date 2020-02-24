@@ -133,6 +133,12 @@ begin
       SPI_D_io(1)   => ESP_MISO_io,
       SPI_D_io(2)   => ESP_QWP_io, -- Write-Protect
       SPI_D_io(3)   => ESP_QHD_io, -- Hold
+      ASDO_o        => ASDO_o,
+      NCSO_o        => NCSO_o,
+      DCLK_o        => DCLK_o,
+      DATA0_i       => DATA0_i,
+      ESP_AS_NCS    => ESP_IO27_io,
+
       wb_dat_i      => wb_rdat,
       wb_dat_o      => wb_wdat,
       wb_adr_o      => wb_adr,

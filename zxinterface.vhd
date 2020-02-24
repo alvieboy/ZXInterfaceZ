@@ -37,6 +37,14 @@ entity zxinterface is
     SPI_SCK_i     : in std_logic;
     SPI_NCS_i     : in std_logic;
     SPI_D_io      : inout std_logic_vector(3 downto 0);
+    ESP_AS_NCS    : in std_logic;
+
+    -- Active serial flash connections.
+
+    ASDO_o        : out std_logic;
+    NCSO_o        : out std_logic;
+    DCLK_o        : out std_logic;
+    DATA0_i       : in  std_logic;
 
     -- Wishbone bus (master)
     wb_dat_o      : out std_logic_vector(7 downto 0);
@@ -106,6 +114,9 @@ architecture beh of zxinterface is
 
   signal d_cap_shr_r: std_logic_vector(C_CAPTURE_DELAY-1 downto 0);
 
+  signal mosi_s             : std_logic;
+  signal miso_s             : std_logic;
+
 begin
 
   ck_sync: entity work.sync generic map (RESET => '0')
@@ -151,12 +162,16 @@ begin
 
   XD_io         <= (others =>'Z') when dbus_oe_s='0' or dbus_oe_q_r='0' else data_o_s;
 
-  D_BUS_OE_io   <= 'Z' when arst_i='1' else '0';
-  CTRL_OE_io    <= 'Z' when arst_i='1' else '0';
-  A_BUS_OE_io   <= 'Z' when arst_i='1' else '0';
+  --D_BUS_OE_io   <= 'Z' when arst_i='1' else '0';
+  D_BUS_OE_io   <= '1';
+  --CTRL_OE_io    <= 'Z' when arst_i='1' else '0';
+  CTRL_OE_io    <= '1';
+  --A_BUS_OE_io   <= 'Z' when arst_i='1' else '0';
+  A_BUS_OE_io   <= '1';
 
   D_BUS_DIR_o   <= '1' --when dbus_oe_s='0' and dbus_oe_q_r='0' else '0';
                        when  dbus_oe_s='0' else '0';
+
 
   memrd_s       <=  NOT XMREQ_sync_s AND NOT XRD_sync_s;
   memwr_s       <=  NOT XMREQ_sync_s AND NOT XWR_sync_s;
@@ -267,12 +282,27 @@ begin
   port map (
     SCK_i         => SPI_SCK_i,
     CSN_i         => SPI_NCS_i,
-    D_io          => SPI_D_io,
+    --D_io          => spi_data_s,
+    MOSI_i        => mosi_s,
+    MISO_o        => miso_s,
     fifo_empty_i  => fifo_empty_s,
     fifo_rd_o     => fifo_rd_s,
     fifo_data_i   => fifo_read_s
   );
 
+  mosi_s          <= SPI_D_io(0);
+
+  --spi_data_s      <= SPI_D_io;
+  --SPI_D_io <= spi_data_s;
+
+  SPI_D_io(0)     <= 'Z';       -- MOSI - Change when Quadmode is enabled
+  SPI_D_io(1)     <= DATA0_i WHEN ESP_AS_NCS='0' ELSE miso_s; -- MISO
+  SPI_D_io(2)     <= 'Z';
+  SPI_D_io(3)     <= 'Z';
+
+  ASDO_o        <= SPI_D_io(0) WHEN ESP_AS_NCS='0' else 'Z';
+  NCSO_o        <= ESP_AS_NCS;
+  DCLK_o        <= SPI_SCK_i WHEN ESP_AS_NCS='0' else '0';
 
 
   FORCE_ROMCS_o <= '0';

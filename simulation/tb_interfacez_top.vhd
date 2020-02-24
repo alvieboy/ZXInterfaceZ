@@ -10,13 +10,13 @@ ARCHITECTURE sim OF tb_interfacez_top IS
   -- constants                                                 
 -- signals
   SIGNAL A_BUS_OE_io : STD_LOGIC;
-  SIGNAL ASDO_o : STD_LOGIC;
+  SIGNAL ASDO_s: STD_LOGIC;
   SIGNAL CLK_i : STD_LOGIC;
   SIGNAL CTRL_OE_io : STD_LOGIC;
   SIGNAL D_BUS_DIR_o : STD_LOGIC;
   SIGNAL D_BUS_OE_io : STD_LOGIC;
-  SIGNAL DATA0_i : STD_LOGIC;
-  SIGNAL DCLK_o : STD_LOGIC;
+  SIGNAL DATA0_s : STD_LOGIC;
+  SIGNAL DCLK_s : STD_LOGIC;
   SIGNAL ESP_IO14_io : STD_LOGIC;
   SIGNAL ESP_IO25_io : STD_LOGIC;
   SIGNAL ESP_IO26_io : STD_LOGIC;
@@ -57,19 +57,21 @@ ARCHITECTURE sim OF tb_interfacez_top IS
 
   constant ZXPERIOD: time := 1 ms / 3500;
 
+  signal vcc: real := 0.0;
+
 BEGIN
 
  interfacez : entity work.interfacez_top
 	PORT MAP (
   -- list connections between master ports and signals
     A_BUS_OE_io => A_BUS_OE_io,
-    ASDO_o => ASDO_o,
+    ASDO_o => ASDO_s,
     CLK_i => CLK_i,
     CTRL_OE_io => CTRL_OE_io,
     D_BUS_DIR_o => D_BUS_DIR_o,
     D_BUS_OE_io => D_BUS_OE_io,
-    DATA0_i => DATA0_i,
-    DCLK_o => DCLK_o,
+    DATA0_i => DATA0_s,
+    DCLK_o => DCLK_s,
     ESP_IO14_io => ESP_IO14_io,
     ESP_IO25_io => ESP_IO25_io,
     ESP_IO26_io => ESP_IO26_io,
@@ -154,6 +156,18 @@ BEGIN
         Dqm   => "11"
     );
 
+  vcc <= 0.0, 3.3 after 50 ns;
+
+  flash_inst: entity work.M25P16
+    port map (
+      VCC => vcc,
+		  C   => DCLK_s,
+      D   => ASDO_s,
+      S   => ESP_IO27_io,
+      W   => '1',
+      HOLD => '1',
+		  Q   => DATA0_s
+    );
 
   spect: block
     signal spect_clk: std_logic := '0';
@@ -234,32 +248,93 @@ BEGIN
       r4( dat(3 downto 0), odat(3 downto 0) );
     end procedure;
 
+
+    procedure w8std(dat: in std_logic_vector(7 downto 0); odat: out std_logic_vector(7 downto 0)) is
+
+    begin
+      ESP_MISO_io <= 'Z';
+      ESP_QWP_io  <= 'Z';
+      ESP_QHD_io  <= 'Z';
+
+      l: for i in 7 downto 0 loop
+        ESP_SCK_i <= '0';
+        ESP_MOSI_io <= dat(i);
+        wait for 20 ns;
+        ESP_SCK_i <= '1';
+        odat(i) := ESP_MISO_io;
+        wait for 20 ns;
+      end loop;
+    end procedure;
+
+
+
     variable dataread_v: std_logic_vector(7 downto 0);
 
   begin
+    ESP_IO27_io <= '1';
     ESP_NCSO_i <= '1';
     ESP_SCK_i <= '1';
-    ESP_MOSI_io <= '0';
-    ESP_MISO_io <= '0';
-    ESP_QHD_io <= '0';
-    ESP_QWP_io <= '0';
-    wait for 40 us;
-    ESP_NCSO_i <= '0';
-    wait for 20 ns;
-    w8(x"FC", dataread_v);
     ESP_MOSI_io <= 'Z';
     ESP_MISO_io <= 'Z';
     ESP_QHD_io <= 'Z';
     ESP_QWP_io <= 'Z';
-    r8(x"00", dataread_v);
-    r8(x"00", dataread_v);
-    r8(x"00", dataread_v);
-    r8(x"DE", dataread_v);
-    r8(x"00", dataread_v);
-    r8(x"00", dataread_v);
-    r8(x"00", dataread_v);
+    wait for 40 us;
+    ESP_NCSO_i <= '0';
+    wait for 20 ns;
+
+    --w8(x"FC", dataread_v);
+    --ESP_MOSI_io <= 'Z';
+    --ESP_MISO_io <= 'Z';
+    --ESP_QHD_io <= 'Z';
+    --ESP_QWP_io <= 'Z';
+    --r8(x"00", dataread_v);
+    --r8(x"00", dataread_v);
+    --r8(x"00", dataread_v);
+    --r8(x"DE", dataread_v);
+    --r8(x"00", dataread_v);
+    --r8(x"00", dataread_v);
+    --r8(x"00", dataread_v);
+
+    w8std(x"9F", dataread_v);
+    w8std(x"00", dataread_v);
+    report "D0: "  & hstr(dataread_v);
+    w8std(x"00", dataread_v);
+    report "D1: "  & hstr(dataread_v);
+    w8std(x"00", dataread_v);
+    report "D2: "  & hstr(dataread_v);
+    w8std(x"00", dataread_v);
+    report "D3: "  & hstr(dataread_v);
 
     ESP_NCSO_i <= '1';
+    wait for 1 us;
+    ESP_NCSO_i <= '0';
+    w8std(x"9F", dataread_v);
+    w8std(x"00", dataread_v);
+    report "D0: "  & hstr(dataread_v);
+    w8std(x"00", dataread_v);
+    report "D1: "  & hstr(dataread_v);
+    w8std(x"00", dataread_v);
+    report "D2: "  & hstr(dataread_v);
+    w8std(x"00", dataread_v);
+    report "D3: "  & hstr(dataread_v);
+
+    ESP_NCSO_i <= '1';
+    wait for 1 ns;
+    ESP_IO27_io <= '0';
+
+    w8std(x"9F", dataread_v);
+    w8std(x"00", dataread_v);
+    report "FD0: "  & hstr(dataread_v);
+    w8std(x"00", dataread_v);
+    report "FD1: "  & hstr(dataread_v);
+    w8std(x"00", dataread_v);
+    report "FD2: "  & hstr(dataread_v);
+    w8std(x"00", dataread_v);
+    report "FD3: "  & hstr(dataread_v);
+
+    ESP_IO27_io <= '1';
+
+
 
     wait;
   end process;

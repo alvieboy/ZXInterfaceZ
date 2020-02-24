@@ -2,9 +2,9 @@
 #define __DEFS_H__
 
 
-#define PIN_NUM_MISO 25
+#define PIN_NUM_MISO 19
 #define PIN_NUM_MOSI 23
-#define PIN_NUM_CLK  19
+#define PIN_NUM_CLK  18
 #define PIN_NUM_QWP  22
 #define PIN_NUM_QHD  21
 #define PIN_NUM_CS   5
@@ -28,5 +28,7 @@
 
 #define PIN_NUM_SWITCH 34
 
+
+#define PIN_NUM_AS_CSN PIN_NUM_IO27
 
 #endif
