@@ -1,0 +1,40 @@
+library IEEE;
+use IEEE.STD_LOGIC_1164.all;
+use IEEE.NUMERIC_STD.all;
+
+entity spectrum_rom_chip is
+  port (
+    A_i     :   in std_logic_vector(13 downto 0);
+    CSn_i   :   in std_logic;
+    OE0n_i  :   in std_logic;
+    OE1n_i  :   in std_logic;
+    D_o     :   out std_logic_vector(7 downto 0)
+  );
+end entity spectrum_rom_chip;
+
+architecture sim of spectrum_rom_chip is
+
+  subtype memword is std_logic_vector(7 downto 0);
+  type mem is array(0 to 16383) of memword;
+
+  signal dat_s:   std_logic_vector(7 downto 0);
+
+  constant m: mem := (
+  
+-- ROM --
+);
+
+begin
+
+  process(A_i, CSn_i)
+    variable index: natural;
+  begin
+    if CSn_i='0' then
+      index := to_integer(unsigned(A_i));
+      dat_s <= m(index);
+    end if;
+  end process;
+
+  D_o <= dat_s when OE0n_i='0' and OE1n_i='0' else (others => 'Z');
+
+end sim;

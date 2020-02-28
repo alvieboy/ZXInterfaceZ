@@ -172,11 +172,12 @@ BEGIN
   spect: block
     signal spect_clk: std_logic := '0';
     signal spect_rst: std_logic := '0';
+    signal ROMCS_n  : std_logic := '1';
   begin
 
     spect_clk <= not spect_clk after ZXPERIOD/2;
-    spect_rst <= '1', '0' after 10 ns, '1' after 1 us;
-
+  --  spect_rst <= '1', '0' after 10 ns, '1' after 1 us;
+  spect_rst <= not FORCE_RESET_o;
 
   zxspect_inst: entity work.spectrum_top
   port map (
@@ -193,6 +194,37 @@ BEGIN
     A               => XA_s,
     D               => XD_io
   );
+
+  process
+  begin
+    XINT_s <= '1';
+    sig: loop
+      wait for 20 ms;
+      XINT_s <= '0';
+      wait for 10 us;
+      XINT_s <= '1';
+    end loop;
+  end process;
+
+  specram_inst: entity work.spectrum_ram
+    port map(
+      MREQ_n          => XMREQ_s,
+      RD_n            => XRD_s,
+      WR_n            => XWR_s,
+      A               => XA_s,
+      D               => XD_io
+    );
+
+  ROMCS_n <= '1' when FORCE_ROMCS_o='1' else (XA_s(15) AND NOT XA_s(14));
+
+  specrom_inst: entity work.spectrum_rom_chip
+    port map (
+      A_i     => XA_s(13 downto 0),
+      CSn_i   => XMREQ_s,
+      OE0n_i  => XRD_s,
+      OE1n_i  => ROMCS_n,
+      D_o     => XD_io
+    );
 
   end block;
 
@@ -269,6 +301,7 @@ BEGIN
 
 
     variable dataread_v: std_logic_vector(7 downto 0);
+    variable dataread40_v: std_logic_vector(39 downto 0);
 
   begin
     ESP_IO27_io <= '1';
@@ -317,9 +350,73 @@ BEGIN
     report "D2: "  & hstr(dataread_v);
     w8std(x"00", dataread_v);
     report "D3: "  & hstr(dataread_v);
-
     ESP_NCSO_i <= '1';
-    wait for 1 ns;
+    wait for 1 us;
+
+
+    -- Reset spectrum.
+    ESP_NCSO_i <= '0';
+    w8std(x"EC", dataread_v);
+    w8std(x"02", dataread_v);
+    ESP_NCSO_i <= '1';
+    wait for 1 us;
+
+    -- Reset fifo, spectrum, capture
+    ESP_NCSO_i <= '0';
+    w8std(x"EC", dataread_v);
+    w8std(x"07", dataread_v);
+    ESP_NCSO_i <= '1';
+    wait for 1 us;
+
+    -- Simple test: frame capture ended
+
+    ESP_NCSO_i <= '0';
+    w8std(x"EF", dataread_v);
+    w8std(x"00", dataread_v);
+    ESP_NCSO_i <= '1';
+    wait for 1 us;
+
+    -- Set trigger data
+    ESP_NCSO_i <= '0';
+    w8std(x"ED", dataread_v);
+    w8std(x"00", dataread_v); -- Mask
+    w8std(x"0F", dataread_v);
+    w8std(x"00", dataread_v);
+    w8std(x"00", dataread_v);
+    w8std(x"00", dataread_v);
+    ESP_NCSO_i <= '1';
+    wait for 1 us;
+
+    -- Set trigger value
+    ESP_NCSO_i <= '0';
+    w8std(x"ED", dataread_v);
+    w8std(x"01", dataread_v); -- Value
+    w8std(x"00", dataread_v);
+    w8std(x"00", dataread_v);
+    w8std(x"00", dataread_v);
+    w8std(x"00", dataread_v);
+    ESP_NCSO_i <= '1';
+    wait for 1 us;
+
+
+    -- Unreset, enable capture
+    ESP_NCSO_i <= '0';
+    w8std(x"EC", dataread_v);
+    w8std(x"08", dataread_v);
+    ESP_NCSO_i <= '1';
+    wait for 1 us;
+
+
+    
+
+
+
+
+
+
+
+
+
     ESP_IO27_io <= '0';
 
     w8std(x"9F", dataread_v);
@@ -334,7 +431,58 @@ BEGIN
 
     ESP_IO27_io <= '1';
 
+    wait for 50 us;
 
+    ESP_NCSO_i <= '0';
+    w8std(x"DF", dataread_v);
+    w8std(x"18", dataread_v);
+    report "D0: "  & hstr(dataread_v);
+    w8std(x"00", dataread_v);
+    report "D1: "  & hstr(dataread_v);
+    w8std(x"00", dataread_v);
+    report "D2: "  & hstr(dataread_v);
+    w8std(x"00", dataread_v);
+    report "D3: "  & hstr(dataread_v);
+    w8std(x"00", dataread_v);
+    report "D4: "  & hstr(dataread_v);
+    w8std(x"00", dataread_v);
+    report "D5: "  & hstr(dataread_v);
+    w8std(x"00", dataread_v);
+    report "D6: "  & hstr(dataread_v);
+    ESP_NCSO_i <= '1';
+
+    wait for 100 us;
+
+    ESP_NCSO_i <= '0';
+    w8std(x"E0", dataread_v);
+    w8std(x"00", dataread_v);
+    report "D state: "  & hstr(dataread_v);
+
+    lo: for i in 0 to 10 loop
+      w8std(x"00", dataread_v);
+      --report "D i: "  & hstr(dataread_v);
+      dataread40_v := dataread40_v(31 downto 0) & dataread_v;
+
+      w8std(x"00", dataread_v);
+      --report "D i: "  & hstr(dataread_v);
+      dataread40_v := dataread40_v(31 downto 0) & dataread_v;
+
+      w8std(x"00", dataread_v);
+      --report "D i: "  & hstr(dataread_v);
+      dataread40_v := dataread40_v(31 downto 0) & dataread_v;
+
+      w8std(x"00", dataread_v);
+      --report "D i: "  & hstr(dataread_v);
+      dataread40_v := dataread40_v(31 downto 0) & dataread_v;
+
+      w8std(x"00", dataread_v);
+      --report "D i: "  & hstr(dataread_v);
+      dataread40_v := dataread40_v(31 downto 0) & dataread_v;
+
+
+      report "D: 0x"  & hstr(dataread40_v);
+    end loop;
+    ESP_NCSO_i <= '1';
 
     wait;
   end process;

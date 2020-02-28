@@ -127,18 +127,18 @@ set_location_assignment PIN_28 -to XA_i[15]
 set_location_assignment PIN_30 -to XA_i[14]
 set_location_assignment PIN_31 -to XA_i[13]
 set_location_assignment PIN_32 -to XA_i[12]
-set_location_assignment PIN_33 -to XA_i[11]
-set_location_assignment PIN_34 -to XA_i[10]
-set_location_assignment PIN_38 -to XA_i[9]
-set_location_assignment PIN_39 -to XA_i[8]
+set_location_assignment PIN_75 -to XA_i[11]
+set_location_assignment PIN_74 -to XA_i[10]
+set_location_assignment PIN_73 -to XA_i[9]
+set_location_assignment PIN_72 -to XA_i[8]
 set_location_assignment PIN_68 -to XA_i[7]
 set_location_assignment PIN_69 -to XA_i[6]
 set_location_assignment PIN_70 -to XA_i[5]
 set_location_assignment PIN_71 -to XA_i[4]
-set_location_assignment PIN_72 -to XA_i[3]
-set_location_assignment PIN_73 -to XA_i[2]
-set_location_assignment PIN_74 -to XA_i[1]
-set_location_assignment PIN_75 -to XA_i[0]
+set_location_assignment PIN_39 -to XA_i[3]
+set_location_assignment PIN_38 -to XA_i[2]
+set_location_assignment PIN_34 -to XA_i[1]
+set_location_assignment PIN_33 -to XA_i[0]
 set_location_assignment PIN_42 -to XD_io[7]
 set_location_assignment PIN_49 -to XD_io[6]
 set_location_assignment PIN_50 -to XD_io[5]
@@ -169,6 +169,16 @@ set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to SDRAM_NCAS_o
 set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to SDRAM_NRAS_o
 set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to SDRAM_NWE_o
 set_instance_assignment -name FAST_INPUT_REGISTER ON -to SDRAM_D_io[*]
+set_global_assignment -name PROJECT_IP_REGENERATION_POLICY ALWAYS_REGENERATE_IP
+set_global_assignment -name GENERATE_RBF_FILE ON
+set_global_assignment -name GENERATE_JBC_FILE ON
+set_location_assignment PIN_136 -to TP5
+set_location_assignment PIN_135 -to TP6
+set_global_assignment -name QIP_FILE signaltap1/synthesis/signaltap1.qip
+set_global_assignment -name VHDL_FILE zxinterfacepkg.vhd
+set_global_assignment -name VHDL_FILE logiccapture.vhd
+set_global_assignment -name VHDL_FILE screencap.vhd
+set_global_assignment -name VHDL_FILE generic_dp_ram.vhd
 set_global_assignment -name VHDL_FILE gh_vhdl_lib/memory/gh_fifo_async_sr_wf.vhd
 set_global_assignment -name VHDL_FILE gh_vhdl_lib/custom_MSI/gh_gray2binary.vhd
 set_global_assignment -name VHDL_FILE gh_vhdl_lib/custom_MSI/gh_binary2gray.vhd
@@ -190,6 +200,37 @@ set_global_assignment -name VHDL_FILE sync.vhd
 set_global_assignment -name VHDL_FILE zxinterface.vhd
 set_global_assignment -name VHDL_FILE busopdet.vhd
 set_global_assignment -name SOURCE_FILE db/interfacez.cmp.rdb
-set_global_assignment -name PROJECT_IP_REGENERATION_POLICY ALWAYS_REGENERATE_IP
-set_global_assignment -name GENERATE_RBF_FILE ON
+set_global_assignment -name SIGNALTAP_FILE signaltap1/synthesis/stp2.stp
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to XA_i[0]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to XA_i[1]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to XA_i[2]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to XA_i[3]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to XA_i[4]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to XA_i[5]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to XA_i[6]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to XA_i[7]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to XA_i[8]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to XA_i[9]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to XA_i[10]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to XA_i[11]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to XA_i[12]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to XA_i[13]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to XA_i[14]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to XA_i[15]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to XD_io[0]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to XD_io[1]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to XD_io[2]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to XD_io[3]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to XD_io[4]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to XD_io[5]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to XD_io[6]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to XD_io[7]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to XCK_i
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to XINT_i
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to XRFSH_i
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to XRD_i
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to XWR_i
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to XIORQ_i
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to XMREQ_i
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to XM1_i
 set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top

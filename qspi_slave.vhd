@@ -49,6 +49,7 @@ begin
     elsif rising_edge(SCK_i) then
       if qen_i='1' then
         --shreg_r   <= shreg_r(3 downto 0) & D_io;
+        shreg_r   <= shreg_r(6 downto 0) & MOSI_i;
       else
         shreg_r   <= shreg_r(6 downto 0) & MOSI_i;
       end if;
@@ -93,6 +94,7 @@ begin
   begin
     if qen_i='1' then
       --din_s         <= shreg_r(3 downto 0) & D_io;
+      din_s         <= shreg_r(6 downto 0) & MOSI_i;
     else
       din_s         <= shreg_r(6 downto 0) & MOSI_i;
     end if;
@@ -107,6 +109,7 @@ begin
         MISO_o <= outreg_r(7);
       else
         --D_io <= outreg_r(7 downto 4);
+        MISO_o <= outreg_r(7);
       end if;
     end if;
 

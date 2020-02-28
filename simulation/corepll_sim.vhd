@@ -7,6 +7,7 @@ ENTITY corepll IS
 		inclk0		: IN STD_LOGIC  := '0';
 		c0		    : OUT STD_LOGIC ;
 		c1		    : OUT STD_LOGIC ;
+    c2		    : OUT STD_LOGIC ;
 		locked		: OUT STD_LOGIC 
 	);
 END corepll;
@@ -22,6 +23,8 @@ begin
 
   process
   begin
+    locked <= '1';
+    wait for 1 ns;
     locked <= '0';
     wait for 200 ns;
     wait until rising_edge(clk_s);

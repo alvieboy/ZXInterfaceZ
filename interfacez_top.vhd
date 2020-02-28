@@ -65,7 +65,9 @@ entity interfacez_top is
     ESP_NCSO_i    : in std_logic;
     ESP_SCK_i     : in std_logic;
     ESP_QWP_io    : inout std_logic;
-    ESP_MOSI_io   : inout std_logic
+    ESP_MOSI_io   : inout std_logic;
+    TP5           : out std_logic;
+    TP6           : out std_logic
   );
 end interfacez_top;
 
@@ -74,6 +76,7 @@ architecture str of interfacez_top is
   signal sysclk_s     : std_logic;
   signal sysrst_s     : std_logic;
   signal plllock_s    : std_logic;
+  signal capclk_s     : std_logic;
 
   signal sdramclk2_s  : std_logic;
 
@@ -103,12 +106,14 @@ begin
       inclk0  => CLK_i,
       c0      => sysclk_s,
       c1      => sdramclk2_s,
+      c2      => capclk_s,
       locked  => plllock_s
   );
 
   interface_inst: entity work.zxinterface
     port map (
       clk_i         => sysclk_s,
+      capclk_i      => capclk_s,
       arst_i        => sysrst_s,
       D_BUS_DIR_o   => D_BUS_DIR_o,
       D_BUS_OE_io   => D_BUS_OE_io,
@@ -138,6 +143,9 @@ begin
       DCLK_o        => DCLK_o,
       DATA0_i       => DATA0_i,
       ESP_AS_NCS    => ESP_IO27_io,
+      spec_int_o    => ESP_IO26_io,
+      TP5           => TP5,
+      TP6           => TP6,
 
       wb_dat_i      => wb_rdat,
       wb_dat_o      => wb_wdat,

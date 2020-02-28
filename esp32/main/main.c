@@ -31,6 +31,7 @@
 #include "hdlc_encoder.h"
 
 #define CMD_PORT 8002
+#define BUFFER_PORT 8003
 
 static spi_device_handle_t spi0_fpga;
 static spi_device_handle_t spi0_as_flash;
@@ -46,11 +47,11 @@ static void spi__init(spi_device_handle_t *fpga_spi,
         .sclk_io_num = PIN_NUM_CLK,
         .quadwp_io_num = PIN_NUM_QWP,
         .quadhd_io_num = PIN_NUM_QHD,
-        .max_transfer_sz = 4096
+        .max_transfer_sz = 16384
     };
 
     spi_device_interface_config_t devcfg={
-        .clock_speed_hz=10*1000*1000,
+        .clock_speed_hz=20*1000*1000,
         .mode = 3,                                //SPI mode 0
         .spics_io_num = PIN_NUM_CS,               //CS pin
         .queue_size = 2,                          //We want to be able to queue 7 transactions at a time
@@ -206,11 +207,14 @@ static void gpio__init()
 
     io_conf.intr_type    = GPIO_PIN_INTR_DISABLE;
     io_conf.mode         = GPIO_MODE_OUTPUT_OD;
-    io_conf.pin_bit_mask = (1ULL<<PIN_NUM_LED1) | (1ULL<<PIN_NUM_LED2);
+    io_conf.pin_bit_mask = (1ULL<<PIN_NUM_LED1) | (1ULL<<PIN_NUM_LED2)
+        | (1ULL<<PIN_NUM_NCONFIG);
     io_conf.pull_down_en = 0;
     io_conf.pull_up_en   = 0;
 
     gpio_config(&io_conf);
+
+    gpio_set_level(PIN_NUM_NCONFIG, 1);
 
     io_conf.mode         = GPIO_MODE_OUTPUT;
     io_conf.pin_bit_mask =
@@ -220,15 +224,14 @@ static void gpio__init()
     io_conf.mode         = GPIO_MODE_INPUT;
     io_conf.pin_bit_mask =
         (1ULL<<PIN_NUM_SWITCH) |
+        (1ULL<<PIN_NUM_CONF_DONE) |
         (1ULL<<PIN_NUM_IO25) |
-        (1ULL<<PIN_NUM_IO26) |
+        (1ULL<<PIN_NUM_SPECT_INTERRUPT) |
         (1ULL<<PIN_NUM_IO14);
 
     io_conf.pull_up_en   = 1;
 
     gpio_config(&io_conf);
-
-
 }
 
 typedef enum {
@@ -649,6 +652,11 @@ static uint8_t *cmd_enterpgm(hdlc_encoder_t *enc, uint8_t *buf, const unsigned c
 
 static uint8_t *cmd_leavepgm(hdlc_encoder_t *enc, uint8_t *buf, const unsigned char *data)
 {
+    // Trigger reconfiguration
+    ESP_LOGI(TAG, "Triggering FPGA reconfiguration");
+    gpio_set_level(PIN_NUM_NCONFIG, 0);
+    vTaskDelay(1 / portTICK_RATE_MS);
+    gpio_set_level(PIN_NUM_NCONFIG, 1);
     return simpleReply(enc, buf, BOOTLOADER_CMD_LEAVEPGM);
 }
  
@@ -687,7 +695,7 @@ static void hdlc_handler(void *user, const uint8_t *data, unsigned datalen)
     if (pos==0)
         return;
 
-    printf("HDLC: command 0x%02x\r\n", pos);
+    //printf("HDLC: command 0x%02x\r\n", pos);
 
     if (pos>BOOTLOADER_MAX_CMD)
         return;
@@ -696,7 +704,7 @@ static void hdlc_handler(void *user, const uint8_t *data, unsigned datalen)
     uint8_t *end = handlers[pos](&enc, hdlc_txbuf, data);
     if (end!=NULL) {
         if (end!=hdlc_txbuf) {
-            printf("HDLC: Sending reply size %d\n", end - hdlc_txbuf);
+            //printf("HDLC: Sending reply size %d\n", end - hdlc_txbuf);
             send(sock, hdlc_txbuf, end - hdlc_txbuf, 0);
         }
     }
@@ -804,8 +812,205 @@ static void cmd_server_task(void *pvParameters)
     vTaskDelete(NULL);
 }
 
+uint8_t fb[16384];
+
+static void send_framebuffer(int socket)
+{
+    fb[0] = 0xDF;
+    fb[1] = 0x00;
+    fb[2] = 0x00;
+    fb[3] = 0x00;
+    int nlen = 4 + 6144 + 768;
+    int len = -1;
+
+    spi__transceive(spi0_fpga, fb, nlen);
+    const uint8_t *txptr = &fb[4];
+    nlen -= 4;
+
+    do {
+        len = send(socket, txptr, nlen, 0);
+        if (len>0) {
+            nlen -= len;
+        } else {
+            break;
+        }
+    } while (nlen>0);
+
+    if (len < 0) {
+        ESP_LOGE(TAG, "send failed: errno %d", errno);
+    }
+}
+
+static void send_captures(int socket)
+{
+    fb[0] = 0xE0;
+    fb[1] = 0x00;
+    int nlen = 2+ (5 * 2048);
+    int len = -1;
+    ESP_LOGI(TAG, "Transceiving %d bytes\r\n", nlen);
+
+    spi__transceive(spi0_fpga, fb, nlen);
+    const uint8_t *txptr = &fb[2];
+
+    nlen -= 2;
+
+    // Find limit.
 
 
+    do {
+        len = send(socket, txptr, nlen, 0);
+        if (len>0) {
+            nlen -= len;
+        } else {
+            break;
+        }
+    } while (nlen>0);
+
+    if (len < 0) {
+        ESP_LOGE(TAG, "send failed: errno %d", errno);
+    }
+}
+
+static void buffer_server_task(void *pvParameters)
+{
+    uint8_t rx_buffer[512];
+    char addr_str[128];
+    int addr_family;
+    int ip_protocol;
+
+    while (1) {
+        struct sockaddr_in dest_addr;
+        dest_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+        dest_addr.sin_family = AF_INET;
+        dest_addr.sin_port = htons(BUFFER_PORT);
+        addr_family = AF_INET;
+        ip_protocol = IPPROTO_TCP;
+        inet_ntoa_r(dest_addr.sin_addr, addr_str, sizeof(addr_str) - 1);
+
+        int listen_sock = socket(addr_family, SOCK_STREAM, ip_protocol);
+
+        if (listen_sock < 0) {
+            ESP_LOGE(TAG, "Unable to create socket: errno %d", errno);
+            break;
+        }
+        ESP_LOGI(TAG, "Socket created");
+
+        int err = bind(listen_sock, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
+        if (err != 0) {
+            ESP_LOGE(TAG, "Socket unable to bind: errno %d", errno);
+            break;
+        }
+        ESP_LOGI(TAG, "Socket bound, port %d", CMD_PORT);
+
+        err = listen(listen_sock, 1);
+        if (err != 0) {
+            ESP_LOGE(TAG, "Error occurred during listen: errno %d", errno);
+            break;
+        }
+        ESP_LOGI(TAG, "Socket listening");
+
+
+        while (1) {
+            char rx[16];
+
+            struct sockaddr_in6 source_addr; // Large enough for both IPv4 or IPv6
+            uint addr_len = sizeof(source_addr);
+            int sock = accept(listen_sock, (struct sockaddr *)&source_addr, &addr_len);
+
+
+            if (sock < 0) {
+                ESP_LOGE(TAG, "Unable to accept connection: errno %d", errno);
+                break;
+            }
+            ESP_LOGI(TAG, "Socket accepted");
+
+            int len = recv(sock, rx, sizeof(rx),0);
+            ESP_LOGI(TAG, "Read %d bytes\r\n", len);
+
+            if (len>0) {
+                if (len<16) {
+                    rx[len] = '\0';
+                    ESP_LOGI(TAG, "Command: %s\r\n", rx);
+                    if (strncmp(rx, "fb", 2)==0) {
+                        send_framebuffer( sock );
+                    } else if (strncmp(rx, "cap", 3)==0) {
+                        send_captures( sock );
+                    }
+
+                }
+            }
+            shutdown(sock,0);
+            close(sock);
+            sock = -1;
+        }
+    }
+    vTaskDelete(NULL);
+}
+
+
+#define FLAG_RSTFIFO (1<<0)
+#define FLAG_RSTSPECT (1<<1)
+#define FLAG_CAPCLR (1<<2)
+#define FLAG_CAPRUN (1<<3)
+#define FLAG_COMPRESS (1<<4)
+#define FLAG_ENABLE_INTERRUPT (1<<5)
+
+static uint8_t latched_flags = 0;
+
+static void set_flags(uint8_t enable, uint8_t disable)
+{
+    uint8_t newflags = (latched_flags & ~disable) | enable;
+    uint8_t buf[2];
+    buf[0] = 0xEC;
+    buf[1] = newflags;
+    spi__transceive(spi0_fpga, buf, sizeof(buf));
+    latched_flags = newflags;
+}
+
+void start_capture2()
+{
+    // Stop, clear
+    set_flags( FLAG_CAPCLR, FLAG_CAPRUN);
+    set_flags( FLAG_CAPRUN, 0);
+}
+
+void start_capture()
+{
+    // Reset spectrum, stop capture
+    set_flags( FLAG_RSTSPECT, FLAG_CAPRUN );
+    // Reset fifo, clear capture
+    set_flags( FLAG_CAPCLR | FLAG_RSTFIFO, 0 );
+
+    // Remove resets, start capture
+    set_flags( FLAG_CAPRUN | FLAG_ENABLE_INTERRUPT , FLAG_RSTFIFO| FLAG_RSTSPECT| FLAG_CAPCLR );
+
+}
+
+//static xQueueHandle gpio_evt_queue = NULL;
+
+volatile uint32_t interrupt_count = 0;
+
+static void IRAM_ATTR gpio_isr_handler(void* arg)
+{
+    uint32_t gpio_num = (uint32_t) arg;
+    //xQueueSendFromISR(gpio_evt_queue, &gpio_num, NULL);
+    interrupt_count++;
+}
+
+static void specinterrupt__init()
+{
+    gpio_set_intr_type(PIN_NUM_SPECT_INTERRUPT, GPIO_INTR_NEGEDGE);
+
+    //create a queue to handle gpio event from isr
+    //gpio_evt_queue = xQueueCreate(10, sizeof(uint32_t));
+    //start gpio task
+//    xTaskCreate(gpio_task_example, "gpio_task_example", 2048, NULL, 10, NULL);
+
+    //install gpio isr service
+    gpio_install_isr_service(0);
+    //hook isr handler for specific gpio pin
+    gpio_isr_handler_add(PIN_NUM_SPECT_INTERRUPT, gpio_isr_handler, (void*) PIN_NUM_SPECT_INTERRUPT);
+}
 
 void app_main()
 {
@@ -820,8 +1025,27 @@ void app_main()
     as_flash__init(spi0_as_flash);
 
     xTaskCreate(cmd_server_task, "cmd_server", 4096, NULL, 5, NULL);
+    xTaskCreate(buffer_server_task, "buffer_server", 4096, NULL, 5, NULL);
+    int lstatus = 0;
 
+    specinterrupt__init();
+
+    // Start capture
+    start_capture();
+    int lastsw=1;
     while(1) {
-        vTaskDelay(100 / portTICK_RATE_MS);
+        int conf = gpio_get_level(PIN_NUM_CONF_DONE);
+//        ESP_LOGI(TAG,"CONF_DONE pin: %d\r\n", conf);
+        led__set(LED1, lstatus);
+        lstatus = !lstatus;
+        int sw = gpio_get_level(PIN_NUM_SWITCH);
+        if (sw==0 && lastsw==1) {
+            ESP_LOGI(TAG, "Start capture");
+            start_capture2();
+        }
+        lastsw = sw;
+
+        vTaskDelay(1000 / portTICK_RATE_MS);
+        ESP_LOGI(TAG,"Interrupts: %d\n", interrupt_count);
     }
 }
