@@ -61,7 +61,7 @@
 <layer number="90" name="Modules" color="5" fill="1" visible="yes" active="yes"/>
 <layer number="91" name="Nets" color="2" fill="1" visible="yes" active="yes"/>
 <layer number="92" name="Busses" color="1" fill="1" visible="yes" active="yes"/>
-<layer number="93" name="Pins" color="2" fill="1" visible="yes" active="yes"/>
+<layer number="93" name="Pins" color="2" fill="1" visible="no" active="yes"/>
 <layer number="94" name="Symbols" color="4" fill="1" visible="yes" active="yes"/>
 <layer number="95" name="Names" color="7" fill="1" visible="yes" active="yes"/>
 <layer number="96" name="Values" color="7" fill="1" visible="yes" active="yes"/>
@@ -8632,7 +8632,7 @@ DIN A3, landscape with location and doc. field</description>
 <label x="137.16" y="45.72" size="1.778" layer="95"/>
 </segment>
 </net>
-<net name="XA15" class="0">
+<net name="ZX_A15" class="0">
 <segment>
 <label x="330.2" y="170.18" size="1.778" layer="95"/>
 <pinref part="IC10" gate="A" pin="B1"/>
@@ -8645,7 +8645,7 @@ DIN A3, landscape with location and doc. field</description>
 <label x="467.36" y="386.08" size="1.778" layer="95"/>
 </segment>
 </net>
-<net name="XA14" class="0">
+<net name="ZX_A14" class="0">
 <segment>
 <wire x1="345.44" y1="167.64" x2="327.66" y2="167.64" width="0.1524" layer="91"/>
 <label x="330.2" y="167.64" size="1.778" layer="95"/>
@@ -8658,7 +8658,7 @@ DIN A3, landscape with location and doc. field</description>
 <label x="467.36" y="381" size="1.778" layer="95"/>
 </segment>
 </net>
-<net name="XA13" class="0">
+<net name="ZX_A13" class="0">
 <segment>
 <label x="330.2" y="165.1" size="1.778" layer="95"/>
 <pinref part="IC10" gate="A" pin="B3"/>
@@ -8671,7 +8671,7 @@ DIN A3, landscape with location and doc. field</description>
 <label x="467.36" y="378.46" size="1.778" layer="95"/>
 </segment>
 </net>
-<net name="XA12" class="0">
+<net name="ZX_A12" class="0">
 <segment>
 <wire x1="345.44" y1="162.56" x2="327.66" y2="162.56" width="0.1524" layer="91"/>
 <label x="330.2" y="162.56" size="1.778" layer="95"/>
@@ -8684,7 +8684,7 @@ DIN A3, landscape with location and doc. field</description>
 <label x="467.36" y="375.92" size="1.778" layer="95"/>
 </segment>
 </net>
-<net name="XA11" class="0">
+<net name="ZX_A0" class="0">
 <segment>
 <label x="330.2" y="160.02" size="1.778" layer="95"/>
 <pinref part="IC10" gate="A" pin="B5"/>
@@ -8697,7 +8697,7 @@ DIN A3, landscape with location and doc. field</description>
 <label x="467.36" y="373.38" size="1.778" layer="95"/>
 </segment>
 </net>
-<net name="XA10" class="0">
+<net name="ZX_A1" class="0">
 <segment>
 <wire x1="345.44" y1="157.48" x2="327.66" y2="157.48" width="0.1524" layer="91"/>
 <label x="330.2" y="157.48" size="1.778" layer="95"/>
@@ -8710,7 +8710,7 @@ DIN A3, landscape with location and doc. field</description>
 <label x="467.36" y="370.84" size="1.778" layer="95"/>
 </segment>
 </net>
-<net name="XA9" class="0">
+<net name="ZX_A2" class="0">
 <segment>
 <label x="330.2" y="154.94" size="1.778" layer="95"/>
 <pinref part="IC10" gate="A" pin="B7"/>
@@ -8723,7 +8723,7 @@ DIN A3, landscape with location and doc. field</description>
 <label x="487.68" y="332.74" size="1.778" layer="95" rot="R90"/>
 </segment>
 </net>
-<net name="XA8" class="0">
+<net name="ZX_A3" class="0">
 <segment>
 <wire x1="345.44" y1="152.4" x2="327.66" y2="152.4" width="0.1524" layer="91"/>
 <label x="330.2" y="152.4" size="1.778" layer="95"/>
@@ -8736,7 +8736,7 @@ DIN A3, landscape with location and doc. field</description>
 <label x="490.22" y="332.74" size="1.778" layer="95" rot="R90"/>
 </segment>
 </net>
-<net name="XA0" class="0">
+<net name="ZX_A11" class="0">
 <segment>
 <label x="330.2" y="104.14" size="1.778" layer="95"/>
 <pinref part="IC11" gate="A" pin="B8"/>
@@ -8748,7 +8748,7 @@ DIN A3, landscape with location and doc. field</description>
 <label x="586.74" y="370.84" size="1.778" layer="95"/>
 </segment>
 </net>
-<net name="XA1" class="0">
+<net name="ZX_A10" class="0">
 <segment>
 <label x="330.2" y="106.68" size="1.778" layer="95"/>
 <pinref part="IC11" gate="A" pin="B7"/>
@@ -8760,7 +8760,7 @@ DIN A3, landscape with location and doc. field</description>
 <label x="586.74" y="368.3" size="1.778" layer="95"/>
 </segment>
 </net>
-<net name="XA2" class="0">
+<net name="ZX_A9" class="0">
 <segment>
 <label x="330.2" y="109.22" size="1.778" layer="95"/>
 <pinref part="IC11" gate="A" pin="B6"/>
@@ -8772,7 +8772,7 @@ DIN A3, landscape with location and doc. field</description>
 <label x="589.28" y="365.76" size="1.778" layer="95"/>
 </segment>
 </net>
-<net name="XA3" class="0">
+<net name="ZX_A8" class="0">
 <segment>
 <label x="330.2" y="111.76" size="1.778" layer="95"/>
 <pinref part="IC11" gate="A" pin="B5"/>
@@ -8784,7 +8784,7 @@ DIN A3, landscape with location and doc. field</description>
 <label x="574.04" y="330.2" size="1.778" layer="95" rot="R90"/>
 </segment>
 </net>
-<net name="XA4" class="0">
+<net name="ZX_A4" class="0">
 <segment>
 <label x="330.2" y="114.3" size="1.778" layer="95"/>
 <pinref part="IC11" gate="A" pin="B4"/>
@@ -8796,7 +8796,7 @@ DIN A3, landscape with location and doc. field</description>
 <label x="571.5" y="330.2" size="1.778" layer="95" rot="R90"/>
 </segment>
 </net>
-<net name="XA5" class="0">
+<net name="ZX_A5" class="0">
 <segment>
 <label x="330.2" y="116.84" size="1.778" layer="95"/>
 <pinref part="IC11" gate="A" pin="B3"/>
@@ -8808,7 +8808,7 @@ DIN A3, landscape with location and doc. field</description>
 <label x="568.96" y="330.2" size="1.778" layer="95" rot="R90"/>
 </segment>
 </net>
-<net name="XA6" class="0">
+<net name="ZX_A6" class="0">
 <segment>
 <label x="330.2" y="119.38" size="1.778" layer="95"/>
 <pinref part="IC11" gate="A" pin="B2"/>
@@ -8820,7 +8820,7 @@ DIN A3, landscape with location and doc. field</description>
 <label x="566.42" y="330.2" size="1.778" layer="95" rot="R90"/>
 </segment>
 </net>
-<net name="XA7" class="0">
+<net name="ZX_A7" class="0">
 <segment>
 <label x="330.2" y="121.92" size="1.778" layer="95"/>
 <pinref part="IC11" gate="A" pin="B1"/>

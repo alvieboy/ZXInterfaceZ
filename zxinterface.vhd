@@ -96,7 +96,7 @@ architecture beh of zxinterface is
   signal XA_sync_s          : std_logic_vector(15 downto 0);
   signal XD_sync_s          : std_logic_vector(7 downto 0);
 
-  signal PC_s               : natural;
+  --signal PC_s               : natural;
 
 
   signal memrd_s            : std_logic; -- Memory read request
@@ -156,6 +156,8 @@ architecture beh of zxinterface is
   signal spect_capsyncen_spisck_s: std_logic;
   signal frameend_spisck_s: std_logic;
   signal spect_inten_s      : std_logic;
+  signal spect_forceromcs_spisck_s: std_logic;
+  signal spect_forceromcs_s : std_logic;
 
 
   signal spect_capsyncen_s: std_logic;
@@ -163,13 +165,33 @@ architecture beh of zxinterface is
   signal capture_clr_spisck_s:   std_logic;
   signal capture_cmp_spisck_s:   std_logic;
   signal capture_run_spisck_s:   std_logic;
-  signal capture_len_spisck_s:   std_logic_vector(CAPTURE_MEMWIDTH_BITS-1 downto 0);
+  --signal capture_len_spisck_s:   std_logic_vector(CAPTURE_MEMWIDTH_BITS-1 downto 0);
   signal capture_trig_mask_spisck_s : std_logic_vector(31 downto 0);
   signal capture_trig_val_spisck_s  : std_logic_vector(31 downto 0);
   signal capmem_en_s:     std_logic;
   signal capmem_data_s:   std_logic_vector(35 downto 0);
   signal capmem_adr_s:    std_logic_vector(CAPTURE_MEMWIDTH_BITS-1 downto 0);
   signal capdin_s: std_logic_vector(27 downto 0);
+
+  signal rom_active_s:    std_logic;
+
+  signal rom_wc_en_s      :   std_logic;
+  signal rom_wc_we_s:   std_logic;
+  signal rom_wc_di_s:   std_logic_vector(7 downto 0);
+  signal rom_wc_addr_s:   std_logic_vector(13 downto 0);
+
+
+  signal capture_clr_s:   std_logic;
+  signal capture_cmp_s:   std_logic;
+  signal capture_run_s:   std_logic;
+  signal capture_len_s:   std_logic_vector(CAPTURE_MEMWIDTH_BITS-1 downto 0);
+  signal capture_trig_mask_s    : std_logic_vector(35-COMPRESS_BITS downto 0);
+  signal capture_trig_val_s     : std_logic_vector(35-COMPRESS_BITS downto 0);
+  signal capture_triggered_s: std_logic;
+
+  signal io_enable_s:   std_logic;
+  signal io_active_s:   std_logic;
+  signal iodata_s   :   std_logic_vector(7 downto 0);
 
 begin
 
@@ -229,6 +251,7 @@ begin
       A_BUS_OE_io   <= '0';
     end if;
   end process;
+
   D_BUS_DIR_o   <= '1' --when dbus_oe_s='0' and dbus_oe_q_r='0' else '0';
                        when  dbus_oe_s='0' else '0';
 
@@ -287,26 +310,60 @@ begin
     end if;
   end process;
 
-  PC_s <= to_integer(unsigned(XA_i(13 downto 0)));
+  --PC_s <= XA_sync_s(13 downto 0);
 
   r: if ROM_ENABLED generate
-  rom: entity work.spectrum_rom
+  rom: entity work.generic_dp_ram
+    generic map (
+      ADDRESS_BITS => 14, -- 16Kb
+      DATA_BITS => 8
+    )
     port map (
-      PC_i    => PC_s,
-      clk_i   => clk_i,
-      en_i    => memrd_p_s,
-      dat_o   => romdata_o_s
-      );
+      clka    => clk_i,
+      ena     => rom_active_s,
+      wea     => '0',
+      dia     => "00000000",
+      doa     => romdata_o_s,
+      addra   => XA_sync_s(13 downto 0),
+
+      clkb    => SPI_SCK_i,
+      enb     => rom_wc_en_s,
+      web     => rom_wc_we_s,
+      dib     => rom_wc_di_s,
+      dob     => open,
+      addrb   => rom_wc_addr_s
+    );
   end generate;
+
   nr: if not ROM_ENABLED generate
     romdata_o_s <= (others => '0');
   end generate;
 
-  data_o_s <= romdata_o_s when rom_enable_s='1' else
-              ramdata_o_s when ram_enable_s='1' else (others => '0');
 
-	rom_enable_s  <= (not XMREQ_sync_s) and not (a_r(15) or a_r(14));
-	ram_enable_s  <= not (XMREQ_sync_s or rom_enable_s);
+
+	rom_enable_s  <= (not XMREQ_sync_s) and not (XA_sync_s(15) or XA_sync_s(14)) and not (XRD_sync_s);
+
+
+
+  io_inst: entity work.interfacez_io
+    port map (
+      clk_i   => clk_i,
+      rst_i   => arst_i,
+
+      ioreq_i => XIORQ_sync_s,
+      rd_i    => XRD_sync_s,
+      wrp_i   => d_io_mem_s,
+      adr_i   => XA_sync_s(7 downto 0),
+      
+      dat_i   => d_r, -- Resynced with delay
+      dat_o   => iodata_s,
+      enable_o  => io_enable_s
+    );
+
+  data_o_s <= romdata_o_s when rom_enable_s='1' else
+              --ramdata_o_s when ram_enable_s='1' else
+              iodata_s    when io_enable_s='1' else (others => '0');
+
 
 
   -- RAM write access captures
@@ -354,27 +411,25 @@ begin
   --fifo_rd_s     <= '0';
   fifo_write_s  <= d_io_mem_s & d_r & a_r;
 
-  -- Test
-  process(clk_i, arst_i)
-  begin
-    if arst_i='1' then
-      dbus_oe_s<='0';
---      data_o_s <= x"5A";
-    elsif rising_edge(clk_i) then
-      if XMREQ_sync_s='0' AND XRD_sync_s='0' then
-        if XA_sync_s(15 downto 14)="00" then
-          dbus_oe_s<='0';
-          -- synthesis translate_off
-          dbus_oe_s <= '0';--FORCE_ROMCS_s;
-          -- synthesis translate_on
-        else
-          dbus_oe_s<='0';
-        end if;
-      else
-        dbus_oe_s<='0';
-      end if;
-    end if;
-  end process;
+  -- ROM is active on access if FORCE romcs is '1'
+
+  rom_active_s <= rom_enable_s and spect_forceromcs_s;
+  io_active_s  <= io_enable_s and NOT XRD_sync_s;
+
+  dbus_oe_s <= rom_active_s or io_active_s;
+
+  --process(clk_i, arst_i)
+  --begin
+  --  if arst_i='1' then
+  --    dbus_oe_s<='0';
+  --  elsif rising_edge(clk_i) then
+  --    if rom_active_s='1' then
+  --     dbus_oe_s<='1';
+  --    else
+  --      dbus_oe_s<='0';
+  --    end if;
+  --  end if;
+  --end process;
 
   qspi_inst: entity work.spi_interface
   port map (
@@ -396,9 +451,17 @@ begin
     capmem_adr_o    => capmem_adr_s,
     capmem_data_i   => capmem_data_s,
 
+    -- ROM connections
+    rom_en_o        => rom_wc_en_s,
+    rom_we_o        => rom_wc_we_s,
+    rom_di_o        => rom_wc_di_s,
+    rom_addr_o      => rom_wc_addr_s,
+
+
     capture_clr_o   => capture_clr_spisck_s,
     capture_run_o   => capture_run_spisck_s,
-    capture_len_i   => capture_len_spisck_s,
+    capture_len_i   => capture_len_s,       -- This is NOT sync!!
+    capture_trig_i  => capture_triggered_s, -- This is NOT sync!!
     capture_cmp_o   => capture_cmp_spisck_s,
 
     capture_trig_mask_o => capture_trig_mask_spisck_s,
@@ -409,7 +472,8 @@ begin
     rstspect_o    => spect_reset_s,
     intenable_o   => spect_inten_spisck_s,
     capsyncen_o   => spect_capsyncen_spisck_s,
-    frameend_o    => frameend_spisck_s
+    frameend_o    => frameend_spisck_s,
+    forceromcs_o  => spect_forceromcs_spisck_s
   );
 
   specinten_sync: entity work.sync generic map (RESET => '0')
@@ -417,6 +481,9 @@ begin
 
   capsync_sync: entity work.sync generic map (RESET => '0')
       port map ( clk_i => clk_i, arst_i => arst_i, din_i => spect_capsyncen_spisck_s, dout_o => spect_capsyncen_s );
+
+  forceromcs_sync: entity work.sync generic map (RESET => '0')
+      port map ( clk_i => clk_i, arst_i => arst_i, din_i => spect_forceromcs_spisck_s, dout_o => spect_forceromcs_s );
 
 
 
@@ -458,17 +525,10 @@ begin
   cs: if CAPTURE_ENABLED generate
   capture: block
     constant TICK_MAX: natural := 4;
-    constant COMPRESS_BITS: natural := 7;
 
     signal tickcnt_r: natural range 0 to TICK_MAX-1;
     signal tick_r   : std_logic;
 
-    signal capture_clr_s:   std_logic;
-    signal capture_cmp_s:   std_logic;
-    signal capture_run_s:   std_logic;
-    signal capture_len_s:   std_logic_vector(CAPTURE_MEMWIDTH_BITS-1 downto 0);
-    signal capture_trig_mask_s    : std_logic_vector(35-COMPRESS_BITS downto 0);
-    signal capture_trig_val_s     : std_logic_vector(35-COMPRESS_BITS downto 0);
     signal capdata_s              : std_logic_vector(35-COMPRESS_BITS downto 0);
 
 
@@ -483,8 +543,8 @@ begin
     run_sync: entity work.sync generic map (RESET => '0')
       port map ( clk_i => clk_i, arst_i => arst_i, din_i => capture_run_spisck_s, dout_o => capture_run_s );
 
-    len_syncv: entity work.syncv generic map (RESET => '0', WIDTH => capture_len_s'length)
-      port map ( clk_i => clk_i, arst_i => arst_i, din_i => capture_len_spisck_s, dout_o => capture_len_s );
+    --len_syncv: entity work.syncv generic map (RESET => '0', WIDTH => capture_len_s'length)
+    --  port map ( clk_i => clk_i, arst_i => arst_i, din_i => capture_len_spisck_s, dout_o => capture_len_s );
 
     trigmask_syncv: entity work.syncv generic map (RESET => '1', WIDTH => 36-COMPRESS_BITS)
       port map ( clk_i => clk_i, arst_i => arst_i, din_i => capture_trig_mask_spisck_s(35-COMPRESS_BITS downto 0), dout_o => capture_trig_mask_s );
@@ -530,6 +590,7 @@ begin
     clen_o      => capture_len_s,
     trig_mask_i => capture_trig_mask_s,
     trig_val_i  => capture_trig_val_s,
+    trig_o      => capture_triggered_s,
 
     ramclk_i    => SPI_SCK_i,
     ramen_i     => capmem_en_s,
@@ -567,7 +628,7 @@ begin
   DCLK_o        <= SPI_SCK_i WHEN ESP_AS_NCS='0' else '0';
 
 
-  FORCE_ROMCS_o <= '0';
+  FORCE_ROMCS_o <= spect_forceromcs_s;
   FORCE_RESET_o <= spect_reset_s;
   FORCE_INT_o   <= '0';
 

@@ -3,6 +3,10 @@ use IEEE.STD_LOGIC_1164.all;
 use IEEE.numeric_std.all;
 use IEEE.std_logic_misc.all;
 
+-- synthesis translate_off
+library work;
+use work.txt_util.all;
+-- synthesis translate_on
 entity logiccapture is
   generic (
     COMPRESS_BITS: natural := 8;
@@ -21,6 +25,7 @@ entity logiccapture is
     trig_val_i  : in std_logic_vector(35-COMPRESS_BITS downto 0);
 
     clen_o      : out std_logic_vector(MEMWIDTH_BITS-1 downto 0);
+    trig_o      : out std_logic;
 
     ramclk_i    : in std_logic;
     ramen_i     : in std_logic;
@@ -48,11 +53,18 @@ architecture beh of logiccapture is
   signal full_s     : std_logic;
   signal match_s    : std_logic;
 
-  constant MASK     : std_logic_vector(27 downto 0) := x"FFFFFFF";
+--  constant MASK     : std_logic_vector(27 downto 0) := x"FFFFFFF";
+
+  -- synthesis translate_off
+  signal seen_full_s: boolean;
+  -- synthesis translate_on
 
 begin
 
+  memaddr_s <= std_logic_vector(sreg_r);
   full_s  <= and_reduce(std_logic_vector(sreg_r));
+  clen_o  <= std_logic_vector(sreg_r);
+  trig_o  <= triggered_r;
 
   ram_inst: entity work.generic_dp_ram
   generic map (
@@ -89,8 +101,7 @@ begin
     end if;
   end process;
 
-  memdi_s <= std_logic_vector(count_r) & cap_r;
-  memaddr_s <= std_logic_vector(sreg_r);
+  memdi_s <= std_logic_vector(count_r) & din_i(35-COMPRESS_BITS downto 0);-- & std_logic_vector(sreg_r(7 downto 0));--cap_r;
 
   process(run_i, full_s, stick_i, match_s, count_r)
   begin
@@ -108,6 +119,9 @@ begin
       count_r <= (others => '0');
       sreg_r  <= (others => '0');
       triggered_r <= '0';
+      -- synthesis translate_off
+      seen_full_s <= false;
+      -- synthesis translate_on
 
     elsif rising_edge(clk_i) then
       if clr_i='1' then
@@ -123,7 +137,10 @@ begin
               sreg_r    <= sreg_r + 1;
             else
               -- synthesis translate_off
-              report "Capture buffer full";
+              if not seen_full_s then
+                report "Capture buffer full " & hstr(std_logic_vector(sreg_r));
+              end if;
+              seen_full_s <= true;
               -- synthesis translate_on
             end if;
             count_r   <= (others => '0');
@@ -139,7 +156,10 @@ begin
           end if;
         else
           if (din_i and trig_mask_i) = (trig_val_i and trig_mask_i) then
-            triggered_r<='1';
+            triggered_r <='1';
+            sreg_r    <= sreg_r + 1;
+            count_r   <= (others => '0');
+
           end if;
         end if;
       end if;

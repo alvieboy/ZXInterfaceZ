@@ -175,9 +175,28 @@ BEGIN
     signal ROMCS_n  : std_logic := '1';
   begin
 
-    spect_clk <= not spect_clk after ZXPERIOD/2;
-  --  spect_rst <= '1', '0' after 10 ns, '1' after 1 us;
-  spect_rst <= not FORCE_RESET_o;
+  spect_clk <= not spect_clk after ZXPERIOD/2;
+  --spect_rst <= not FORCE_RESET_o;
+  XCK_s <= spect_clk;
+
+  process
+  begin
+    spect_rst <= '1';
+    wait for 1 ps;
+    spect_rst <= '0';
+    wait for 1 us;
+    spect_rst <= '1';
+    li: loop
+      wait on FORCE_RESET_o;
+      if FORCE_RESET_o='1' then
+        wait for 1 us;
+        spect_rst <= '0';
+      else
+        wait for 1 us;
+        spect_rst <= '1';
+      end if;
+    end loop;
+  end process;
 
   zxspect_inst: entity work.spectrum_top
   port map (
@@ -220,8 +239,8 @@ BEGIN
   specrom_inst: entity work.spectrum_rom_chip
     port map (
       A_i     => XA_s(13 downto 0),
-      CSn_i   => XMREQ_s,
-      OE0n_i  => XRD_s,
+      CSn_i   => XRD_s,
+      OE0n_i  => XMREQ_s,
       OE1n_i  => ROMCS_n,
       D_o     => XD_io
     );
@@ -315,44 +334,33 @@ BEGIN
     ESP_NCSO_i <= '0';
     wait for 20 ns;
 
-    --w8(x"FC", dataread_v);
-    --ESP_MOSI_io <= 'Z';
-    --ESP_MISO_io <= 'Z';
-    --ESP_QHD_io <= 'Z';
-    --ESP_QWP_io <= 'Z';
-    --r8(x"00", dataread_v);
-    --r8(x"00", dataread_v);
-    --r8(x"00", dataread_v);
-    --r8(x"DE", dataread_v);
-    --r8(x"00", dataread_v);
-    --r8(x"00", dataread_v);
-    --r8(x"00", dataread_v);
+    -- Write ROM test
 
-    w8std(x"9F", dataread_v);
-    w8std(x"00", dataread_v);
-    report "D0: "  & hstr(dataread_v);
-    w8std(x"00", dataread_v);
-    report "D1: "  & hstr(dataread_v);
-    w8std(x"00", dataread_v);
-    report "D2: "  & hstr(dataread_v);
-    w8std(x"00", dataread_v);
-    report "D3: "  & hstr(dataread_v);
-
-    ESP_NCSO_i <= '1';
-    wait for 1 us;
     ESP_NCSO_i <= '0';
-    w8std(x"9F", dataread_v);
+    w8std(x"E1", dataread_v);
     w8std(x"00", dataread_v);
-    report "D0: "  & hstr(dataread_v);
     w8std(x"00", dataread_v);
-    report "D1: "  & hstr(dataread_v);
-    w8std(x"00", dataread_v);
-    report "D2: "  & hstr(dataread_v);
-    w8std(x"00", dataread_v);
-    report "D3: "  & hstr(dataread_v);
+    w8std(x"DE", dataread_v);
+    w8std(x"AD", dataread_v);
+    w8std(x"BE", dataread_v);
+    w8std(x"EF", dataread_v);
     ESP_NCSO_i <= '1';
     wait for 1 us;
 
+    -- Test ROM enable, Reset spectrum, enable ROMCS
+    ESP_NCSO_i <= '0';
+    w8std(x"EC", dataread_v);
+    w8std(x"82", dataread_v);
+    ESP_NCSO_i <= '1';
+    wait for 1 us;
+    -- Test ROM enable, Reset spectrum, disable ROMCS
+    ESP_NCSO_i <= '0';
+    w8std(x"EC", dataread_v);
+    w8std(x"80", dataread_v);
+    ESP_NCSO_i <= '1';
+    wait for 1 us;
+
+    wait for 40 us;
 
     -- Reset spectrum.
     ESP_NCSO_i <= '0';
@@ -372,7 +380,7 @@ BEGIN
 
     ESP_NCSO_i <= '0';
     w8std(x"EF", dataread_v);
-    w8std(x"00", dataread_v);
+    w8std(x"07", dataread_v);
     ESP_NCSO_i <= '1';
     wait for 1 us;
 
@@ -381,8 +389,8 @@ BEGIN
     w8std(x"ED", dataread_v);
     w8std(x"00", dataread_v); -- Mask
     w8std(x"0F", dataread_v);
-    w8std(x"00", dataread_v);
-    w8std(x"00", dataread_v);
+    w8std(x"FF", dataread_v);
+    w8std(x"FF", dataread_v);
     w8std(x"00", dataread_v);
     ESP_NCSO_i <= '1';
     wait for 1 us;
@@ -391,67 +399,58 @@ BEGIN
     ESP_NCSO_i <= '0';
     w8std(x"ED", dataread_v);
     w8std(x"01", dataread_v); -- Value
+    w8std(x"05", dataread_v);
     w8std(x"00", dataread_v);
-    w8std(x"00", dataread_v);
-    w8std(x"00", dataread_v);
+    w8std(x"01", dataread_v);
     w8std(x"00", dataread_v);
     ESP_NCSO_i <= '1';
     wait for 1 us;
 
+
+    report "Trigger set, starting capture";
 
     -- Unreset, enable capture
     ESP_NCSO_i <= '0';
     w8std(x"EC", dataread_v);
     w8std(x"08", dataread_v);
     ESP_NCSO_i <= '1';
-    wait for 1 us;
-
-
-    
-
-
-
-
-
-
-
-
-
-    ESP_IO27_io <= '0';
-
-    w8std(x"9F", dataread_v);
-    w8std(x"00", dataread_v);
-    report "FD0: "  & hstr(dataread_v);
-    w8std(x"00", dataread_v);
-    report "FD1: "  & hstr(dataread_v);
-    w8std(x"00", dataread_v);
-    report "FD2: "  & hstr(dataread_v);
-    w8std(x"00", dataread_v);
-    report "FD3: "  & hstr(dataread_v);
-
-    ESP_IO27_io <= '1';
-
-    wait for 50 us;
-
-    ESP_NCSO_i <= '0';
-    w8std(x"DF", dataread_v);
-    w8std(x"18", dataread_v);
-    report "D0: "  & hstr(dataread_v);
-    w8std(x"00", dataread_v);
-    report "D1: "  & hstr(dataread_v);
-    w8std(x"00", dataread_v);
-    report "D2: "  & hstr(dataread_v);
-    w8std(x"00", dataread_v);
-    report "D3: "  & hstr(dataread_v);
-    w8std(x"00", dataread_v);
-    report "D4: "  & hstr(dataread_v);
-    w8std(x"00", dataread_v);
-    report "D5: "  & hstr(dataread_v);
-    w8std(x"00", dataread_v);
-    report "D6: "  & hstr(dataread_v);
-    ESP_NCSO_i <= '1';
 
     wait for 100 us;
+
+    ESP_NCSO_i <= '0';
+    w8std(x"E2", dataread_v);
+    w8std(x"00", dataread_v);
+    w8std(x"00", dataread_v);
+    report "Sta00: "  & hstr(dataread_v);
+    w8std(x"00", dataread_v);
+    report "Sta1: "  & hstr(dataread_v);
+    w8std(x"00", dataread_v);
+    report "Sta2: "  & hstr(dataread_v);
+    w8std(x"00", dataread_v);
+    report "Sta3: "  & hstr(dataread_v);
+    ESP_NCSO_i <= '1';
+
+    wait for 1 us;
+
+    ESP_NCSO_i <= '0';
+    w8std(x"E0", dataread_v);
+    w8std(x"00", dataread_v);
+
+    w8std(x"00", dataread_v);
+    w8std(x"00", dataread_v);
+    w8std(x"00", dataread_v);
+    w8std(x"00", dataread_v);
+    w8std(x"00", dataread_v);
+    report "Seq 0 " & hstr(dataread_v);
+    ESP_NCSO_i <= '1';
+
+
+
+
+
+    wait for 100 us;
+
+
 
     ESP_NCSO_i <= '0';
     w8std(x"E0", dataread_v);
