@@ -334,6 +334,28 @@ BEGIN
     ESP_NCSO_i <= '0';
     wait for 20 ns;
 
+    -- Reset resource fifo
+    ESP_NCSO_i <= '0';
+    w8std(x"EC", dataread_v);
+    w8std(x"00", dataread_v);
+    w8std(x"01", dataread_v);
+    w8std(x"00", dataread_v);
+    ESP_NCSO_i <= '1';
+
+    wait for 1 us;
+
+    -- Write resource FIFO
+
+    ESP_NCSO_i <= '0';
+    w8std(x"E3", dataread_v);
+    w8std(x"AA", dataread_v);
+    w8std(x"BB", dataread_v);
+    w8std(x"CC", dataread_v);
+    w8std(x"DD", dataread_v);
+    w8std(x"EE", dataread_v);
+    w8std(x"FF", dataread_v);
+    ESP_NCSO_i <= '1';
+
     -- Write ROM test
 
     ESP_NCSO_i <= '0';

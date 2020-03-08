@@ -5814,7 +5814,7 @@ DIN A3, landscape with location and doc. field</description>
 <part name="C41" library="GadgetFactory" deviceset="C" device="0603" value="100nF 6.3V"/>
 <part name="GND101" library="supply1" deviceset="GND" device=""/>
 <part name="GND102" library="supply1" deviceset="GND" device=""/>
-<part name="C40" library="GadgetFactory" deviceset="C" device="0603" value="1uF"/>
+<part name="C40" library="GadgetFactory" deviceset="C" device="0603" value="10uF"/>
 <part name="GND2" library="supply1" deviceset="GND" device=""/>
 <part name="C37" library="GadgetFactory" deviceset="C" device="0603" value="1uF"/>
 <part name="C3" library="GadgetFactory" deviceset="C" device="0603" value="100nF 6.3V"/>
@@ -6038,6 +6038,8 @@ DIN A3, landscape with location and doc. field</description>
 <part name="R32" library="GadgetFactory" deviceset="R" device="0603" value="10K"/>
 <part name="R33" library="GadgetFactory" deviceset="R" device="0603" value="10K"/>
 <part name="R34" library="GadgetFactory" deviceset="R" device="0603" value="10K"/>
+<part name="Q6" library="transistor-small-signal" deviceset="BSS123" device=""/>
+<part name="GND62" library="supply1" deviceset="GND" device=""/>
 </parts>
 <sheets>
 <sheet>
@@ -6345,6 +6347,8 @@ DIN A3, landscape with location and doc. field</description>
 <instance part="R32" gate="A" x="45.72" y="431.8" rot="R90"/>
 <instance part="R33" gate="A" x="38.1" y="431.8" rot="R90"/>
 <instance part="R34" gate="A" x="30.48" y="431.8" rot="R90"/>
+<instance part="Q6" gate="G$1" x="99.06" y="129.54"/>
+<instance part="GND62" gate="1" x="99.06" y="119.38"/>
 </instances>
 <busses>
 </busses>
@@ -6942,6 +6946,11 @@ DIN A3, landscape with location and doc. field</description>
 <pinref part="C57" gate="G$1" pin="-"/>
 <pinref part="GND61" gate="1" pin="GND"/>
 <wire x1="7.62" y1="342.9" x2="7.62" y2="345.44" width="0.1524" layer="91"/>
+</segment>
+<segment>
+<pinref part="Q6" gate="G$1" pin="S"/>
+<pinref part="GND62" gate="1" pin="GND"/>
+<wire x1="99.06" y1="124.46" x2="99.06" y2="121.92" width="0.1524" layer="91"/>
 </segment>
 </net>
 <net name="N$149" class="0">
@@ -8542,6 +8551,11 @@ DIN A3, landscape with location and doc. field</description>
 <label x="467.36" y="421.64" size="1.778" layer="95"/>
 <pinref part="R7" gate="A" pin="1"/>
 </segment>
+<segment>
+<pinref part="U1" gate="G$1" pin="IO25"/>
+<wire x1="33.02" y1="335.28" x2="20.32" y2="335.28" width="0.1524" layer="91"/>
+<label x="20.32" y="335.28" size="1.778" layer="95"/>
+</segment>
 </net>
 <net name="DCLK" class="0">
 <segment>
@@ -9720,18 +9734,6 @@ DIN A3, landscape with location and doc. field</description>
 <wire x1="185.42" y1="170.18" x2="185.42" y2="167.64" width="0.1524" layer="91"/>
 </segment>
 </net>
-<net name="ESP_IO25" class="0">
-<segment>
-<pinref part="U1" gate="G$1" pin="IO25"/>
-<wire x1="33.02" y1="335.28" x2="20.32" y2="335.28" width="0.1524" layer="91"/>
-<label x="20.32" y="335.28" size="1.778" layer="95"/>
-</segment>
-<segment>
-<pinref part="IC2" gate="G$1" pin="__IO_79"/>
-<wire x1="505.46" y1="480.06" x2="505.46" y2="492.76" width="0.1524" layer="91"/>
-<label x="505.46" y="482.6" size="1.778" layer="95" rot="R90"/>
-</segment>
-</net>
 <net name="ESP_IO26" class="0">
 <segment>
 <pinref part="U1" gate="G$1" pin="IO26"/>
@@ -9794,6 +9796,33 @@ DIN A3, landscape with location and doc. field</description>
 <wire x1="27.94" y1="276.86" x2="27.94" y2="274.32" width="0.1524" layer="91"/>
 <wire x1="27.94" y1="274.32" x2="33.02" y2="274.32" width="0.1524" layer="91"/>
 <pinref part="R29" gate="A" pin="1"/>
+</segment>
+</net>
+<net name="FORCE_NMI" class="0">
+<segment>
+<pinref part="Q6" gate="G$1" pin="G"/>
+<wire x1="93.98" y1="127" x2="91.44" y2="127" width="0.1524" layer="91"/>
+<wire x1="91.44" y1="127" x2="91.44" y2="121.92" width="0.1524" layer="91"/>
+<wire x1="91.44" y1="121.92" x2="76.2" y2="121.92" width="0.1524" layer="91"/>
+<label x="76.2" y="121.92" size="1.778" layer="95"/>
+</segment>
+<segment>
+<pinref part="IC2" gate="G$1" pin="__IO_79"/>
+<wire x1="505.46" y1="480.06" x2="505.46" y2="492.76" width="0.1524" layer="91"/>
+<label x="505.46" y="482.6" size="1.778" layer="95" rot="R90"/>
+</segment>
+</net>
+<net name="NMI" class="0">
+<segment>
+<pinref part="Q6" gate="G$1" pin="D"/>
+<wire x1="99.06" y1="134.62" x2="99.06" y2="137.16" width="0.1524" layer="91"/>
+<wire x1="99.06" y1="137.16" x2="78.74" y2="137.16" width="0.1524" layer="91"/>
+<label x="78.74" y="137.16" size="1.778" layer="95"/>
+</segment>
+<segment>
+<pinref part="CONN1" gate="G$1" pin="NMI"/>
+<wire x1="114.3" y1="182.88" x2="104.14" y2="182.88" width="0.1524" layer="91"/>
+<label x="104.14" y="182.88" size="1.778" layer="95"/>
 </segment>
 </net>
 </nets>

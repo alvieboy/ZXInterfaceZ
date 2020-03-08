@@ -206,6 +206,7 @@ set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to XWR_i
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to XIORQ_i
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to XMREQ_i
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to XM1_i
+set_global_assignment -name VHDL_FILE insn_detector.vhd
 set_global_assignment -name VHDL_FILE interfacez_io.vhd
 set_global_assignment -name VHDL_FILE async_pulse.vhd
 set_global_assignment -name QIP_FILE signaltap1/synthesis/signaltap1.qip

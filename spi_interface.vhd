@@ -47,7 +47,16 @@ entity spi_interface is
     intenable_o   : out std_logic;
     capsyncen_o   : out std_logic;
     frameend_o    : out std_logic;
-    forceromcs_o  : out std_logic
+    forceromcs_trig_on_o  : out std_logic;
+    forceromcs_trig_off_o  : out std_logic;
+    forceromonretn_trig_o: out std_logic; -- single tick, SPI sck
+    -- Resource FIFO
+
+
+    resfifo_reset_o : out std_logic;
+    resfifo_wr_o    : out std_logic;
+    resfifo_write_o : out std_logic_vector(7 downto 0);
+    resfifo_full_i  : in std_logic_vector(3 downto 0)
   );
 
 end entity spi_interface;
@@ -65,7 +74,7 @@ architecture beh of spi_interface is
   signal wordindex2_r : unsigned(2 downto 0);
 
   signal vid_addr_r   : unsigned(12 downto 0);
-  signal flags_r      : std_logic_vector(7 downto 0);
+  signal flags_r      : std_logic_vector(15 downto 0);
   signal capmem_adr_r : unsigned(CAPTURE_MEMWIDTH_BITS-1 downto 0);
 
   constant NUMREGS32  : natural := 4;
@@ -87,7 +96,8 @@ architecture beh of spi_interface is
     RDVIDMEM,
     READCAPTURE,
     READCAPSTATUS,
-    SETFLAGS,
+    SETFLAGS1,
+    SETFLAGS2,
     SETREG32_INDEX,
     SETREG32_1,
     SETREG32_2,
@@ -95,7 +105,8 @@ architecture beh of spi_interface is
     SETREG32_4,
     WRITEROM1,
     WRITEROM2,
-    WRITEROM
+    WRITEROM,
+    WRRESFIFO
   );
 
   signal state_r      : state_type;
@@ -143,11 +154,26 @@ begin
   process(SCK_i, arst_i)
   begin
     if arst_i='1' then
-      flags_r <= "00000000";
+      flags_r <= (others => '0');
+      resfifo_reset_o <= '0';
+      forceromonretn_trig_o <= '0';
+      forceromcs_trig_on_o <= '0';
+      forceromcs_trig_off_o <= '0';
     elsif rising_edge(SCK_i) then
-      if state_r=SETFLAGS then
+      resfifo_reset_o <= '0';
+      forceromonretn_trig_o <= '0';
+      forceromcs_trig_on_o <= '0';
+      forceromcs_trig_off_o <= '0';
+      if state_r=SETFLAGS1 then
         if dat_valid_s='1' then
-          flags_r <= dat_s;
+          flags_r(7 downto 0) <= dat_s;
+        end if;
+      elsif state_r=SETFLAGS2 then
+        if dat_valid_s='1' then
+          resfifo_reset_o <= dat_s(0);
+          forceromonretn_trig_o <= dat_s(1);
+          forceromcs_trig_on_o <= dat_s(2);
+          forceromcs_trig_off_o <= dat_s(3);
         end if;
       end if;
     end if;
@@ -160,7 +186,7 @@ begin
   capture_cmp_o <= flags_r(4); -- Compress
   intenable_o   <= flags_r(5); -- Interrupt enable
   capsyncen_o   <= flags_r(6); -- Capture sync
-  forceromcs_o  <= flags_r(7);
+  --forceromcs_o  <= flags_r(7);
 
 
   rom_en_o <= '1' when state_r=WRITEROM else '0';
@@ -168,7 +194,11 @@ begin
   rom_di_o <= dat_s;
   rom_addr_o <= std_logic_vector(rom_addr_r);
 
-  process(SCK_i, CSN_i)
+  resfifo_wr_o <= '1' when state_r=WRRESFIFO and dat_valid_s='1' else '0';
+  resfifo_write_o <= dat_s;
+
+
+  process(SCK_i, CSN_i, arst_i)
     variable caplen_v:  std_logic_vector(31 downto 0);
   begin
     if CSN_i='1' then
@@ -180,8 +210,6 @@ begin
       frame_end_r <= '0';
       capmem_adr_r <= (others=>'0');
       wreg_en_r <= '0';
-      regs32_r(2) <= x"deadbeef";
-      regs32_r(3) <= x"cafe1234";
     elsif rising_edge(SCK_i) then
 
       fifo_rd_o <= '0';
@@ -196,7 +224,7 @@ begin
               when x"DE" => -- Read status
                 txden_s <= '1';
                 txload_s <= '1';
-                txdat_s <= "0000000" & fifo_empty_i;
+                txdat_s <= "000" & resfifo_full_i & fifo_empty_i;
                 state_r <= READSTATUS;
 
               when x"DF" => -- Read video memory
@@ -230,11 +258,17 @@ begin
                 rom_addr_r <= (others => '0');
                 state_r <= WRITEROM1;
 
+              when x"E3" => -- Write FIFO contents
+                txden_s <= '1';
+                txload_s <= '1';
+                txdat_s <= "00000000";
+                state_r <= WRRESFIFO;
+
               when x"EC" => -- Set flags
                 txden_s <= '1';
                 txload_s <= '1';
                 txdat_s <= "00000000";
-                state_r <= SETFLAGS;
+                state_r <= SETFLAGS1;
 
               when x"ED" | x"EE" => -- Set/get regs 32
                 txden_s <= '1';
@@ -349,6 +383,8 @@ begin
             rom_addr_r <= rom_addr_r + 1;
           end if;
 
+        when WRRESFIFO =>
+          
         when READSTATUS =>
           txload_s <= '1';
           txden_s <= '1';
@@ -379,13 +415,16 @@ begin
             --end if;
           end if;
 
-        when SETFLAGS =>
+        when SETFLAGS1 =>
 
           if dat_valid_s='1' then
-            txden_s <= '1';
-            txload_s <= '1';
-            txdat_s <= flags_r;
-            --flags_r <= dat_s;
+            state_r <= SETFLAGS2;
+          end if;
+
+        when SETFLAGS2 =>
+          
+          if dat_valid_s='1' then
+            state_r <= UNKNOWN;
           end if;
 
 
