@@ -15,6 +15,7 @@ entity interfacez_io is
     ioreq_i   : in std_logic;
     rd_i      : in std_logic;
     wrp_i     : in std_logic;
+    rdp_i     : in std_logic;
     adr_i     : in std_logic_vector(7 downto 0);
     dat_i     : in std_logic_vector(7 downto 0);
     dat_o     : out std_logic_vector(7 downto 0);
@@ -37,6 +38,7 @@ architecture beh of interfacez_io is
   signal addr_match_s:    std_logic;
   signal enable_s:  std_logic;
   signal dataread_r:std_logic_vector(7 downto 0);
+  signal testdata_r:unsigned(7 downto 0);
 begin
 
   border_o  <= border_r;
@@ -52,6 +54,7 @@ begin
       border_r      <= (others => '0');
       dataread_r    <= (others => 'X');
       resfifo_rd_o  <= '0';
+      testdata_r    <= (others => '0');
     elsif rising_edge(clk_i) then
 
       resfifo_rd_o <= '0';
@@ -63,7 +66,7 @@ begin
         -- synthesis translate_on
       end if;
 
-      if ioreq_i='0' and rd_i='0' then
+      if ioreq_i='0' and rdp_i='1' then
         case adr_i is
           when x"05" =>
             dataread_r <= x"39";
@@ -73,6 +76,7 @@ begin
             dataread_r <= resfifo_read_i;
             -- Pop data on next clock cycle
             resfifo_rd_o <= '1';
+            testdata_r <= testdata_r + 1;
           when others =>
             dataread_r <= (others => '1');
         end case;

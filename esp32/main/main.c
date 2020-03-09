@@ -30,48 +30,20 @@
 #include "fpga.h"
 #include "flash_pgm.h"
 #include "dump.h"
-
+#include "command.h"
+#include "ota.h"
+#include "sna.h"
+#include "res.h"
+#include "strtoint.h"
 
 static xQueueHandle gpio_evt_queue = NULL;
 
 static volatile uint32_t interrupt_count = 0;
 
-typedef enum {
-    READCMD,
-    READDATA
-} cmdstate_t;
-
-
-
-typedef struct command
-{
-    int socket;
-    struct sockaddr_in *source_addr;
-    int (*rxdatafunc)(struct command *cmdt);
-    uint8_t tx_prebuffer[4];
-    uint8_t rx_buffer[1024];
-    unsigned len;
-    unsigned romsize;
-    unsigned romoffset;
-    cmdstate_t state;
-} command_t;
-
-
-struct commandhandler_t {
-    const char *cmd;
-    uint8_t cmdlen;
-    int (*handler)(command_t*, int argc, char **argv);
-};
-
-#define CMD(x) x, __builtin_strlen(x)
-
 
 static uint8_t fb[16384];
-static uint8_t sna[49179];
 
 
-
-int strtoint(const char *str, int *dest);
 
 #define EXAMPLE_ESP_WIFI_SSID      CONFIG_ESP_WIFI_SSID
 #define EXAMPLE_ESP_WIFI_PASS      CONFIG_ESP_WIFI_PASSWORD
@@ -219,6 +191,10 @@ static void gpio__init()
 
     gpio_config(&io_conf);
 
+    gpio_set_level(PIN_NUM_AS_CSN, 1);
+    gpio_set_level(PIN_NUM_CS, 1);
+
+
     io_conf.mode         = GPIO_MODE_INPUT;
     io_conf.pin_bit_mask =
         (1ULL<<PIN_NUM_SWITCH) |
@@ -249,28 +225,6 @@ static void led__set(led_t led, uint8_t on)
 
 }
 
-
-static int spi__transceive2(spi_device_handle_t spi, uint8_t *tx_buffer, unsigned txlen, uint8_t *rx_buffer, unsigned rxlen)
-{
-    spi_transaction_t t;
-
-
-    if (txlen==0)
-        return 0;             //no need to send anything
-
-    memset(&t, 0, sizeof(t));       //Zero out the transaction
-
-    t.length = txlen*8;                 //Len is in bytes, transaction length is in bits.
-    t.rxlength = (rxlen)*8;
-    t.tx_buffer = tx_buffer;               //Data
-    t.rx_buffer = rx_buffer;               //Data
-
-    int ret = spi_device_polling_transmit(spi, &t);  //Transmit!
-
-    return ret;
-}
-
-
 static int send_framebuffer(command_t *cmdt, int argc, char **argv)
 {
     fpga__get_framebuffer(fb);
@@ -281,10 +235,10 @@ static int send_framebuffer(command_t *cmdt, int argc, char **argv)
 
     if (len != SPECTRUM_FRAME_SIZE) {
         ESP_LOGE(TAG, "send failed: errno %d", errno);
-        return -1;
+        return COMMAND_CLOSE_SILENT;
     }
 
-    return 0;
+    return COMMAND_CLOSE_SILENT;
 }
 
 // Target needs extra 4 bytes at start
@@ -551,8 +505,12 @@ static int upload_rom_data(command_t *cmdt)
         ESP_LOGE(TAG, "ROM: expected max %d but got %d bytes", remain, cmdt->len);
         return -1;
     }
-    cmdt += fpga__upload_rom_chunk(cmdt->romoffset, &cmdt->tx_prebuffer[1], cmdt->len);
-            /*
+
+    ESP_LOGI(TAG, "ROM: offset %d before uploading %d bytes", cmdt->romoffset, cmdt->len);
+
+    cmdt->romoffset += fpga__upload_rom_chunk(cmdt->romoffset, &cmdt->tx_prebuffer[1], cmdt->len);
+
+    /*
     // Upload chunk
     cmdt->tx_prebuffer[1] = 0xE1;
     cmdt->tx_prebuffer[2] = (cmdt->romoffset>>8) & 0xFF;
@@ -565,7 +523,7 @@ static int upload_rom_data(command_t *cmdt)
     spi__transceive(spi0_fpga, &cmdt->tx_prebuffer[1], 3 + cmdt->len);
 
     cmdt->romoffset += cmdt->len;
-              */
+    */
     ESP_LOGI(TAG, "ROM: offset %d after uploading %d bytes", cmdt->romoffset, cmdt->len);
 
     cmdt->len = 0; // Reset receive ptr.
@@ -596,6 +554,8 @@ static int upload_rom(command_t *cmdt, int argc, char **argv)
     cmdt->romoffset = 0;
     cmdt->rxdatafunc = &upload_rom_data;
     cmdt->state = READDATA;
+
+    ESP_LOGI(TAG, "Uploading ROM requested size %d\n", romsize);
 
     return 1; // Continue receiving data.
 }
@@ -639,6 +599,9 @@ struct commandhandler_t hand[] = {
     { CMD("reset"), &reset_spectrum },
     { CMD("scap"), &scap },
     { CMD("resettocustom"), &reset_custom_spectrum },
+    { CMD("ota"), &ota__performota },
+    { CMD("uploadsna"), &sna__uploadsna },
+    { CMD("uploadres"), &res__upload },
 };
 
 
@@ -702,7 +665,7 @@ static int check_command(command_t *cmdt, uint8_t *nl)
     return -1;
 }
 
-static int handle_command(command_t *cmdt)
+static command_result_t handle_command(command_t *cmdt)
 {
     uint8_t *nl = NULL;
     int r;
@@ -714,7 +677,7 @@ static int handle_command(command_t *cmdt)
                        0);
 
         if (len<0) {
-            return -1;
+            return COMMAND_CLOSE_SILENT;
         }
 
         cmdt->len += len;
@@ -727,33 +690,31 @@ static int handle_command(command_t *cmdt)
                 // So far no newline.
                 if (cmdt->len >= sizeof(cmdt->rx_buffer)) {
                     // Overflow, we cannot store more data.
-                    return -1;
+                    return COMMAND_CLOSE_ERROR;
                 }
                 // Just continue to get more data.
             } else {
                 r = check_command(cmdt, nl);
-                if (r<0)
-                    return -1;
-                if (r==0) {
-                    // We might have still data to process;
-
-                    return 0; // Completed.
+                if (r != COMMAND_CONTINUE)
+                    return r;
+                // Now, if we moved to READDATA and we still have data, process it
+                if (cmdt->state == READDATA && (cmdt->len>0)) {
+                    r = cmdt->rxdatafunc(cmdt);
+                    if (r != COMMAND_CONTINUE)
+                        return r;
                 }
             }
             break;
         case READDATA:
             r = cmdt->rxdatafunc(cmdt);
-            if (r<0) {
-                return -1;
-            }
-            if (r==0)
-                return 0;
-            // Default continue getting data
+
+            if (r != COMMAND_CONTINUE)
+                return r;
             break;
         }
     } while (1);
 
-    return 0;
+    return COMMAND_CLOSE_OK;
 }
 
 
@@ -814,7 +775,17 @@ static void buffer_server_task(void *pvParameters)
             cmdt.len = 0;
             cmdt.state = READCMD;
 
-            handle_command(&cmdt);
+            command_result_t r = handle_command(&cmdt);
+            switch (r) {
+            case COMMAND_CLOSE_OK:
+                send(sock, "OK\n", 3,  0);
+                break;
+            case COMMAND_CLOSE_ERROR:
+                send(sock, "ERROR\n", 6, 0);
+                break;
+            default:
+                break;
+            }
 
             shutdown(sock,0);
             close(sock);
@@ -823,14 +794,6 @@ static void buffer_server_task(void *pvParameters)
     }
     vTaskDelete(NULL);
 }
-
-
-#define FLAG_RSTFIFO (1<<0)
-#define FLAG_RSTSPECT (1<<1)
-#define FLAG_CAPCLR (1<<2)
-#define FLAG_CAPRUN (1<<3)
-#define FLAG_COMPRESS (1<<4)
-#define FLAG_ENABLE_INTERRUPT (1<<5)
 
 
 void start_capture2()
@@ -874,6 +837,13 @@ static void specinterrupt__init()
     gpio_isr_handler_add(PIN_NUM_SPECT_INTERRUPT, gpio_isr_handler, (void*) PIN_NUM_SPECT_INTERRUPT);
 }
 
+volatile int restart_requested = 0;
+
+void request_restart()
+{
+    restart_requested = 1;
+}
+
 void app_main()
 {
     gpio__init();
@@ -896,6 +866,8 @@ void app_main()
     // Start capture
     start_capture();
     int lastsw=1;
+    int do_restart = 0;
+
     while(1) {
         //int conf = gpio_get_level(PIN_NUM_CONF_DONE);
 //        ESP_LOGI(TAG,"CONF_DONE pin: %d\r\n", conf);
@@ -908,7 +880,13 @@ void app_main()
         }
         lastsw = sw;
 
+        if (restart_requested)
+            do_restart = 1;
+
         vTaskDelay(1000 / portTICK_RATE_MS);
- //       ESP_LOGI(TAG,"Interrupts: %d\n", interrupt_count);
+        //       ESP_LOGI(TAG,"Interrupts: %d\n", interrupt_count);
+        if (do_restart)
+            esp_restart();
+
     }
 }

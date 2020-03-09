@@ -21,7 +21,7 @@
 
 
 #define PIN_NUM_LED1 32
-#define PIN_NUM_LED2 32
+#define PIN_NUM_LED2 33
 
 #define PIN_NUM_IO25 25
 #define PIN_NUM_IO26 26
@@ -30,7 +30,7 @@
 
 #define PIN_NUM_SWITCH 34
 #define PIN_NUM_CONF_DONE 15 /* TBD: change to IO15 - SMDMMC_PIN_DET */
-#define PIN_NUM_NCONFIG 12
+#define PIN_NUM_NCONFIG 13
 
 #define PIN_NUM_SPECT_INTERRUPT PIN_NUM_IO26
 #define PIN_NUM_AS_CSN PIN_NUM_IO27
@@ -51,5 +51,7 @@ static inline uint32_t getbe32(const uint8_t *source)
         ((uint32_t)source[3]);
     return ret;
 }
+
+void request_restart();
 
 #endif

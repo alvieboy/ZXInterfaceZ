@@ -159,7 +159,7 @@ architecture beh of zxinterface is
   signal spect_capsyncen_spisck_s: std_logic;
   signal frameend_spisck_s: std_logic;
   signal spect_inten_s      : std_logic;
-  signal spect_forceromcs_spisck_s: std_logic;
+  --signal spect_forceromcs_spisck_s: std_logic;
   signal spect_forceromcs_s : std_logic;
   signal spect_forceromcs_bussync_s : std_logic;
   signal forceromonretn_trig_spisck_s: std_logic;
@@ -211,6 +211,9 @@ architecture beh of zxinterface is
   signal resfifo_read_s         : std_logic_vector(7 downto 0);
   signal resfifo_full_s         : std_logic_vector(3 downto 0); -- main clock
   signal resfifo_empty_s        : std_logic;                    -- SPI clock
+
+  signal d_io_read_p_s          : std_logic;
+  signal d_io_write_p_s         : std_logic;
 
 begin
 
@@ -285,6 +288,7 @@ begin
   process(clk_i, arst_i)
     variable write_access_v: std_logic;
     variable read_access_v: std_logic;
+    variable io_access_v: std_logic;
   begin
     if arst_i='1' then
       d_wr_cap_shr_r <= (others => '0');
@@ -293,9 +297,12 @@ begin
     elsif rising_edge(clk_i) then
       write_access_v      :=  memwr_p_s or iowr_p_s;
       read_access_v       :=  memrd_p_s or iord_p_s;
+      io_access_v         :=  iowr_p_s or iord_p_s;
+
       d_wr_cap_shr_r      <= d_wr_cap_shr_r(C_CAPTURE_DELAY-2 downto 0) & write_access_v;
       d_rd_cap_shr_r      <= d_rd_cap_shr_r(C_CAPTURE_DELAY-2 downto 0) & read_access_v;
-     -- d_wr_io_mem_shr_r   <= d_wr_io_mem_shr_r(C_CAPTURE_DELAY-2 downto 0) & io_p_s;
+      d_io_mem_shr_r      <= d_io_mem_shr_r(C_CAPTURE_DELAY-2 downto 0) & io_access_v;
+      --d_wr_io_mem_shr_r   <= d_wr_io_mem_shr_r(C_CAPTURE_DELAY-2 downto 0) & io_p_s;
     end if;
   end process;
 
@@ -375,6 +382,8 @@ begin
   rom_enable_s  <= (not XMREQ_sync_s) and not (XA_sync_s(15) or XA_sync_s(14)) and not (XRD_sync_s);
 
 
+  d_io_write_p_s  <=  d_io_mem_s and d_wr_valid_s; -- IO write pulse
+  d_io_read_p_s   <=  iord_p_s;--d_io_mem_s and d_rd_valid_s; -- IO read pulse
 
   io_inst: entity work.interfacez_io
     port map (
@@ -383,7 +392,8 @@ begin
 
       ioreq_i => XIORQ_sync_s,
       rd_i    => XRD_sync_s,
-      wrp_i   => d_io_mem_s,
+      wrp_i   => d_io_write_p_s,
+      rdp_i   => d_io_read_p_s,
       adr_i   => XA_sync_s(7 downto 0),
       
       dat_i   => d_r, -- Resynced with delay
@@ -535,6 +545,20 @@ begin
     rst_i     => arst_i,
     pulse_i   => forceromonretn_trig_spisck_s,
     pulse_o   => forceromonretn_trig_s
+  );
+
+  fmromcson: entity work.async_pulse port map (
+    clk_i     => clk_i,
+    rst_i     => arst_i,
+    pulse_i   => forceromcs_spisck_on_s,
+    pulse_o   => forceromcs_on_s
+  );
+
+  fmromcsoff: entity work.async_pulse port map (
+    clk_i     => clk_i,
+    rst_i     => arst_i,
+    pulse_i   => forceromcs_spisck_off_s,
+    pulse_o   => forceromcs_off_s
   );
 
   specinten_sync: entity work.sync generic map (RESET => '0')

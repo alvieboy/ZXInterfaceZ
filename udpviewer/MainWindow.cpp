@@ -13,7 +13,10 @@
 #include <QStatusBar>
 #include <QFileDialog>
 #include <QMessageBox>
+#include <QMenuBar>
 #include "VCDWriter.h"
+#include <QApplication>
+#include "ProgressBar.h"
 
 #define UDP_STREAM_PORT 8010
 
@@ -22,8 +25,23 @@ MainWindow::MainWindow()
     setWindowTitle("ZX Interface Z");
     QWidget *mainWidget = new QWidget(this);
 
-    //m_zxaddress = QHostAddress("192.168.120.1");
-    m_zxaddress = QHostAddress("127.0.0.1");
+    QMenuBar *menuBar = new QMenuBar(this);
+    setMenuBar(menuBar);
+
+    QMenu *fileMenu = new QMenu(tr("&File"));
+    menuBar->addMenu(fileMenu);
+
+
+    connect(fileMenu->addAction("&Upload firmware"), &QAction::triggered,
+            this, &MainWindow::onUploadOTAClicked);
+
+    connect(fileMenu->addAction("&Load resource"), &QAction::triggered,
+            this, &MainWindow::onLoadResourceClicked);
+
+    connect(fileMenu->addAction("E&xit"), &QAction::triggered, this, &MainWindow::onExit);
+
+    m_zxaddress = QHostAddress("192.168.120.1");
+    //m_zxaddress = QHostAddress("127.0.0.1");
 
     m_renderer = new SpectrumRenderArea(mainWidget);
 
@@ -101,6 +119,7 @@ MainWindow::MainWindow()
         m_renderer->renderSCR(data);
         m_renderer->finishFrame();
     }
+    m_progress = NULL;
 }
 
 
@@ -125,7 +144,7 @@ void MainWindow::fbReceived(QByteArray*b)
 
 
 bool MainWindow::sendReceive(const QHostAddress &address, void (MainWindow::*callback)(QByteArray*), const QString &data,
-                            const QByteArray &bindata)
+                            const QByteArray &bindata, bool showProgress)
 {
     if (m_connecting)
         return false;
@@ -144,21 +163,60 @@ bool MainWindow::sendReceive(const QHostAddress &address, void (MainWindow::*cal
     m_cmd = data;
     m_cmdHandler = callback;
     m_result = NULL;
-    qDebug()<<"Connecting to "<<address;
 
+    if (showProgress) {
+        if (m_progress!=NULL) {
+            delete(m_progress);
+        }
+        m_progress = new ProgressBar(this, "Uploading");
+        m_progress->show();
+    }
+
+    if (m_progress) {
+        QString s = "Connecting to " + address.toString();
+        m_progress->setStatusText(s);
+    }
     m_bindata = bindata;
     m_cmdSocket->connectToHost(address, 8003);
 
     return true;
 }
 
+void MainWindow::sendInChunks(QTcpSocket*sock, QByteArray&data)
+{
+    QByteArray qb;
+    unsigned totalsize = data.length();
+    unsigned uploaded = 0;
+
+#define CHUNKSIZE 2048
+    unsigned csize;
+
+    while (uploaded<totalsize) {
+        csize = data.length() < CHUNKSIZE ? data.length() : CHUNKSIZE;
+        qb = m_bindata.left(csize);
+        m_bindata.remove(0, csize);
+        uploaded+=csize;
+        if (m_progress) {
+            m_progress->setPrimaryPercentage( (uploaded * 100)/totalsize );
+        }
+        qDebug()<<"Write chunk"<<qb.length();
+        if (sock->write(qb)<0)
+            return ;
+    }
+}
 void MainWindow::commandSocketConnected()
 {
     // Send data.
     qDebug()<<"Connected";
     QString tb = m_cmd + "\n";
 
+
     m_cmdSocket->write(tb.toLocal8Bit());
+
+    if (m_progress) {
+        QString s = "Connected, command sent.";
+        m_progress->setStatusText(s);
+    }
 
     if (m_bindata.length()) {
         {
@@ -169,8 +227,7 @@ void MainWindow::commandSocketConnected()
             }
             printf("\n");
         }
-        m_cmdSocket->write(m_bindata);//.constDa());
-        m_bindata.clear();
+        sendInChunks(m_cmdSocket, m_bindata);
     }
 }
 
@@ -242,6 +299,31 @@ void MainWindow::uploadSNA(const QString &filename)
     sendReceive(m_zxaddress, &MainWindow::nullReceived, "uploadsna " + QString::number(data.length()), data);
 }
 
+void MainWindow::uploadResource(const QString &filename)
+{
+    QFile f(filename);
+    if (!f.open(QIODevice::ReadOnly)) {
+        alert("Cannot open file.");
+    }
+
+    QByteArray data = f.readAll();
+    qDebug()<<"Resource Uploading "<<data.length()<<"bytes";
+    sendReceive(m_zxaddress, &MainWindow::nullReceived, "uploadres " + QString::number(data.length()), data);
+}
+
+void MainWindow::uploadOTA(const QString &filename)
+{
+    QFile f(filename);
+    if (!f.open(QIODevice::ReadOnly)) {
+        alert("Cannot open file.");
+    }
+
+    QByteArray data = f.readAll();
+    qDebug()<<"OTA Uploading "<<data.length()<<"bytes";
+    sendReceive(m_zxaddress, &MainWindow::nullReceived, "ota " + QString::number(data.length()), data,
+               true);
+}
+
 void MainWindow::onResetClicked()
 {
     sendReceive(m_zxaddress, &MainWindow::nullReceived, "reset cap 0x0FFFFF00 0x05000100 ");
@@ -249,7 +331,7 @@ void MainWindow::onResetClicked()
 
 void MainWindow::onResetToCustomClicked()
 {
-    // capdata_s <= XCK_sync_s & XMREQ_sync_s & XIORQ_sync_s & XRD_sync_s & XWR_sync_s \
+    // capdata_s <= XCK_sync_s & XMREQ_sync_s & XIORQ_sync_s & XRD_sync_s & XWR_sync_s
     // & XA_sync_s & XD_sync_s;
     // Mask 0xA000000 val 0x0
     sendReceive(m_zxaddress, &MainWindow::nullReceived, "resettocustom cap 0x0FFFFF00 0x05000100");
@@ -283,6 +365,38 @@ void MainWindow::onUploadROMClicked()
         QString filename = files[0];
         qDebug()<<"Uploading "<<filename;
         uploadROM(filename);
+    }
+}
+
+void MainWindow::onUploadOTAClicked()
+{
+    QFileDialog *fc = new QFileDialog(this, "Open firmware file",
+                                      ".",
+                                      "Firmware files (*.bin)");
+    fc->setFileMode(QFileDialog::ExistingFile);
+    if (fc->exec()) {
+        QStringList files = fc->selectedFiles();
+        if (files.length()!=1)
+            return;
+        QString filename = files[0];
+        qDebug()<<"Uploading "<<filename;
+        uploadOTA(filename);
+    }
+}
+
+void MainWindow::onLoadResourceClicked()
+{
+    QFileDialog *fc = new QFileDialog(this, "Open resource file",
+                                      ".",
+                                      "Firmware files (*.*)");
+    fc->setFileMode(QFileDialog::ExistingFile);
+    if (fc->exec()) {
+        QStringList files = fc->selectedFiles();
+        if (files.length()!=1)
+            return;
+        QString filename = files[0];
+        qDebug()<<"Uploading "<<filename;
+        uploadResource(filename);
     }
 }
 
@@ -322,4 +436,9 @@ void MainWindow::onFpsUpdated(unsigned fps)
 void MainWindow::alert(const QString &s)
 {
     QMessageBox::critical(this, "Error", s);
+}
+
+void MainWindow::onExit()
+{
+    QApplication::exit();
 }

@@ -234,7 +234,7 @@ BEGIN
       D               => XD_io
     );
 
-  ROMCS_n <= '1' when FORCE_ROMCS_o='1' else (XA_s(15) AND NOT XA_s(14));
+  ROMCS_n <= '1' when FORCE_ROMCS_o='1' else (XA_s(15) OR XA_s(14));
 
   specrom_inst: entity work.spectrum_rom_chip
     port map (

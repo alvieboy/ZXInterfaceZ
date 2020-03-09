@@ -18,6 +18,7 @@ void spi__init_bus()
     };
 
     ret=spi_bus_initialize(HSPI_HOST, &buscfg, 1);
+
     ESP_ERROR_CHECK(ret);
 
     spi_sem = xSemaphoreCreateMutex();
@@ -30,13 +31,12 @@ void spi__init_device(spi_device_handle_t *dev, uint32_t speed_hz, gpio_num_t cs
 {
     esp_err_t ret;
 
-    spi_device_interface_config_t devcfg={
-        .clock_speed_hz=speed_hz,
-        .mode = 3,                                //SPI mode 0
-        .spics_io_num = cs_pin,                   //CS pin
-        .queue_size = 1,                          //We want to be able to queue 7 transactions at a time
-        .pre_cb = NULL,
-    };
+    spi_device_interface_config_t devcfg = {0};
+
+    devcfg.clock_speed_hz=speed_hz;
+    devcfg.mode = 3;
+    devcfg.spics_io_num = cs_pin;
+    devcfg.queue_size = 1;
 
     ret=spi_bus_add_device(HSPI_HOST, &devcfg, dev);
 

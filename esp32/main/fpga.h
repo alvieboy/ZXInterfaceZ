@@ -2,6 +2,7 @@
 #define __FPGA_H__
 
 #include <inttypes.h>
+#include "esp_system.h"
 
 typedef uint16_t fpga_flags_t;
 typedef uint8_t fpga_status_t;
@@ -48,6 +49,7 @@ typedef uint8_t fpga_status_t;
 #define REG_CAPTURE_MASK 0x0
 #define REG_CAPTURE_VAL 0x1
 
+#define FPGA_RESOURCE_FIFO_SIZE 512 /* Should be 1024 */
 
 int fpga__init(void);
 
@@ -61,7 +63,12 @@ void fpga__set_capture_mask(uint32_t mask);
 void fpga__set_capture_value(uint32_t value);
 int fpga__get_captures(uint8_t *target);
 int fpga__upload_rom_chunk(uint16_t offset, uint8_t *buffer_sub3, unsigned len);
+int fpga__upload_rom(const uint8_t *buffer, unsigned len);
 
+
+int fpga__reset_to_custom_rom(bool activate_retn_hook);
+
+int fpga__load_resource_fifo(const uint8_t *data, unsigned len, int timeout);
 
 
 static inline void fpga__set_flags(uint8_t enable)
