@@ -11,7 +11,7 @@
 #include "sna_relocs.h"
 #include "fpga.h"
 #include "sna.h"
-
+#include "dump.h"
 #undef TEST_ROM
 
 extern unsigned char snaloader_rom[];
@@ -81,9 +81,11 @@ static int sna__chunk(command_t *cmdt)
             // Forcibly move data back, this helps below.
             cmdt->len -= SNA_HEADER_SIZE;
             memmove( cmdt->rx_buffer, &cmdt->rx_buffer[SNA_HEADER_SIZE], cmdt->len);
+
 #ifdef TEST_ROM
             int r = fpga__upload_rom( INTZ_ROM, INTZ_ROM_len );
 #else
+            dump__buffer(snaloader_rom, snaloader_rom_len);
             int r = fpga__upload_rom( snaloader_rom, snaloader_rom_len );
 #endif
             if (r<0) {
@@ -94,7 +96,7 @@ static int sna__chunk(command_t *cmdt)
             // Update len, remove the header size
             cmdt->romsize -= SNA_HEADER_SIZE;
 
-            fpga__reset_to_custom_rom(false); // Also enable RETN hook
+            fpga__reset_to_custom_rom(true); // Also enable RETN hook
 
         } else {
             // Need more data.

@@ -8,6 +8,15 @@ typedef uint16_t fpga_flags_t;
 typedef uint8_t fpga_status_t;
 
 
+typedef struct
+{
+    int first_unerased_address;
+    int current_write_address;
+    unsigned flashid;
+    //uint8_t page[FLASH_PAGE_SIZE];
+} fpga_program_state_t;
+
+
 #define FPGA_SPI_CMD_READ_STATUS (0xDE)
 #define FPGA_SPI_CMD_READ_VIDEOMEM (0xDF)
 #define FPGA_SPI_CMD_READ_CAPMEM (0xE0)
@@ -49,7 +58,7 @@ typedef uint8_t fpga_status_t;
 #define REG_CAPTURE_MASK 0x0
 #define REG_CAPTURE_VAL 0x1
 
-#define FPGA_RESOURCE_FIFO_SIZE 512 /* Should be 1024 */
+#define FPGA_RESOURCE_FIFO_SIZE 1024 /* Should be 1024 */
 
 int fpga__init(void);
 
@@ -69,6 +78,12 @@ int fpga__upload_rom(const uint8_t *buffer, unsigned len);
 int fpga__reset_to_custom_rom(bool activate_retn_hook);
 
 int fpga__load_resource_fifo(const uint8_t *data, unsigned len, int timeout);
+
+
+int fpga__startprogram(fpga_program_state_t*);
+int fpga__program(fpga_program_state_t*,const uint8_t *data, unsigned len);
+int fpga__finishprogram(fpga_program_state_t*);
+void fpga__trigger_reconfiguration(void);
 
 
 static inline void fpga__set_flags(uint8_t enable)

@@ -17,9 +17,10 @@
 #include <lwip/netdb.h>
 #include "spi.h"
 #include "dump.h"
-
+#include "fpga.h"
 #include "hdlc_decoder.h"
 #include "hdlc_encoder.h"
+#include <string.h>
 
 static spi_device_handle_t spi0_as_flash;
 
@@ -97,7 +98,7 @@ static int spi_read_status()
     return status;
 }
 
-static unsigned int spi_read_id()
+unsigned int fpga_pgm__read_id()
 {
     unsigned int ret;
     uint8_t buf[4];
@@ -183,6 +184,20 @@ static uint8_t *cmd_set_baudrate(hdlc_encoder_t *enc, uint8_t *buf, const unsign
     return simpleReply(enc, buf, BOOTLOADER_CMD_SETBAUDRATE);
 }
 
+static int spi_flash_wait_ready()
+{
+    int timeout = 100000;
+    uint8_t status;
+    do {
+        status = spi_read_status();
+        timeout--;
+    } while ((timeout>0) && (status & 1));
+
+    if (timeout==0)
+        return -1;
+    return 0;
+}
+
 static uint8_t *cmd_waitready(hdlc_encoder_t *enc, uint8_t *buf, const unsigned char *data)
 {
     int status;
@@ -253,7 +268,7 @@ static uint8_t *cmd_identify(hdlc_encoder_t *enc, uint8_t *buf, const unsigned c
     uint8_t *ret = hdlc_encoder__begin_mem(enc, buf);
 
     ret = hdlc_encoder__write_mem_byte(enc, REPLY(BOOTLOADER_CMD_IDENTIFY), ret);
-    unsigned flash_id = spi_read_id();
+    unsigned flash_id = fpga_pgm__read_id();
     ret = hdlc_encoder__write_mem_byte(enc, flash_id>>16, ret);
     ret = hdlc_encoder__write_mem_byte(enc, flash_id>>8, ret);
     ret = hdlc_encoder__write_mem_byte(enc, flash_id, ret);
@@ -276,9 +291,7 @@ static uint8_t *cmd_leavepgm(hdlc_encoder_t *enc, uint8_t *buf, const unsigned c
 {
     // Trigger reconfiguration
     ESP_LOGI(TAG, "Triggering FPGA reconfiguration");
-    gpio_set_level(PIN_NUM_NCONFIG, 0);
-    vTaskDelay(1 / portTICK_RATE_MS);
-    gpio_set_level(PIN_NUM_NCONFIG, 1);
+    fpga__trigger_reconfiguration();
     return simpleReply(enc, buf, BOOTLOADER_CMD_LEAVEPGM);
 }
  
@@ -426,3 +439,77 @@ void flash_pgm__init()
 
     xTaskCreate(flash_pgm__task, "cmd_server", 4096, NULL, 5, NULL);
 }
+
+
+static int flash_pgm__enable_writes()
+{
+    unsigned char buf[1];
+
+    buf[0] = 0x06; // Enable Write
+
+    int r = spi__transceive(spi0_as_flash, buf, sizeof(buf));
+
+    return r;
+}
+
+
+int flash_pgm__erase_sector_address(int sector_address)
+{
+    uint8_t buf[4];
+    int r;
+
+    buf[0] = 0xD8; // Sector erase
+    buf[1] = (sector_address>>16) & 0xff;
+    buf[2] = (sector_address>>8) & 0xff;
+    buf[3] = (sector_address) & 0xff;
+
+    ESP_LOGI(TAG, "Erasing sector at 0x%08x", sector_address);
+
+    if (spi_flash_wait_ready()<0)
+        return -1;
+
+    if (flash_pgm__enable_writes()<0)
+        return -1;
+
+    r = spi__transceive(spi0_as_flash,buf, 4);
+
+    if (r<0)
+        return -1;
+
+    if (spi_flash_wait_ready()<0)
+        return -1;
+
+    return 0;
+}
+
+int flash_pgm__program_page( int address, const uint8_t *data, int size)
+{
+    uint8_t buf[256 + 4];
+    int r;
+
+    if (size>256)
+        return -1;
+
+    buf[0] = 0x02; // Page program
+    buf[1] = (address >> 16) & 0xff;
+    buf[2] = (address >> 8) & 0xff;
+    buf[3] = (address) & 0xff;
+
+    memcpy(&buf[4], data, size);
+
+    ESP_LOGI(TAG, "Programming page at 0x%08x len %d", address, size);
+
+    if (flash_pgm__enable_writes()<0)
+        return -1;
+
+    r = spi__transceive(spi0_as_flash, buf, size+4);
+
+    if (r<0)
+        return -1;
+
+    if (spi_flash_wait_ready()<0)
+        return -1;
+
+    return 0;
+}
+

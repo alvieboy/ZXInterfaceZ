@@ -51,5 +51,7 @@ begin
     end if;
   end process;
 
+  retn_det_o <= retn_detected_r;
+
 end beh;
 

@@ -11,6 +11,11 @@ class SpectrumRenderArea: public RenderArea
 public:
     SpectrumRenderArea(QWidget *parent);
     void renderSCR(const uint8_t *data);
+
+    void setFPS(int fps) {
+        m_fps=fps;
+    }
+
 public slots:
     void onFlashTimerExpired();
 protected:
@@ -33,13 +38,19 @@ protected:
         return data[ (32*192) + x + (y*32) ];
     }
     void render(bool flashonly=false);
+
+
+    virtual void finaliseImage() override;
+
 private:
     static uint32_t normal_colors[8];
     static uint32_t bright_colors[8];
     uint8_t m_scr[SPECTRUM_FRAME_SIZE];
 
     QTimer *m_flashtimer;
+    QFont m_fpsfont;
     bool m_flashinvert;
+    int m_fps;
 
 };
 

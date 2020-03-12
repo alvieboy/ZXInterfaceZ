@@ -2,11 +2,8 @@
 #include <QPainter>
 #include <QDebug>
 
-#define ZOOMIDX 2
-#define ZOOMMUL (1<<ZOOMIDX)
-
 // Temporario...
-#define PIXELHACK 1
+//#define PIXELHACK 1
 
 RenderArea::RenderArea(unsigned w, unsigned h, QWidget *parent): QVideoWidget(parent),
     m_width(w), m_height(h)
@@ -20,12 +17,20 @@ RenderArea::RenderArea(unsigned w, unsigned h, QWidget *parent): QVideoWidget(pa
 
 QSize RenderArea::minimumSizeHint() const
 {
+#ifdef PIXELHACK
     return QSize(PIXELHACK+m_width*ZOOMMUL, m_height*ZOOMMUL);
+#else
+    return QSize(m_width*ZOOMMUL, m_height*ZOOMMUL);
+#endif
 }
 
 QSize RenderArea::sizeHint() const
 {
+#ifdef PIXELHACK
     return QSize(PIXELHACK+m_width*ZOOMMUL, m_height*ZOOMMUL);
+#else
+    return QSize(m_width*ZOOMMUL, m_height*ZOOMMUL);
+#endif
 }
 
 void RenderArea::paintEvent(QPaintEvent *event)
@@ -78,13 +83,15 @@ void RenderArea::drawImage(int x, int y, QImage *i)
 
 void RenderArea::startFrame()
 {
-    if (!videomode)
-        image->fill(0x0);
+    //if (!videomode)
+    image->fill(0x0);
 }
+
 void RenderArea::finishFrame()
 {
-    if (!videomode)
-        repaint();
+    //if (!videomode)
+    finaliseImage();
+    repaint();
 }
 
 void RenderArea::drawPixel(int x, int y, uint32_t color)

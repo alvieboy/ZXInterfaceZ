@@ -7,6 +7,11 @@
 #include <QTimer>
 #include "ScreenDrawer.h"
 
+#define ZOOMIDX 2
+#define ZOOMMUL (1<<ZOOMIDX)
+
+
+
 class RenderArea : public QVideoWidget, public ScreenDrawer
 {
     Q_OBJECT
@@ -26,7 +31,7 @@ protected:
     void drawImage(int x, int y, QImage *);
     void drawHLine(int x, int y, int width, uint32_t color);
     void drawVLine(int x, int y, int width, uint32_t color);
-
+    virtual void finaliseImage() {}
     QVideoWidget* getVideoWidget() override;
 
 

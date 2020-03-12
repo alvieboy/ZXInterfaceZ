@@ -16,19 +16,21 @@ class SpectrumRenderArea;
 class UDPListener;
 class QStatusBar;
 class ProgressBar;
+class LineBuffer;
 
 class MainWindow: public QMainWindow
 {
 public:
-    MainWindow();
+    MainWindow(const char *host);
 
     bool sendReceive(const QHostAddress &address, void (MainWindow::*callback)(QByteArray*),
+                     bool callImmediatlyOnReception,
                      const QString &data, const QByteArray &bindata=QByteArray(),
                      bool show_progress=false);
 
     void onGetFBClicked();
     void fbReceived(QByteArray*);
-    void nullReceived(QByteArray*);
+    void progressReceived(QByteArray*);
     void captureReceived(QByteArray*data);
 
     void uploadROM(const QString &filename);
@@ -40,6 +42,7 @@ public:
     void sendInChunks(QTcpSocket*sock, QByteArray&data);
 
     void alert(const QString&);
+
 public slots:
     void commandSocketError(QAbstractSocket::SocketError socketError);
     void commandSocketConnected();
@@ -55,6 +58,10 @@ public slots:
     void onFpsUpdated(unsigned);
     void onCaptureClicked();
     void onExit();
+    void onStatusLineReceived(QString);
+protected:
+    void processStatus(const QString &s);
+    void reverseBits(QByteArray &b);
 
 private:
     QUdpSocket *m_udpsocket;
@@ -67,9 +74,11 @@ private:
     void (MainWindow::*m_cmdHandler)(QByteArray*);
     QByteArray *m_result;
     QByteArray m_bindata;
+    bool m_callimmediatly;
     QStatusBar *m_statusbar;
     QHostAddress m_zxaddress;
     ProgressBar *m_progress;
+    LineBuffer *m_linebuffer;
 };
 
 #endif

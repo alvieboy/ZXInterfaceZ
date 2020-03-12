@@ -15,6 +15,7 @@
 #include "defs.h"
 #include "command.h"
 #include "strtoint.h"
+#include "netcomms.h"
 
 //#define BUFFSIZE 1024
 #define HASH_LEN 32 /* SHA-256 digest length */
@@ -73,6 +74,7 @@ int ota__performota(command_t *cmdt, int argc, char **argv)
     cmdt->romoffset = 0;
     cmdt->rxdatafunc = &ota__chunk;
     cmdt->state = READDATA;
+    cmdt->reported_progress = 0;
 
     image_header_was_checked = false;
 
@@ -161,10 +163,17 @@ static int ota__chunk(command_t *cmdt)
 
     cmdt->romoffset += cmdt->len;
     cmdt->len = 0; // Reset receive ptr.
-
     remain = cmdt->romsize - cmdt->romoffset;
 
     ESP_LOGI(TAG, "OTA: remain size %d", remain);
+
+    /* Report progress if needed */
+    int current_progress = (cmdt->romoffset*100) / cmdt->romsize;
+    if (cmdt->reported_progress != current_progress) {
+        cmdt->reported_progress =current_progress;
+        netcomms__send_progress(cmdt->socket, 100, current_progress);
+    }
+
 
     if (remain==0) {
         ESP_LOGI(TAG, "OTA: finished");

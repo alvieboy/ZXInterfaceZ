@@ -49,9 +49,9 @@ NMIH:	RETN
 RESTOREREGS:
 ; This is the register restore routine.
 	DI
-        EXX
         LD	HL, (P_TEMP)	; Save P_TEMP
-        LD	DE, $FFF1 	; FILL register: AF'
+        EXX
+        LD	DE, $FFFF 	; FILL register: AF'
         LD	(P_TEMP), DE
         LD	SP, P_TEMP      ; TBD: check if SP points to actual word
         LD	BC, $FFFF	; FILL register: BC' 
@@ -70,12 +70,6 @@ RESTOREREGS:
         LD	R, A
         LD	A, $FF		; FILL border
         OUT	($FE), A
-        LD	A, 1
-        LD	DE, RETINST+2   ; Load the last fetch address, Once this address is requested, FPGA will disable the custom ROM
-        LD	A, D
-        OUT	($07), A 	; Notify FPGA we are now to return (MSB) 
-        LD	A, E
-        OUT	($09), A 	; Notify FPGA we are now to return (LSB)
         POP	AF
         LD	DE, $FFFF       ; FILL register : DE
         LD	IX, $FFFF       ; FILL register: IX
@@ -122,8 +116,7 @@ RAM_DONE:
         LD	SP, HL
         
         LD	HL, $4000
-        LD	D, $BF
-        LD	B, $FF
+        LD	DE, $BFFF
 LOADER:
 	IN	A, ($0B)
         OR	A
@@ -131,8 +124,9 @@ LOADER:
         IN	A, ($0D)
         LD	(HL), A
 	INC	HL
-        DJNZ	LOADER
-        DEC 	D
-        JR 	NZ, LOADER
+	DEC	DE
+    	LD	A, D
+        OR 	E
+    	JR	NZ, LOADER
         JP	RESTOREREGS
 

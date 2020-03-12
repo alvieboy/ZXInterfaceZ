@@ -32,9 +32,11 @@
 #include "dump.h"
 #include "command.h"
 #include "ota.h"
+#include "fpga_ota.h"
 #include "sna.h"
 #include "res.h"
 #include "strtoint.h"
+#include "netcomms.h"
 
 static xQueueHandle gpio_evt_queue = NULL;
 
@@ -172,6 +174,8 @@ static void gpio__init()
 {
     gpio_config_t io_conf;
 
+    gpio_set_level(PIN_NUM_NCONFIG, 1);
+
     io_conf.intr_type    = GPIO_PIN_INTR_DISABLE;
     io_conf.mode         = GPIO_MODE_OUTPUT_OD;
     io_conf.pin_bit_mask = (1ULL<<PIN_NUM_LED1) | (1ULL<<PIN_NUM_LED2)
@@ -181,8 +185,6 @@ static void gpio__init()
 
     gpio_config(&io_conf);
 
-    gpio_set_level(PIN_NUM_NCONFIG, 0);
-    gpio_set_level(PIN_NUM_NCONFIG, 1);
 
     io_conf.mode         = GPIO_MODE_OUTPUT;
     io_conf.pin_bit_mask =
@@ -600,6 +602,7 @@ struct commandhandler_t hand[] = {
     { CMD("scap"), &scap },
     { CMD("resettocustom"), &reset_custom_spectrum },
     { CMD("ota"), &ota__performota },
+    { CMD("fpgaota"), &fpga_ota__performota },
     { CMD("uploadsna"), &sna__uploadsna },
     { CMD("uploadres"), &res__upload },
 };
@@ -774,20 +777,22 @@ static void buffer_server_task(void *pvParameters)
             cmdt.source_addr = (struct sockaddr_in*)&source_addr;
             cmdt.len = 0;
             cmdt.state = READCMD;
+            cmdt.errstr = NULL;
 
             command_result_t r = handle_command(&cmdt);
+            ESP_LOGI(TAG, "Command result: %d", r);
             switch (r) {
             case COMMAND_CLOSE_OK:
-                send(sock, "OK\n", 3,  0);
+                netcomms__send_ok(sock);
                 break;
             case COMMAND_CLOSE_ERROR:
-                send(sock, "ERROR\n", 6, 0);
+                netcomms__send_error(sock, cmdt.errstr);
                 break;
             default:
                 break;
             }
 
-            shutdown(sock,0);
+            shutdown(sock,3);
             close(sock);
             sock = -1;
         }
@@ -884,7 +889,7 @@ void app_main()
             do_restart = 1;
 
         vTaskDelay(1000 / portTICK_RATE_MS);
-        //       ESP_LOGI(TAG,"Interrupts: %d\n", interrupt_count);
+        //ESP_LOGI(TAG,"Interrupts: %d\n", interrupt_count);
         if (do_restart)
             esp_restart();
 

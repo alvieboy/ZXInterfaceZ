@@ -26,6 +26,8 @@ typedef struct command
     unsigned len;
     unsigned romsize;
     unsigned romoffset;
+    const char *errstr;
+    int reported_progress;
     cmdstate_t state;
 } command_t;
 

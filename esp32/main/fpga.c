@@ -6,6 +6,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include <string.h>
+#include "flash_pgm.h"
 
 static spi_device_handle_t spi0_fpga;
 static uint8_t latched_flags = 0;
@@ -15,34 +16,35 @@ static void fpga__init_spi()
     spi__init_device(&spi0_fpga, 20000000, PIN_NUM_CS);
 }
 
-int fpga__init()
+unsigned fpga__read_id()
 {
     uint8_t idbuf[5];
-    int r;
+
+    idbuf[0] = 0x9F;
+    idbuf[1] = 0xAA;
+    idbuf[2] = 0x55;
+    idbuf[3] = 0xAA;
+    idbuf[4] = 0x55;
+
+
+    int r = spi__transceive(spi0_fpga, idbuf, 5);
+
+    if (r<0) {
+        ESP_LOGE(TAG, "SPI transceive: error %d", r);
+        return 0;
+    }
+    printf("FPGA id: ");
+    dump__buffer(&idbuf[1], 4);
+    printf("\r\n");
+
+    return getbe32(&idbuf[1]);
+}
+
+int fpga__init()
+{
     fpga__init_spi();
-
-    do {
-        idbuf[0] = 0x9F;
-        idbuf[1] = 0xAA;
-        idbuf[2] = 0x55;
-        idbuf[3] = 0xAA;
-        idbuf[4] = 0x55;
-
-
-        r = spi__transceive(spi0_fpga, idbuf, 5);
-
-        if (r<0) {
-            printf("SPI transceive: error %d\r\n", r);
-        } else {
-            printf("FPGA id: ");
-            dump__buffer(&idbuf[1], 4);
-            printf("\r\n");
-            if (idbuf[1] == 0xA5) {
-                break;
-            }
-        }
-    } while (0);
-    return r;
+    fpga__read_id();
+    return 0;
 }
 
 uint8_t fpga__get_status()
@@ -191,7 +193,7 @@ int fpga__reset_to_custom_rom(bool activate_retn_hook)
 
 int fpga__load_resource_fifo(const uint8_t *data, unsigned len, int timeout)
 {
-#define LOCAL_CHUNK_SIZE 256
+#define LOCAL_CHUNK_SIZE 512
     uint8_t txbuf[LOCAL_CHUNK_SIZE+1];
 
     do {
@@ -200,13 +202,13 @@ int fpga__load_resource_fifo(const uint8_t *data, unsigned len, int timeout)
         if (stat & FPGA_STATUS_RESFIFO_FULL) {
             maxsize=0;
         } else if (stat & FPGA_STATUS_RESFIFO_QQQFULL) {
-            maxsize = 0;//(FPGA_RESOURCE_FIFO_SIZE/4) -1;
+            maxsize = 0;
         } else if (stat & FPGA_STATUS_RESFIFO_HFULL) {
-            maxsize = (FPGA_RESOURCE_FIFO_SIZE/2) -1;
+            maxsize = (FPGA_RESOURCE_FIFO_SIZE/4) -1;
         } else if (stat & FPGA_STATUS_RESFIFO_QFULL) {
-            maxsize = (FPGA_RESOURCE_FIFO_SIZE*3/4) -1;
+            maxsize = (FPGA_RESOURCE_FIFO_SIZE/2) -1;
         } else {
-            maxsize = FPGA_RESOURCE_FIFO_SIZE-1;
+            maxsize = (FPGA_RESOURCE_FIFO_SIZE*4/3)-1;
         }
 
         ESP_LOGI(TAG,"Resource FIFO stat %02x avail size %d, len %d", stat, maxsize, len);
@@ -264,4 +266,96 @@ int fpga__upload_rom(const uint8_t *buffer, unsigned len)
 
     return 0;
 }
+
+
+#define FLASH_SECTOR_SIZE 65536
+#define FLASH_PAGE_SIZE 256
+#define FLASH_SECTOR_MASK (FLASH_SECTOR_SIZE-1)
+
+int fpga__startprogram(fpga_program_state_t *state)
+{
+    state->first_unerased_address = 0;
+    state->current_write_address = 0;
+    unsigned id = fpga_pgm__read_id();
+    ESP_LOGI(TAG, "FPGA Flash ID: %08x", id);
+    state->flashid = id;
+    if ((id & 0xFFFFFF) == 0x202015) {
+        return 0;
+    }
+    return -1;
+}
+
+/*
+ Case 1: unerased=0    last=65535 - sector to erase 0
+ Case 1: unerased=65536 last=65535 - sector to erase: none
+ Case 1: last=65534 end=65535 - sector to erase: 0
+ */
+
+static inline int fpga__erase_until(fpga_program_state_t*state, int last_address)
+{
+    int first_sector_to_erase = (state->first_unerased_address & ~FLASH_SECTOR_MASK);
+    int last_sector_to_erase = (last_address+FLASH_SECTOR_MASK) & ~FLASH_SECTOR_MASK;
+
+    ESP_LOGI(TAG,"First unerased address 0x%08x start at 0x%08x mask 0x%08x",
+             state->first_unerased_address,
+             first_sector_to_erase,
+             FLASH_SECTOR_MASK
+            );
+
+    while (last_sector_to_erase > first_sector_to_erase) {
+        if (flash_pgm__erase_sector_address(first_sector_to_erase)<0)
+            return -1;
+        first_sector_to_erase += FLASH_SECTOR_SIZE;
+        state->first_unerased_address = first_sector_to_erase;
+        ESP_LOGI(TAG,"Erased, first unerased address 0x%08x", first_sector_to_erase);
+    }
+    return 0;
+}
+
+int fpga__program( fpga_program_state_t *state, const uint8_t *data, unsigned len)
+{
+    int last_address = (state->current_write_address + len)-1;
+
+    if (last_address >= state->first_unerased_address) {
+        ESP_LOGI(TAG,"Erasing up to 0x%08x", last_address);
+        fpga__erase_until(state, last_address);
+    }
+
+    while (len)  {
+        // max 256 bytes page. We may need to do partial writes here.
+        int page_used = state->current_write_address & (FLASH_PAGE_SIZE-1);
+        int page_avail = FLASH_PAGE_SIZE - page_used;
+
+        int pgmsize = len > page_avail ? page_avail : len;
+
+        flash_pgm__program_page( state->current_write_address, data, pgmsize);
+        data += pgmsize;
+        state->current_write_address += pgmsize;
+        len-=pgmsize;
+    }
+
+    return -1;
+}
+
+int fpga__finishprogram( fpga_program_state_t *state)
+{
+    fpga__trigger_reconfiguration();
+    vTaskDelay(100 / portTICK_RATE_MS);
+    unsigned id = fpga__read_id();
+    ESP_LOGI(TAG, "FPGA ID: 0x%08x", id);
+    return 0;
+}
+
+void fpga__trigger_reconfiguration()
+{
+    gpio_set_level(PIN_NUM_NCONFIG, 0);
+    vTaskDelay(1 / portTICK_RATE_MS);
+    gpio_set_level(PIN_NUM_NCONFIG, 1);
+}
+
+
+
+
+
+
 

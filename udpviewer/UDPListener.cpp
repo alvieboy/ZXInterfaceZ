@@ -47,7 +47,7 @@ void UDPListener::process(QNetworkDatagram&datagram)
         return;
 
     unsigned payloadlen = data.length() - 2;
-
+    //qDebug()<<"Dgram";
     const struct frame *f = (const struct frame*)data.constData();
     switch (f->frag) {
     case 0:
@@ -64,6 +64,7 @@ void UDPListener::process(QNetworkDatagram&datagram)
         break;
     case 3:
         memcpy( &m_framedata[MAX_FRAME_PAYLOAD*3], f->payload, payloadlen);
+        m_render->startFrame();
         m_render->renderSCR(m_framedata);
         m_render->finishFrame();
         m_fps++;

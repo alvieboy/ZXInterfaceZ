@@ -17,10 +17,48 @@
 #include "VCDWriter.h"
 #include <QApplication>
 #include "ProgressBar.h"
+#include "LineBuffer.h"
 
 #define UDP_STREAM_PORT 8010
 
-MainWindow::MainWindow()
+static const uint8_t bitRevTable[256] =
+{
+    0x00, 0x80, 0x40, 0xc0, 0x20, 0xa0, 0x60, 0xe0,
+    0x10, 0x90, 0x50, 0xd0, 0x30, 0xb0, 0x70, 0xf0,
+    0x08, 0x88, 0x48, 0xc8, 0x28, 0xa8, 0x68, 0xe8,
+    0x18, 0x98, 0x58, 0xd8, 0x38, 0xb8, 0x78, 0xf8,
+    0x04, 0x84, 0x44, 0xc4, 0x24, 0xa4, 0x64, 0xe4,
+    0x14, 0x94, 0x54, 0xd4, 0x34, 0xb4, 0x74, 0xf4,
+    0x0c, 0x8c, 0x4c, 0xcc, 0x2c, 0xac, 0x6c, 0xec,
+    0x1c, 0x9c, 0x5c, 0xdc, 0x3c, 0xbc, 0x7c, 0xfc,
+    0x02, 0x82, 0x42, 0xc2, 0x22, 0xa2, 0x62, 0xe2,
+    0x12, 0x92, 0x52, 0xd2, 0x32, 0xb2, 0x72, 0xf2,
+    0x0a, 0x8a, 0x4a, 0xca, 0x2a, 0xaa, 0x6a, 0xea,
+    0x1a, 0x9a, 0x5a, 0xda, 0x3a, 0xba, 0x7a, 0xfa,
+    0x06, 0x86, 0x46, 0xc6, 0x26, 0xa6, 0x66, 0xe6,
+    0x16, 0x96, 0x56, 0xd6, 0x36, 0xb6, 0x76, 0xf6,
+    0x0e, 0x8e, 0x4e, 0xce, 0x2e, 0xae, 0x6e, 0xee,
+    0x1e, 0x9e, 0x5e, 0xde, 0x3e, 0xbe, 0x7e, 0xfe,
+    0x01, 0x81, 0x41, 0xc1, 0x21, 0xa1, 0x61, 0xe1,
+    0x11, 0x91, 0x51, 0xd1, 0x31, 0xb1, 0x71, 0xf1,
+    0x09, 0x89, 0x49, 0xc9, 0x29, 0xa9, 0x69, 0xe9,
+    0x19, 0x99, 0x59, 0xd9, 0x39, 0xb9, 0x79, 0xf9,
+    0x05, 0x85, 0x45, 0xc5, 0x25, 0xa5, 0x65, 0xe5,
+    0x15, 0x95, 0x55, 0xd5, 0x35, 0xb5, 0x75, 0xf5,
+    0x0d, 0x8d, 0x4d, 0xcd, 0x2d, 0xad, 0x6d, 0xed,
+    0x1d, 0x9d, 0x5d, 0xdd, 0x3d, 0xbd, 0x7d, 0xfd,
+    0x03, 0x83, 0x43, 0xc3, 0x23, 0xa3, 0x63, 0xe3,
+    0x13, 0x93, 0x53, 0xd3, 0x33, 0xb3, 0x73, 0xf3,
+    0x0b, 0x8b, 0x4b, 0xcb, 0x2b, 0xab, 0x6b, 0xeb,
+    0x1b, 0x9b, 0x5b, 0xdb, 0x3b, 0xbb, 0x7b, 0xfb,
+    0x07, 0x87, 0x47, 0xc7, 0x27, 0xa7, 0x67, 0xe7,
+    0x17, 0x97, 0x57, 0xd7, 0x37, 0xb7, 0x77, 0xf7,
+    0x0f, 0x8f, 0x4f, 0xcf, 0x2f, 0xaf, 0x6f, 0xef,
+    0x1f, 0x9f, 0x5f, 0xdf, 0x3f, 0xbf, 0x7f, 0xff,
+};
+
+
+MainWindow::MainWindow(const char *host)
 {
     setWindowTitle("ZX Interface Z");
     QWidget *mainWidget = new QWidget(this);
@@ -35,12 +73,15 @@ MainWindow::MainWindow()
     connect(fileMenu->addAction("&Upload firmware"), &QAction::triggered,
             this, &MainWindow::onUploadOTAClicked);
 
+    connect(fileMenu->addAction("&Upload FPGA firmware"), &QAction::triggered,
+            this, &MainWindow::onUploadFPGAClicked);
+
     connect(fileMenu->addAction("&Load resource"), &QAction::triggered,
             this, &MainWindow::onLoadResourceClicked);
 
     connect(fileMenu->addAction("E&xit"), &QAction::triggered, this, &MainWindow::onExit);
-
-    m_zxaddress = QHostAddress("192.168.120.1");
+    qDebug()<<"Using host"<<host;
+    m_zxaddress = QHostAddress(host);//?host:"192.168.120.1");
     //m_zxaddress = QHostAddress("127.0.0.1");
 
     m_renderer = new SpectrumRenderArea(mainWidget);
@@ -102,7 +143,13 @@ MainWindow::MainWindow()
     connect(resetcustom, &QPushButton::clicked, this, &MainWindow::onResetToCustomClicked);
     connect(capture, &QPushButton::clicked, this, &MainWindow::onCaptureClicked);
 
-    
+
+    m_linebuffer = new LineBuffer(8192, this);
+
+    connect(m_linebuffer, &LineBuffer::lineReceived,
+            this, &MainWindow::onStatusLineReceived);
+
+
     m_listener = new UDPListener(m_udpsocket, m_renderer);
 
     connect(m_listener, &UDPListener::fpsUpdated,
@@ -125,7 +172,7 @@ MainWindow::MainWindow()
 
 void MainWindow::onGetFBClicked()
 {
-    sendReceive(m_zxaddress, &MainWindow::fbReceived, "fb");
+    sendReceive(m_zxaddress, &MainWindow::fbReceived, false, "fb");
 }
 
 void MainWindow::fbReceived(QByteArray*b)
@@ -143,8 +190,12 @@ void MainWindow::fbReceived(QByteArray*b)
 }
 
 
-bool MainWindow::sendReceive(const QHostAddress &address, void (MainWindow::*callback)(QByteArray*), const QString &data,
-                            const QByteArray &bindata, bool showProgress)
+bool MainWindow::sendReceive(const QHostAddress &address,
+                             void (MainWindow::*callback)(QByteArray*),
+                             bool callImmediatlyOnReception,
+                             const QString &data,
+                             const QByteArray &bindata,
+                             bool showProgress)
 {
     if (m_connecting)
         return false;
@@ -163,12 +214,13 @@ bool MainWindow::sendReceive(const QHostAddress &address, void (MainWindow::*cal
     m_cmd = data;
     m_cmdHandler = callback;
     m_result = NULL;
+    m_callimmediatly = callImmediatlyOnReception;
 
     if (showProgress) {
         if (m_progress!=NULL) {
             delete(m_progress);
         }
-        m_progress = new ProgressBar(this, "Uploading");
+        m_progress = new ProgressBar(this, "Uploading", ProgressBar::MODE_DUAL);
         m_progress->show();
     }
 
@@ -236,19 +288,27 @@ void MainWindow::commandSocketRead()
     uint8_t data[8192];
     int r = m_cmdSocket->read((char*)data,sizeof(data));
     qDebug()<<"Socket: read "<<r<<"bytes";
+
     if (r<0) {
         return;
     }
-    if (r==0) {
+
+    if ((r==0) && (m_callimmediatly==false)) {
         (this->*MainWindow::m_cmdHandler)(m_result);
         if (m_result) {
             delete(m_result);
         }
     } else {
-        if (m_result==NULL) {
-            m_result = new QByteArray();
+        if (m_callimmediatly) {
+            QByteArray *ba = new QByteArray((const char*)data, r);
+            (this->*MainWindow::m_cmdHandler)(ba);
+            delete(ba);
+        } else {
+            if (m_result==NULL) {
+                m_result = new QByteArray();
+            }
+            m_result->append((const char*)data, r);
         }
-        m_result->append((const char*)data, r);
     }
 }
 
@@ -259,10 +319,12 @@ void MainWindow::commandSocketError(QAbstractSocket::SocketError error)
     //m_cmdSocket
     if (error==QAbstractSocket::RemoteHostClosedError) {
         qDebug()<<"Remote host closed connection";
-        (this->*MainWindow::m_cmdHandler)(m_result);
-        if (m_result) {
-            delete(m_result);
-            m_result = NULL;
+        if (!m_callimmediatly) {
+            (this->*MainWindow::m_cmdHandler)(m_result);
+            if (m_result) {
+                delete(m_result);
+                m_result = NULL;
+            }
         }
         m_connecting = false;
         return;
@@ -284,7 +346,7 @@ void MainWindow::uploadROM(const QString &filename)
 
     QByteArray data = f.readAll();
     qDebug()<<"Uploading "<<data.length()<<"bytes";
-    sendReceive(m_zxaddress, &MainWindow::nullReceived, "uploadrom " + QString::number(data.length()), data);
+    sendReceive(m_zxaddress, &MainWindow::progressReceived, true, "uploadrom " + QString::number(data.length()), data);
 }
 
 void MainWindow::uploadSNA(const QString &filename)
@@ -296,7 +358,7 @@ void MainWindow::uploadSNA(const QString &filename)
 
     QByteArray data = f.readAll();
     qDebug()<<"SNA Uploading "<<data.length()<<"bytes";
-    sendReceive(m_zxaddress, &MainWindow::nullReceived, "uploadsna " + QString::number(data.length()), data);
+    sendReceive(m_zxaddress, &MainWindow::progressReceived, true, "uploadsna " + QString::number(data.length()), data);
 }
 
 void MainWindow::uploadResource(const QString &filename)
@@ -308,7 +370,16 @@ void MainWindow::uploadResource(const QString &filename)
 
     QByteArray data = f.readAll();
     qDebug()<<"Resource Uploading "<<data.length()<<"bytes";
-    sendReceive(m_zxaddress, &MainWindow::nullReceived, "uploadres " + QString::number(data.length()), data);
+    sendReceive(m_zxaddress, &MainWindow::progressReceived, true, "uploadres " + QString::number(data.length()), data);
+}
+
+
+void MainWindow::reverseBits(QByteArray &b)
+{
+    int i;
+    for (i=0;i<b.size();i++) {
+        b[i] = bitRevTable[(unsigned char)b[i]];
+    }
 }
 
 void MainWindow::uploadOTA(const QString &filename)
@@ -319,14 +390,30 @@ void MainWindow::uploadOTA(const QString &filename)
     }
 
     QByteArray data = f.readAll();
+
     qDebug()<<"OTA Uploading "<<data.length()<<"bytes";
-    sendReceive(m_zxaddress, &MainWindow::nullReceived, "ota " + QString::number(data.length()), data,
+    sendReceive(m_zxaddress, &MainWindow::progressReceived, true, "ota " + QString::number(data.length()), data,
+               true);
+}
+
+void MainWindow::uploadFPGA(const QString &filename)
+{
+    QFile f(filename);
+    if (!f.open(QIODevice::ReadOnly)) {
+        alert("Cannot open file.");
+    }
+
+    QByteArray data = f.readAll();
+    reverseBits(data);
+
+    qDebug()<<"OTA Uploading "<<data.length()<<"bytes";
+    sendReceive(m_zxaddress, &MainWindow::progressReceived, true, "fpgaota " + QString::number(data.length()), data,
                true);
 }
 
 void MainWindow::onResetClicked()
 {
-    sendReceive(m_zxaddress, &MainWindow::nullReceived, "reset cap 0x0FFFFF00 0x05000100 ");
+    sendReceive(m_zxaddress, &MainWindow::progressReceived, true, "reset cap 0x0FFFFF00 0x05000100 ");
 }
 
 void MainWindow::onResetToCustomClicked()
@@ -334,12 +421,12 @@ void MainWindow::onResetToCustomClicked()
     // capdata_s <= XCK_sync_s & XMREQ_sync_s & XIORQ_sync_s & XRD_sync_s & XWR_sync_s
     // & XA_sync_s & XD_sync_s;
     // Mask 0xA000000 val 0x0
-    sendReceive(m_zxaddress, &MainWindow::nullReceived, "resettocustom cap 0x0FFFFF00 0x05000100");
+    sendReceive(m_zxaddress, &MainWindow::progressReceived, true, "resettocustom cap 0x0FFFFF00 0x05000100");
 }
 
 void MainWindow::onCaptureClicked()
 {
-    sendReceive(m_zxaddress, &MainWindow::captureReceived, "cap");
+    sendReceive(m_zxaddress, &MainWindow::captureReceived, false, "cap");
 }
 
 void MainWindow::captureReceived(QByteArray*data)
@@ -384,6 +471,22 @@ void MainWindow::onUploadOTAClicked()
     }
 }
 
+void MainWindow::onUploadFPGAClicked()
+{
+    QFileDialog *fc = new QFileDialog(this, "Open firmware file",
+                                      ".",
+                                      "FPGA Firmware files (*.rbf)");
+    fc->setFileMode(QFileDialog::ExistingFile);
+    if (fc->exec()) {
+        QStringList files = fc->selectedFiles();
+        if (files.length()!=1)
+            return;
+        QString filename = files[0];
+        qDebug()<<"Uploading "<<filename;
+        uploadFPGA(filename);
+    }
+}
+
 void MainWindow::onLoadResourceClicked()
 {
     QFileDialog *fc = new QFileDialog(this, "Open resource file",
@@ -416,20 +519,22 @@ void MainWindow::onUploadSNAClicked()
     }
 }
 
-void MainWindow::nullReceived(QByteArray*a)
+void MainWindow::progressReceived(QByteArray*a)
 {
-    Q_UNUSED(a);
+    m_linebuffer->append(*a);
+    //Q_UNUSED(a);
 }
 
 void MainWindow::onStreamClicked()
 {
-    sendReceive(m_zxaddress, &MainWindow::nullReceived, "stream 8010");
+    sendReceive(m_zxaddress, &MainWindow::progressReceived, true,  "stream 8010");
 }
 
 void MainWindow::onFpsUpdated(unsigned fps)
 {
-    QString statustext = "FPS: " + QString::number(fps);
-    m_statusbar->showMessage(statustext);
+    //QString statustext = "FPS: " + QString::number(fps);
+    //m_statusbar->showMessage(statustext);
+    m_renderer->setFPS(fps);
 }
 
 
@@ -441,4 +546,51 @@ void MainWindow::alert(const QString &s)
 void MainWindow::onExit()
 {
     QApplication::exit();
+}
+
+void MainWindow::processStatus(const QString &s)
+{
+    int delim_pos = s.indexOf('/');
+    if (delim_pos>0) {
+        QString total = s.left(delim_pos);
+        QString current = s.right(s.length()-(delim_pos+1));
+
+        bool ok;
+        int total_int = total.toInt(&ok);
+        if (!ok) {
+            qDebug()<<"Cannot process: '"<<total<<"' is not a number";
+            return;
+        }
+        int current_int = current.toInt(&ok);
+        if (!ok) {
+            qDebug()<<"Cannot process: '"<<current<<"' is not a number";
+            return;
+        }
+        m_statusbar->showMessage("Progress: "+current+" of "+total);
+        if (m_progress) {
+            m_progress->setSecondaryPercentage( current_int*100 / total_int );
+            m_progress->setStatusText("Progress: "+current+" of "+total);
+
+        }
+    } else {
+        qDebug()<<"Cannot find delimiter in "<<s;
+    }
+}
+
+void MainWindow::onStatusLineReceived(QString status)
+{
+    if (status=="OK") {
+        m_statusbar->showMessage("OK");
+        if (m_progress) {
+            m_progress->completed();
+        }
+    } else if (status.startsWith("ERROR:")) {
+//        QStringRef errtxt(&status, 7, status.length()-7);
+        if (m_progress) {
+            m_progress->error(status);
+        }
+        m_statusbar->showMessage(status);//status.right(status.lenght()-7));
+    } else if (status.startsWith("P:")) {
+        processStatus(status.right(status.length()-2));
+    }
 }

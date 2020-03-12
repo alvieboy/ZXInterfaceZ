@@ -1,7 +1,9 @@
 #include "SpectrumRenderArea.h"
+#include <QPainter>
+#include <QDebug>
 
-#define BORDER_TB 8
-#define BORDER_LR 8
+#define BORDER_TB (8+(4*ZOOMMUL))
+#define BORDER_LR (8+(4*ZOOMMUL))
 
 SpectrumRenderArea::SpectrumRenderArea(QWidget *w): RenderArea(256+(BORDER_LR*2), 192+ (BORDER_TB*2), w)
 {
@@ -11,6 +13,8 @@ SpectrumRenderArea::SpectrumRenderArea(QWidget *w): RenderArea(256+(BORDER_LR*2)
     connect(m_flashtimer, &QTimer::timeout, this, &SpectrumRenderArea::onFlashTimerExpired);
     m_flashtimer->start(1000);
     initColors();
+    m_fpsfont = QFont("Arial", 20);
+    m_fps=0;
 }
 
 void SpectrumRenderArea::onFlashTimerExpired()
@@ -82,6 +86,32 @@ void SpectrumRenderArea::render(bool flashonly)
                 pixeldata8<<=1;
             }
         }
+    }
+}
+
+void SpectrumRenderArea::finaliseImage()
+{
+    //qDebug()<<"Finalise image";
+    QPainter painter(image);
+
+    QPoint location(BORDER_LR + ZOOMMUL*240,
+                    BORDER_TB + ZOOMMUL*230);
+
+
+    painter.setFont(m_fpsfont);
+    //QBrush brush(QColor(0xFFFFFFFF));
+    QPen pen(QColor(0xFFFFFFFF));
+   // painter.setBrush(brush);
+    painter.setPen(pen);
+    //
+    //painter.setCompositionMode(QPainter::CompositionMode_Xor);
+//    qDebug()<<"Render FPS";
+    if (m_fps==0) {
+        painter.drawText(location,"No signal");
+    } else {
+        char t[64];
+        sprintf(t,"FPS: %d", m_fps);
+        painter.drawText(location,t);
     }
 }
 
