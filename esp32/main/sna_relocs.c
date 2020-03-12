@@ -17,22 +17,23 @@ struct relocentry
 };
 
 const struct relocentry relocmap[] = {
-    { "AF'", 0x0086, RELOC_16 },
-    { "BC'", 0x0090, RELOC_16 },
-    { "DE'", 0x0093, RELOC_16 },
-    { "HL'", 0x0096, RELOC_16 },
-    { "I",   0x009B, RELOC_8 },
-    { "AF",  0x009F, RELOC_16 },
-    { "BC",  0x00A6, RELOC_16 },
-    { "R",   0x00AC, RELOC_8 },
-    { "BORDER",   0x00B0, RELOC_8 },
-    { "DE",   0x00B5, RELOC_16 },
-    { "IX",   0x00B9, RELOC_16 },
-    { "IY",   0x00BD, RELOC_16 },
-    { "SP",   0x00C3, RELOC_16 },
-    { "HL",   0x00C6, RELOC_16 },
-    { "IM",   0x00C9, RELOC_IM },  // 0x46, 0x56, 0x5E,
-    { "INT",  0x00CA, RELOC_EIDI},  // EI: 0xFB, DI: 0xF3
+    { "AF'", 0x0084, RELOC_16 },
+
+    { "BC'", 0x008E, RELOC_16 },
+    { "DE'", 0x0091, RELOC_16 },
+    { "HL'", 0x0094, RELOC_16 },
+    { "I",   0x009A, RELOC_8 },
+    { "AF",  0x009E, RELOC_16 },
+    { "BC",  0x00A5, RELOC_16 },
+    { "R",   0x00AB, RELOC_8 },
+    { "BORDER",   0x00AF, RELOC_8 },
+    { "DE",   0x00B4, RELOC_16 },
+    { "IX",   0x00B8, RELOC_16 },
+    { "IY",   0x00BC, RELOC_16 },
+    { "SP",   0x00C2, RELOC_16 },
+    { "HL",   0x00C5, RELOC_16 },
+    { "IM",   0x00C8, RELOC_IM },  // 0x46, 0x56, 0x5E,
+    { "INT",  0x00C9, RELOC_EIDI},  // EI: 0xFB, DI: 0xF3
 };
 
 static const struct relocentry *findreloc(const char *name)
