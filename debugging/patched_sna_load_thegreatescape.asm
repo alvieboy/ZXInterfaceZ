@@ -151,35 +151,35 @@ l0008h:
 
 l0080h:
 	di	
-	ld hl,(05c02h)
+	ld hl,(05c02h)    ; Save word at 5C02 so we can restore later
 	exx	
-	ld de,00c1ah
-	ld (05c02h),de
-	ld sp,05c02h
-	ld bc,l0000h
-	ld de,l0000h
-	ld hl,0d2c2h
-	pop af	
-	exx	
-	ld a,03fh
-	ld i,a
-	ld de,l0000h
-	ld (05c02h),de
-	ld bc,0045eh
-	ld sp,05c02h
-	ld a,040h
-	ld r,a
-	ld a,000h
-	out (0feh),a
-	pop af	
-	ld de,0542bh
-	ld ix,0ff82h
-	ld iy,08000h
-	ld (05c02h),hl
-	ld sp,0ffebh
-	ld hl,0af8ah
-	im 1
-	di	
+	ld de,00c1ah      ; Put AF' value in DE
+	ld (05c02h),de    ; Store it on memory
+	ld sp,05c02h      ; put SP pointing to AF' value (a)
+	ld bc,l0000h      ; Restore BC'
+	ld de,l0000h      ; Restore DE'
+	ld hl,0d2c2h      ; Restore HL'
+	pop af	          ; Restore AF' from stack (a)
+	exx	          
+	ld a,03fh         ; Load I value
+	ld i,a            ; Restore I
+	ld de,l0000h      ; Put AF value in DE
+	ld (05c02h),de    ; Store it on memory
+	ld bc,0045eh      ; Restore BC
+	ld sp,05c02h      ; Put SP pointing to AF value (b)
+	ld a,040h         ; Load R value
+	ld r,a            ; Restore R
+	ld a,000h         ; Load BORDER value
+	out (0feh),a      ; Restore border
+	pop af	          ; Restore AF from stack (b)
+	ld de,0542bh      ; Restore DE
+	ld ix,0ff82h      ; Restore IX
+	ld iy,08000h      ; Restore IY
+	ld (05c02h),hl    ; Restore word saved on the beginning
+	ld sp,0ffebh      ; Restore SP
+	ld hl,0af8ah      ; Restore HL
+	im 1              ; Restore IM mode
+	di	          ; Restore interrupt state
 	retn
 l00cdh:
 	ld a,007h
