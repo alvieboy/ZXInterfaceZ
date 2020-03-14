@@ -8,8 +8,10 @@ snaloader.rom: snaloader-rom.asm
 	xxd -i $@ > snaloader_rom.c
 	#./pad $@ 16384
 
+INTZ.ROM: menu.asm
+
 INTZ.ROM: interfacez-rom.asm
-	pasmo -d $+ $@ > $@.out
+	pasmo -d interfacez-rom.asm $@ > $@.out
 	xxd -i $@ > interfacez_rom.c
 	./pad $@ 16384
 

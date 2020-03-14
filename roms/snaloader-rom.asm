@@ -48,16 +48,15 @@ NMIH:	RETN
 
 RESTOREREGS:
 ; This is the register restore routine.
-	DI
         LD	HL, (P_TEMP)	; Save P_TEMP
-        EXX
         LD	DE, $FFFF 	; FILL register: AF'
         LD	(P_TEMP), DE
-        LD	SP, P_TEMP      ; TBD: check if SP points to actual word
+        LD	SP, P_TEMP      ; 
         LD	BC, $FFFF	; FILL register: BC' 
         LD	DE, $FFFF       ; FILL register: DE'
         LD	HL, $FFFF       ; FILL register: HL'
         POP	AF
+        EX	AF, AF'
         EXX
         LD	A, $FF          ; FILL register: I
         LD	I, A
