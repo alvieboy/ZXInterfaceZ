@@ -321,7 +321,7 @@ SETUP_MENU1:
 
 
 MENUTITLE:
-	DB 	"ZX Inteface Z", 0
+	DB 	"ZX Interface Z", 0
 ENTRY1: DB	"Configure WiFI", 0
 ENTRY2: DB	"Load from SD Card", 0
 ENTRY3: DB	"Show version", 0
