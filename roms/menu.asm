@@ -10,20 +10,68 @@
 ; 09  02   Ptr to entry
 ; *   *    Ptr to entry
 
+; 
+;  Functions in this file
 ;
-; DRAWMENU: Draw a simple menu.
-;
-; HL:	    Pointer to menu structure
-;
+;  MENU__INIT       : Initialise a menu
+;  MENU__DRAW       : Draw the menu (call once)
+;  MENU__CHOOSENEXT : Choose next entry in the menu
+;  MENU__CHOOSEPREV : Choose previous entry in menu
+
+
+
+; MENU_INIT - Initialise a new menu
+;   Inputs
+;       HL:     Pointer to menu structure.
+;       D:      Line to display menu at
+;   Outputs
+;       None
+;   Clobbers: IX, DE
 MENU__INIT:
+        PUSH	HL
 	PUSH	HL
         POP	IX
-	LD	DE, SCREEN+64
-        LD	(IX+3), E
-        LD	(IX+4), D
-        LD	DE, ATTR+64
-        LD	(IX+5), E
-        LD	(IX+6), D
+	; Get menu width
+	LD      A, (IX)
+	SRA     A       ; Divide by 2.
+	LD      C, A   
+	LD      A, 15
+	SUB     C       ; Now A has the start column offset. Place it in L
+;	LD      L, A
+	LD      C, A    ; Save in C
+	LD      A, D
+	RRCA			; multiply
+	RRCA			; by
+	RRCA			; thirty-two.
+	AND	$E0		; mask off low bits to make
+	ADD     A, C
+	LD      L,A
+	LD	A,D		; bring back the line to A.
+	AND	$18		; now $00, $08 or $10.
+        OR	$40		; add the base address of screen.
+	LD      H,  A
+
+        LD	(IX+3), L
+        LD	(IX+4), H
+	
+	; Pick start line again. C still holds the offset.
+	LD      A, D
+	LD      L, A ; L= start line
+	LD      H, 0
+	
+	LD      B, $58
+	
+	ADD	HL,HL		; multiply
+        ADD	HL,HL		; by
+	ADD	HL,HL		; thirty two
+	ADD	HL,HL		; to give count of attribute
+	ADD	HL,HL		; cells to end of display.
+	ADD     HL, BC
+	
+        ;LD	DE, ATTR+64
+        LD	(IX+5), L
+        LD	(IX+6), H
+	POP     HL
         RET
 
 MENU__DRAW:
@@ -127,15 +175,11 @@ L3:	LD	HL, RIGHTVERTICAL
         LD 	(DE), A
 
         ; Draw contents
-        ;LD	DE, SCREEN+64
-        
         LD	E, (IX+3)
         LD	D, (IX+4)
-
         INC	DE
         JR 	MENU__DRAWCONTENTS
 
-        ;RET
 FILLSLINE:     
 	PUSH	BC
 	PUSH	DE

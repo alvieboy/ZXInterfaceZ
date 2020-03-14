@@ -113,10 +113,19 @@ RAM_DONE:
 
 	CALL	SETUP_MENU1
 	LD	HL, MENU1
+        LD	D, 4 ; line to display menu at.
         CALL	MENU__INIT
         
 	CALL	MENU__DRAW
-  
+
+
+
+	LD	HL,$0523	; The keyboard repeat and delay values
+	LD	(REPDEL),HL	; are loaded to REPDEL and REPPER.
+        LD	A, $FF
+        LD	(KSTATE_0),A	; set KSTATE_0 to $FF.
+        LD	(KSTATE_4),A	; set KSTATE_0 to $FF.
+
   	IM 	1
         LD	IY, ERR_NR
         EI
@@ -124,12 +133,10 @@ RAM_DONE:
 ENDLESS:CALL	KEY_INPUT
        	JR 	ENDLESS 
 
-HANDLEKEY:
-        PUSH	AF
-	LD	DE, SCREEN
-        CALL	PRINTHEX
-        POP	AF
+MENUSELECTED:
+	RET
 
+HANDLEKEY:
 	LD	HL, MENU1
 	
         CP	$90
@@ -140,6 +147,10 @@ N1:
         JR	NZ, N2
         JP	MENU__CHOOSEPREV
 N2:
+        CP	$0D
+        JR	NZ, N3
+        JP	MENUSELECTED
+N3:
 	RET
 
 KEY_INPUT:	
@@ -279,7 +290,7 @@ NEXTBAND$:
 
 SETUP_MENU1:
        	LD	IX, MENU1
-        LD	A, 24  			; Menu width 24
+        LD	A, 28  			; Menu width 24
         LD	(IX), A
         LD	A, 4                    ; Menu entries
         LD	(IX+1), A
@@ -303,22 +314,6 @@ SETUP_MENU1:
         LD	(IX+16), H
         RET
 
-
-
-;MENU1:
-;	 DB	23 ; 0 Width
-;        DB 	4  ; 1 Entries
-;        DB 	0  ; 2 Current selected entry
-;        DW	SCREEN ; 3 Start screen ptr
-;        DW	ATTR   ; 5 Start attr ptr
-;        DW	MENUTITLE ; 7
-;        DW	ENTRY1    ; 9
-;        DW	ENTRY2
-;        DW	ENTRY3
-;        DW	ENTRY4
-
-TEXTO1:	
-	DB "Exemplo", 0
         include "menu.asm"
         include "keyboard.asm"
 	include	"charmap.asm"
@@ -326,8 +321,8 @@ TEXTO1:
 
 
 MENUTITLE:
-	DB 	"01234567890123456", 0
-ENTRY1: DB	"Access point", 0
-ENTRY2: DB	"000000000111111111122222", 0
-ENTRY3: DB	"123456789012345678901234", 0
+	DB 	"ZX Inteface Z", 0
+ENTRY1: DB	"Configure WiFI", 0
+ENTRY2: DB	"Load from SD Card", 0
+ENTRY3: DB	"Show version", 0
 ENTRY4: DB	"Goto BASIC", 0

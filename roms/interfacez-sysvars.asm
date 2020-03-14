@@ -8,8 +8,8 @@ FRAMES1 	equ	$5C04
 KSTATE_0	equ	$5C05
 KSTATE_4	equ	$5C06
 REPDEL    	equ	$5C07
-LASTK    	equ	$5C08
-REPPER    	equ	$5C09
+REPPER    	equ	$5C08
+LASTK    	equ	$5C09
 
 ERR_NR		equ	$5C0A
 FLAGS		equ	$5C0B
