@@ -2,6 +2,33 @@
 #include "SDL_syswm.h"
 #include <X11/extensions/Xrandr.h>
 
+
+void showmodes(int displayIndex)
+{
+    int display_count = 0, display_index = 0, mode_index = 0;
+    SDL_DisplayMode mode = { SDL_PIXELFORMAT_UNKNOWN, 0, 0, 0, 0 };
+
+    int nmodes = SDL_GetNumDisplayModes(displayIndex);
+    SDL_Log("Number of modes: %d", nmodes);
+
+
+    if ((display_count = SDL_GetNumVideoDisplays()) < 1) {
+        SDL_Log("SDL_GetNumVideoDisplays returned: %i", display_count);
+        return;
+    }
+    for (mode_index=0; mode_index < nmodes; mode_index++) {
+
+        if (SDL_GetDisplayMode(display_index, mode_index, &mode) != 0) {
+            SDL_Log("SDL_GetDisplayMode failed: %s", SDL_GetError());
+            return;
+        }
+
+
+        SDL_Log("SDL_GetDisplayMode(0, 0, &mode):\t\t%i bpp\t%i x %i",
+                SDL_BITSPERPIXEL(mode.format), mode.w, mode.h);
+    }
+}
+
 int main(int argc, char **argv)
 {
     SDL_DisplayMode current;
@@ -22,6 +49,8 @@ int main(int argc, char **argv)
         else
             // On success, print the current display mode.
             SDL_Log("Display #%d: current display mode is %dx%dpx @ %dhz.", i, current.w, current.h, current.refresh_rate);
+
+        showmodes(i);
 
     }
 
@@ -87,7 +116,7 @@ int main(int argc, char **argv)
 
 
 
-if (1)    {
+    if (1)    {
         int j;
         printf(" SZ:    Pixels          Physical       Refresh\n");
 	for (i = 0; i < nsize; i++) {
@@ -105,7 +134,6 @@ if (1)    {
 	}
 
     }
-
     SDL_DestroyWindow(window);
 
     // Clean up and exit the program.
