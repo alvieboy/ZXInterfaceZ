@@ -7,8 +7,19 @@
 #define FULLSCREEN
 #endif
 
+const unsigned int BORDER_LR = 32;
+const unsigned int BORDER_TB = 39;
+bool flashinvert;
 
-static const uint32_t normal_colors[] = {
+typedef struct {
+    uint8_t pixeldata[32*192];
+    uint8_t attributes[32*24];
+} __attribute__((packed)) scr_t;
+
+
+#define RGB565(r,g,b) (((r & 0xf8)<<8) + ((g & 0xfc)<<3)+(b>>3))
+
+static const uint32_t normal_colors32[] = {
     0x000000,
     0x0000D7,
     0xD70000,
@@ -19,7 +30,7 @@ static const uint32_t normal_colors[] = {
     0xD7D7D7
 };
 
-static const uint32_t bright_colors[] = {
+static const uint32_t bright_colors32[] = {
     0x000000,
     0x0000FF,
     0xFF0000,
@@ -28,6 +39,28 @@ static const uint32_t bright_colors[] = {
     0x00FFFF,
     0xFFFF00,
     0xFFFFFF
+};
+
+static const uint16_t normal_colors16[] = {
+    RGB565(0,0,0),
+    RGB565(0,0,0xD7),
+    RGB565(0xD7,0,0),
+    RGB565(0xD7,0,0xD7),
+    RGB565(0, 0xD7, 0),
+    RGB565(0, 0xD7, 0xD7),
+    RGB565(0xD7, 0xD7,0),
+    RGB565(0xD7, 0xD7, 0xD7)
+};
+
+static const uint16_t bright_colors16[] = {
+    RGB565(0,0,0),
+    RGB565(0,0,0xFF),
+    RGB565(0xFF,0,0),
+    RGB565(0xFF,0,0xFF),
+    RGB565(0, 0xFF, 0),
+    RGB565(0, 0xFF, 0xFF),
+    RGB565(0xFF, 0xFF,0),
+    RGB565(0xFF, 0xFF, 0xFF)
 };
 
 void showmodes(int displayIndex)
@@ -60,6 +93,11 @@ void showmodes(int displayIndex)
 SDL_Window *win;
 SDL_Surface *rootsurface;
 
+void renderscr32(const scr_t *scr, bool flashonly);
+void renderscr16(const scr_t *scr, bool flashonly);
+
+void (*renderscr)(const scr_t *scr, bool flashonly);
+
 void open_window( int w, int h)
 {
 #ifdef FULLSCREEN
@@ -82,26 +120,49 @@ void open_window( int w, int h)
                          );
 #endif
     rootsurface = SDL_GetWindowSurface(win);
+
+    SDL_PixelFormat*fmt = rootsurface->format;
+
+    printf("Running with BPP %d\n", fmt->BitsPerPixel);
+    switch (fmt->BitsPerPixel) {
+    case 32:
+        /* Fall-through */
+    case 24:
+        renderscr = &renderscr32;
+        break;
+    case 16:
+        renderscr = &renderscr16;
+        break;
+    default:
+        printf("Unsupported BPP %d\n", fmt->BitsPerPixel);
+        exit(-1);
+    }
+	
+
+
 }
 
-const unsigned int BORDER_LR = 32;
-const unsigned int BORDER_TB = 39;
-bool flashinvert;
-
-typedef struct {
-    uint8_t pixeldata[32*192];
-    uint8_t attributes[32*24];
-} __attribute__((packed)) scr_t;
-
-static uint32_t parsecolor( uint8_t col, int bright)
+static uint32_t parsecolor32( uint8_t col, int bright)
 {
-    return bright ? bright_colors[col] : normal_colors[col];
+    return bright ? bright_colors32[col] : normal_colors32[col];
 }
 
-static void parseattr( uint8_t attr, uint32_t *fg, uint32_t *bg, int *flash)
+static uint16_t parsecolor16( uint8_t col, int bright)
 {
-    *fg = parsecolor(attr & 0x7, attr & 0x40);
-    *bg = parsecolor((attr>>3) & 0x7, attr & 0x40);
+    return bright ? bright_colors16[col] : normal_colors16[col];
+}
+
+static void parseattr32( uint8_t attr, uint32_t *fg, uint32_t *bg, int *flash)
+{
+    *fg = parsecolor32(attr & 0x7, attr & 0x40);
+    *bg = parsecolor32((attr>>3) & 0x7, attr & 0x40);
+    *flash = attr & 0x80;
+}
+
+static void parseattr16( uint8_t attr, uint16_t *fg, uint16_t *bg, int *flash)
+{
+    *fg = parsecolor16(attr & 0x7, attr & 0x40);
+    *bg = parsecolor16((attr>>3) & 0x7, attr & 0x40);
     *flash = attr & 0x80;
 }
 
@@ -120,7 +181,7 @@ void calc_sizes(int w, int h)
 }
 
 
-static inline void drawPixel(int x, int y, uint32_t pixel)
+static inline void drawPixel32(int x, int y, uint32_t pixel)
 {
     Uint32 *pixels = (Uint32 *)rootsurface->pixels;
     Uint32 *pptr = &pixels[ ( (y*4) * rootsurface->w ) + (x*4) ];
@@ -155,7 +216,7 @@ static inline void drawPixel(int x, int y, uint32_t pixel)
     *pptr2=pixel;
 }
 
-void renderscr(const scr_t *scr, bool flashonly)
+void renderscr32(const scr_t *scr, bool flashonly)
 {
     int x;
     int y;
@@ -173,7 +234,7 @@ void renderscr(const scr_t *scr, bool flashonly)
             offset |= ((y>>6) &0x3 ) << 11;               // Y8, Y7
 
             uint8_t attr = getattr(scr, x, y>>3);
-            parseattr( attr, &fg, &bg, &flash);
+            parseattr32( attr, &fg, &bg, &flash);
 
             if (!flash && flashonly)
                 continue;
@@ -188,7 +249,86 @@ void renderscr(const scr_t *scr, bool flashonly)
             //printf("%d %d Pixel %02x attr %02x fg %08x bg %08x\n", x, y, pixeldata8, attr, fg, bg);
 
             for (int ix=0;ix<8;ix++) {
-                drawPixel(BORDER_LR + (x*8 + ix),
+                drawPixel32(BORDER_LR + (x*8 + ix),
+                          BORDER_TB+y,
+                          pixeldata8 & 0x80 ? fg: bg);
+                pixeldata8<<=1;
+            }
+        }
+    }
+    SDL_UnlockSurface( rootsurface );
+
+};
+
+static inline void drawPixel16(int x, int y, uint16_t pixel)
+{
+    Uint16 *pixels = (Uint16 *)rootsurface->pixels;
+    Uint16 *pptr = &pixels[ ( (y*4) * rootsurface->w ) + (x*4) ];
+
+    Uint16 *pptr2 = pptr;
+
+    *pptr2++=pixel;
+    *pptr2++=pixel;
+    *pptr2++=pixel;
+    *pptr2=pixel;
+
+    pptr2 += (rootsurface->w - 3);
+
+    *pptr2++=pixel;
+    *pptr2++=pixel;
+    *pptr2++=pixel;
+    *pptr2=pixel;
+
+
+    pptr2 += (rootsurface->w - 3);
+
+    *pptr2++=pixel;
+    *pptr2++=pixel;
+    *pptr2++=pixel;
+    *pptr2=pixel;
+
+    pptr2 += (rootsurface->w -3 );
+
+    *pptr2++=pixel;
+    *pptr2++=pixel;
+    *pptr2++=pixel;
+    *pptr2=pixel;
+}
+
+void renderscr16(const scr_t *scr, bool flashonly)
+{
+    int x;
+    int y;
+    uint16_t fg, bg, t;
+    int flash;
+
+    SDL_LockSurface( rootsurface );
+
+    for (y=0;y<192;y++) {
+        for (x=0; x<32; x++) {
+            unsigned offset = x; // 5 bits
+
+            offset |= ((y>>3) & 0x7)<<5;  // Y5, Y4, Y3
+            offset |= (y & 7)<<8;         // Y2, Y1, Y0
+            offset |= ((y>>6) &0x3 ) << 11;               // Y8, Y7
+
+            uint8_t attr = getattr(scr, x, y>>3);
+            parseattr16( attr, &fg, &bg, &flash);
+
+            if (!flash && flashonly)
+                continue;
+
+            if (flash && flashinvert) {
+                t = bg;
+                bg = fg;
+                fg = t;
+            }
+            // Get m_scr
+            uint8_t pixeldata8 = scr->pixeldata[offset];
+            //printf("%d %d Pixel %02x attr %02x fg %08x bg %08x\n", x, y, pixeldata8, attr, fg, bg);
+
+            for (int ix=0;ix<8;ix++) {
+                drawPixel32(BORDER_LR + (x*8 + ix),
                           BORDER_TB+y,
                           pixeldata8 & 0x80 ? fg: bg);
                 pixeldata8<<=1;
