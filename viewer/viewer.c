@@ -1,7 +1,34 @@
 #include "SDL.h"
 #include "SDL_syswm.h"
 #include <X11/extensions/Xrandr.h>
+#include <stdbool.h>
 
+#ifdef __arm__
+#define FULLSCREEN
+#endif
+
+
+static const uint32_t normal_colors[] = {
+    0x000000,
+    0x0000D7,
+    0xD70000,
+    0xD700D7,
+    0x00D700,
+    0x00D7D7,
+    0xD7D700,
+    0xD7D7D7
+};
+
+static const uint32_t bright_colors[] = {
+    0x000000,
+    0x0000FF,
+    0xFF0000,
+    0xFF00FF,
+    0x00FF00,
+    0x00FFFF,
+    0xFFFF00,
+    0xFFFFFF
+};
 
 void showmodes(int displayIndex)
 {
@@ -28,6 +55,213 @@ void showmodes(int displayIndex)
                 SDL_BITSPERPIXEL(mode.format), mode.w, mode.h);
     }
 }
+
+
+SDL_Window *win;
+SDL_Surface *rootsurface;
+
+void open_window( int w, int h)
+{
+#ifdef FULLSCREEN
+    win = SDL_CreateWindow(
+                          "ZX Spectrum",
+                          0,
+                          0,
+                          w,                               // width, in pixels
+                          h,                               // height, in pixels
+                          SDL_WINDOW_FULLSCREEN
+                         );
+#else
+    win = SDL_CreateWindow(
+                          "ZX Spectrum",
+                          0,
+                          0,
+                          w,                               // width, in pixels
+                          h,                               // height, in pixels
+                          0
+                         );
+#endif
+    rootsurface = SDL_GetWindowSurface(win);
+}
+
+const unsigned int BORDER_LR = 32;
+const unsigned int BORDER_TB = 39;
+bool flashinvert;
+
+typedef struct {
+    uint8_t pixeldata[32*192];
+    uint8_t attributes[32*24];
+} __attribute__((packed)) scr_t;
+
+static uint32_t parsecolor( uint8_t col, int bright)
+{
+    return bright ? bright_colors[col] : normal_colors[col];
+}
+
+static void parseattr( uint8_t attr, uint32_t *fg, uint32_t *bg, int *flash)
+{
+    *fg = parsecolor(attr & 0x7, attr & 0x40);
+    *bg = parsecolor((attr>>3) & 0x7, attr & 0x40);
+    *flash = attr & 0x80;
+}
+
+static uint8_t getattr(const scr_t *scr, int x, int y)
+{
+    return scr->attributes[ x + (y*32) ];
+}
+
+
+
+void calc_sizes(int w, int h)
+{
+    // *0   1920 x 1080   ( 309mm x 173mm )  *60   120  48
+    // Assumed square pixels
+
+}
+
+
+static inline void drawPixel(int x, int y, uint32_t pixel)
+{
+    Uint32 *pixels = (Uint32 *)rootsurface->pixels;
+    Uint32 *pptr = &pixels[ ( (y*4) * rootsurface->w ) + (x*4) ];
+
+    Uint32 *pptr2 = pptr;
+
+    *pptr2++=pixel;
+    *pptr2++=pixel;
+    *pptr2++=pixel;
+    *pptr2=pixel;
+
+    pptr2 += (rootsurface->w - 3);
+
+    *pptr2++=pixel;
+    *pptr2++=pixel;
+    *pptr2++=pixel;
+    *pptr2=pixel;
+
+
+    pptr2 += (rootsurface->w - 3);
+
+    *pptr2++=pixel;
+    *pptr2++=pixel;
+    *pptr2++=pixel;
+    *pptr2=pixel;
+
+    pptr2 += (rootsurface->w -3 );
+
+    *pptr2++=pixel;
+    *pptr2++=pixel;
+    *pptr2++=pixel;
+    *pptr2=pixel;
+}
+
+void renderscr(const scr_t *scr, bool flashonly)
+{
+    int x;
+    int y;
+    uint32_t fg, bg, t;
+    int flash;
+
+    SDL_LockSurface( rootsurface );
+
+    for (y=0;y<192;y++) {
+        for (x=0; x<32; x++) {
+            unsigned offset = x; // 5 bits
+
+            offset |= ((y>>3) & 0x7)<<5;  // Y5, Y4, Y3
+            offset |= (y & 7)<<8;         // Y2, Y1, Y0
+            offset |= ((y>>6) &0x3 ) << 11;               // Y8, Y7
+
+            uint8_t attr = getattr(scr, x, y>>3);
+            parseattr( attr, &fg, &bg, &flash);
+
+            if (!flash && flashonly)
+                continue;
+
+            if (flash && flashinvert) {
+                t = bg;
+                bg = fg;
+                fg = t;
+            }
+            // Get m_scr
+            uint8_t pixeldata8 = scr->pixeldata[offset];
+            //printf("%d %d Pixel %02x attr %02x fg %08x bg %08x\n", x, y, pixeldata8, attr, fg, bg);
+
+            for (int ix=0;ix<8;ix++) {
+                drawPixel(BORDER_LR + (x*8 + ix),
+                          BORDER_TB+y,
+                          pixeldata8 & 0x80 ? fg: bg);
+                pixeldata8<<=1;
+            }
+        }
+    }
+    SDL_UnlockSurface( rootsurface );
+
+};
+
+void update()
+{
+    SDL_UpdateWindowSurface(win);
+}
+
+void close_window()
+{
+    SDL_DestroyWindow(win);
+}
+
+#include <unistd.h>
+#include <fcntl.h>
+
+void load(const char *file)
+{
+    int f = open(file,O_RDONLY);
+    if (f<0)
+        return;
+    off_t size = lseek(f,0,SEEK_END);
+    lseek(f,0,SEEK_SET);
+
+    uint8_t *buf = (uint8_t*)malloc(size);
+    read(f, buf, size);
+    close(f);
+    renderscr((scr_t*)buf, false);
+}
+
+
+void run(int w, int h)
+{
+    open_window(w,h);
+    load("MANIC.SCR");
+    update();
+
+    while (1) {
+        SDL_Event event;
+        while (SDL_PollEvent(&event)) {
+             printf("event %d\n", event.type);
+            // handle your event here
+
+            switch (event.type) {
+                // exit if the window is closed
+            case SDL_QUIT:
+                return;
+            case SDL_WINDOWEVENT:
+
+                switch (event.window.event) {
+                case SDL_WINDOWEVENT_CLOSE:
+                    return;
+                }
+            default:
+                break;
+            }
+        }
+        //if (!hasevent) {
+            SDL_Delay(10);
+        //} else {
+        //    count=0;
+        //}
+    }
+    close_window();
+}
+
 
 int main(int argc, char **argv)
 {
@@ -135,6 +369,8 @@ int main(int argc, char **argv)
 
     }
     SDL_DestroyWindow(window);
+
+    run(1280, 1024);
 
     // Clean up and exit the program.
     SDL_Quit();
