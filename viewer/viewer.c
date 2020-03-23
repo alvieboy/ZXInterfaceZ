@@ -2,10 +2,22 @@
 #include "SDL_syswm.h"
 #include <X11/extensions/Xrandr.h>
 #include <stdbool.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <errno.h>
+#include <assert.h>
 
 #ifdef __arm__
 #define FULLSCREEN
 #endif
+#define MAX_FRAME_PAYLOAD 2048
+
+struct frame {
+    uint8_t seq;
+    uint8_t frag;
+    uint8_t payload[MAX_FRAME_PAYLOAD];
+};
 
 const unsigned int BORDER_LR = 32;
 const unsigned int BORDER_TB = 39;
@@ -366,6 +378,133 @@ void load(const char *file)
     renderscr((scr_t*)buf, false);
 }
 
+uint8_t framedata[8192];
+
+void udp_process(const uint8_t *data, int len)
+{
+    if (len<2)
+        return;
+
+    unsigned payloadlen = len - 2;
+    //qDebug()<<"Dgram";
+    const struct frame *f = (const struct frame*)data;
+
+    switch (f->frag) {
+    case 0:
+        assert( payloadlen == MAX_FRAME_PAYLOAD );
+        memcpy( &framedata[0], f->payload, MAX_FRAME_PAYLOAD);
+        break;
+    case 1:
+        assert( payloadlen == MAX_FRAME_PAYLOAD );
+        memcpy( &framedata[MAX_FRAME_PAYLOAD], f->payload, MAX_FRAME_PAYLOAD);
+        break;
+    case 2:
+        assert( payloadlen == MAX_FRAME_PAYLOAD );
+        memcpy( &framedata[MAX_FRAME_PAYLOAD*2], f->payload, MAX_FRAME_PAYLOAD);
+        break;
+    case 3:
+        memcpy( &framedata[MAX_FRAME_PAYLOAD*3], f->payload, payloadlen);
+        renderscr( (scr_t*)framedata, false );
+        update();
+        break;
+
+    default:
+        break;
+    }
+}
+
+
+#include <sys/select.h>
+#include "list.h"
+
+
+int udp_socket = -1;
+int tcp_socket = -1;
+
+
+void tcp_data()
+{
+    char buf[128];
+    int s = read(tcp_socket, buf, sizeof(buf));
+    if (s<=0) {
+        close(tcp_socket);
+        tcp_socket = -1;
+    } else {
+        buf[s] = '\0';
+        printf("Reply: %s\n", buf);
+    }
+}
+
+
+void udp_data()
+{
+    uint8_t data[16368];
+    int r = recv(udp_socket, data, sizeof(data), 0);
+    printf("UDP recv: %d\n", r);
+    if (r>0) {
+        udp_process(data, r);
+    }
+}
+
+void net_check()
+{
+    struct timeval tv;
+    fd_set rfs;
+    fd_set wfs;
+    FD_ZERO(&rfs);
+    FD_ZERO(&wfs);
+
+    tv.tv_sec = 0;
+    tv.tv_usec = 10000;
+    int max = -1;
+
+    FD_SET(udp_socket, &rfs);
+    max = udp_socket;
+
+    if (tcp_socket>0) {
+        FD_SET(tcp_socket, &rfs);
+        if (tcp_socket>max)
+            max=tcp_socket;
+    }
+
+    switch(select(max+1, &rfs, &wfs, 0, &tv)) {
+    case 0:
+        break;
+    case -1:
+        break;
+    default:
+        if (FD_ISSET(udp_socket,&rfs)) {
+            udp_data();
+        }
+        if (FD_ISSET(tcp_socket,&rfs)) {
+            tcp_data();
+        }
+        break;
+    }
+}
+
+
+int request_data(const char *ip)
+{
+    int tcp_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    struct sockaddr_in s;
+
+    s.sin_family = AF_INET;
+    s.sin_port = htons(8003);
+    s.sin_addr.s_addr = inet_addr(ip);
+
+    if (connect(tcp_socket, (struct sockaddr*)&s, sizeof(s))<0) {
+        printf("Cannot connect: %s\n", strerror(errno));
+        return -1;
+    }
+    printf("Connected to %s\n", ip);
+
+    write(tcp_socket, "stream 8010\n",12);
+    shutdown(tcp_socket, SHUT_WR);
+
+    //sendReceive(m_zxaddress, &MainWindow::progressReceived, true,  "stream 8010");
+
+}
 
 void run(int w, int h)
 {
@@ -373,10 +512,21 @@ void run(int w, int h)
     load("MANIC.SCR");
     update();
 
+    udp_socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    struct sockaddr_in s;
+    s.sin_family = AF_INET;
+    s.sin_port = htons(8010);
+    s.sin_addr.s_addr = INADDR_ANY;
+    if (bind(udp_socket,(struct sockaddr*)&s, sizeof(s))<0) {
+        printf("Cannot bind: %s\n", strerror(errno));
+        exit -1;
+    }
+
+    request_data("192.168.91.5");
     while (1) {
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
-             printf("event %d\n", event.type);
+             //printf("event %d\n", event.type);
             // handle your event here
 
             switch (event.type) {
@@ -393,13 +543,18 @@ void run(int w, int h)
                 break;
             }
         }
+        net_check();
         //if (!hasevent) {
-            SDL_Delay(10);
+        //    SDL_Delay(10);
         //} else {
         //    count=0;
         //}
     }
     close_window();
+}
+
+void start_network()
+{
 }
 
 
@@ -516,3 +671,6 @@ int main(int argc, char **argv)
     SDL_Quit();
     return 0;
 }
+
+
+
