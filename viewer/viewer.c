@@ -328,7 +328,7 @@ void renderscr16(const scr_t *scr, bool flashonly)
             //printf("%d %d Pixel %02x attr %02x fg %08x bg %08x\n", x, y, pixeldata8, attr, fg, bg);
 
             for (int ix=0;ix<8;ix++) {
-                drawPixel32(BORDER_LR + (x*8 + ix),
+                drawPixel16(BORDER_LR + (x*8 + ix),
                           BORDER_TB+y,
                           pixeldata8 & 0x80 ? fg: bg);
                 pixeldata8<<=1;
