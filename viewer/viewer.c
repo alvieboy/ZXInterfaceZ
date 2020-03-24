@@ -408,8 +408,6 @@ void udp_process(const uint8_t *data, int len)
 
 
 #include <sys/select.h>
-#include "list.h"
-
 
 int udp_socket = -1;
 int tcp_socket = -1;
