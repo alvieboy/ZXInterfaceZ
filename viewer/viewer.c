@@ -14,7 +14,8 @@
 #define MAX_FRAME_PAYLOAD 2048
 
 struct frame {
-    uint8_t seq;
+    uint8_t seq:7;
+    uint8_t val:1;
     uint8_t frag;
     uint8_t payload[MAX_FRAME_PAYLOAD];
 };
@@ -378,7 +379,9 @@ void load(const char *file)
     renderscr((scr_t*)buf, false);
 }
 
-uint8_t framedata[8192];
+#define SPECTRUM_FRAME_SIZE (32*(192+24))
+
+uint8_t framedata[SPECTRUM_FRAME_SIZE];
 
 void udp_process(const uint8_t *data, int len)
 {
@@ -389,27 +392,17 @@ void udp_process(const uint8_t *data, int len)
     //qDebug()<<"Dgram";
     const struct frame *f = (const struct frame*)data;
 
-    switch (f->frag) {
-    case 0:
-        assert( payloadlen == MAX_FRAME_PAYLOAD );
-        memcpy( &framedata[0], f->payload, MAX_FRAME_PAYLOAD);
-        break;
-    case 1:
-        assert( payloadlen == MAX_FRAME_PAYLOAD );
-        memcpy( &framedata[MAX_FRAME_PAYLOAD], f->payload, MAX_FRAME_PAYLOAD);
-        break;
-    case 2:
-        assert( payloadlen == MAX_FRAME_PAYLOAD );
-        memcpy( &framedata[MAX_FRAME_PAYLOAD*2], f->payload, MAX_FRAME_PAYLOAD);
-        break;
-    case 3:
-        memcpy( &framedata[MAX_FRAME_PAYLOAD*3], f->payload, payloadlen);
+    unsigned maxpayload = 1<<((f->frag) >> 4);
+
+    uint8_t lastfrag = (((unsigned)SPECTRUM_FRAME_SIZE+((unsigned)maxpayload-1))/(unsigned)maxpayload)-1;
+    uint8_t frag = f->frag & 0xf;
+//    printf("UDP: seq %d frag %d lastfrag %d maxpayload %d\n", f->seq, frag, lastfrag,maxpayload);
+
+    memcpy( &framedata[ frag * maxpayload ], f->payload, payloadlen);
+
+    if (frag>=lastfrag) {
         renderscr( (scr_t*)framedata, false );
         update();
-        break;
-
-    default:
-        break;
     }
 }
 
@@ -440,7 +433,7 @@ void udp_data()
 {
     uint8_t data[16368];
     int r = recv(udp_socket, data, sizeof(data), 0);
-    printf("UDP recv: %d\n", r);
+    //printf("UDP recv: %d\n", r);
     if (r>0) {
         udp_process(data, r);
     }
@@ -522,7 +515,7 @@ void run(int w, int h)
         exit -1;
     }
 
-    request_data("192.168.91.5");
+    request_data("192.168.1.194");
     while (1) {
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
