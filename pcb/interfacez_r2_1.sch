@@ -61,7 +61,7 @@
 <layer number="90" name="Modules" color="5" fill="1" visible="yes" active="yes"/>
 <layer number="91" name="Nets" color="2" fill="1" visible="yes" active="yes"/>
 <layer number="92" name="Busses" color="1" fill="1" visible="yes" active="yes"/>
-<layer number="93" name="Pins" color="2" fill="1" visible="no" active="yes"/>
+<layer number="93" name="Pins" color="2" fill="1" visible="yes" active="yes"/>
 <layer number="94" name="Symbols" color="4" fill="1" visible="yes" active="yes"/>
 <layer number="95" name="Names" color="7" fill="1" visible="yes" active="yes"/>
 <layer number="96" name="Values" color="7" fill="1" visible="yes" active="yes"/>
@@ -4613,121 +4613,6 @@ In this library the device names are the same as the pin names of the symbols, t
 </deviceset>
 </devicesets>
 </library>
-<library name="Altera_By_element14_Batch_1">
-<description>Developed by element14 :&lt;br&gt;
-element14 CAD Library consolidation.ulp
-at 27/07/2012 14:29:04</description>
-<packages>
-<package name="SOIC127P600X175-8N">
-<smd name="1" x="-2.6416" y="1.905" dx="1.6002" dy="0.5588" layer="1"/>
-<smd name="2" x="-2.6416" y="0.635" dx="1.6002" dy="0.5588" layer="1"/>
-<smd name="3" x="-2.6416" y="-0.635" dx="1.6002" dy="0.5588" layer="1"/>
-<smd name="4" x="-2.6416" y="-1.905" dx="1.6002" dy="0.5588" layer="1"/>
-<smd name="5" x="2.6416" y="-1.905" dx="1.6002" dy="0.5588" layer="1"/>
-<smd name="6" x="2.6416" y="-0.635" dx="1.6002" dy="0.5588" layer="1"/>
-<smd name="7" x="2.6416" y="0.635" dx="1.6002" dy="0.5588" layer="1"/>
-<smd name="8" x="2.6416" y="1.905" dx="1.6002" dy="0.5588" layer="1"/>
-<wire x1="-2.0066" y1="1.651" x2="-2.0066" y2="2.159" width="0.1524" layer="51"/>
-<wire x1="-2.0066" y1="2.159" x2="-3.0988" y2="2.159" width="0.1524" layer="51"/>
-<wire x1="-3.0988" y1="2.159" x2="-3.0988" y2="1.651" width="0.1524" layer="51"/>
-<wire x1="-3.0988" y1="1.651" x2="-2.0066" y2="1.651" width="0.1524" layer="51"/>
-<wire x1="-2.0066" y1="0.381" x2="-2.0066" y2="0.889" width="0.1524" layer="51"/>
-<wire x1="-2.0066" y1="0.889" x2="-3.0988" y2="0.889" width="0.1524" layer="51"/>
-<wire x1="-3.0988" y1="0.889" x2="-3.0988" y2="0.381" width="0.1524" layer="51"/>
-<wire x1="-3.0988" y1="0.381" x2="-2.0066" y2="0.381" width="0.1524" layer="51"/>
-<wire x1="-2.0066" y1="-0.889" x2="-2.0066" y2="-0.381" width="0.1524" layer="51"/>
-<wire x1="-2.0066" y1="-0.381" x2="-3.0988" y2="-0.381" width="0.1524" layer="51"/>
-<wire x1="-3.0988" y1="-0.381" x2="-3.0988" y2="-0.889" width="0.1524" layer="51"/>
-<wire x1="-3.0988" y1="-0.889" x2="-2.0066" y2="-0.889" width="0.1524" layer="51"/>
-<wire x1="-2.0066" y1="-2.159" x2="-2.0066" y2="-1.651" width="0.1524" layer="51"/>
-<wire x1="-2.0066" y1="-1.651" x2="-3.0988" y2="-1.651" width="0.1524" layer="51"/>
-<wire x1="-3.0988" y1="-1.651" x2="-3.0988" y2="-2.159" width="0.1524" layer="51"/>
-<wire x1="-3.0988" y1="-2.159" x2="-2.0066" y2="-2.159" width="0.1524" layer="51"/>
-<wire x1="2.0066" y1="-1.651" x2="2.0066" y2="-2.159" width="0.1524" layer="51"/>
-<wire x1="2.0066" y1="-2.159" x2="3.0988" y2="-2.159" width="0.1524" layer="51"/>
-<wire x1="3.0988" y1="-2.159" x2="3.0988" y2="-1.651" width="0.1524" layer="51"/>
-<wire x1="3.0988" y1="-1.651" x2="2.0066" y2="-1.651" width="0.1524" layer="51"/>
-<wire x1="2.0066" y1="-0.381" x2="2.0066" y2="-0.889" width="0.1524" layer="51"/>
-<wire x1="2.0066" y1="-0.889" x2="3.0988" y2="-0.889" width="0.1524" layer="51"/>
-<wire x1="3.0988" y1="-0.889" x2="3.0988" y2="-0.381" width="0.1524" layer="51"/>
-<wire x1="3.0988" y1="-0.381" x2="2.0066" y2="-0.381" width="0.1524" layer="51"/>
-<wire x1="2.0066" y1="0.889" x2="2.0066" y2="0.381" width="0.1524" layer="51"/>
-<wire x1="2.0066" y1="0.381" x2="3.0988" y2="0.381" width="0.1524" layer="51"/>
-<wire x1="3.0988" y1="0.381" x2="3.0988" y2="0.889" width="0.1524" layer="51"/>
-<wire x1="3.0988" y1="0.889" x2="2.0066" y2="0.889" width="0.1524" layer="51"/>
-<wire x1="2.0066" y1="2.159" x2="2.0066" y2="1.651" width="0.1524" layer="51"/>
-<wire x1="2.0066" y1="1.651" x2="3.0988" y2="1.651" width="0.1524" layer="51"/>
-<wire x1="3.0988" y1="1.651" x2="3.0988" y2="2.159" width="0.1524" layer="51"/>
-<wire x1="3.0988" y1="2.159" x2="2.0066" y2="2.159" width="0.1524" layer="51"/>
-<wire x1="-2.0066" y1="-2.4892" x2="2.0066" y2="-2.4892" width="0.1524" layer="51"/>
-<wire x1="2.0066" y1="-2.4892" x2="2.0066" y2="2.4892" width="0.1524" layer="51"/>
-<wire x1="2.0066" y1="2.4892" x2="0.3048" y2="2.4892" width="0.1524" layer="51"/>
-<wire x1="0.3048" y1="2.4892" x2="-0.3048" y2="2.4892" width="0.1524" layer="51"/>
-<wire x1="-0.3048" y1="2.4892" x2="-2.0066" y2="2.4892" width="0.1524" layer="51"/>
-<wire x1="-2.0066" y1="2.4892" x2="-2.0066" y2="-2.4892" width="0.1524" layer="51"/>
-<wire x1="0.3048" y1="2.4892" x2="-0.3048" y2="2.4892" width="0" layer="51" curve="-180"/>
-<text x="-3.4798" y="2.3368" size="1.27" layer="51" ratio="6" rot="SR0">*</text>
-<wire x1="-1.7272" y1="-2.4892" x2="1.7272" y2="-2.4892" width="0.1524" layer="21"/>
-<wire x1="1.7272" y1="2.4892" x2="0.3048" y2="2.4892" width="0.1524" layer="21"/>
-<wire x1="0.3048" y1="2.4892" x2="-0.3048" y2="2.4892" width="0.1524" layer="21"/>
-<wire x1="-0.3048" y1="2.4892" x2="-1.7272" y2="2.4892" width="0.1524" layer="21"/>
-<wire x1="0.3048" y1="2.4892" x2="-0.3048" y2="2.4892" width="0" layer="21" curve="-180"/>
-<text x="-3.4798" y="2.3368" size="1.27" layer="21" ratio="6" rot="SR0">*</text>
-<text x="-4.3942" y="3.6576" size="2.0828" layer="25" ratio="10" rot="SR0">&gt;NAME</text>
-<text x="-5.2832" y="-5.3848" size="2.0828" layer="27" ratio="10" rot="SR0">&gt;VALUE</text>
-</package>
-</packages>
-<symbols>
-<symbol name="EPCS1SI8N">
-<pin name="VCC_2" x="-17.78" y="7.62" length="middle" direction="pwr"/>
-<pin name="VCC_3" x="-17.78" y="5.08" length="middle" direction="pwr"/>
-<pin name="VCC" x="-17.78" y="2.54" length="middle" direction="pwr"/>
-<pin name="DCLK" x="-17.78" y="-2.54" length="middle" direction="in"/>
-<pin name="NCS" x="-17.78" y="-5.08" length="middle" direction="in"/>
-<pin name="ASDI" x="-17.78" y="-7.62" length="middle" direction="in"/>
-<pin name="GND" x="-17.78" y="-12.7" length="middle" direction="pas"/>
-<pin name="DATA" x="17.78" y="7.62" length="middle" direction="out" rot="R180"/>
-<wire x1="-12.7" y1="12.7" x2="-12.7" y2="-17.78" width="0.4064" layer="94"/>
-<wire x1="-12.7" y1="-17.78" x2="12.7" y2="-17.78" width="0.4064" layer="94"/>
-<wire x1="12.7" y1="-17.78" x2="12.7" y2="12.7" width="0.4064" layer="94"/>
-<wire x1="12.7" y1="12.7" x2="-12.7" y2="12.7" width="0.4064" layer="94"/>
-<text x="-4.7244" y="16.7386" size="2.0828" layer="95" ratio="10" rot="SR0">&gt;NAME</text>
-<text x="-5.8674" y="-22.987" size="2.0828" layer="96" ratio="10" rot="SR0">&gt;VALUE</text>
-</symbol>
-</symbols>
-<devicesets>
-<deviceset name="EPCS1SI8N" prefix="U">
-<description>Serial Configuration Devices</description>
-<gates>
-<gate name="A" symbol="EPCS1SI8N" x="0" y="0"/>
-</gates>
-<devices>
-<device name="" package="SOIC127P600X175-8N">
-<connects>
-<connect gate="A" pin="ASDI" pad="5"/>
-<connect gate="A" pin="DATA" pad="2"/>
-<connect gate="A" pin="DCLK" pad="6"/>
-<connect gate="A" pin="GND" pad="4"/>
-<connect gate="A" pin="NCS" pad="1"/>
-<connect gate="A" pin="VCC" pad="8"/>
-<connect gate="A" pin="VCC_2" pad="3"/>
-<connect gate="A" pin="VCC_3" pad="7"/>
-</connects>
-<technologies>
-<technology name="">
-<attribute name="DESCRIPTION" value="Serial Configuration Devices" constant="no"/>
-<attribute name="MPN" value="EPCS1SI8N" constant="no"/>
-<attribute name="OC_FARNELL" value="1453504" constant="no"/>
-<attribute name="OC_NEWARK" value="51R0466" constant="no"/>
-<attribute name="PACKAGE" value="SOIC-8" constant="no"/>
-<attribute name="SUPPLIER" value="ALTERA" constant="no"/>
-</technology>
-</technologies>
-</device>
-</devices>
-</deviceset>
-</devicesets>
-</library>
 <library name="EAGLE_BoosterPack_Library">
 <packages>
 <package name="TACTILE-PTH">
@@ -5991,16 +5876,16 @@ Based on the datasheets for the following products.&lt;br&gt;
 </package>
 <package name="USB-A-H">
 <description>&lt;b&gt;USB Series A Hole Mounted&lt;/b&gt;</description>
-<wire x1="3.6957" y1="6.5659" x2="-10.287" y2="6.5659" width="0.127" layer="21"/>
-<wire x1="3.6957" y1="-6.5659" x2="-10.287" y2="-6.5659" width="0.127" layer="21"/>
-<wire x1="-10.287" y1="6.477" x2="-10.287" y2="-6.477" width="0.127" layer="21"/>
-<wire x1="3.7084" y1="6.5024" x2="3.7084" y2="-6.5024" width="0.127" layer="21"/>
-<wire x1="-2.54" y1="-5.08" x2="-8.89" y2="-4.445" width="0.127" layer="21"/>
-<wire x1="-8.89" y1="-4.445" x2="-8.89" y2="-1.27" width="0.127" layer="21"/>
-<wire x1="-8.89" y1="-1.27" x2="-2.54" y2="-0.635" width="0.127" layer="21"/>
-<wire x1="-2.54" y1="5.08" x2="-8.89" y2="4.445" width="0.127" layer="21"/>
-<wire x1="-8.89" y1="4.445" x2="-8.89" y2="1.27" width="0.127" layer="21"/>
-<wire x1="-8.89" y1="1.27" x2="-2.54" y2="0.635" width="0.127" layer="21"/>
+<wire x1="3.6957" y1="6.5659" x2="-10.287" y2="6.5659" width="0.127" layer="48"/>
+<wire x1="3.6957" y1="-6.5659" x2="-10.287" y2="-6.5659" width="0.127" layer="48"/>
+<wire x1="-10.287" y1="6.477" x2="-10.287" y2="-6.477" width="0.127" layer="48"/>
+<wire x1="3.7084" y1="6.5024" x2="3.7084" y2="-6.5024" width="0.127" layer="48"/>
+<wire x1="-2.54" y1="-5.08" x2="-8.89" y2="-4.445" width="0.127" layer="48"/>
+<wire x1="-8.89" y1="-4.445" x2="-8.89" y2="-1.27" width="0.127" layer="48"/>
+<wire x1="-8.89" y1="-1.27" x2="-2.54" y2="-0.635" width="0.127" layer="48"/>
+<wire x1="-2.54" y1="5.08" x2="-8.89" y2="4.445" width="0.127" layer="48"/>
+<wire x1="-8.89" y1="4.445" x2="-8.89" y2="1.27" width="0.127" layer="48"/>
+<wire x1="-8.89" y1="1.27" x2="-2.54" y2="0.635" width="0.127" layer="48"/>
 <pad name="VBUS" x="2.7178" y="3.4925" drill="0.9144" rot="R270"/>
 <pad name="D-" x="2.7178" y="1.0033" drill="0.9144" rot="R270"/>
 <pad name="D+" x="2.7178" y="-1.0033" drill="0.9144" rot="R270"/>
@@ -8106,41 +7991,41 @@ EIA Code 3216, Size A, 3.2 mm x 1.6 mm, grid 0.0125 inch</description>
 </package>
 <package name="HDF15H">
 <description>&lt;b&gt;SUB-D&lt;/b&gt;</description>
-<wire x1="7.62" y1="-17.607" x2="8.128" y2="-17.099" width="0.1524" layer="21" curve="90"/>
-<wire x1="-8.128" y1="-17.099" x2="-7.62" y2="-17.607" width="0.1524" layer="21" curve="90"/>
-<wire x1="-15.494" y1="-11.276" x2="-15.494" y2="-7.62" width="0.1524" layer="21"/>
-<wire x1="9.614" y1="-10.368" x2="9.614" y2="-11.276" width="0.1524" layer="21"/>
-<wire x1="9.614" y1="-10.368" x2="9.487" y2="-10.368" width="0.1524" layer="21"/>
-<wire x1="9.487" y1="-10.368" x2="-9.487" y2="-10.368" width="0.1524" layer="21"/>
-<wire x1="8.852" y1="-7.62" x2="9.487" y2="-8.255" width="0.1524" layer="21" curve="-90"/>
-<wire x1="9.487" y1="-8.255" x2="9.487" y2="-10.368" width="0.1524" layer="21"/>
-<wire x1="-9.614" y1="-10.368" x2="-9.614" y2="-11.276" width="0.1524" layer="21"/>
-<wire x1="-9.487" y1="-8.255" x2="-9.487" y2="-10.368" width="0.1524" layer="21"/>
-<wire x1="-9.487" y1="-10.368" x2="-9.614" y2="-10.368" width="0.1524" layer="21"/>
-<wire x1="-9.487" y1="-8.255" x2="-8.852" y2="-7.62" width="0.1524" layer="21" curve="-90"/>
-<wire x1="14.859" y1="4.445" x2="15.494" y2="3.81" width="0.1524" layer="21"/>
-<wire x1="15.494" y1="3.81" x2="15.494" y2="-11.276" width="0.1524" layer="21"/>
-<wire x1="10.033" y1="4.445" x2="14.859" y2="4.445" width="0.1524" layer="21"/>
-<wire x1="10.033" y1="4.445" x2="9.525" y2="3.937" width="0.1524" layer="21"/>
-<wire x1="9.525" y1="3.937" x2="9.525" y2="-7.62" width="0.1524" layer="21"/>
-<wire x1="-9.525" y1="3.937" x2="-9.525" y2="-7.62" width="0.1524" layer="21"/>
-<wire x1="-9.525" y1="3.937" x2="-10.033" y2="4.445" width="0.1524" layer="21"/>
-<wire x1="-10.033" y1="4.445" x2="-14.986" y2="4.445" width="0.1524" layer="21"/>
-<wire x1="-14.986" y1="4.445" x2="-15.494" y2="3.937" width="0.1524" layer="21"/>
-<wire x1="-15.494" y1="3.937" x2="-15.494" y2="-7.62" width="0.1524" layer="21"/>
-<wire x1="8.128" y1="-11.919" x2="8.128" y2="-17.099" width="0.1524" layer="21"/>
-<wire x1="8.128" y1="-11.919" x2="8.763" y2="-11.284" width="0.1524" layer="21" curve="-90"/>
-<wire x1="-8.128" y1="-11.919" x2="-8.128" y2="-17.099" width="0.1524" layer="21"/>
-<wire x1="-8.763" y1="-11.284" x2="-8.128" y2="-11.919" width="0.1524" layer="21" curve="-90"/>
-<wire x1="7.62" y1="-17.607" x2="-7.62" y2="-17.607" width="0.1524" layer="21"/>
-<wire x1="15.476" y1="-11.294" x2="-15.38" y2="-11.294" width="0.1524" layer="21"/>
-<wire x1="15.475" y1="-7.62" x2="-15.494" y2="-7.62" width="0.1524" layer="21"/>
-<circle x="12.5" y="0" radius="1.651" width="0.1524" layer="21"/>
+<wire x1="7.62" y1="-17.607" x2="8.128" y2="-17.099" width="0.1524" layer="51" curve="90"/>
+<wire x1="-8.128" y1="-17.099" x2="-7.62" y2="-17.607" width="0.1524" layer="51" curve="90"/>
+<wire x1="-15.494" y1="-11.276" x2="-15.494" y2="-7.62" width="0.1524" layer="51"/>
+<wire x1="9.614" y1="-10.368" x2="9.614" y2="-11.276" width="0.1524" layer="51"/>
+<wire x1="9.614" y1="-10.368" x2="9.487" y2="-10.368" width="0.1524" layer="51"/>
+<wire x1="9.487" y1="-10.368" x2="-9.487" y2="-10.368" width="0.1524" layer="51"/>
+<wire x1="8.852" y1="-7.62" x2="9.487" y2="-8.255" width="0.1524" layer="51" curve="-90"/>
+<wire x1="9.487" y1="-8.255" x2="9.487" y2="-10.368" width="0.1524" layer="51"/>
+<wire x1="-9.614" y1="-10.368" x2="-9.614" y2="-11.276" width="0.1524" layer="51"/>
+<wire x1="-9.487" y1="-8.255" x2="-9.487" y2="-10.368" width="0.1524" layer="51"/>
+<wire x1="-9.487" y1="-10.368" x2="-9.614" y2="-10.368" width="0.1524" layer="51"/>
+<wire x1="-9.487" y1="-8.255" x2="-8.852" y2="-7.62" width="0.1524" layer="51" curve="-90"/>
+<wire x1="14.859" y1="4.445" x2="15.494" y2="3.81" width="0.1524" layer="51"/>
+<wire x1="15.494" y1="3.81" x2="15.494" y2="-11.276" width="0.1524" layer="51"/>
+<wire x1="10.033" y1="4.445" x2="14.859" y2="4.445" width="0.1524" layer="51"/>
+<wire x1="10.033" y1="4.445" x2="9.525" y2="3.937" width="0.1524" layer="51"/>
+<wire x1="9.525" y1="3.937" x2="9.525" y2="-7.62" width="0.1524" layer="51"/>
+<wire x1="-9.525" y1="3.937" x2="-9.525" y2="-7.62" width="0.1524" layer="51"/>
+<wire x1="-9.525" y1="3.937" x2="-10.033" y2="4.445" width="0.1524" layer="51"/>
+<wire x1="-10.033" y1="4.445" x2="-14.986" y2="4.445" width="0.1524" layer="51"/>
+<wire x1="-14.986" y1="4.445" x2="-15.494" y2="3.937" width="0.1524" layer="51"/>
+<wire x1="-15.494" y1="3.937" x2="-15.494" y2="-7.62" width="0.1524" layer="51"/>
+<wire x1="8.128" y1="-11.919" x2="8.128" y2="-17.099" width="0.1524" layer="51"/>
+<wire x1="8.128" y1="-11.919" x2="8.763" y2="-11.284" width="0.1524" layer="51" curve="-90"/>
+<wire x1="-8.128" y1="-11.919" x2="-8.128" y2="-17.099" width="0.1524" layer="51"/>
+<wire x1="-8.763" y1="-11.284" x2="-8.128" y2="-11.919" width="0.1524" layer="51" curve="-90"/>
+<wire x1="7.62" y1="-17.607" x2="-7.62" y2="-17.607" width="0.1524" layer="51"/>
+<wire x1="15.476" y1="-11.294" x2="-15.38" y2="-11.294" width="0.1524" layer="51"/>
+<wire x1="15.475" y1="-7.62" x2="-15.494" y2="-7.62" width="0.1524" layer="51"/>
+<circle x="12.5" y="0" radius="1.651" width="0.1524" layer="51"/>
 <circle x="12.5" y="0" radius="2.667" width="0" layer="42"/>
 <circle x="12.5" y="0" radius="2.667" width="0" layer="43"/>
 <circle x="-12.5" y="0" radius="2.667" width="0" layer="42"/>
 <circle x="-12.5" y="0" radius="2.667" width="0" layer="43"/>
-<circle x="-12.5" y="0" radius="1.651" width="0.1524" layer="21"/>
+<circle x="-12.5" y="0" radius="1.651" width="0.1524" layer="51"/>
 <pad name="10" x="-3.672" y="0" drill="0.9"/>
 <pad name="9" x="-1.386" y="0" drill="0.9"/>
 <pad name="8" x="0.9" y="0" drill="0.9"/>
@@ -8156,31 +8041,31 @@ EIA Code 3216, Size A, 3.2 mm x 1.6 mm, grid 0.0125 inch</description>
 <pad name="13" x="-0.243" y="-2.54" drill="0.9"/>
 <pad name="12" x="2.043" y="-2.54" drill="0.9"/>
 <pad name="11" x="4.329" y="-2.54" drill="0.9"/>
-<text x="-8.89" y="5.08" size="1.778" layer="25" ratio="10">&gt;NAME</text>
-<text x="0" y="5.08" size="1.778" layer="27" ratio="10">&gt;VALUE</text>
-<text x="5.48" y="2.095" size="1.27" layer="21" ratio="10">1</text>
-<text x="-6.915" y="1.995" size="1.27" layer="21" ratio="10">5</text>
-<text x="6.58" y="-0.565" size="1.27" layer="21" ratio="10">6</text>
-<text x="-7.115" y="-0.665" size="1.27" layer="21" ratio="10">10</text>
-<text x="-7.82" y="-3.565" size="1.27" layer="21" ratio="10">15</text>
-<text x="5.98" y="-3.265" size="1.27" layer="21" ratio="10">11</text>
+<text x="-8.89" y="5.08" size="0.8128" layer="25" ratio="10">&gt;NAME</text>
+<text x="0" y="5.08" size="0.8128" layer="27" ratio="10">&gt;VALUE</text>
+<text x="5.48" y="2.095" size="0.8128" layer="21" font="vector" ratio="10">1</text>
+<text x="-6.915" y="1.995" size="0.8128" layer="21" font="vector" ratio="10">5</text>
+<text x="6.58" y="-0.565" size="0.8128" layer="21" font="vector" ratio="10">6</text>
+<text x="-7.115" y="-0.665" size="0.8128" layer="21" font="vector" ratio="10">10</text>
+<text x="-7.82" y="-3.565" size="0.8128" layer="21" font="vector" ratio="10">15</text>
+<text x="5.98" y="-3.265" size="0.8128" layer="21" font="vector" ratio="10">11</text>
 <text x="-6.064" y="-14.717" size="1.27" layer="51" ratio="10">HDF15 CONEC</text>
-<text x="2.413" y="-9.652" size="1.27" layer="21">Female</text>
-<rectangle x1="0.7" y1="-7.6" x2="1.1" y2="-1.5" layer="21"/>
-<rectangle x1="-1.586" y1="-7.6" x2="-1.186" y2="-1.5" layer="21"/>
-<rectangle x1="-3.872" y1="-7.6" x2="-3.472" y2="-1.5" layer="21"/>
-<rectangle x1="2.986" y1="-7.6" x2="3.386" y2="-1.5" layer="21"/>
-<rectangle x1="5.272" y1="-7.6" x2="5.672" y2="-1.5" layer="21"/>
-<rectangle x1="-0.443" y1="-7.6" x2="-0.043" y2="-4" layer="21"/>
-<rectangle x1="-2.729" y1="-7.6" x2="-2.329" y2="-4" layer="21"/>
-<rectangle x1="-5.015" y1="-7.6" x2="-4.615" y2="-4" layer="21"/>
-<rectangle x1="1.843" y1="-7.6" x2="2.243" y2="-4" layer="21"/>
-<rectangle x1="4.129" y1="-7.6" x2="4.529" y2="-4" layer="21"/>
-<rectangle x1="-5.015" y1="-1.6" x2="-4.615" y2="1.5" layer="21"/>
-<rectangle x1="-2.729" y1="-1.6" x2="-2.329" y2="1.5" layer="21"/>
-<rectangle x1="-0.443" y1="-1.6" x2="-0.043" y2="1.5" layer="21"/>
-<rectangle x1="1.843" y1="-1.6" x2="2.243" y2="1.5" layer="21"/>
-<rectangle x1="4.129" y1="-1.6" x2="4.529" y2="1.5" layer="21"/>
+<text x="2.413" y="-9.652" size="1.27" layer="51">Female</text>
+<rectangle x1="0.7" y1="-7.6" x2="1.1" y2="-1.5" layer="51"/>
+<rectangle x1="-1.586" y1="-7.6" x2="-1.186" y2="-1.5" layer="51"/>
+<rectangle x1="-3.872" y1="-7.6" x2="-3.472" y2="-1.5" layer="51"/>
+<rectangle x1="2.986" y1="-7.6" x2="3.386" y2="-1.5" layer="51"/>
+<rectangle x1="5.272" y1="-7.6" x2="5.672" y2="-1.5" layer="51"/>
+<rectangle x1="-0.443" y1="-7.6" x2="-0.043" y2="-4" layer="51"/>
+<rectangle x1="-2.729" y1="-7.6" x2="-2.329" y2="-4" layer="51"/>
+<rectangle x1="-5.015" y1="-7.6" x2="-4.615" y2="-4" layer="51"/>
+<rectangle x1="1.843" y1="-7.6" x2="2.243" y2="-4" layer="51"/>
+<rectangle x1="4.129" y1="-7.6" x2="4.529" y2="-4" layer="51"/>
+<rectangle x1="-5.015" y1="-1.6" x2="-4.615" y2="1.5" layer="51"/>
+<rectangle x1="-2.729" y1="-1.6" x2="-2.329" y2="1.5" layer="51"/>
+<rectangle x1="-0.443" y1="-1.6" x2="-0.043" y2="1.5" layer="51"/>
+<rectangle x1="1.843" y1="-1.6" x2="2.243" y2="1.5" layer="51"/>
+<rectangle x1="4.129" y1="-1.6" x2="4.529" y2="1.5" layer="51"/>
 <hole x="-12.5" y="0" drill="3"/>
 <hole x="12.5" y="0" drill="3"/>
 </package>
@@ -8393,7 +8278,12 @@ EIA Code 3216, Size A, 3.2 mm x 1.6 mm, grid 0.0125 inch</description>
 <connect gate="-1" pin="9" pad="9"/>
 </connects>
 <technologies>
-<technology name=""/>
+<technology name="">
+<attribute name="MF" value="" constant="no"/>
+<attribute name="MPN" value="" constant="no"/>
+<attribute name="OC_FARNELL" value="unknown" constant="no"/>
+<attribute name="OC_NEWARK" value="unknown" constant="no"/>
+</technology>
 </technologies>
 </device>
 <device name="H" package="F15H">
@@ -8415,7 +8305,12 @@ EIA Code 3216, Size A, 3.2 mm x 1.6 mm, grid 0.0125 inch</description>
 <connect gate="-1" pin="9" pad="9"/>
 </connects>
 <technologies>
-<technology name=""/>
+<technology name="">
+<attribute name="MF" value="" constant="no"/>
+<attribute name="MPN" value="" constant="no"/>
+<attribute name="OC_FARNELL" value="unknown" constant="no"/>
+<attribute name="OC_NEWARK" value="unknown" constant="no"/>
+</technology>
 </technologies>
 </device>
 <device name="HP" package="F15HP">
@@ -8437,7 +8332,12 @@ EIA Code 3216, Size A, 3.2 mm x 1.6 mm, grid 0.0125 inch</description>
 <connect gate="-1" pin="9" pad="9"/>
 </connects>
 <technologies>
-<technology name=""/>
+<technology name="">
+<attribute name="MF" value="" constant="no"/>
+<attribute name="MPN" value="" constant="no"/>
+<attribute name="OC_FARNELL" value="unknown" constant="no"/>
+<attribute name="OC_NEWARK" value="unknown" constant="no"/>
+</technology>
 </technologies>
 </device>
 <device name="V" package="F15V">
@@ -8459,7 +8359,12 @@ EIA Code 3216, Size A, 3.2 mm x 1.6 mm, grid 0.0125 inch</description>
 <connect gate="-1" pin="9" pad="9"/>
 </connects>
 <technologies>
-<technology name=""/>
+<technology name="">
+<attribute name="MF" value="" constant="no"/>
+<attribute name="MPN" value="" constant="no"/>
+<attribute name="OC_FARNELL" value="unknown" constant="no"/>
+<attribute name="OC_NEWARK" value="unknown" constant="no"/>
+</technology>
 </technologies>
 </device>
 <device name="VP" package="F15VP">
@@ -8481,7 +8386,12 @@ EIA Code 3216, Size A, 3.2 mm x 1.6 mm, grid 0.0125 inch</description>
 <connect gate="-1" pin="9" pad="9"/>
 </connects>
 <technologies>
-<technology name=""/>
+<technology name="">
+<attribute name="MF" value="" constant="no"/>
+<attribute name="MPN" value="" constant="no"/>
+<attribute name="OC_FARNELL" value="unknown" constant="no"/>
+<attribute name="OC_NEWARK" value="unknown" constant="no"/>
+</technology>
 </technologies>
 </device>
 <device name="HDH" package="HDF15H">
@@ -8503,7 +8413,12 @@ EIA Code 3216, Size A, 3.2 mm x 1.6 mm, grid 0.0125 inch</description>
 <connect gate="-1" pin="9" pad="9"/>
 </connects>
 <technologies>
-<technology name=""/>
+<technology name="">
+<attribute name="MF" value="" constant="no"/>
+<attribute name="MPN" value="" constant="no"/>
+<attribute name="OC_FARNELL" value="unknown" constant="no"/>
+<attribute name="OC_NEWARK" value="unknown" constant="no"/>
+</technology>
 </technologies>
 </device>
 <device name="HDV" package="HDF15V">
@@ -8525,7 +8440,12 @@ EIA Code 3216, Size A, 3.2 mm x 1.6 mm, grid 0.0125 inch</description>
 <connect gate="-1" pin="9" pad="9"/>
 </connects>
 <technologies>
-<technology name=""/>
+<technology name="">
+<attribute name="MF" value="" constant="no"/>
+<attribute name="MPN" value="" constant="no"/>
+<attribute name="OC_FARNELL" value="unknown" constant="no"/>
+<attribute name="OC_NEWARK" value="unknown" constant="no"/>
+</technology>
 </technologies>
 </device>
 <device name="VB" package="F15VB">
@@ -8547,7 +8467,12 @@ EIA Code 3216, Size A, 3.2 mm x 1.6 mm, grid 0.0125 inch</description>
 <connect gate="-1" pin="9" pad="9"/>
 </connects>
 <technologies>
-<technology name=""/>
+<technology name="">
+<attribute name="MF" value="" constant="no"/>
+<attribute name="MPN" value="" constant="no"/>
+<attribute name="OC_FARNELL" value="unknown" constant="no"/>
+<attribute name="OC_NEWARK" value="unknown" constant="no"/>
+</technology>
 </technologies>
 </device>
 </devices>
@@ -8630,9 +8555,6 @@ EIA Code 3216, Size A, 3.2 mm x 1.6 mm, grid 0.0125 inch</description>
 <part name="R18" library="GadgetFactory" deviceset="R" device="0603" value="13K"/>
 <part name="R12" library="GadgetFactory" deviceset="R" device="0603" value="140K"/>
 <part name="C44" library="GadgetFactory" deviceset="C" device="0603" value="15pF"/>
-<part name="U2" library="Altera_By_element14_Batch_1" deviceset="EPCS1SI8N" device="" value="EPCS16"/>
-<part name="+3V1" library="supply1" deviceset="+3V3" device=""/>
-<part name="GND8" library="supply1" deviceset="GND" device=""/>
 <part name="C47" library="GadgetFactory" deviceset="C" device="0805" value="10uF 6.3V TBD"/>
 <part name="GND9" library="supply1" deviceset="GND" device=""/>
 <part name="C9" library="GadgetFactory" deviceset="C" device="0603" value="100nF 6.3V"/>
@@ -8753,8 +8675,6 @@ EIA Code 3216, Size A, 3.2 mm x 1.6 mm, grid 0.0125 inch</description>
 <part name="FRAME2" library="frames" deviceset="A3L-LOC" device=""/>
 <part name="FRAME3" library="frames" deviceset="A3L-LOC" device=""/>
 <part name="+3V16" library="supply1" deviceset="+3V3" device=""/>
-<part name="C55" library="GadgetFactory" deviceset="C" device="0603" value="100nF 6.3V"/>
-<part name="GND59" library="supply1" deviceset="GND" device=""/>
 <part name="C56" library="GadgetFactory" deviceset="C" device="0603" value="100nF 6.3V"/>
 <part name="C60" library="alvie" deviceset="TANT_CASE_A" device="" value="47uF 6.3V TANT"/>
 <part name="GND60" library="supply1" deviceset="GND" device=""/>
@@ -8849,6 +8769,8 @@ EIA Code 3216, Size A, 3.2 mm x 1.6 mm, grid 0.0125 inch</description>
 <part name="R54" library="GadgetFactory" deviceset="R" device="0603" value="270R"/>
 <part name="R55" library="GadgetFactory" deviceset="R" device="0603" value="520R"/>
 <part name="R56" library="GadgetFactory" deviceset="R" device="0603" value="270R"/>
+<part name="TP4" library="testpad" deviceset="TP" device="TP08R" value="TPTP08R"/>
+<part name="TP5" library="testpad" deviceset="TP" device="TP08R" value="TPTP08R"/>
 </parts>
 <sheets>
 <sheet>
@@ -8884,6 +8806,8 @@ EIA Code 3216, Size A, 3.2 mm x 1.6 mm, grid 0.0125 inch</description>
 <text x="104.14" y="353.06" size="1.778" layer="97">VSPIWP</text>
 <text x="104.14" y="345.44" size="1.778" layer="97">VSPIHD</text>
 <text x="104.14" y="355.6" size="1.778" layer="97">VSPID</text>
+<text x="619.76" y="424.18" size="1.778" layer="91">CHANGE TO PS!</text>
+<text x="190.5" y="139.7" size="1.778" layer="91">DMC3400SDW-7</text>
 </plain>
 <instances>
 <instance part="GND1" gate="1" x="353.06" y="193.04"/>
@@ -8976,9 +8900,6 @@ EIA Code 3216, Size A, 3.2 mm x 1.6 mm, grid 0.0125 inch</description>
 <instance part="R18" gate="A" x="231.14" y="302.26" rot="R90"/>
 <instance part="R12" gate="A" x="185.42" y="337.82" rot="R90"/>
 <instance part="C44" gate="A" x="241.3" y="307.34"/>
-<instance part="U2" gate="A" x="436.88" y="307.34"/>
-<instance part="+3V1" gate="G$1" x="416.56" y="325.12"/>
-<instance part="GND8" gate="1" x="416.56" y="289.56" rot="MR0"/>
 <instance part="C47" gate="A" x="302.26" y="312.42" rot="R90"/>
 <instance part="GND9" gate="1" x="284.48" y="297.18"/>
 <instance part="C9" gate="A" x="485.14" y="314.96" rot="R270"/>
@@ -9115,8 +9036,6 @@ EIA Code 3216, Size A, 3.2 mm x 1.6 mm, grid 0.0125 inch</description>
 <instance part="FRAME2" gate="G$1" x="388.62" y="261.62"/>
 <instance part="FRAME3" gate="G$1" x="0" y="0"/>
 <instance part="+3V16" gate="G$1" x="261.62" y="335.28"/>
-<instance part="C55" gate="A" x="408.94" y="314.96" rot="R180"/>
-<instance part="GND59" gate="1" x="403.86" y="309.88" rot="MR0"/>
 <instance part="C56" gate="A" x="403.86" y="396.24" rot="R270"/>
 <instance part="C60" gate="G$1" x="723.9" y="416.56"/>
 <instance part="GND60" gate="1" x="723.9" y="408.94"/>
@@ -9225,6 +9144,8 @@ EIA Code 3216, Size A, 3.2 mm x 1.6 mm, grid 0.0125 inch</description>
 <instance part="R54" gate="A" x="586.74" y="200.66" rot="R180"/>
 <instance part="R55" gate="A" x="586.74" y="208.28" rot="R180"/>
 <instance part="R56" gate="A" x="586.74" y="215.9" rot="R180"/>
+<instance part="TP4" gate="G$1" x="444.5" y="436.88" rot="R90"/>
+<instance part="TP5" gate="G$1" x="480.06" y="490.22" rot="R90"/>
 </instances>
 <busses>
 </busses>
@@ -9412,16 +9333,10 @@ EIA Code 3216, Size A, 3.2 mm x 1.6 mm, grid 0.0125 inch</description>
 <label x="586.74" y="381" size="1.778" layer="95"/>
 </segment>
 <segment>
-<pinref part="U2" gate="A" pin="GND"/>
-<wire x1="419.1" y1="294.64" x2="416.56" y2="294.64" width="0.1524" layer="91"/>
-<wire x1="416.56" y1="294.64" x2="416.56" y2="292.1" width="0.1524" layer="91"/>
-<pinref part="GND8" gate="1" pin="GND"/>
-</segment>
-<segment>
-<label x="609.6" y="424.18" size="1.778" layer="95"/>
+<label x="604.52" y="424.18" size="1.778" layer="95"/>
 <pinref part="IC2" gate="G$1" pin="__MSEL1"/>
 <label x="586.74" y="424.18" size="1.778" layer="95"/>
-<wire x1="617.22" y1="424.18" x2="584.2" y2="424.18" width="0.1524" layer="91"/>
+<wire x1="607.06" y1="424.18" x2="584.2" y2="424.18" width="0.1524" layer="91"/>
 </segment>
 <segment>
 <wire x1="284.48" y1="307.34" x2="284.48" y2="302.26" width="0.1524" layer="91"/>
@@ -9741,12 +9656,6 @@ EIA Code 3216, Size A, 3.2 mm x 1.6 mm, grid 0.0125 inch</description>
 <pinref part="Q3" gate="G$1" pin="S"/>
 </segment>
 <segment>
-<pinref part="C55" gate="A" pin="2"/>
-<pinref part="GND59" gate="1" pin="GND"/>
-<wire x1="406.4" y1="314.96" x2="403.86" y2="314.96" width="0.1524" layer="91"/>
-<wire x1="403.86" y1="314.96" x2="403.86" y2="312.42" width="0.1524" layer="91"/>
-</segment>
-<segment>
 <pinref part="C60" gate="G$1" pin="-"/>
 <pinref part="GND60" gate="1" pin="GND"/>
 <wire x1="723.9" y1="414.02" x2="723.9" y2="411.48" width="0.1524" layer="91"/>
@@ -9883,6 +9792,9 @@ EIA Code 3216, Size A, 3.2 mm x 1.6 mm, grid 0.0125 inch</description>
 <pinref part="X1" gate="-1" pin="6"/>
 <wire x1="528.32" y1="190.5" x2="530.86" y2="190.5" width="0.1524" layer="91"/>
 <pinref part="GND65" gate="1" pin="GND"/>
+<junction x="530.86" y="195.58"/>
+<junction x="530.86" y="193.04"/>
+<junction x="530.86" y="190.5"/>
 </segment>
 <segment>
 <pinref part="R49" gate="A" pin="1"/>
@@ -9896,6 +9808,12 @@ EIA Code 3216, Size A, 3.2 mm x 1.6 mm, grid 0.0125 inch</description>
 <wire x1="551.18" y1="162.56" x2="543.56" y2="162.56" width="0.1524" layer="91"/>
 <wire x1="543.56" y1="162.56" x2="543.56" y2="165.1" width="0.1524" layer="91"/>
 <junction x="551.18" y="162.56"/>
+</segment>
+<segment>
+<label x="604.52" y="419.1" size="1.778" layer="95"/>
+<pinref part="IC2" gate="G$1" pin="__MSEL0"/>
+<label x="586.74" y="419.1" size="1.778" layer="95"/>
+<wire x1="607.06" y1="419.1" x2="584.2" y2="419.1" width="0.1524" layer="91"/>
 </segment>
 </net>
 <net name="N$149" class="0">
@@ -10047,34 +9965,10 @@ EIA Code 3216, Size A, 3.2 mm x 1.6 mm, grid 0.0125 inch</description>
 <pinref part="C25" gate="A" pin="1"/>
 </segment>
 <segment>
-<pinref part="U2" gate="A" pin="VCC"/>
-<wire x1="419.1" y1="309.88" x2="416.56" y2="309.88" width="0.1524" layer="91"/>
-<wire x1="416.56" y1="309.88" x2="416.56" y2="312.42" width="0.1524" layer="91"/>
-<pinref part="U2" gate="A" pin="VCC_2"/>
-<wire x1="416.56" y1="312.42" x2="416.56" y2="314.96" width="0.1524" layer="91"/>
-<wire x1="416.56" y1="314.96" x2="416.56" y2="322.58" width="0.1524" layer="91"/>
-<wire x1="419.1" y1="314.96" x2="416.56" y2="314.96" width="0.1524" layer="91"/>
-<pinref part="U2" gate="A" pin="VCC_3"/>
-<wire x1="419.1" y1="312.42" x2="416.56" y2="312.42" width="0.1524" layer="91"/>
-<pinref part="+3V1" gate="G$1" pin="+3V3"/>
-<junction x="416.56" y="312.42"/>
-<junction x="416.56" y="314.96"/>
-<pinref part="C55" gate="A" pin="1"/>
-<wire x1="411.48" y1="314.96" x2="416.56" y2="314.96" width="0.1524" layer="91"/>
-</segment>
-<segment>
 <label x="609.6" y="426.72" size="1.778" layer="95"/>
 <pinref part="IC2" gate="G$1" pin="__MSEL2"/>
 <wire x1="584.2" y1="426.72" x2="617.22" y2="426.72" width="0.1524" layer="91"/>
 <label x="586.74" y="426.72" size="1.778" layer="95"/>
-</segment>
-<segment>
-<label x="609.6" y="421.64" size="1.778" layer="95"/>
-<pinref part="IC2" gate="G$1" pin="__MSEL0"/>
-<wire x1="584.2" y1="419.1" x2="601.98" y2="419.1" width="0.1524" layer="91"/>
-<label x="586.74" y="419.1" size="1.778" layer="95"/>
-<wire x1="601.98" y1="419.1" x2="601.98" y2="421.64" width="0.1524" layer="91"/>
-<wire x1="617.22" y1="421.64" x2="601.98" y2="421.64" width="0.1524" layer="91"/>
 </segment>
 <segment>
 <pinref part="C3" gate="A" pin="1"/>
@@ -10896,8 +10790,8 @@ EIA Code 3216, Size A, 3.2 mm x 1.6 mm, grid 0.0125 inch</description>
 </segment>
 <segment>
 <pinref part="IC2" gate="G$1" pin="__IO_8"/>
-<wire x1="477.52" y1="429.26" x2="467.36" y2="429.26" width="0.1524" layer="91"/>
-<label x="467.36" y="429.26" size="1.778" layer="95"/>
+<wire x1="477.52" y1="429.26" x2="464.82" y2="429.26" width="0.1524" layer="91"/>
+<label x="464.82" y="429.26" size="1.778" layer="95"/>
 </segment>
 </net>
 <net name="D_BUS_OE" class="0">
@@ -11551,54 +11445,6 @@ EIA Code 3216, Size A, 3.2 mm x 1.6 mm, grid 0.0125 inch</description>
 <label x="20.32" y="335.28" size="1.778" layer="95"/>
 </segment>
 </net>
-<net name="DCLK" class="0">
-<segment>
-<pinref part="IC2" gate="G$1" pin="__DCLK"/>
-<wire x1="477.52" y1="426.72" x2="467.36" y2="426.72" width="0.1524" layer="91"/>
-<label x="467.36" y="426.72" size="1.778" layer="95"/>
-</segment>
-<segment>
-<pinref part="U2" gate="A" pin="DCLK"/>
-<wire x1="419.1" y1="304.8" x2="406.4" y2="304.8" width="0.1524" layer="91"/>
-<label x="408.94" y="304.8" size="1.778" layer="95"/>
-</segment>
-</net>
-<net name="DATA0" class="0">
-<segment>
-<pinref part="IC2" gate="G$1" pin="__DATA0"/>
-<wire x1="477.52" y1="424.18" x2="467.36" y2="424.18" width="0.1524" layer="91"/>
-<label x="467.36" y="424.18" size="1.778" layer="95"/>
-</segment>
-<segment>
-<pinref part="U2" gate="A" pin="DATA"/>
-<wire x1="454.66" y1="314.96" x2="467.36" y2="314.96" width="0.1524" layer="91"/>
-<label x="457.2" y="314.96" size="1.778" layer="95"/>
-</segment>
-</net>
-<net name="NCSO" class="0">
-<segment>
-<pinref part="U2" gate="A" pin="NCS"/>
-<wire x1="419.1" y1="302.26" x2="406.4" y2="302.26" width="0.1524" layer="91"/>
-<label x="408.94" y="302.26" size="1.778" layer="95"/>
-</segment>
-<segment>
-<pinref part="IC2" gate="G$1" pin="__IO_6/FLASH_NCS/NCSO"/>
-<wire x1="477.52" y1="436.88" x2="467.36" y2="436.88" width="0.1524" layer="91"/>
-<label x="467.36" y="436.88" size="1.778" layer="95"/>
-</segment>
-</net>
-<net name="ASDO" class="0">
-<segment>
-<pinref part="U2" gate="A" pin="ASDI"/>
-<wire x1="419.1" y1="299.72" x2="406.4" y2="299.72" width="0.1524" layer="91"/>
-<label x="408.94" y="299.72" size="1.778" layer="95"/>
-</segment>
-<segment>
-<pinref part="IC2" gate="G$1" pin="__IO_4/DATA/ADSO"/>
-<wire x1="477.52" y1="441.96" x2="464.82" y2="441.96" width="0.1524" layer="91"/>
-<label x="464.82" y="441.96" size="1.778" layer="95"/>
-</segment>
-</net>
 <net name="CONF_DONE" class="0">
 <segment>
 <pinref part="IC2" gate="G$1" pin="__CONF_DONE"/>
@@ -12109,9 +11955,9 @@ EIA Code 3216, Size A, 3.2 mm x 1.6 mm, grid 0.0125 inch</description>
 <label x="83.82" y="355.6" size="1.778" layer="95"/>
 </segment>
 <segment>
-<pinref part="IC2" gate="G$1" pin="__IO_84"/>
-<wire x1="487.68" y1="480.06" x2="487.68" y2="497.84" width="0.1524" layer="91"/>
-<label x="487.68" y="482.6" size="1.778" layer="95" rot="R90"/>
+<pinref part="IC2" gate="G$1" pin="__DATA0"/>
+<wire x1="477.52" y1="424.18" x2="462.28" y2="424.18" width="0.1524" layer="91"/>
+<label x="462.28" y="424.18" size="1.778" layer="95"/>
 </segment>
 </net>
 <net name="ESP_QWP" class="0">
@@ -12145,9 +11991,9 @@ EIA Code 3216, Size A, 3.2 mm x 1.6 mm, grid 0.0125 inch</description>
 <label x="83.82" y="340.36" size="1.778" layer="95"/>
 </segment>
 <segment>
-<pinref part="IC2" gate="G$1" pin="__IO_2"/>
-<wire x1="477.52" y1="452.12" x2="462.28" y2="452.12" width="0.1524" layer="91"/>
-<label x="462.28" y="452.12" size="1.778" layer="95"/>
+<pinref part="IC2" gate="G$1" pin="__IO_4/DATA/ADSO"/>
+<wire x1="477.52" y1="441.96" x2="462.28" y2="441.96" width="0.1524" layer="91"/>
+<label x="464.82" y="441.96" size="1.778" layer="95"/>
 </segment>
 </net>
 <net name="ESP_SCK" class="0">
@@ -12160,6 +12006,11 @@ EIA Code 3216, Size A, 3.2 mm x 1.6 mm, grid 0.0125 inch</description>
 <pinref part="IC2" gate="G$1" pin="__CLK1"/>
 <wire x1="477.52" y1="398.78" x2="464.82" y2="398.78" width="0.1524" layer="91"/>
 <label x="464.82" y="398.78" size="1.778" layer="95"/>
+</segment>
+<segment>
+<pinref part="IC2" gate="G$1" pin="__DCLK"/>
+<wire x1="477.52" y1="426.72" x2="462.28" y2="426.72" width="0.1524" layer="91"/>
+<label x="462.28" y="426.72" size="1.778" layer="95"/>
 </segment>
 </net>
 <net name="ESP_NCS0" class="0">
@@ -12294,6 +12145,11 @@ EIA Code 3216, Size A, 3.2 mm x 1.6 mm, grid 0.0125 inch</description>
 <wire x1="477.52" y1="434.34" x2="464.82" y2="434.34" width="0.1524" layer="91"/>
 <label x="467.36" y="434.34" size="1.778" layer="95"/>
 </segment>
+<segment>
+<pinref part="U1" gate="G$1" pin="IO16"/>
+<wire x1="81.28" y1="330.2" x2="101.6" y2="330.2" width="0.1524" layer="91"/>
+<label x="86.36" y="330.2" size="1.778" layer="95"/>
+</segment>
 </net>
 <net name="LED1" class="0">
 <segment>
@@ -12316,14 +12172,14 @@ EIA Code 3216, Size A, 3.2 mm x 1.6 mm, grid 0.0125 inch</description>
 </net>
 <net name="LED2" class="0">
 <segment>
-<pinref part="U1" gate="G$1" pin="IO33"/>
-<wire x1="33.02" y1="337.82" x2="20.32" y2="337.82" width="0.1524" layer="91"/>
-<label x="20.32" y="337.82" size="1.778" layer="95"/>
-</segment>
-<segment>
 <pinref part="R22" gate="A" pin="2"/>
 <wire x1="185.42" y1="480.06" x2="195.58" y2="480.06" width="0.1524" layer="91"/>
 <label x="185.42" y="480.06" size="1.778" layer="95"/>
+</segment>
+<segment>
+<pinref part="IC2" gate="G$1" pin="__IO_2"/>
+<wire x1="477.52" y1="452.12" x2="459.74" y2="452.12" width="0.1524" layer="91"/>
+<label x="459.74" y="452.12" size="1.778" layer="95"/>
 </segment>
 </net>
 <net name="N$3" class="0">
@@ -12416,9 +12272,9 @@ EIA Code 3216, Size A, 3.2 mm x 1.6 mm, grid 0.0125 inch</description>
 <label x="5.08" y="284.48" size="1.778" layer="95"/>
 </segment>
 <segment>
-<pinref part="U1" gate="G$1" pin="IO16"/>
-<wire x1="81.28" y1="330.2" x2="101.6" y2="330.2" width="0.1524" layer="91"/>
-<label x="86.36" y="330.2" size="1.778" layer="95"/>
+<pinref part="U1" gate="G$1" pin="IO33"/>
+<wire x1="33.02" y1="337.82" x2="20.32" y2="337.82" width="0.1524" layer="91"/>
+<label x="20.32" y="337.82" size="1.778" layer="95"/>
 </segment>
 </net>
 <net name="N$56" class="0">
@@ -13181,6 +13037,21 @@ EIA Code 3216, Size A, 3.2 mm x 1.6 mm, grid 0.0125 inch</description>
 <wire x1="505.46" y1="193.04" x2="502.92" y2="193.04" width="0.1524" layer="91"/>
 </segment>
 </net>
+<net name="N$1" class="0">
+<segment>
+<pinref part="IC2" gate="G$1" pin="__IO_6/FLASH_NCS/NCSO"/>
+<pinref part="TP4" gate="G$1" pin="TP"/>
+<wire x1="477.52" y1="436.88" x2="447.04" y2="436.88" width="0.1524" layer="91"/>
+</segment>
+</net>
+<net name="N$55" class="0">
+<segment>
+<pinref part="TP5" gate="G$1" pin="TP"/>
+<pinref part="IC2" gate="G$1" pin="__IO_84"/>
+<wire x1="482.6" y1="490.22" x2="487.68" y2="490.22" width="0.1524" layer="91"/>
+<wire x1="487.68" y1="490.22" x2="487.68" y2="480.06" width="0.1524" layer="91"/>
+</segment>
+</net>
 </nets>
 </sheet>
 </sheets>
@@ -13240,9 +13111,6 @@ EIA Code 3216, Size A, 3.2 mm x 1.6 mm, grid 0.0125 inch</description>
 <approved hash="104,1,353.06,78.74,IC4P,VCC,+3V3,,,"/>
 <approved hash="104,1,190.5,398.78,IC5,IN,VREG,,,"/>
 <approved hash="104,1,190.5,327.66,IC6,IN,VREG,,,"/>
-<approved hash="104,1,419.1,314.96,U2,VCC_2,+3V3,,,"/>
-<approved hash="104,1,419.1,312.42,U2,VCC_3,+3V3,,,"/>
-<approved hash="104,1,419.1,309.88,U2,VCC,+3V3,,,"/>
 <approved hash="104,1,271.78,327.66,IC8,VIN,+5V,,,"/>
 <approved hash="104,1,297.18,327.66,IC8,VOUT,+2V5,,,"/>
 <approved hash="104,1,411.48,401.32,U$1,VCC,+3V3,,,"/>
@@ -13259,8 +13127,6 @@ EIA Code 3216, Size A, 3.2 mm x 1.6 mm, grid 0.0125 inch</description>
 <approved hash="104,1,193.04,-38.1,U3,VCC(5.0),+3V3,,,"/>
 <approved hash="104,1,193.04,-40.64,U3,VCC_(I_/O),+3V3,,,"/>
 <approved hash="104,1,193.04,-43.18,U3,VREG(3.3),+3V3,,,"/>
-<approved hash="209,1,477.52,426.72,DCLK,,,,,"/>
-<approved hash="209,1,419.1,304.8,DCLK,,,,,"/>
 </errors>
 </schematic>
 </drawing>
