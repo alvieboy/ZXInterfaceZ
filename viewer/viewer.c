@@ -707,19 +707,12 @@ int find_video_mode(int *w, int *h, int *zoom_out)
     BORDER_LR = remain_w >> 1;
     BORDER_TB = remain_h >> 1;
 
-    switch (zoom) {
-    case 2:
-        break;
-        renderscr = &renderscr32_2;
-    case 4:
-        renderscr = &renderscr32_4;
-        break;
-    default:
-        SDL_Log("Unsupported zoom level %d\n", zoom);
-        break;
-    }
+    //    SDL_Surface *SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags);
+    *zoom_out = zoom;
+    *w = best_mode.w;
+    *h = best_mode.h;
 
-//    SDL_Surface *SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags);
+    return 0;
 }
 
 
@@ -833,7 +826,9 @@ int main(int argc, char **argv)
     int w=800, h=600;
     int zoom = 2;
 
-    find_video_mode(&w, &h, &zoom);
+    if (find_video_mode(&w, &h, &zoom)<0)
+        return -1;
+
     run(w,h, zoom);
 
     // Clean up and exit the program.
