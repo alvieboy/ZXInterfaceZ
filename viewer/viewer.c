@@ -451,7 +451,7 @@ void open_window( int w, int h, int zoom)
 
 void update()
 {
-    printf("Update frame\n");
+   // printf("Update frame\n");
 
     int i;
 //    drawPixel32_4(0,0,0xffffffff);
