@@ -13,6 +13,13 @@
 #endif
 #define MAX_FRAME_PAYLOAD 2048
 
+SDL_Renderer *sdlRenderer;
+SDL_Texture *sdlTexture;
+
+int tex_w;
+int tex_h;
+uint32_t tex_format;
+
 struct frame {
     uint8_t seq:7;
     uint8_t val:1;
@@ -33,25 +40,25 @@ typedef struct {
 #define RGB565(r,g,b) (((r & 0xf8)<<8) + ((g & 0xfc)<<3)+(b>>3))
 
 static const uint32_t normal_colors32[] = {
-    0x000000,
-    0x0000D7,
-    0xD70000,
-    0xD700D7,
-    0x00D700,
-    0x00D7D7,
-    0xD7D700,
-    0xD7D7D7
+    0xFF000000,
+    0xFF0000D7,
+    0xFFD70000,
+    0xFFD700D7,
+    0xFF00D700,
+    0xFF00D7D7,
+    0xFFD7D700,
+    0xFFD7D7D7
 };
 
 static const uint32_t bright_colors32[] = {
-    0x000000,
-    0x0000FF,
-    0xFF0000,
-    0xFF00FF,
-    0x00FF00,
-    0x00FFFF,
-    0xFFFF00,
-    0xFFFFFF
+    0xFF000000,
+    0xFF0000FF,
+    0xFFFF0000,
+    0xFFFF00FF,
+    0xFF00FF00,
+    0xFF00FFFF,
+    0xFFFFFF00,
+    0xFFFFFFFF
 };
 
 static const uint16_t normal_colors16[] = {
@@ -104,7 +111,7 @@ void showmodes(int displayIndex)
 
 
 SDL_Window *win;
-SDL_Surface *rootsurface;
+//SDL_Surface *rootsurface;
 
 void renderscr32_2(const scr_t *scr, bool flashonly);
 void renderscr32_4(const scr_t *scr, bool flashonly);
@@ -112,53 +119,6 @@ void renderscr16(const scr_t *scr, bool flashonly);
 
 void (*renderscr)(const scr_t *scr, bool flashonly);
 
-void open_window( int w, int h, int zoom)
-{
-#ifdef FULLSCREEN
-    win = SDL_CreateWindow(
-                          "ZX Spectrum",
-                          0,
-                          0,
-                          w,                               // width, in pixels
-                          h,                               // height, in pixels
-                          SDL_WINDOW_FULLSCREEN
-                         );
-#else
-    win = SDL_CreateWindow(
-                          "ZX Spectrum",
-                          0,
-                          0,
-                          w,                               // width, in pixels
-                          h,                               // height, in pixels
-                          0
-                         );
-#endif
-    rootsurface = SDL_GetWindowSurface(win);
-
-    SDL_PixelFormat*fmt = rootsurface->format;
-
-    printf("Running with BPP %d size %d %d pitch %d\n", fmt->BitsPerPixel, rootsurface->w, rootsurface->h, rootsurface->pitch);
-    switch (fmt->BitsPerPixel) {
-    case 32:
-        /* Fall-through */
-    case 24:
-        if (zoom==4) {
-            renderscr = &renderscr32_4;
-        } else {
-            renderscr = &renderscr32_2;
-        }
-        break;
-    case 16:
-        renderscr = &renderscr16;
-        break;
-    default:
-        printf("Unsupported BPP %d\n", fmt->BitsPerPixel);
-        exit(-1);
-    }
-	
-
-
-}
 
 static uint32_t parsecolor32( uint8_t col, int bright)
 {
@@ -198,11 +158,13 @@ void calc_sizes(int w, int h)
 
 }
 
+static uint8_t *image_pixels;
+
 
 static inline void drawPixel32_4(int x, int y, uint32_t pixel)
 {
-    Uint32 *pixels = (Uint32 *)rootsurface->pixels;
-    Uint32 *pptr = &pixels[ ( (y*4) * rootsurface->w ) + (x*4) ];
+    Uint32 *pixels = (Uint32 *)image_pixels;
+    Uint32 *pptr = &pixels[ ( (y*4) * tex_w ) + (x*4) ];
 
     Uint32 *pptr2 = pptr;
 
@@ -211,7 +173,7 @@ static inline void drawPixel32_4(int x, int y, uint32_t pixel)
     *pptr2++=pixel;
     *pptr2=pixel;
 
-    pptr2 += (rootsurface->w - 3);
+    pptr2 += (tex_w - 3);
 
     *pptr2++=pixel;
     *pptr2++=pixel;
@@ -219,14 +181,14 @@ static inline void drawPixel32_4(int x, int y, uint32_t pixel)
     *pptr2=pixel;
 
 
-    pptr2 += (rootsurface->w - 3);
+    pptr2 += (tex_w - 3);
 
     *pptr2++=pixel;
     *pptr2++=pixel;
     *pptr2++=pixel;
     *pptr2=pixel;
 
-    pptr2 += (rootsurface->w -3 );
+    pptr2 += (tex_w -3 );
 
     *pptr2++=pixel;
     *pptr2++=pixel;
@@ -236,16 +198,16 @@ static inline void drawPixel32_4(int x, int y, uint32_t pixel)
 
 static inline void drawPixel32_2(int x, int y, uint32_t pixel)
 {
-    Uint8 *pixels = (Uint8 *)rootsurface->pixels;
+    Uint8 *pixels = image_pixels;
 
-    Uint32 *pptr = &pixels[ ( (y*2) * rootsurface->pitch) + (x*2*sizeof(Uint32)) ];
+    Uint32 *pptr = (Uint32*)&pixels[ ( (y*2) * (tex_w*sizeof(Uint32))) + (x*2*sizeof(Uint32)) ];
 
     Uint32 *pptr2 = pptr;
 
     *pptr2++=pixel;
     *pptr2=pixel;
 
-    pptr2 += (rootsurface->w - 1);
+    pptr2 += (tex_w - 1);
 
     *pptr2++=pixel;
     *pptr2=pixel;
@@ -258,7 +220,7 @@ void renderscr32_4(const scr_t *scr, bool flashonly)
     uint32_t fg, bg, t;
     int flash;
 
-    SDL_LockSurface( rootsurface );
+    //SDL_LockSurface( rootsurface );
 
     for (y=0;y<192;y++) {
         for (x=0; x<32; x++) {
@@ -291,7 +253,7 @@ void renderscr32_4(const scr_t *scr, bool flashonly)
             }
         }
     }
-    SDL_UnlockSurface( rootsurface );
+    //SDL_UnlockSurface( rootsurface );
 
 };
 
@@ -302,7 +264,7 @@ void renderscr32_2(const scr_t *scr, bool flashonly)
     uint32_t fg, bg, t;
     int flash;
 
-    SDL_LockSurface( rootsurface );
+    //SDL_LockSurface( rootsurface );
 
     for (y=0;y<192;y++) {
         for (x=0; x<32; x++) {
@@ -335,14 +297,14 @@ void renderscr32_2(const scr_t *scr, bool flashonly)
             }
         }
     }
-    SDL_UnlockSurface( rootsurface );
+    //SDL_UnlockSurface( rootsurface );
 
 };
 
 static inline void drawPixel16_4(int x, int y, uint16_t pixel)
 {
-    Uint16 *pixels = (Uint16 *)rootsurface->pixels;
-    Uint16 *pptr = &pixels[ ( (y*4) * rootsurface->w ) + (x*4) ];
+    Uint16 *pixels = (Uint16 *)image_pixels;
+    Uint16 *pptr = &pixels[ ( (y*4) * tex_w ) + (x*4) ];
 
     Uint16 *pptr2 = pptr;
 
@@ -351,7 +313,7 @@ static inline void drawPixel16_4(int x, int y, uint16_t pixel)
     *pptr2++=pixel;
     *pptr2=pixel;
 
-    pptr2 += (rootsurface->w - 3);
+    pptr2 += (tex_w - 3);
 
     *pptr2++=pixel;
     *pptr2++=pixel;
@@ -359,14 +321,14 @@ static inline void drawPixel16_4(int x, int y, uint16_t pixel)
     *pptr2=pixel;
 
 
-    pptr2 += (rootsurface->w - 3);
+    pptr2 += (tex_w - 3);
 
     *pptr2++=pixel;
     *pptr2++=pixel;
     *pptr2++=pixel;
     *pptr2=pixel;
 
-    pptr2 += (rootsurface->w -3 );
+    pptr2 += (tex_w -3 );
 
     *pptr2++=pixel;
     *pptr2++=pixel;
@@ -381,7 +343,7 @@ void renderscr16(const scr_t *scr, bool flashonly)
     uint16_t fg, bg, t;
     int flash;
 
-    SDL_LockSurface( rootsurface );
+    //SDL_LockSurface( rootsurface );
 
     for (y=0;y<192;y++) {
         for (x=0; x<32; x++) {
@@ -414,12 +376,91 @@ void renderscr16(const scr_t *scr, bool flashonly)
             }
         }
     }
-    SDL_UnlockSurface( rootsurface );
+    //SDL_UnlockSurface( rootsurface );
 
 };
 
+
+void open_window( int w, int h, int zoom)
+{
+#ifdef FULLSCREEN
+    win = SDL_CreateWindow(
+                          "ZX Spectrum",
+                          0,
+                          0,
+                          w,                               // width, in pixels
+                          h,                               // height, in pixels
+                          SDL_WINDOW_FULLSCREEN
+                         );
+#else
+    win = SDL_CreateWindow(
+                          "ZX Spectrum",
+                          0,
+                          0,
+                          w,                               // width, in pixels
+                          h,                               // height, in pixels
+                          0
+                         );
+#endif
+   // rootsurface = SDL_GetWindowSurface(win);
+
+    //    SDL_PixelFormat*fmt = rootsurface->format;
+
+    sdlRenderer = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
+
+    sdlTexture = SDL_CreateTexture(sdlRenderer,
+                                   SDL_PIXELFORMAT_RGB888,
+                                   SDL_TEXTUREACCESS_STREAMING,
+                                   w, h);
+    tex_w = w;
+    tex_h = h;
+    tex_format = SDL_PIXELFORMAT_RGB888;
+
+
+    printf("Running with BPP %d size %d %d pitch %d\n",
+           SDL_BITSPERPIXEL(tex_format),
+           tex_w,
+           tex_h, 0);
+    switch (SDL_BITSPERPIXEL(tex_format)) {
+    case 32:
+        /* Fall-through */
+    case 24:
+        if (zoom==4) {
+            renderscr = &renderscr32_4;
+        } else {
+            renderscr = &renderscr32_2;
+        }
+        image_pixels = malloc(w*h*4);
+        break;
+    case 16:
+        renderscr = &renderscr16;
+        image_pixels = malloc(w*h*2);
+        break;
+    default:
+        printf("Unsupported BPP %d\n", SDL_BITSPERPIXEL(tex_format));
+        exit(-1);
+    }
+
+
+
+
+   
+
+
+}
+
 void update()
 {
+    printf("Update frame\n");
+
+    int i;
+//    drawPixel32_4(0,0,0xffffffff);
+    drawPixel32_4(1,0,0xffff);
+    SDL_UpdateTexture(sdlTexture, NULL, image_pixels, tex_w * sizeof (Uint32));
+    SDL_RenderClear(sdlRenderer);
+    SDL_RenderCopy(sdlRenderer, sdlTexture, NULL, NULL);
+    SDL_RenderPresent(sdlRenderer);
+
     SDL_UpdateWindowSurface(win);
 }
 
