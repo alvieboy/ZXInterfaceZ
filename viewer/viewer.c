@@ -20,8 +20,8 @@ struct frame {
     uint8_t payload[MAX_FRAME_PAYLOAD];
 };
 
-const unsigned int BORDER_LR = 32;
-const unsigned int BORDER_TB = 39;
+unsigned int BORDER_LR = 32;
+unsigned int BORDER_TB = 39;
 bool flashinvert;
 
 typedef struct {
@@ -106,12 +106,13 @@ void showmodes(int displayIndex)
 SDL_Window *win;
 SDL_Surface *rootsurface;
 
-void renderscr32(const scr_t *scr, bool flashonly);
+void renderscr32_2(const scr_t *scr, bool flashonly);
+void renderscr32_4(const scr_t *scr, bool flashonly);
 void renderscr16(const scr_t *scr, bool flashonly);
 
 void (*renderscr)(const scr_t *scr, bool flashonly);
 
-void open_window( int w, int h)
+void open_window( int w, int h, int zoom)
 {
 #ifdef FULLSCREEN
     win = SDL_CreateWindow(
@@ -141,7 +142,11 @@ void open_window( int w, int h)
     case 32:
         /* Fall-through */
     case 24:
-        renderscr = &renderscr32;
+        if (zoom==4) {
+            renderscr = &renderscr32_4;
+        } else {
+            renderscr = &renderscr32_2;
+        }
         break;
     case 16:
         renderscr = &renderscr16;
@@ -194,7 +199,7 @@ void calc_sizes(int w, int h)
 }
 
 
-static inline void drawPixel32(int x, int y, uint32_t pixel)
+static inline void drawPixel32_4(int x, int y, uint32_t pixel)
 {
     Uint32 *pixels = (Uint32 *)rootsurface->pixels;
     Uint32 *pptr = &pixels[ ( (y*4) * rootsurface->w ) + (x*4) ];
@@ -229,7 +234,23 @@ static inline void drawPixel32(int x, int y, uint32_t pixel)
     *pptr2=pixel;
 }
 
-void renderscr32(const scr_t *scr, bool flashonly)
+static inline void drawPixel32_2(int x, int y, uint32_t pixel)
+{
+    Uint32 *pixels = (Uint32 *)rootsurface->pixels;
+    Uint32 *pptr = &pixels[ ( (y*4) * rootsurface->w ) + (x*4) ];
+
+    Uint32 *pptr2 = pptr;
+
+    *pptr2++=pixel;
+    *pptr2=pixel;
+
+    pptr2 += (rootsurface->w - 3);
+
+    *pptr2++=pixel;
+    *pptr2=pixel;
+}
+
+void renderscr32_4(const scr_t *scr, bool flashonly)
 {
     int x;
     int y;
@@ -262,9 +283,9 @@ void renderscr32(const scr_t *scr, bool flashonly)
             //printf("%d %d Pixel %02x attr %02x fg %08x bg %08x\n", x, y, pixeldata8, attr, fg, bg);
 
             for (int ix=0;ix<8;ix++) {
-                drawPixel32(BORDER_LR + (x*8 + ix),
-                          BORDER_TB+y,
-                          pixeldata8 & 0x80 ? fg: bg);
+                drawPixel32_4(BORDER_LR + (x*8 + ix),
+                              BORDER_TB+y,
+                              pixeldata8 & 0x80 ? fg: bg);
                 pixeldata8<<=1;
             }
         }
@@ -273,7 +294,51 @@ void renderscr32(const scr_t *scr, bool flashonly)
 
 };
 
-static inline void drawPixel16(int x, int y, uint16_t pixel)
+void renderscr32_2(const scr_t *scr, bool flashonly)
+{
+    int x;
+    int y;
+    uint32_t fg, bg, t;
+    int flash;
+
+    SDL_LockSurface( rootsurface );
+
+    for (y=0;y<192;y++) {
+        for (x=0; x<32; x++) {
+            unsigned offset = x; // 5 bits
+
+            offset |= ((y>>3) & 0x7)<<5;  // Y5, Y4, Y3
+            offset |= (y & 7)<<8;         // Y2, Y1, Y0
+            offset |= ((y>>6) &0x3 ) << 11;               // Y8, Y7
+
+            uint8_t attr = getattr(scr, x, y>>3);
+            parseattr32( attr, &fg, &bg, &flash);
+
+            if (!flash && flashonly)
+                continue;
+
+            if (flash && flashinvert) {
+                t = bg;
+                bg = fg;
+                fg = t;
+            }
+            // Get m_scr
+            uint8_t pixeldata8 = scr->pixeldata[offset];
+            //printf("%d %d Pixel %02x attr %02x fg %08x bg %08x\n", x, y, pixeldata8, attr, fg, bg);
+
+            for (int ix=0;ix<8;ix++) {
+                drawPixel32_2(BORDER_LR + (x*8 + ix),
+                              BORDER_TB+y,
+                              pixeldata8 & 0x80 ? fg: bg);
+                pixeldata8<<=1;
+            }
+        }
+    }
+    SDL_UnlockSurface( rootsurface );
+
+};
+
+static inline void drawPixel16_4(int x, int y, uint16_t pixel)
 {
     Uint16 *pixels = (Uint16 *)rootsurface->pixels;
     Uint16 *pptr = &pixels[ ( (y*4) * rootsurface->w ) + (x*4) ];
@@ -341,9 +406,9 @@ void renderscr16(const scr_t *scr, bool flashonly)
             //printf("%d %d Pixel %02x attr %02x fg %08x bg %08x\n", x, y, pixeldata8, attr, fg, bg);
 
             for (int ix=0;ix<8;ix++) {
-                drawPixel16(BORDER_LR + (x*8 + ix),
-                          BORDER_TB+y,
-                          pixeldata8 & 0x80 ? fg: bg);
+                drawPixel16_4(BORDER_LR + (x*8 + ix),
+                              BORDER_TB+y,
+                              pixeldata8 & 0x80 ? fg: bg);
                 pixeldata8<<=1;
             }
         }
@@ -497,9 +562,10 @@ int request_data(const char *ip)
 
 }
 
-void run(int w, int h)
+void run(int w, int h, int zoom)
 {
-    open_window(w,h);
+    open_window(w,h, zoom);
+
     load("MANIC.SCR");
     update();
 
@@ -546,6 +612,114 @@ void run(int w, int h)
 
 void start_network()
 {
+}
+
+#define MINIMUM_WIDTH (256*2)
+#define MINIMUM_HEIGHT (192*2)
+
+int compare_modes(const SDL_DisplayMode *prev_mode, const SDL_DisplayMode *new_mode)
+{
+    if (prev_mode->format == SDL_PIXELFORMAT_UNKNOWN)
+        return 0; // Best
+    if ((new_mode->w > MINIMUM_WIDTH) &&
+        (new_mode->h > MINIMUM_HEIGHT)) {
+        SDL_Log("Valid mode %d %d\n", new_mode->w, new_mode->h);
+        if (new_mode->w < prev_mode->w) {
+            return 0;
+        }
+    }
+    return -1;
+
+}
+
+int find_video_mode(int *w, int *h, int *zoom_out)
+{
+    int display_count = 0, display_index = 0, mode_index = 0;
+    SDL_DisplayMode mode = { SDL_PIXELFORMAT_UNKNOWN, 0, 0, 0, 0 };
+    SDL_DisplayMode best_mode = {
+        .format = SDL_PIXELFORMAT_UNKNOWN,
+        .w = 4096,
+        .h = 4096
+    };
+
+    if ((display_count = SDL_GetNumVideoDisplays()) < 1) {
+        SDL_Log("SDL_GetNumVideoDisplays returned: %i", display_count);
+        return -1;
+    }
+
+    int num_modes = SDL_GetNumDisplayModes(0);
+    SDL_Log("Number of modes: %d\n", num_modes);
+
+    for (mode_index = 0; mode_index < num_modes; mode_index++) {
+
+        if (SDL_GetDisplayMode(display_index, mode_index, &mode) != 0) {
+            SDL_Log("SDL_GetDisplayMode failed: %s", SDL_GetError());
+            return 1;
+        }
+        SDL_Log("SDL_GetDisplayMode(0, 0, &mode):\t\t%i bpp\t%i x %i",
+                SDL_BITSPERPIXEL(mode.format), mode.w, mode.h);
+        switch (mode.format) {
+        case SDL_PIXELFORMAT_RGB888:
+            // Check if better than previous mode
+            SDL_Log("Valid mode");
+            if (compare_modes(&best_mode, &mode)==0) {
+                best_mode = mode;
+            }
+            break;
+        default:
+            SDL_Log("Skipping mode");
+            break;
+        }
+    }
+
+    if (best_mode.format == SDL_PIXELFORMAT_UNKNOWN) {
+        SDL_Log("Cannot find a suitable video mode\n");
+        return -1;
+    }
+
+    SDL_Log("Choosing mode %i bpp\t%i x %i",
+            SDL_BITSPERPIXEL(best_mode.format), best_mode.w, best_mode.h);
+
+
+    int zoom = 4;
+    while (zoom>=2){
+        if ((zoom*256) < best_mode.w) {
+            if ((zoom*192) < best_mode.h) {
+                SDL_Log("Can zoom %d\n", zoom);
+                break;
+            }
+        }
+        zoom>>=1;
+    }
+    if (zoom<2) {
+        SDL_Log("Unsupported zoom level %d\n", zoom);
+        return -1;
+    }
+
+    // Compute borders, offsets, etc. Set up proper render callback
+
+    int usable_w = best_mode.w / zoom;
+    int usable_h = best_mode.h / zoom;
+
+    int remain_w = usable_w - 256;
+    int remain_h = usable_h - 192;
+
+    BORDER_LR = remain_w >> 1;
+    BORDER_TB = remain_h >> 1;
+
+    switch (zoom) {
+    case 2:
+        break;
+        renderscr = &renderscr32_2;
+    case 4:
+        renderscr = &renderscr32_4;
+        break;
+    default:
+        SDL_Log("Unsupported zoom level %d\n", zoom);
+        break;
+    }
+
+//    SDL_Surface *SDL_SetVideoMode(int width, int height, int bpp, Uint32 flags);
 }
 
 
@@ -656,7 +830,11 @@ int main(int argc, char **argv)
     }
     SDL_DestroyWindow(window);
 
-    run(1280, 1024);
+    int w=800, h=600;
+    int zoom = 2;
+
+    find_video_mode(&w, &h, &zoom);
+    run(w,h, zoom);
 
     // Clean up and exit the program.
     SDL_Quit();
