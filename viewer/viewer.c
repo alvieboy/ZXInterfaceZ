@@ -137,7 +137,7 @@ void open_window( int w, int h, int zoom)
 
     SDL_PixelFormat*fmt = rootsurface->format;
 
-    printf("Running with BPP %d\n", fmt->BitsPerPixel);
+    printf("Running with BPP %d size %d %d \n", fmt->BitsPerPixel, rootsurface->w, rootsurface->h);
     switch (fmt->BitsPerPixel) {
     case 32:
         /* Fall-through */
@@ -237,14 +237,14 @@ static inline void drawPixel32_4(int x, int y, uint32_t pixel)
 static inline void drawPixel32_2(int x, int y, uint32_t pixel)
 {
     Uint32 *pixels = (Uint32 *)rootsurface->pixels;
-    Uint32 *pptr = &pixels[ ( (y*4) * rootsurface->w ) + (x*4) ];
+    Uint32 *pptr = &pixels[ ( (y*2) * rootsurface->w ) + (x*2) ];
 
     Uint32 *pptr2 = pptr;
 
     *pptr2++=pixel;
     *pptr2=pixel;
 
-    pptr2 += (rootsurface->w - 3);
+    pptr2 += (rootsurface->w - 1);
 
     *pptr2++=pixel;
     *pptr2=pixel;
