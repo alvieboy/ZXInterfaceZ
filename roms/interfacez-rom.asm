@@ -4,7 +4,6 @@
 ; System variables definitions
 
 		include	"interfacez-sysvars.asm"
-
 ;*****************************************
 ;** Part 1. RESTART ROUTINES AND TABLES **
 ;*****************************************
@@ -47,10 +46,9 @@ MASK_INT:	PUSH	AF		; save the registers.
 		OR	L		; was zero.
 		JR	NZ,KEY_INT	; forward to KEY_INT if not.
 
-		INC	(IY+$40)	; otherwise increment FRAMES3 the third byte.
+		;INC	(IY+$40)	; otherwise increment FRAMES3 the third byte.
 
 					; now save the rest of the main registers and read and decode the keyboard.
-
 					;;;$0048
 KEY_INT:	PUSH	BC		; save the other
 		PUSH	DE		; main registers.
@@ -113,11 +111,40 @@ RAM_DONE:
 
 	CALL	SETUP_MENU1
 	LD	HL, MENU1
-        LD	D, 4 ; line to display menu at.
+        LD	D, 6 ; line to display menu at.
         CALL	MENU__INIT
         
 	CALL	MENU__DRAW
 
+	LD	HL, HEAP
+        LD	A, $00
+        CALL 	LOADRESOURCE
+        JR	Z, ENDLESS
+        
+	LD	HL, HEAP
+        LD	DE, LINE23
+        ;	Load string lenght
+        LD	A,(HL)
+        INC	HL
+        CALL 	PUTSTRINGN
+
+
+	LD	HL, COPYRIGHT
+        LD	DE, LINE22
+        CALL 	PUTSTRING
+
+
+	; Load image logo
+
+	LD	HL, HEAP
+        LD	A, $01
+        CALL 	LOADRESOURCE
+        CP	$FF
+        JR	Z, ENDLESS
+
+	LD	HL, HEAP
+        LD	DE, SCREEN
+        CALL	DISPLAYBITMAP
 
 
 	LD	HL,$0523	; The keyboard repeat and delay values
@@ -127,42 +154,42 @@ RAM_DONE:
         LD	(KSTATE_4),A	; set KSTATE_0 to $FF.
 
   	IM 	1
-        LD	IY, ERR_NR
+        LD	IY, IYBASE
         EI
         
-ENDLESS:CALL	KEY_INPUT
+ENDLESS:
+	CALL	KEY_INPUT
+        HALT
        	JR 	ENDLESS 
-
-MENUSELECTED:
-	RET
 
 HANDLEKEY:
 	LD	HL, MENU1
 	
-        CP	$90
+        CP	$26 	; A key
         JR	NZ, N1
         JP	MENU__CHOOSENEXT
 N1:
-        CP	$A0
+        CP	$25     ; Q key
         JR	NZ, N2
         JP	MENU__CHOOSEPREV
 N2:
-        CP	$0D
+        CP	$21     ; ENTER key
         JR	NZ, N3
-        JP	MENUSELECTED
+        JP	MENU__ACTIVATE
 N3:
 	RET
 
 KEY_INPUT:	
-	BIT	5,(IY+$01)	; test FLAGS  - has a new key been pressed ?
+	BIT	5,(IY+(FLAGS-IYBASE))	; test FLAGS  - has a new key been pressed ?
 	RET	Z		; return if not.
 
-	LD	A,(LASTK)	; system variable LASTK will hold last key -
-					; from the interrupt routine.
-	RES	5,(IY+$01)	; update FLAGS  - reset the new key flag.
+	LD	DE, (CURKEY)
+	LD	A, D
+	RES	5,(IY+(FLAGS-IYBASE))	; update FLAGS  - reset the new key flag.
+        DEC	A
+        RET 	Z 	; Modifier key applied, skip
+        LD	A, E
 	JR	HANDLEKEY
-        ;RET
-
 
 
 SETATTRS:
@@ -219,6 +246,19 @@ PUTSTRING:
         POP	HL
         INC	HL
         JR 	PUTSTRING
+
+PUTSTRINGN:
+	LD	B, A
+PS1:
+	LD 	A,(HL)
+        PUSH	HL
+        PUSH	BC
+        CALL	PUTCHAR
+        POP	BC
+        POP	HL
+        INC	HL
+        DJNZ 	PS1
+        RET
         
 PUTNIBBLE:
         CP	10
@@ -228,6 +268,8 @@ PUTNIBBLE:
 NDEC:   ADD	A, 'A'-10
         JR 	PUTCHAR
         
+
+
 ;
 ;      DE: screen address
 ;	A: char 
@@ -288,37 +330,164 @@ NEXTBAND$:
 	LD 	D,A			; copy back into destination MSB	
 	RET
 
+ENTRY1HANDLER:
+	LD	HL, MENU1
+        LD	A, $38
+        CALL	MENU__CLEAR
+	RET
+ENTRY2HANDLER:
+	RET
+ENTRY3HANDLER:
+	RET
+ENTRY4HANDLER:
+	JP 0
+	RET
+        
+MENUCALLBACKTABLE:
+	DEFW ENTRY1HANDLER
+        DEFW ENTRY2HANDLER
+        DEFW ENTRY3HANDLER
+        DEFW ENTRY4HANDLER
+
+include "menu_defs.asm"
+
 SETUP_MENU1:
        	LD	IX, MENU1
         LD	A, 28  			; Menu width 24
-        LD	(IX), A
+        LD	(IX + MENU_OFF_WIDTH), A
         LD	A, 4                    ; Menu entries
-        LD	(IX+1), A
+        LD	(IX + MENU_OFF_MAX_VISIBLE_ENTRIES), A
+        LD	(IX + MENU_OFF_DATA_ENTRIES), A
         XOR	A
-        LD 	(IX+2), A		; Selected entry
-        ; Leave screen out.
+        LD 	(IX+ MENU_OFF_SELECTED_ENTRY), A		; Selected entry
         LD	HL, MENUTITLE
-        LD	(IX+7), L
-        LD	(IX+8), H
+        LD	(IX+MENU_OFF_MENU_TITLE), L
+        LD	(IX+MENU_OFF_MENU_TITLE+1), H
+        ; Entry 1
         LD	HL, ENTRY1
-        LD	(IX+9), L
-        LD	(IX+10), H
+        LD	(IX+MENU_OFF_FIRST_ENTRY), L
+        LD	(IX+MENU_OFF_FIRST_ENTRY+1), H
         LD	HL, ENTRY2
-        LD	(IX+11), L
-        LD	(IX+12), H
+        LD	(IX+MENU_OFF_FIRST_ENTRY+2), L
+        LD	(IX+MENU_OFF_FIRST_ENTRY+3), H
         LD	HL, ENTRY3
-        LD	(IX+13), L
-        LD	(IX+14), H
+        LD	(IX+MENU_OFF_FIRST_ENTRY+4), L
+        LD	(IX+MENU_OFF_FIRST_ENTRY+5), H
         LD	HL, ENTRY4
-        LD	(IX+15), L
-        LD	(IX+16), H
+        LD	(IX+MENU_OFF_FIRST_ENTRY+6), L
+        LD	(IX+MENU_OFF_FIRST_ENTRY+7), H
+
+	LD	(IX+MENU_OFF_CALLBACKPTR), low(MENUCALLBACKTABLE)
+        LD	(IX+MENU_OFF_CALLBACKPTR+1), high(MENUCALLBACKTABLE)
         RET
+
+READRESFIFO:
+	IN	A, ($0B)
+        OR	A
+        JR	NZ, READRESFIFO
+        ; Grab resoruce data
+        IN	A, ($0D)
+        RET
+
+;
+; Inputs: 	A:  Resource ID
+;         	HL: Target memory area
+; Returns:
+;		A:  Resource type, or $FF if not found
+;		DE: Resource size
+;		Z:  Zero if resource is invalid.
+; Corrupts:	HL, BC, F
+
+LOADRESOURCE:
+	LD	C, A
+WAITFIFO1:
+        IN 	A, ($07)
+        OR	A
+        JR	NZ, WAITFIFO1
+        ; Send resource ID
+        LD	A, C
+        OUT	($09), A
+        
+        
+        CALL	READRESFIFO
+        CP	$FF
+        RET	Z	; If invalid, return immediatly
+        
+        LD	C, A ; Save resource type in C
+
+        CALL	READRESFIFO        
+        LD	E, A 	; Resource size LSB
+
+        CALL	READRESFIFO
+        LD	D, A 	; Resource size MSB
+        
+        PUSH	DE	; Save resource size.
+	
+WAITFIFO3:
+
+        CALL	READRESFIFO
+        
+        LD	(HL), A
+        INC	HL
+        DEC	DE
+       	LD	A, D
+    	OR	E
+        JR 	NZ,   WAITFIFO3
+
+        LD	A, C ; Get resource type back in A
+	POP 	DE   ; Get resource size back
+
+        CP	$FF
+        RET
+
+	; Move DE one pixel line below
+PMOVEDOWN:
+	INC 	D				; Go down onto the next pixel line
+	LD 	A, D				; Check if we have gone onto next character boundary
+	AND	7
+	RET 	NZ				; No, so skip the next bit
+	LD 	A,E				; Go onto the next character line
+	ADD 	A, 32
+	LD 	E,A
+	RET 	C				; Check if we have gone onto next third of screen
+	LD 	A,D				; Yes, so go onto next third
+	SUB 	8
+	LD 	D,A
+	RET
+
+;	In: 	HL: pointer to bitmap structure
+;		DE: screen address
+;
+;		Bitmap structure contains:
+;			DB 0	// Width in bytes
+;			DB 0	// Height in lines
+;			Db 0..  // Bitmap data.
+DISPLAYBITMAP:
+        LD	C, (HL)  ; Width in bytes
+        INC	HL
+        LD	A, (HL)	 ; Number of lines
+        INC	HL
+DOLINE:
+        LD	B, $0
+	PUSH	DE
+        PUSH	BC
+        LDIR
+        POP	BC
+        POP	DE
+        LD	B, A      ; PMOVEDOWN corrupts A, save it.
+	CALL	PMOVEDOWN
+        LD	A, B
+        DEC	A
+        JR	NZ, DOLINE
+        RET
+        
 
         include "menu.asm"
         include "keyboard.asm"
 	include	"charmap.asm"
-
-
+               ; 00000000001111111111222222222233
+               ; 01234567890123456789012345678901
+COPYRIGHT:DB	"ZX Interface Z (C) Alvieboy 2020", 0
 
 MENUTITLE:
 	DB 	"ZX Interface Z", 0

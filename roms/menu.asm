@@ -1,22 +1,11 @@
-;
-; MENU structure definition
-; off size meaning
-; 00  01   Width of menu
-; 01  01   Number of entries
-; 02  01   Current selected entry
-; 03  02   Screen pointer (start)
-; 05  02   Attribute pointer (start)
-; 07  02   Ptr to menu title
-; 09  02   Ptr to entry
-; *   *    Ptr to entry
-
-; 
+;include "menu_defs.asm"; 
 ;  Functions in this file
 ;
 ;  MENU__INIT       : Initialise a menu
 ;  MENU__DRAW       : Draw the menu (call once)
 ;  MENU__CHOOSENEXT : Choose next entry in the menu
 ;  MENU__CHOOSEPREV : Choose previous entry in menu
+;  MENU__ACTIVATE   : Activate current menu entry (execute callback)
 
 
 
@@ -32,7 +21,7 @@ MENU__INIT:
 	PUSH	HL
         POP	IX
 	; Get menu width
-	LD      A, (IX)
+	LD      A, (IX + MENU_OFF_WIDTH)
 	SRA     A       ; Divide by 2.
 	LD      C, A   
 	LD      A, 15
@@ -51,8 +40,8 @@ MENU__INIT:
         OR	$40		; add the base address of screen.
 	LD      H,  A
 
-        LD	(IX+3), L
-        LD	(IX+4), H
+        LD	(IX+MENU_OFF_SCREENPTR), L
+        LD	(IX+MENU_OFF_SCREENPTR+1), H
 	
 	; Pick start line again. C still holds the offset.
 	LD      A, D
@@ -69,17 +58,89 @@ MENU__INIT:
 	ADD     HL, BC
 	
         ;LD	DE, ATTR+64
-        LD	(IX+5), L
-        LD	(IX+6), H
+        LD	(IX+MENU_OFF_ATTRPTR), L
+        LD	(IX+MENU_OFF_ATTRPTR+1), H
 	POP     HL
         RET
+
+; Clear area used by menu.
+; Attribute used in A
+MENU__CLEAR:
+        PUSH	AF		; Save attribute
+	PUSH  	HL
+        POP	IX
+	LD	A, (IX+MENU_OFF_MAX_VISIBLE_ENTRIES)  	; Number of entries
+        INC	A		; Include header
+        SLA	A
+        SLA	A
+        SLA	A               ; Multiply by 8
+        INC	A		; Include (one line) footer
+        LD	L, (IX+MENU_OFF_SCREENPTR)       ; Screen..
+        LD	H, (IX+MENU_OFF_SCREENPTR+1)     ; pointer.
+        PUSH	HL
+        POP	DE
+        
+        LD	C, A            ; Rows to process
+CLRNEXT:
+        XOR	A
+        LD	B, (IX+MENU_OFF_WIDTH)         ; Width of menu
+        INC	B
+        INC	B
+CLRLINE:
+        LD	(HL), A
+        INC	HL
+        DJNZ	CLRLINE
+        CALL	PMOVEDOWN
+        PUSH	DE
+        POP	HL
+        DEC	C
+        XOR	A
+        OR	C		; A is still 0
+	JR	NZ, CLRNEXT
+        POP	AF
+        
+        ; Now, clear attributes
+        LD	L, (IX+MENU_OFF_ATTRPTR)
+        LD	H, (IX+MENU_OFF_ATTRPTR+1)
+
+        LD	C, (IX+MENU_OFF_MAX_VISIBLE_ENTRIES)       ; Attribute lines to clear
+        INC	C               ; Include header
+        INC	C               ; And footer
+        
+        LD	D, A	; Save attribute in D
+        
+CLRATTRNEXT:
+        LD	B, (IX+MENU_OFF_WIDTH)         ; Width of menu
+        INC	B
+        INC	B
+        PUSH	HL
+CLRATTR:
+        LD	(HL), A
+        INC 	HL
+        DJNZ	CLRATTR
+        POP	HL
+        
+        LD	A, 32
+        ADD	A, L
+    	LD	L, A   ; L = A+L
+    	ADC	A, H   ; A = A+L+H+carry
+    	SUB	L      ; A = H+carry
+    	LD	H, A   ; H = H+carry
+        LD	A, 0
+        DEC	C
+        OR	C
+        LD	A, D ; Restore attibute
+        JR	NZ, CLRATTRNEXT
+        
+        RET
+        
 
 MENU__DRAW:
 	PUSH  	HL
         POP	IX
-	LD	B, (IX+1)
-        LD	E, (IX+3)
-        LD	D, (IX+4)
+	LD	B, (IX+MENU_OFF_MAX_VISIBLE_ENTRIES)  	; Number of entries
+        LD	E, (IX+MENU_OFF_SCREENPTR)       ; Screen..
+        LD	D, (IX+MENU_OFF_SCREENPTR+1)       ; pointer.
        	CALL	MOVEDOWN
  
 d1$:
@@ -90,7 +151,7 @@ d1$:
         CALL	PUTRAW
         
         LD	A, E
-        ADD	A, (IX) ; Width of menu
+        ADD	A, (IX+MENU_OFF_WIDTH) ; Width of menu
         ;DEC 	A
         LD	E, A
         JR	NC, L3
@@ -106,32 +167,31 @@ L3:	LD	HL, RIGHTVERTICAL
         DJNZ	d1$
 
         
-        LD	B, (IX)
+        LD	B, (IX+MENU_OFF_WIDTH)
         INC	B
         INC	B
         LD	A, $FF
         CALL	DRAWHLINE
 
         ; Prepare header attributes
-        LD	E, (IX+5)
-        LD	D, (IX+6)
+        LD	E, (IX+MENU_OFF_ATTRPTR)
+        LD	D, (IX+MENU_OFF_ATTRPTR+1)
 
 	CALL	FILLHEADERLINE
         CALL 	MENU__UPDATESELECTION
         
-        LD	E, (IX+3)
-        LD	D, (IX+4)
+        LD	E, (IX+MENU_OFF_SCREENPTR)
+        LD	D, (IX+MENU_OFF_SCREENPTR+1)
 
-        ;LD	DE, SCREEN+64
         INC	DE
-        LD	L, (IX+7)
-        LD	H, (IX+8)
+        LD	L, (IX+MENU_OFF_MENU_TITLE)
+        LD	H, (IX+MENU_OFF_MENU_TITLE+1)
         PUSH	DE
         CALL	PUTSTRING
         POP	DE
         LD	A, E
-        ADD	A, (IX)
-        SUB	5
+        ADD	A, (IX+MENU_OFF_WIDTH)
+        SUB	5      ; Adjust for logo space
         LD	E, A
         
         ; Place the Logo chars
@@ -145,14 +205,14 @@ L3:	LD	HL, RIGHTVERTICAL
         CALL 	PUTRAW
         LD	HL, HH
         CALL 	PUTRAW
+        
         ; Place logo attributes
-        ;LD	DE, ATTR + 64 
-        LD	E, (IX+5)
-        LD	D, (IX+6)
+        LD	E, (IX+MENU_OFF_ATTRPTR)
+        LD	D, (IX+MENU_OFF_ATTRPTR+1)
 
         LD	A, E
-        ADD	A, (IX)
-        SUB 	4
+        ADD	A, (IX+MENU_OFF_WIDTH)
+        SUB 	4    ; 4 logo entries
         LD 	E, A
         
         
@@ -175,17 +235,17 @@ L3:	LD	HL, RIGHTVERTICAL
         LD 	(DE), A
 
         ; Draw contents
-        LD	E, (IX+3)
-        LD	D, (IX+4)
+        LD	E, (IX+MENU_OFF_SCREENPTR)
+        LD	D, (IX+MENU_OFF_SCREENPTR+1)
         INC	DE
         JR 	MENU__DRAWCONTENTS
 
 FILLSLINE:     
 	PUSH	BC
 	PUSH	DE
-        LD	B, (IX)  	; Load width of menu
+        LD	B, (IX+MENU_OFF_WIDTH)  	; Load width of menu
         INC	B               ; Add +2 for extra borders.
-        INC	B               
+        INC	B
 LP1:    LD	(DE), A
         INC 	DE
         DJNZ	LP1
@@ -196,7 +256,7 @@ FILLHEADERLINE:
         ; Prepare header attributes
         PUSH 	DE
 	PUSH	BC
- 	LD	B, (IX)
+ 	LD	B, (IX+MENU_OFF_WIDTH)
 HEADER$:
         LD	A, $07
         LD	(DE), A
@@ -213,10 +273,10 @@ MENU__UPDATESELECTION:
 	PUSH	BC
         PUSH	DE
         
-        LD	E, (IX+5)
-        LD	D, (IX+6)
+        LD	E, (IX+MENU_OFF_ATTRPTR)
+        LD	D, (IX+MENU_OFF_ATTRPTR+1)
         
-        LD	B, (IX+1) 	; Number of entries
+        LD	B, (IX+MENU_OFF_MAX_VISIBLE_ENTRIES) 	; Number of entries
         LD	C, $0           ; Start at 0 for "active" comparison
 L6:
         LD	A, E            ; Move to next attribute line
@@ -226,7 +286,7 @@ L6:
         INC	D
 L7:
 
-	LD	A, (IX+2)	; Get active entry
+	LD	A, (IX+MENU_OFF_SELECTED_ENTRY)	; Get active entry
         CP	C		; Compare
         LD	A, %01111000    ; Normal color
         JR	NZ,  L5
@@ -244,11 +304,11 @@ L5:
 ; Inputs: 	IX : 	pointer to menu structure
 ;   		DE : 	Ptr to screen header location
 MENU__DRAWCONTENTS:
-	LD	B, (IX+1) ; Get number of entries
+	LD	B, (IX+MENU_OFF_MAX_VISIBLE_ENTRIES) ; Get number of entries
         PUSH	IX
         POP	HL
         LD	A, L
-        ADD	A, 9
+        ADD	A, MENU_OFF_FIRST_ENTRY
         LD	L, A
         JR	NC, MD1
         INC	H
@@ -276,18 +336,45 @@ MD1:    ; HL now contains the first entry.
 MENU__CHOOSENEXT:
         PUSH	HL
         POP	IX
-	LD	A, (IX+2)
+	LD	A, (IX+MENU_OFF_SELECTED_ENTRY)
         INC	A
-        CP	(IX+1)
+        CP	(IX+MENU_OFF_MAX_VISIBLE_ENTRIES)
         RET	Z
-	LD	(IX+2), A
+	LD	(IX+MENU_OFF_SELECTED_ENTRY), A
 	JR   	MENU__UPDATESELECTION
 
 MENU__CHOOSEPREV:
         PUSH	HL
         POP	IX
-	LD	A, (IX+2)
+	LD	A, (IX+MENU_OFF_SELECTED_ENTRY)
         SUB	1
         RET	C
-	LD	(IX+2), A
+	LD	(IX+MENU_OFF_SELECTED_ENTRY), A
 	JR   	MENU__UPDATESELECTION
+
+MENU__ACTIVATE:
+	PUSH	HL
+        POP	IX
+        ; Load active entry
+        LD	A, (IX+MENU_OFF_SELECTED_ENTRY)
+        SLA	A
+        SLA	A      ; Multiply by 4
+        ; Get base pointer to 1st callback
+	PUSH	BC
+        ;LD	C, $0
+        ;ADD	A, C 	; Add to A offset.
+        LD	B, $0
+        LD	C, A
+        ; Load HL with base callback pointer
+        LD	L, (IX+MENU_OFF_CALLBACKPTR)
+        LD	H, (IX+MENU_OFF_CALLBACKPTR+1)
+        ADD	HL, BC 		; Add to base pointer.
+        POP	BC
+
+	LD	E, (HL)
+        INC 	HL
+        LD	D, (HL)
+        PUSH	DE
+        RET			; Jump to function handler
+	
+        
