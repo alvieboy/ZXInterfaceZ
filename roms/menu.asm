@@ -1,4 +1,4 @@
-;include "menu_defs.asm"; 
+include "menu_defs.asm"
 ;  Functions in this file
 ;
 ;  MENU__INIT       : Initialise a menu
@@ -148,7 +148,7 @@ d1$:
         PUSH	DE
         
   	LD	HL, LEFTVERTICAL
-        CALL	PUTRAW
+        CALL	DRAWCHAR
         
         LD	A, E
         ADD	A, (IX+MENU_OFF_WIDTH) ; Width of menu
@@ -157,7 +157,7 @@ d1$:
         JR	NC, L3
 	INC	D
 L3:	LD	HL, RIGHTVERTICAL
-	CALL	PUTRAW
+	CALL	DRAWCHAR
 	POP	DE
 
         CALL 	MOVEDOWN
@@ -187,7 +187,7 @@ L3:	LD	HL, RIGHTVERTICAL
         LD	L, (IX+MENU_OFF_MENU_TITLE)
         LD	H, (IX+MENU_OFF_MENU_TITLE+1)
         PUSH	DE
-        CALL	PUTSTRING
+        CALL	PRINTSTRING
         POP	DE
         LD	A, E
         ADD	A, (IX+MENU_OFF_WIDTH)
@@ -196,15 +196,15 @@ L3:	LD	HL, RIGHTVERTICAL
         
         ; Place the Logo chars
         LD	HL, HH
-        CALL 	PUTRAW
+        CALL 	DRAWCHAR
         LD	HL, HH
-        CALL 	PUTRAW
+        CALL 	DRAWCHAR
         LD	HL, HH
-        CALL 	PUTRAW
+        CALL 	DRAWCHAR
         LD	HL, HH
-        CALL 	PUTRAW
+        CALL 	DRAWCHAR
         LD	HL, HH
-        CALL 	PUTRAW
+        CALL 	DRAWCHAR
         
         ; Place logo attributes
         LD	E, (IX+MENU_OFF_ATTRPTR)
@@ -273,11 +273,15 @@ MENU__UPDATESELECTION:
 	PUSH	BC
         PUSH	DE
         
+        PUSH	IX
+        EX	(SP), IY  ; IY now in stack, IY=IX
+        
         LD	E, (IX+MENU_OFF_ATTRPTR)
         LD	D, (IX+MENU_OFF_ATTRPTR+1)
         
         LD	B, (IX+MENU_OFF_MAX_VISIBLE_ENTRIES) 	; Number of entries
         LD	C, $0           ; Start at 0 for "active" comparison
+
 L6:
         LD	A, E            ; Move to next attribute line
         ADD	A, $20
@@ -285,16 +289,27 @@ L6:
         JR	NC, L7
         INC	D
 L7:
-
 	LD	A, (IX+MENU_OFF_SELECTED_ENTRY)	; Get active entry
         CP	C		; Compare
-        LD	A, %01111000    ; Normal color
         JR	NZ,  L5
-        LD	A, %01101000    ; Cyan, for selected
+        
+        ; load item flags.
+        BIT 	0, (IY+MENU_OFF_FIRST_ENTRY)
+        JR	NZ, L9 ; Disabled
+        LD	A, MENU_COLOR_SELECTED ; Cyan, for selected
+	JR	L8
+L9:	LD	A, MENU_COLOR_DISABLED
+	JR 	L8
 L5:
+        LD	A, MENU_COLOR_NORMAL ; Normal color
+L8:
+        INC	IY
+        INC	IY
+        INC	IY
         INC	C		; Next entry
         CALL	FILLSLINE
         DJNZ	L6
+        POP	IY
 	POP	DE
         POP 	BC
         RET
@@ -316,16 +331,19 @@ MD1:    ; HL now contains the first entry.
         PUSH	BC
         CALL	MOVEDOWN
 	PUSH	DE
-        LD	C, (HL)
+        ; Load entry attributes
+        LD	A, (HL)
+        INC 	HL
+        LD	C, (HL) ; Load entry..
         INC	HL
-        LD	B, (HL)
+        LD	B, (HL) ; pointer
         INC	HL
         PUSH	HL
         PUSH	BC
         POP	HL
         ;LD	A, 'L'
         ;CALL PUTCHAR
-        CALL 	PUTSTRING
+        CALL 	PRINTSTRING
         POP	HL
         POP	DE
         POP	BC
@@ -350,7 +368,7 @@ MENU__CHOOSEPREV:
         SUB	1
         RET	C
 	LD	(IX+MENU_OFF_SELECTED_ENTRY), A
-	JR   	MENU__UPDATESELECTION
+	JP   	MENU__UPDATESELECTION
 
 MENU__ACTIVATE:
 	PUSH	HL

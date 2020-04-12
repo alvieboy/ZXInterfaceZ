@@ -86,7 +86,8 @@ KEYBOARD:	CALL	KEY_SCAN	; routine KEY_SCAN
                 LD	(PREVKEY), DE
 					; Notify key pressed
                 LD	(CURKEY), DE
+                ; IY might be changed outside interrupt.
+                LD	IY, IYBASE
                 SET	5, (IY+(FLAGS-IYBASE))
-
                 RET
 

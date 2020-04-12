@@ -126,12 +126,12 @@ RAM_DONE:
         ;	Load string lenght
         LD	A,(HL)
         INC	HL
-        CALL 	PUTSTRINGN
+        CALL 	PRINTSTRINGN
 
 
 	LD	HL, COPYRIGHT
         LD	DE, LINE22
-        CALL 	PUTSTRING
+        CALL 	PRINTSTRING
 
 
 	; Load image logo
@@ -205,130 +205,6 @@ ALOOP:
         JR 	NZ, ALOOP
         RET
 
-;
-; Print HEX byte in A.
-;
-; Inputs
-; 	DE:	Target screen address
-
-PRINTHEX:
-	PUSH 	BC
-	LD 	B, A
-        SRL     A
-        SRL     A
-        SRL     A
-        SRL     A
-        CALL	PUTNIBBLE
-        LD	A, B
-        AND	$F
-        CALL 	PUTNIBBLE
-        POP	BC
-        RET
-
-
-; Draw a simple H line.
-; DE: start address
-;  B: size
-; Corrupts: A
-DRAWHLINE:
-	LD	(DE), A
-	LD	A, $FF
-        INC	DE
-        DJNZ	DRAWHLINE
-        RET
-
-PUTSTRING:
-	LD 	A,(HL)
-        OR	A
-        RET 	Z
-        PUSH	HL	
-        CALL	PUTCHAR
-        POP	HL
-        INC	HL
-        JR 	PUTSTRING
-
-PUTSTRINGN:
-	LD	B, A
-PS1:
-	LD 	A,(HL)
-        PUSH	HL
-        PUSH	BC
-        CALL	PUTCHAR
-        POP	BC
-        POP	HL
-        INC	HL
-        DJNZ 	PS1
-        RET
-        
-PUTNIBBLE:
-        CP	10
-        JR	NC, NDEC
-	ADD 	A, '0'
-        JR	PUTCHAR
-NDEC:   ADD	A, 'A'-10
-        JR 	PUTCHAR
-        
-
-
-;
-;      DE: screen address
-;	A: char 
-PUTCHAR:
-	SUB	32
-        PUSH 	BC
-        PUSH 	DE
-        LD	BC, CHAR_SET
-        LD	H,$00		; set high byte to 0
-	LD	L,A		; character to A
-        ADD	HL,HL		; multiply
-	ADD	HL,HL		; by
-        ADD	HL,HL		; eight
-        ADD	HL, BC
-        LD	B, 8
-PCLOOP1:
-	LD	A, (HL)
-        LD	(DE), A
-        INC	D
-        INC 	HL
-        DJNZ 	PCLOOP1
-        POP	DE
-        INC 	DE
-        POP	BC
-        RET
-
-PUTRAW:
-	PUSH	BC
-        PUSH	DE
-	LD	B, 8
-PCLOOP2:
-	LD	A, (HL)
-        LD	(DE), A
-        INC	D
-        INC 	HL
-        DJNZ 	PCLOOP1
-        POP	DE
-        INC 	DE
-        POP	BC
-        RET
-
-MOVEDOWN:
-	LD	A,E
-	CP 	%11100000 	      	; 0xE0, last entry of the band	
-	JR	NC, NEXTBAND$           ; Yes, move to next band
-	ADD	A,$20                   ; Othewise just increment
-	LD	E, A
-	LD	A, D
-	AND 	%01011000               ; Make sure we don't overflow
-	LD	D,A 
-	RET        
-NEXTBAND$:
-	AND 	%00011111		; Blanks out y coords of LSB
-	LD	E,A			; copy back to destination LSB
-	LD	A,D			; get destination MSB
-	ADD 	A,$08	                ; increment band bit - this will push us into attribute space if we're already in the last band
-	AND 	%01011000		; 0101 1000 - ensures 010 prefix is maintained, wiping out any carry. Also wipes Y pixel offset.
-	LD 	D,A			; copy back into destination MSB	
-	RET
 
 ENTRY1HANDLER:
 	LD	HL, MENU1
@@ -365,126 +241,42 @@ SETUP_MENU1:
         LD	(IX+MENU_OFF_MENU_TITLE+1), H
         ; Entry 1
         LD	HL, ENTRY1
-        LD	(IX+MENU_OFF_FIRST_ENTRY), L
-        LD	(IX+MENU_OFF_FIRST_ENTRY+1), H
+        LD	(IX+MENU_OFF_FIRST_ENTRY),A ; Flags
+        LD	(IX+MENU_OFF_FIRST_ENTRY+1), L
+        LD	(IX+MENU_OFF_FIRST_ENTRY+2), H
+
         LD	HL, ENTRY2
-        LD	(IX+MENU_OFF_FIRST_ENTRY+2), L
-        LD	(IX+MENU_OFF_FIRST_ENTRY+3), H
-        LD	HL, ENTRY3
+        LD	A,1
+        LD	(IX+MENU_OFF_FIRST_ENTRY+3),A ; Flags
         LD	(IX+MENU_OFF_FIRST_ENTRY+4), L
         LD	(IX+MENU_OFF_FIRST_ENTRY+5), H
+        
+        XOR	A
+        LD	HL, ENTRY3
+        LD	(IX+MENU_OFF_FIRST_ENTRY+6),A ; Flags
+        LD	(IX+MENU_OFF_FIRST_ENTRY+7), L
+        LD	(IX+MENU_OFF_FIRST_ENTRY+8), H
+        
         LD	HL, ENTRY4
-        LD	(IX+MENU_OFF_FIRST_ENTRY+6), L
-        LD	(IX+MENU_OFF_FIRST_ENTRY+7), H
+        LD	(IX+MENU_OFF_FIRST_ENTRY+9),A ; Flags
+        LD	(IX+MENU_OFF_FIRST_ENTRY+10), L
+        LD	(IX+MENU_OFF_FIRST_ENTRY+11), H
 
 	LD	(IX+MENU_OFF_CALLBACKPTR), low(MENUCALLBACKTABLE)
         LD	(IX+MENU_OFF_CALLBACKPTR+1), high(MENUCALLBACKTABLE)
         RET
 
-READRESFIFO:
-	IN	A, ($0B)
-        OR	A
-        JR	NZ, READRESFIFO
-        ; Grab resoruce data
-        IN	A, ($0D)
-        RET
 
-;
-; Inputs: 	A:  Resource ID
-;         	HL: Target memory area
-; Returns:
-;		A:  Resource type, or $FF if not found
-;		DE: Resource size
-;		Z:  Zero if resource is invalid.
-; Corrupts:	HL, BC, F
 
-LOADRESOURCE:
-	LD	C, A
-WAITFIFO1:
-        IN 	A, ($07)
-        OR	A
-        JR	NZ, WAITFIFO1
-        ; Send resource ID
-        LD	A, C
-        OUT	($09), A
-        
-        
-        CALL	READRESFIFO
-        CP	$FF
-        RET	Z	; If invalid, return immediatly
-        
-        LD	C, A ; Save resource type in C
-
-        CALL	READRESFIFO        
-        LD	E, A 	; Resource size LSB
-
-        CALL	READRESFIFO
-        LD	D, A 	; Resource size MSB
-        
-        PUSH	DE	; Save resource size.
-	
-WAITFIFO3:
-
-        CALL	READRESFIFO
-        
-        LD	(HL), A
-        INC	HL
-        DEC	DE
-       	LD	A, D
-    	OR	E
-        JR 	NZ,   WAITFIFO3
-
-        LD	A, C ; Get resource type back in A
-	POP 	DE   ; Get resource size back
-
-        CP	$FF
-        RET
-
-	; Move DE one pixel line below
-PMOVEDOWN:
-	INC 	D				; Go down onto the next pixel line
-	LD 	A, D				; Check if we have gone onto next character boundary
-	AND	7
-	RET 	NZ				; No, so skip the next bit
-	LD 	A,E				; Go onto the next character line
-	ADD 	A, 32
-	LD 	E,A
-	RET 	C				; Check if we have gone onto next third of screen
-	LD 	A,D				; Yes, so go onto next third
-	SUB 	8
-	LD 	D,A
-	RET
-
-;	In: 	HL: pointer to bitmap structure
-;		DE: screen address
-;
-;		Bitmap structure contains:
-;			DB 0	// Width in bytes
-;			DB 0	// Height in lines
-;			Db 0..  // Bitmap data.
-DISPLAYBITMAP:
-        LD	C, (HL)  ; Width in bytes
-        INC	HL
-        LD	A, (HL)	 ; Number of lines
-        INC	HL
-DOLINE:
-        LD	B, $0
-	PUSH	DE
-        PUSH	BC
-        LDIR
-        POP	BC
-        POP	DE
-        LD	B, A      ; PMOVEDOWN corrupts A, save it.
-	CALL	PMOVEDOWN
-        LD	A, B
-        DEC	A
-        JR	NZ, DOLINE
-        RET
         
 
         include "menu.asm"
         include "keyboard.asm"
 	include	"charmap.asm"
+        include	"resource.asm"
+        include	"graphics.asm"
+        include	"print.asm"
+        include	"debug.asm"
                ; 00000000001111111111222222222233
                ; 01234567890123456789012345678901
 COPYRIGHT:DB	"ZX Interface Z (C) Alvieboy 2020", 0
