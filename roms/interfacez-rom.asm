@@ -3,7 +3,9 @@
 
 ; System variables definitions
 
-		include	"interfacez-sysvars.asm"
+include	"interfacez-sysvars.asm"
+include "macros.asm"
+
 ;*****************************************
 ;** Part 1. RESTART ROUTINES AND TABLES **
 ;*****************************************

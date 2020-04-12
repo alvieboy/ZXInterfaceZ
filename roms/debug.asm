@@ -18,3 +18,13 @@ DEBUGHEXHL:
         POP	BC
         POP	DE
         RET
+
+; Debug A
+DEBUGHEXA:
+	PUSH	DE
+        PUSH 	BC
+        LD	DE, LINE21
+        CALL	PRINTHEX
+        POP	BC
+        POP	DE
+        RET

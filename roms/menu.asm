@@ -60,16 +60,23 @@ MENU__INIT:
         ;LD	DE, ATTR+64
         LD	(IX+MENU_OFF_ATTRPTR), L
         LD	(IX+MENU_OFF_ATTRPTR+1), H
+        ; Add some default settings.
+	XOR	A
+        LD 	(IX+MENU_OFF_DISPLAY_OFFSET), A
+
 	POP     HL
         RET
 
 ; Clear area used by menu.
 ; Attribute used in A
 MENU__CLEAR:
+
         PUSH	AF		; Save attribute
 	PUSH  	HL
         POP	IX
-	LD	A, (IX+MENU_OFF_MAX_VISIBLE_ENTRIES)  	; Number of entries
+	
+        LD	A, (IX+MENU_OFF_MAX_VISIBLE_ENTRIES)  	; Number of entries
+
         INC	A		; Include header
         SLA	A
         SLA	A
@@ -81,6 +88,7 @@ MENU__CLEAR:
         POP	DE
         
         LD	C, A            ; Rows to process
+
 CLRNEXT:
         XOR	A
         LD	B, (IX+MENU_OFF_WIDTH)         ; Width of menu
@@ -93,11 +101,18 @@ CLRLINE:
         CALL	PMOVEDOWN
         PUSH	DE
         POP	HL
+        
         DEC	C
         XOR	A
         OR	C		; A is still 0
 	JR	NZ, CLRNEXT
+        
+        
         POP	AF
+        ;RET
+        
+        
+        
         
         ; Now, clear attributes
         LD	L, (IX+MENU_OFF_ATTRPTR)
@@ -121,12 +136,9 @@ CLRATTR:
         POP	HL
         
         LD	A, 32
-        ADD	A, L
-    	LD	L, A   ; L = A+L
-    	ADC	A, H   ; A = A+L+H+carry
-    	SUB	L      ; A = H+carry
-    	LD	H, A   ; H = H+carry
-        LD	A, 0
+        ADD_HL_A ; Add A to HL
+        XOR	A
+
         DEC	C
         OR	C
         LD	A, D ; Restore attibute
@@ -322,12 +334,18 @@ MENU__DRAWCONTENTS:
 	LD	B, (IX+MENU_OFF_MAX_VISIBLE_ENTRIES) ; Get number of entries
         PUSH	IX
         POP	HL
+        
+        ; Move HL pointer to correct offset
         LD	A, L
         ADD	A, MENU_OFF_FIRST_ENTRY
         LD	L, A
         JR	NC, MD1
         INC	H
 MD1:    ; HL now contains the first entry.
+        ; Move past offset if we have one. This is used for scrolling.
+        
+
+
         PUSH	BC
         CALL	MOVEDOWN
 	PUSH	DE
@@ -375,20 +393,20 @@ MENU__ACTIVATE:
         POP	IX
         ; Load active entry
         LD	A, (IX+MENU_OFF_SELECTED_ENTRY)
-        SLA	A
-        SLA	A      ; Multiply by 4
+        SLA	A ; Multiply by 2
+        
         ; Get base pointer to 1st callback
-	PUSH	BC
+	;PUSH	BC
         ;LD	C, $0
         ;ADD	A, C 	; Add to A offset.
-        LD	B, $0
-        LD	C, A
+        ;LD	B, $0
+        ;LD	C, A
         ; Load HL with base callback pointer
         LD	L, (IX+MENU_OFF_CALLBACKPTR)
         LD	H, (IX+MENU_OFF_CALLBACKPTR+1)
-        ADD	HL, BC 		; Add to base pointer.
-        POP	BC
-
+        ;ADD	HL, BC 		; Add to base pointer.
+        ;POP	BC
+        ADD_HL_A
 	LD	E, (HL)
         INC 	HL
         LD	D, (HL)
