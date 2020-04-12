@@ -286,6 +286,13 @@ MENU__UPDATESELECTION:
         
         PUSH	IX
         EX	(SP), IY  ; IY now in stack, IY=IX
+        ; We need to offset IY to the "offset" we are looking at the menu.
+        ; There is for sure a better way to do this.
+        LD	A, (IX+MENU_OFF_DISPLAY_OFFSET)
+        LD	C, A
+        ADD	A, A ; *2
+        ADD	A, C ; *3
+        ADD_IY_A ; macro
         
         LD	E, (IX+MENU_OFF_ATTRPTR)
         LD	D, (IX+MENU_OFF_ATTRPTR+1)
