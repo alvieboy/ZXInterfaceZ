@@ -394,18 +394,9 @@ MENU__ACTIVATE:
         ; Load active entry
         LD	A, (IX+MENU_OFF_SELECTED_ENTRY)
         SLA	A ; Multiply by 2
-        
-        ; Get base pointer to 1st callback
-	;PUSH	BC
-        ;LD	C, $0
-        ;ADD	A, C 	; Add to A offset.
-        ;LD	B, $0
-        ;LD	C, A
         ; Load HL with base callback pointer
         LD	L, (IX+MENU_OFF_CALLBACKPTR)
         LD	H, (IX+MENU_OFF_CALLBACKPTR+1)
-        ;ADD	HL, BC 		; Add to base pointer.
-        ;POP	BC
         ADD_HL_A
 	LD	E, (HL)
         INC 	HL
