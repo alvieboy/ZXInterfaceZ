@@ -62,7 +62,6 @@ MENU__INIT:
         LD	(IX+MENU_OFF_ATTRPTR+1), H
         ; Add some default settings.
 	XOR	A
-        LD 	(IX+MENU_OFF_DISPLAY_OFFSET), A
 
 	POP     HL
         RET
@@ -292,8 +291,8 @@ MENU__UPDATESELECTION:
         LD	D, (IX+MENU_OFF_ATTRPTR+1)
         
         LD	B, (IX+MENU_OFF_MAX_VISIBLE_ENTRIES) 	; Number of entries
-        LD	C, $0           ; Start at 0 for "active" comparison
-
+        ;LD	C, $0           ; Start at 0 for "active" comparison
+        LD	C, (IX+MENU_OFF_DISPLAY_OFFSET)
 L6:
         LD	A, E            ; Move to next attribute line
         ADD	A, $20
@@ -330,6 +329,11 @@ L8:
 ; Draw menu contents
 ; Inputs: 	IX : 	pointer to menu structure
 ;   		DE : 	Ptr to screen header location
+
+MENU__DRAWCONTENTS_NO_DE:
+	LD	E, (IX+MENU_OFF_SCREENPTR)
+        LD	D, (IX+MENU_OFF_SCREENPTR+1)
+        INC	DE
 MENU__DRAWCONTENTS:
 	LD	B, (IX+MENU_OFF_MAX_VISIBLE_ENTRIES) ; Get number of entries
         PUSH	IX
@@ -343,9 +347,14 @@ MENU__DRAWCONTENTS:
         INC	H
 MD1:    ; HL now contains the first entry.
         ; Move past offset if we have one. This is used for scrolling.
+        LD	A, (IX+MENU_OFF_DISPLAY_OFFSET)
+        LD	C, A
+        ADD	A, C ; Multiply by 2.
+        ADD	A, C ; Multiply by 3.
+        ADD_HL_A  ; Add to HL offset
         
 
-
+MD2:
         PUSH	BC
         CALL	MOVEDOWN
 	PUSH	DE
@@ -359,14 +368,13 @@ MD1:    ; HL now contains the first entry.
         PUSH	HL
         PUSH	BC
         POP	HL
-        ;LD	A, 'L'
-        ;CALL PUTCHAR
-        CALL 	PRINTSTRING
+        LD	A, (IX+MENU_OFF_WIDTH)
+        CALL 	PRINTSTRINGPAD
         POP	HL
         POP	DE
         POP	BC
         
-        DJNZ	MD1
+        DJNZ	MD2
 	RET
 
 MENU__CHOOSENEXT:
@@ -374,10 +382,30 @@ MENU__CHOOSENEXT:
         POP	IX
 	LD	A, (IX+MENU_OFF_SELECTED_ENTRY)
         INC	A
-        CP	(IX+MENU_OFF_MAX_VISIBLE_ENTRIES)
+        CP	(IX+MENU_OFF_DATA_ENTRIES)
         RET	Z
 	LD	(IX+MENU_OFF_SELECTED_ENTRY), A
-	JR   	MENU__UPDATESELECTION
+        ; Check if we need to scroll
+
+        LD	A, (IX+MENU_OFF_MAX_VISIBLE_ENTRIES)
+        ADD	A, (IX+MENU_OFF_DISPLAY_OFFSET)
+        ; Example:
+        ;	- Max visible entries is 4
+        ;       - Current display offset is 0
+        ;	- Selected entry is 4
+        CP	(IX+MENU_OFF_SELECTED_ENTRY)
+
+        JR	NZ, NOSCROLL2
+        ;	
+        INC	(IX+MENU_OFF_DISPLAY_OFFSET)
+        CALL	MENU__DRAWCONTENTS_NO_DE
+        
+
+;	endless2: jr endless2
+	;
+NOSCROLL2:
+
+	JP   	MENU__UPDATESELECTION
 
 MENU__CHOOSEPREV:
         PUSH	HL
@@ -386,6 +414,14 @@ MENU__CHOOSEPREV:
         SUB	1
         RET	C
 	LD	(IX+MENU_OFF_SELECTED_ENTRY), A
+        ; If we are moving before offset, decrement offset
+
+        CP	(IX+MENU_OFF_DISPLAY_OFFSET)
+	JR	NC, NOSCROLL1
+        DEC     (IX+MENU_OFF_DISPLAY_OFFSET)
+        ; Redraw contents
+        CALL	MENU__DRAWCONTENTS_NO_DE
+NOSCROLL1:
 	JP   	MENU__UPDATESELECTION
 
 MENU__ACTIVATE:
@@ -398,10 +434,10 @@ MENU__ACTIVATE:
         LD	L, (IX+MENU_OFF_CALLBACKPTR)
         LD	H, (IX+MENU_OFF_CALLBACKPTR+1)
         ADD_HL_A
-	;LD	E, (HL)
-        ;INC 	HL
-        ;LD	D, (HL)
-        ;PUSH	DE
-        ;RET			; Jump to function handler
-	JP (HL)
+
+        LD	E, (HL)
+        INC 	HL
+        LD	D, (HL)
+        PUSH	DE
+        RET			; Jump to function handler. Unclear why JP (HL) does not work.
         

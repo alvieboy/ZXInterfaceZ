@@ -38,7 +38,7 @@ PCLOOP2:
         LD	(DE), A
         INC	D
         INC 	HL
-        DJNZ 	PCLOOP1
+        DJNZ 	PCLOOP2
         POP	DE
         INC 	DE
         POP	BC

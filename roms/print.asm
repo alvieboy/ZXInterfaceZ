@@ -48,6 +48,37 @@ PRINTSTRING:
         INC	HL
         JR 	PRINTSTRING
 
+; PRINTSTRINGPAD:	Print NULL-terminated string in HL, padding to at least "A" spaces
+;			Assumed "A" is at least size of string.
+; Inputs
+;	HL:	Pointer to string
+; 	DE:	Target screen address
+; Outputs:
+;	DE:	Updated screen address
+; Clobbers:
+;	AF HL BC
+
+PRINTSTRINGPAD:
+        LD	B, A
+psploop:	LD 	A,(HL)
+        OR	A
+        JR  	Z, ENDPl
+        PUSH	HL	
+        CALL	PRINTCHAR
+        DEC	B
+        POP	HL
+        INC	HL
+        JR 	psploop
+ENDPl:	; Now, for the remainder
+	XOR	A
+        OR	B
+        RET	Z ; No remainder.
+psploop2:
+	LD	A, 32 ; Space
+        CALL	PRINTCHAR
+        DJNZ	psploop2
+	RET
+        
 ; PRINTSTRINGN:	Print fixed-size string in HL
 ; Inputs
 ;	HL:	Pointer to string

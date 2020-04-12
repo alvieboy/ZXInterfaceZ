@@ -220,12 +220,15 @@ ENTRY3HANDLER:
 ENTRY4HANDLER:
 	JP 0
 	RET
+ENTRY5HANDLER:
+	RET
         
 MENUCALLBACKTABLE:
 	DEFW ENTRY1HANDLER
         DEFW ENTRY2HANDLER
         DEFW ENTRY3HANDLER
         DEFW ENTRY4HANDLER
+        DEFW ENTRY5HANDLER
 
 include "menu_defs.asm"
 
@@ -233,8 +236,9 @@ SETUP_MENU1:
        	LD	IX, MENU1
         LD	A, 28  			; Menu width 24
         LD	(IX + MENU_OFF_WIDTH), A
-        LD	A, 4                    ; Menu entries
+        LD	A, 4                    ; Menu visible entries
         LD	(IX + MENU_OFF_MAX_VISIBLE_ENTRIES), A
+        LD	A, 5                    ; Menu actual entries
         LD	(IX + MENU_OFF_DATA_ENTRIES), A
         XOR	A
         LD 	(IX+ MENU_OFF_SELECTED_ENTRY), A		; Selected entry
@@ -264,8 +268,19 @@ SETUP_MENU1:
         LD	(IX+MENU_OFF_FIRST_ENTRY+10), L
         LD	(IX+MENU_OFF_FIRST_ENTRY+11), H
 
+        LD	HL, ENTRY5
+        LD	(IX+MENU_OFF_FIRST_ENTRY+12),A ; Flags
+        LD	(IX+MENU_OFF_FIRST_ENTRY+13), L
+        LD	(IX+MENU_OFF_FIRST_ENTRY+14), H
+
 	LD	(IX+MENU_OFF_CALLBACKPTR), low(MENUCALLBACKTABLE)
         LD	(IX+MENU_OFF_CALLBACKPTR+1), high(MENUCALLBACKTABLE)
+
+
+                             
+	LD	A, 1 ; TEST ONLY
+        LD 	(IX+MENU_OFF_DISPLAY_OFFSET), A
+        LD 	(IX+MENU_OFF_SELECTED_ENTRY), A
         RET
 
 
@@ -289,3 +304,4 @@ ENTRY1: DB	"Configure WiFI", 0
 ENTRY2: DB	"Load from SD Card", 0
 ENTRY3: DB	"Show version", 0
 ENTRY4: DB	"Goto BASIC", 0
+ENTRY5: DB	"Hidden entry", 0
