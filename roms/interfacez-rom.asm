@@ -278,7 +278,7 @@ SETUP_MENU1:
 
 
                              
-	LD	A, 1 ; TEST ONLY
+	LD	A, 0 ; TEST ONLY
         LD 	(IX+MENU_OFF_DISPLAY_OFFSET), A
         LD 	(IX+MENU_OFF_SELECTED_ENTRY), A
         RET

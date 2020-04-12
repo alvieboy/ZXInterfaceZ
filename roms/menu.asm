@@ -375,6 +375,50 @@ MD2:
         POP	BC
         
         DJNZ	MD2
+
+;	Check if we need up/down arrows.
+
+	LD	A, (IX+MENU_OFF_SCREENPTR)
+        LD	D, (IX+MENU_OFF_SCREENPTR+1)
+        INC	A
+        ADD	A, (IX+MENU_OFF_WIDTH)
+        LD	E,A
+        
+        CALL	MOVEDOWN
+
+        ; Up arrow needed if offset is not zero
+        XOR	A
+        CP	(IX+MENU_OFF_DISPLAY_OFFSET)
+        JR	Z, nouparrow
+        LD	HL, UPARROW
+        JR	f1
+nouparrow:  
+	LD	HL, RIGHTVERTICAL ; Empty (space) with vertical bar on right
+f1:
+        CALL	DRAWCHAR
+        DEC	DE
+
+
+
+        ; Draw down arrow
+        LD	B, (IX+MENU_OFF_MAX_VISIBLE_ENTRIES)
+        DEC	B
+POSITION_DOWN_ARROW:
+        CALL	MOVEDOWN
+        DJNZ	POSITION_DOWN_ARROW
+
+	LD	A, (IX+MENU_OFF_DISPLAY_OFFSET)
+        ADD 	A, (IX+MENU_OFF_MAX_VISIBLE_ENTRIES)
+        CP	(IX+MENU_OFF_DATA_ENTRIES)
+        JR	NC, nodownarrow
+        LD	HL, DOWNARROW
+	JR 	f2
+nodownarrow:
+	LD	HL, RIGHTVERTICAL ; Empty (space) with vertical bar on right
+f2:
+        CALL	DRAWCHAR
+
+
 	RET
 
 MENU__CHOOSENEXT:

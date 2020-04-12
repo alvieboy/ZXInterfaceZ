@@ -892,3 +892,24 @@ HH:
                 DEFB	%00111111
                 DEFB	%01111111
                 DEFB	%11111111
+
+UPARROW:
+		DEFB	%00000001
+                DEFB	%00010001
+                DEFB	%00111001
+                DEFB	%01111101
+                DEFB	%11111111
+                DEFB	%00010001
+                DEFB	%00010001
+                DEFB	%00010001
+
+DOWNARROW:
+                DEFB	%00010001
+                DEFB	%00010001
+                DEFB	%00010001
+                DEFB	%11111111
+                DEFB	%01111101
+                DEFB	%00111001
+                DEFB	%00010001
+		DEFB	%00000001
+
