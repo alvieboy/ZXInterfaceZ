@@ -398,10 +398,10 @@ MENU__ACTIVATE:
         LD	L, (IX+MENU_OFF_CALLBACKPTR)
         LD	H, (IX+MENU_OFF_CALLBACKPTR+1)
         ADD_HL_A
-	LD	E, (HL)
-        INC 	HL
-        LD	D, (HL)
-        PUSH	DE
-        RET			; Jump to function handler
-	
+	;LD	E, (HL)
+        ;INC 	HL
+        ;LD	D, (HL)
+        ;PUSH	DE
+        ;RET			; Jump to function handler
+	JP (HL)
         
