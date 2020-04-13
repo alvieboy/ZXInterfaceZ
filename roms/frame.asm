@@ -45,6 +45,25 @@ FRAME__INIT:
         LD	(IX+FRAME_OFF_ATTRPTR+1), H
 	RET
 
+
+FRAME__FILLHEADERLINE:
+        ; Prepare header attributes
+        PUSH 	DE
+	PUSH	BC
+ 	LD	B, (IX+FRAME_OFF_WIDTH)
+HEADER$:
+        LD	A, $07
+        LD	(DE), A
+        INC	DE
+        DJNZ 	HEADER$
+        ; Last one is black
+        LD	A, $0
+        LD	(DE), A
+        POP	BC
+	POP 	DE
+        RET
+
+
 	; Draw a menu/whatever frame
         ; Inputs:
         ;	IX: Pointer to frame structure
@@ -90,8 +109,7 @@ L3:	LD	HL, RIGHTVERTICAL
         LD	E, (IX+FRAME_OFF_ATTRPTR)
         LD	D, (IX+FRAME_OFF_ATTRPTR+1)
 
-	CALL	FILLHEADERLINE
-        CALL 	MENU__UPDATESELECTION
+	CALL	FRAME__FILLHEADERLINE
         
         LD	E, (IX+FRAME_OFF_SCREENPTR)
         LD	D, (IX+FRAME_OFF_SCREENPTR+1)
@@ -152,10 +170,7 @@ L3:	LD	HL, RIGHTVERTICAL
 ; Clear area used by frame.
 ; Attribute used in A
 FRAME__CLEAR:
-
         PUSH	AF		; Save attribute
-	PUSH  	HL
-        POP	IX
 	
         LD	A, (IX+FRAME_OFF_NUMBER_OF_LINES)  	; Number of entries
 

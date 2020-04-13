@@ -31,13 +31,16 @@ MENU__INIT:
         RET
 
 MENU__CLEAR:
-	JP 	FRAME__CLEAR
+	PUSH  	HL
+        POP	IX
+	JP  	FRAME__CLEAR
 
 
 MENU__DRAW:
 	PUSH  	HL
         POP	IX
 	CALL	FRAME__DRAW
+        CALL 	MENU__UPDATESELECTION
         ; Draw contents
         LD	E, (IX+FRAME_OFF_SCREENPTR)
         LD	D, (IX+FRAME_OFF_SCREENPTR+1)
@@ -57,22 +60,6 @@ LP1:    LD	(DE), A
         POP	BC
 	RET
 
-FILLHEADERLINE:
-        ; Prepare header attributes
-        PUSH 	DE
-	PUSH	BC
- 	LD	B, (IX+FRAME_OFF_WIDTH)
-HEADER$:
-        LD	A, $07
-        LD	(DE), A
-        INC	DE
-        DJNZ 	HEADER$
-        ; Last one is black
-        LD	A, $0
-        LD	(DE), A
-        POP	BC
-	POP 	DE
-        RET
         
 MENU__UPDATESELECTION:
 	PUSH	BC
