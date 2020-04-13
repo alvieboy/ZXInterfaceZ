@@ -30,78 +30,8 @@ MENU__INIT:
 	POP     HL
         RET
 
-; Clear area used by menu.
-; Attribute used in A
 MENU__CLEAR:
-
-        PUSH	AF		; Save attribute
-	PUSH  	HL
-        POP	IX
-	
-        LD	A, (IX+FRAME_OFF_NUMBER_OF_LINES)  	; Number of entries
-
-        INC	A		; Include header
-        SLA	A
-        SLA	A
-        SLA	A               ; Multiply by 8
-        INC	A		; Include (one line) footer
-        LD	L, (IX+FRAME_OFF_SCREENPTR)       ; Screen..
-        LD	H, (IX+FRAME_OFF_SCREENPTR+1)     ; pointer.
-        PUSH	HL
-        POP	DE
-        
-        LD	C, A            ; Rows to process
-
-CLRNEXT:
-        XOR	A
-        LD	B, (IX+FRAME_OFF_WIDTH)         ; Width of menu
-        INC	B
-        INC	B
-CLRLINE:
-        LD	(HL), A
-        INC	HL
-        DJNZ	CLRLINE
-        CALL	PMOVEDOWN
-        PUSH	DE
-        POP	HL
-        
-        DEC	C
-        XOR	A
-        OR	C		; A is still 0
-	JR	NZ, CLRNEXT
-        
-        POP	AF
-        ; Now, clear attributes
-        LD	L, (IX+FRAME_OFF_ATTRPTR)
-        LD	H, (IX+FRAME_OFF_ATTRPTR+1)
-
-        LD	C, (IX+FRAME_OFF_NUMBER_OF_LINES)       ; Attribute lines to clear
-        INC	C               ; Include header
-        INC	C               ; And footer
-        
-        LD	D, A	; Save attribute in D
-        
-CLRATTRNEXT:
-        LD	B, (IX+FRAME_OFF_WIDTH)         ; Width of menu
-        INC	B
-        INC	B
-        PUSH	HL
-CLRATTR:
-        LD	(HL), A
-        INC 	HL
-        DJNZ	CLRATTR
-        POP	HL
-        
-        LD	A, 32
-        ADD_HL_A ; Add A to HL
-        XOR	A
-
-        DEC	C
-        OR	C
-        LD	A, D ; Restore attibute
-        JR	NZ, CLRATTRNEXT
-        
-        RET
+	JP 	FRAME__CLEAR
 
 
 MENU__DRAW:
