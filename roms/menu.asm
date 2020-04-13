@@ -287,7 +287,9 @@ MENU__UPDATESELECTION:
         PUSH	IX
         EX	(SP), IY  ; IY now in stack, IY=IX
         ; We need to offset IY to the "offset" we are looking at the menu.
-        ; There is for sure a better way to do this.
+        ; There is for sure a better way to do this. IY is not preserved on standard
+        ; ZX spectrum interrupt.
+        
         LD	A, (IX+MENU_OFF_DISPLAY_OFFSET)
         LD	C, A
         ADD	A, A ; *2
@@ -312,7 +314,7 @@ L7:
         JR	NZ,  L5
         
         ; load item flags.
-        BIT 	0, (IY+MENU_OFF_FIRST_ENTRY)
+        BIT 	0, (IY+MENU_OFF_FIRST_ENTRY); TODO: Do NOT use IY!
         JR	NZ, L9 ; Disabled
         LD	A, MENU_COLOR_SELECTED ; Cyan, for selected
 	JR	L8
@@ -341,12 +343,12 @@ MENU__DRAWCONTENTS_NO_DE:
 	LD	E, (IX+MENU_OFF_SCREENPTR)
         LD	D, (IX+MENU_OFF_SCREENPTR+1)
         INC	DE
-MENU__DRAWCONTENTS:
+MENU__DRAWCONTENTS:   	; Call this instead if you already have DE pointing to the correct place.
 	LD	B, (IX+MENU_OFF_MAX_VISIBLE_ENTRIES) ; Get number of entries
-        PUSH	IX
-        POP	HL
+        PUSH	IX  	;
+        POP	HL      ; Move IX (menu structure) into HL
         
-        ; Move HL pointer to correct offset
+        ; Move HL pointer to correct offset of first entry ()
         LD	A, L
         ADD	A, MENU_OFF_FIRST_ENTRY
         LD	L, A
@@ -480,15 +482,14 @@ MENU__ACTIVATE:
         POP	IX
         ; Load active entry
         LD	A, (IX+MENU_OFF_SELECTED_ENTRY)
-        SLA	A ; Multiply by 2
+        ADD	A, A ; Multiply by 2
         ; Load HL with base callback pointer
         LD	L, (IX+MENU_OFF_CALLBACKPTR)
         LD	H, (IX+MENU_OFF_CALLBACKPTR+1)
         ADD_HL_A
-
         LD	E, (HL)
         INC 	HL
         LD	D, (HL)
         PUSH	DE
-        RET			; Jump to function handler. Unclear why JP (HL) does not work.
+        RET			; Jump to function handler. 
         

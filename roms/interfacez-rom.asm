@@ -1,10 +1,14 @@
-		
-;                OUTPUT	"INTZ.ROM"
-
 ; System variables definitions
 
 include	"interfacez-sysvars.asm"
 include "macros.asm"
+
+
+; Main state machine
+STATE_MAINMENU 		EQU 0
+STATE_WIFICONFIG 	EQU 1
+STATE_LISTSDFILES 	EQU 2
+STATE_UNKNOWN  		EQU $FF
 
 ;*****************************************
 ;** Part 1. RESTART ROUTINES AND TABLES **
@@ -111,12 +115,6 @@ RAM_DONE:
         LD	A, $1
         OUT	($FE),A
 
-	CALL	SETUP_MENU1
-	LD	HL, MENU1
-        LD	D, 6 ; line to display menu at.
-        CALL	MENU__INIT
-        
-	CALL	MENU__DRAW
 
 	LD	HL, HEAP
         LD	A, $00
@@ -149,38 +147,111 @@ RAM_DONE:
         CALL	DISPLAYBITMAP
 
 
-	LD	HL,$0523	; The keyboard repeat and delay values
-	LD	(REPDEL),HL	; are loaded to REPDEL and REPPER.
-        LD	A, $FF
-        LD	(KSTATE_0),A	; set KSTATE_0 to $FF.
-        LD	(KSTATE_4),A	; set KSTATE_0 to $FF.
+	;LD	HL,$0523	; The keyboard repeat and delay values
+	;LD	(REPDEL),HL	; are loaded to REPDEL and REPPER.
+        ;LD	A, $FF
+        ;LD	(KSTATE_0),A	; set KSTATE_0 to $FF.
+        ;LD	(KSTATE_4),A	; set KSTATE_0 to $FF.
+
+	; Setup default state.
+        LD	A, STATE_UNKNOWN
+        LD	(STATE), A ; State STATE_UNKNOWN
 
   	IM 	1
         LD	IY, IYBASE
         EI
         
+        LD	A, STATE_MAINMENU
+        CALL	ENTERSTATE
+        
+        
 ENDLESS:
+	CALL	SYSTEM_STATUS
 	CALL	KEY_INPUT
         HALT
        	JR 	ENDLESS 
 
-HANDLEKEY:
-	LD	HL, MENU1
-	
-        CP	$26 	; A key
-        JR	NZ, N1
-        JP	MENU__CHOOSENEXT
-N1:
-        CP	$25     ; Q key
-        JR	NZ, N2
-        JP	MENU__CHOOSEPREV
-N2:
-        CP	$21     ; ENTER key
-        JR	NZ, N3
-        JP	MENU__ACTIVATE
-N3:
-	RET
 
+STATUSCHANGEDHANDLERTABLE:
+	DEFW	MAINMENU__STATUSCHANGED
+        DEFW	WIFICONFIG__STATUSCHANGED
+
+HANDLEKEYANDLERTABLE:
+	DEFW	MAINMENU__HANDLEKEY
+        DEFW    WIFICONFIG__HANDLEKEY
+
+	; Enter new state in A
+ENTERSTATE:
+	; Ignore if we are already on that state.
+        ;CP	(STATE)
+	PUSH 	AF
+        ;
+        ; Check previous state.
+	;
+        LD	A, (STATE)
+        CP	STATE_MAINMENU  ; Coming from main menu?
+        JR	NZ, _nl1        ; No.
+        
+        LD	HL, MENU1    	; Yes. Coming from main menu, clear it.
+        LD	A, $38
+        CALL	MENU__CLEAR
+_nl1:
+        POP	AF
+        LD	(STATE), A ; Set up state.
+        ;
+        ;
+        ; Check new state
+        CP	STATE_MAINMENU
+        JR 	NZ, _l1
+	; ENTER STATE: MAINMENU
+
+	CALL	MAINMENU__SETUP
+	LD	HL, MENU1
+        LD	D, 6 ; line to display menu at.
+        CALL	MENU__INIT
+	CALL	MENU__DRAW
+        
+        JR	 _lend
+_l1:
+_lend:
+	RET
+        
+SYSTEM_STATUS:
+	LD	A, $2           ; Load resource #2 (status flag)
+        LD	HL, HEAP        ; Into our HEAP area
+        CALL	LOADRESOURCE
+        CP 	$FF             ; If not valid (can this happen?) exits.
+        RET 	Z
+        LD	IX, HEAP        ; Check system status flags. Use IX for dereferencing with BIT later on
+        LD	A, (PREVSTATUS)
+        XOR	(IX)            ; Compute differences between this status and prev. status
+        CP	0
+        CALL	NZ, PROCESSSTATUSCHANGE	; Process status change if anything changed
+
+        LD	A, (HEAP) 	; Store status for next check	
+	LD	(PREVSTATUS), A
+        
+        RET
+
+PROCESSSTATUSCHANGE:
+	LD	HL, STATUSCHANGEDHANDLERTABLE
+	JR	CALLSTATUSFUN
+HANDLEKEY:
+	LD	HL, HANDLEKEYANDLERTABLE
+        ; Fallback
+CALLSTATUSFUN:
+	LD	B, A
+	LD	A, (STATE)
+        ADD	A, A ; a = a*2
+        ADD_HL_A
+	LD	A, (HL)
+        INC 	HL
+	LD	H, (HL)
+	LD	L, A
+        PUSH	HL
+        LD	A, B
+        RET
+        
 KEY_INPUT:	
 	BIT	5,(IY+(FLAGS-IYBASE))	; test FLAGS  - has a new key been pressed ?
 	RET	Z		; return if not.
@@ -208,86 +279,12 @@ ALOOP:
         RET
 
 
-ENTRY1HANDLER:
-	LD	HL, MENU1
-        LD	A, $38
-        CALL	MENU__CLEAR
-	RET
-ENTRY2HANDLER:
-	RET
-ENTRY3HANDLER:
-	RET
-ENTRY4HANDLER:
-	JP 0
-	RET
-ENTRY5HANDLER:
-	RET
-        
-MENUCALLBACKTABLE:
-	DEFW ENTRY1HANDLER
-        DEFW ENTRY2HANDLER
-        DEFW ENTRY3HANDLER
-        DEFW ENTRY4HANDLER
-        DEFW ENTRY5HANDLER
 
 include "menu_defs.asm"
 
-SETUP_MENU1:
-       	LD	IX, MENU1
-        LD	A, 28  			; Menu width 24
-        LD	(IX + MENU_OFF_WIDTH), A
-        LD	A, 4                    ; Menu visible entries
-        LD	(IX + MENU_OFF_MAX_VISIBLE_ENTRIES), A
-        LD	A, 5                    ; Menu actual entries
-        LD	(IX + MENU_OFF_DATA_ENTRIES), A
-        XOR	A
-        LD 	(IX+ MENU_OFF_SELECTED_ENTRY), A		; Selected entry
-        LD	HL, MENUTITLE
-        LD	(IX+MENU_OFF_MENU_TITLE), L
-        LD	(IX+MENU_OFF_MENU_TITLE+1), H
-        ; Entry 1
-        LD	HL, ENTRY1
-        LD	(IX+MENU_OFF_FIRST_ENTRY),A ; Flags
-        LD	(IX+MENU_OFF_FIRST_ENTRY+1), L
-        LD	(IX+MENU_OFF_FIRST_ENTRY+2), H
-
-        LD	HL, ENTRY2
-        LD	A,1
-        LD	(IX+MENU_OFF_FIRST_ENTRY+3),A ; Flags
-        LD	(IX+MENU_OFF_FIRST_ENTRY+4), L
-        LD	(IX+MENU_OFF_FIRST_ENTRY+5), H
-        
-        XOR	A
-        LD	HL, ENTRY3
-        LD	(IX+MENU_OFF_FIRST_ENTRY+6),A ; Flags
-        LD	(IX+MENU_OFF_FIRST_ENTRY+7), L
-        LD	(IX+MENU_OFF_FIRST_ENTRY+8), H
-        
-        LD	HL, ENTRY4
-        LD	(IX+MENU_OFF_FIRST_ENTRY+9),A ; Flags
-        LD	(IX+MENU_OFF_FIRST_ENTRY+10), L
-        LD	(IX+MENU_OFF_FIRST_ENTRY+11), H
-
-        LD	HL, ENTRY5
-        LD	(IX+MENU_OFF_FIRST_ENTRY+12),A ; Flags
-        LD	(IX+MENU_OFF_FIRST_ENTRY+13), L
-        LD	(IX+MENU_OFF_FIRST_ENTRY+14), H
-
-	LD	(IX+MENU_OFF_CALLBACKPTR), low(MENUCALLBACKTABLE)
-        LD	(IX+MENU_OFF_CALLBACKPTR+1), high(MENUCALLBACKTABLE)
-
-
-                             
-	LD	A, 0 ; TEST ONLY
-        LD 	(IX+MENU_OFF_DISPLAY_OFFSET), A
-        LD 	(IX+MENU_OFF_SELECTED_ENTRY), A
-        RET
-
-
-
-        
-
         include "menu.asm"
+        include "mainmenu.asm"
+        include "wifimenu.asm"
         include "keyboard.asm"
 	include	"charmap.asm"
         include	"resource.asm"

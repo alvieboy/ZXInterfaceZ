@@ -6,6 +6,20 @@ READRESFIFO:
         IN	A, ($0D)
         RET
 
+
+; Corrupts: C AF
+
+WRITECMDFIFO:
+	LD	C, A
+WAITFIFO1:
+        IN 	A, ($07)
+        OR	A
+        JR	NZ, WAITFIFO1
+        ; Send resource ID
+        LD	A, C
+        OUT	($09), A
+	RET
+
 ;
 ; Inputs: 	A:  Resource ID
 ;         	HL: Target memory area
@@ -16,16 +30,11 @@ READRESFIFO:
 ; Corrupts:	HL, BC, F
 
 LOADRESOURCE:
-	LD	C, A
-WAITFIFO1:
-        IN 	A, ($07)
-        OR	A
-        JR	NZ, WAITFIFO1
-        ; Send resource ID
-        LD	A, C
-        OUT	($09), A
-        
-        
+	LD	B, A
+        XOR	A ; A=0
+        CALL 	WRITECMDFIFO	; Send "REQUEST_RESOURCE" command
+	LD	A, B		; Resource ID
+        CALL 	WRITECMDFIFO	
         CALL	READRESFIFO
         CP	$FF
         RET	Z	; If invalid, return immediatly
