@@ -315,6 +315,7 @@ _endl1: HALT
 
 	include "menu_defs.asm"
         include "menu.asm"
+        include "frame.asm"
         include "mainmenu.asm"
         include "wifimenu.asm"
         include "sdcardmenu.asm"

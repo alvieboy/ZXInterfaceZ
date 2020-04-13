@@ -66,16 +66,16 @@ ENTRY5HANDLER:
 MAINMENU__SETUP:
        	LD	IX, MENU1
         LD	A, 28  			; Menu width 24
-        LD	(IX + MENU_OFF_WIDTH), A
+        LD	(IX + FRAME_OFF_WIDTH), A
         LD	A, 4                    ; Menu visible entries
-        LD	(IX + MENU_OFF_MAX_VISIBLE_ENTRIES), A
+        LD	(IX + FRAME_OFF_NUMBER_OF_LINES), A
         LD	A, 5                    ; Menu actual entries
         LD	(IX + MENU_OFF_DATA_ENTRIES), A
         XOR	A
         LD 	(IX+ MENU_OFF_SELECTED_ENTRY), A		; Selected entry
         LD	HL, MENUTITLE
-        LD	(IX+MENU_OFF_MENU_TITLE), L
-        LD	(IX+MENU_OFF_MENU_TITLE+1), H
+        LD	(IX+FRAME_OFF_TITLEPTR), L
+        LD	(IX+FRAME_OFF_TITLEPTR+1), H
         ; Entry 1
         LD	HL, ENTRY1
         LD	(IX+MENU_OFF_FIRST_ENTRY),A ; Flags
