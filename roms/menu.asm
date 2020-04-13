@@ -15,7 +15,7 @@ include "menu_defs.asm"
 ;       D:      Line to display menu at
 ;   Outputs
 ;       None
-;   Clobbers: IX, DE
+;   Clobbers: IX, DE, C, A
 MENU__INIT:
         PUSH	HL
 	PUSH	HL
@@ -62,6 +62,8 @@ MENU__INIT:
         LD	(IX+MENU_OFF_ATTRPTR+1), H
         ; Add some default settings.
 	XOR	A
+        LD	(IX+MENU_OFF_SELECTED_ENTRY), A
+        LD	(IX+MENU_OFF_DISPLAY_OFFSET), A
 
 	POP     HL
         RET
@@ -106,13 +108,7 @@ CLRLINE:
         OR	C		; A is still 0
 	JR	NZ, CLRNEXT
         
-        
         POP	AF
-        ;RET
-        
-        
-        
-        
         ; Now, clear attributes
         LD	L, (IX+MENU_OFF_ATTRPTR)
         LD	H, (IX+MENU_OFF_ATTRPTR+1)
@@ -263,6 +259,7 @@ LP1:    LD	(DE), A
         POP	DE
         POP	BC
 	RET
+
 FILLHEADERLINE:
         ; Prepare header attributes
         PUSH 	DE
@@ -477,11 +474,28 @@ MENU__CHOOSEPREV:
 NOSCROLL1:
 	JP   	MENU__UPDATESELECTION
 
+	; A: menu index to check.
+        ; IX: pointer to menu structure
+        ; Clobbers: C
+MENU__ISDISABLED:
+        LD	C, A
+        ADD	A, C ; Multiply by 2.
+        ADD	A, C ; Multiply by 3.
+        PUSH	IX
+        ADD_IX_A  ; Add to HL offset
+        BIT	0, (IX+MENU_OFF_FIRST_ENTRY)
+	POP	IX
+        RET
+
 MENU__ACTIVATE:
 	PUSH	HL
         POP	IX
+        LD	A, (IX+MENU_OFF_SELECTED_ENTRY)
+        CALL	MENU__ISDISABLED
+        RET	NZ
         ; Load active entry
         LD	A, (IX+MENU_OFF_SELECTED_ENTRY)
+        
         ADD	A, A ; Multiply by 2
         ; Load HL with base callback pointer
         LD	L, (IX+MENU_OFF_CALLBACKPTR)

@@ -10,8 +10,8 @@ snaloader.rom: snaloader-rom.asm
 
 INTZ.ROM: menu.asm pad
 
-INTZ.ROM: interfacez-rom.asm keyboard.asm
-	pasmo -d interfacez-rom.asm $@ > $@.out
+INTZ.ROM: interfacez-rom.asm keyboard.asm sdcardmenu.asm
+	pasmo -d --alocal interfacez-rom.asm $@ > $@.out
 	xxd -i $@ > interfacez_rom.c
 	./pad $@ 16384
 

@@ -7,7 +7,7 @@ include "macros.asm"
 ; Main state machine
 STATE_MAINMENU 		EQU 0
 STATE_WIFICONFIG 	EQU 1
-STATE_LISTSDFILES 	EQU 2
+STATE_SDCARDMENU 	EQU 2
 STATE_UNKNOWN  		EQU $FF
 
 ;*****************************************
@@ -175,10 +175,12 @@ ENDLESS:
 STATUSCHANGEDHANDLERTABLE:
 	DEFW	MAINMENU__STATUSCHANGED
         DEFW	WIFICONFIG__STATUSCHANGED
+        DEFW	SDCARDMENU__STATUSCHANGED
 
 HANDLEKEYANDLERTABLE:
 	DEFW	MAINMENU__HANDLEKEY
         DEFW    WIFICONFIG__HANDLEKEY
+        DEFW	SDCARDMENU__HANDLEKEY
 
 	; Enter new state in A
 ENTERSTATE:
@@ -195,7 +197,17 @@ ENTERSTATE:
         LD	HL, MENU1    	; Yes. Coming from main menu, clear it.
         LD	A, $38
         CALL	MENU__CLEAR
-_nl1:
+        JR	_nl2
+_nl1:   CP	STATE_SDCARDMENU  ; Coming from SD card menu?
+        JR	NZ, _nl2        ; No.
+
+        LD	HL, (SDMENU)  	; Yes. Coming from SD menu, clear it.
+        LD	A, $38
+        CALL	MENU__CLEAR
+
+
+        
+_nl2:
         POP	AF
         LD	(STATE), A ; Set up state.
         ;
@@ -212,23 +224,34 @@ _nl1:
 	CALL	MENU__DRAW
         
         JR	 _lend
-_l1:
+_l1:   	CP	 STATE_SDCARDMENU
+	JR	NZ, _l1
+       	CALL	SDCARDMENU__SETUP
+	
+        LD	HL, (SDMENU)
+        LD	D, 5 ; line to display menu at.
+        CALL	MENU__INIT
+        
+	CALL	MENU__DRAW
+
+
+        JR	_lend
 _lend:
 	RET
         
 SYSTEM_STATUS:
 	LD	A, $2           ; Load resource #2 (status flag)
-        LD	HL, HEAP        ; Into our HEAP area
+        LD	HL, STATUSBUF        ; Into our STATUSBUF area
         CALL	LOADRESOURCE
         CP 	$FF             ; If not valid (can this happen?) exits.
         RET 	Z
-        LD	IX, HEAP        ; Check system status flags. Use IX for dereferencing with BIT later on
+        LD	IX, STATUSBUF        ; Check system status flags. Use IX for dereferencing with BIT later on
         LD	A, (PREVSTATUS)
         XOR	(IX)            ; Compute differences between this status and prev. status
         CP	0
         CALL	NZ, PROCESSSTATUSCHANGE	; Process status change if anything changed
 
-        LD	A, (HEAP) 	; Store status for next check	
+        LD	A, (STATUSBUF) 	; Store status for next check	
 	LD	(PREVSTATUS), A
         
         RET
@@ -278,21 +301,34 @@ ALOOP:
         JR 	NZ, ALOOP
         RET
 
+INTERNALERROR:
+	LD	DE, LINE23
+        LD	HL, INTERNALERRORSTR
+        LD	A, 32
+        CALL	PRINTSTRINGPAD
+	LD	DE, LINE22
+        LD	HL, EMPTYSYRING
+        LD	A, 32
+        CALL	PRINTSTRINGPAD
+_endl1: HALT
+	JR _endl1
 
-
-include "menu_defs.asm"
-
+	include "menu_defs.asm"
         include "menu.asm"
         include "mainmenu.asm"
         include "wifimenu.asm"
+        include "sdcardmenu.asm"
         include "keyboard.asm"
 	include	"charmap.asm"
         include	"resource.asm"
         include	"graphics.asm"
         include	"print.asm"
         include	"debug.asm"
+
                ; 00000000001111111111222222222233
                ; 01234567890123456789012345678901
+INTERNALERRORSTR: DB "Internal ERROR, aborting" ; Fallback to EMPTYSYRING
+EMPTYSYRING:	DB 0
 COPYRIGHT:DB	"ZX Interface Z (C) Alvieboy 2020", 0
 
 MENUTITLE:

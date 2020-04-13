@@ -27,6 +27,8 @@ WAITFIFO1:
 ;		A:  Resource type, or $FF if not found
 ;		DE: Resource size
 ;		Z:  Zero if resource is invalid.
+;		HL points past last item received.
+
 ; Corrupts:	HL, BC, F
 
 LOADRESOURCE:
