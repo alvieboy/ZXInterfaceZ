@@ -21,3 +21,7 @@ ADD_IY_A MACRO
     	SUB	IYL      ; A = H+carry
     	LD	IYH, A   ; H = H+carry
 ENDM
+
+ENDLESS MACRO
+	_endless: JR _endless
+ENDM

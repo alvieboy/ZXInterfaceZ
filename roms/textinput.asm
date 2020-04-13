@@ -18,6 +18,9 @@ TEXTINPUT__DRAWCONTENT:
         LD	A, 'C'
         CALL	PRINTCHAR
         ; In "C" we still have the number of chars printed.
+        LD	A,C
+        CALL	DEBUGHEXA
+        ENDLESS
         RET
         
 TEXTINPUT__DRAW:

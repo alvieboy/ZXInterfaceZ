@@ -181,6 +181,10 @@ WIFIPASSWORD__SETUP:
         LD      (IX+FRAME_OFF_TITLEPTR), LOW(PASSWDTITLE)
         LD      (IX+FRAME_OFF_TITLEPTR+1), HIGH(PASSWDTITLE)
 
+	LD	(IX+TEXTINPUT_OFF_STRINGPTR), LOW(PASSWDTMP)
+        LD	(IX+TEXTINPUT_OFF_STRINGPTR+1), HIGH(PASSWDTMP)
+
+
         RET
 
 
@@ -258,11 +262,14 @@ _l2:   	CP	STATE_WIFIPASSWORD
 	JR	NZ, _lend
        	CALL	WIFIPASSWORD__SETUP
 	
-        LD	HL, (PASSWDENTRY)
+        LD	HL, PASSWDENTRY
         LD	D, 14 ; line to display menu at.
         CALL	TEXTINPUT__INIT
         
+        LD	HL, PASSWDENTRY
 	CALL	TEXTINPUT__DRAW
+        ;CALL 	DEBUGHEXHL
+        _end: jr _end
         ;JR	_lend
         
         
@@ -364,6 +371,9 @@ EMPTYSYRING:	DB 0
 COPYRIGHT:DB	"ZX Interface Z (C) Alvieboy 2020", 0
 
 PASSWDTITLE: DB "WiFi password", 0
+
+PASSWDTMP: DB "Spectrum", 0
+
 MENUTITLE:
 	DB 	"ZX Interface Z", 0
 ENTRY1: DB	"Configure WiFI", 0

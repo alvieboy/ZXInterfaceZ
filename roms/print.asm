@@ -60,7 +60,7 @@ PRINTSTRING:
 
 PRINTSTRINGCNT:
 	LD	C,0
-	LD 	A,(HL)
+_l1:	LD 	A,(HL)
         OR	A
         RET 	Z
         INC	C
@@ -68,7 +68,7 @@ PRINTSTRINGCNT:
         CALL	PRINTCHAR
         POP	HL
         INC	HL
-        JR 	PRINTSTRING
+        JR 	_l1
 
 ; PRINTSTRINGPAD:	Print NULL-terminated string in HL, padding to at least "A" spaces
 ;			Assumed "A" is at least size of string.
