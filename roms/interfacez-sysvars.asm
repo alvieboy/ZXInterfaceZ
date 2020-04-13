@@ -34,6 +34,9 @@ SDMENU		equ 	$5C1C ; To store SD card menu location in RAM
 STATE		equ 	$5C1E
 PREVSTATUS	equ 	$5C1F
 MENU1		equ	$5C20 ; 4 entries: size: 9+(4*2) = 9+16 = 25
+PASSWDENTRY     equ	$5C40
+
+WIFIPASSWD      equ	$5CD0 ; TODO.
 
 STATUSBUF	equ	$5CF0 
 HEAP		equ	$5D00 

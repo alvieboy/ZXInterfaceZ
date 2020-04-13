@@ -8,6 +8,7 @@ include "macros.asm"
 STATE_MAINMENU 		EQU 0
 STATE_WIFICONFIG 	EQU 1
 STATE_SDCARDMENU 	EQU 2
+STATE_WIFIPASSWORD 	EQU 3
 STATE_UNKNOWN  		EQU $FF
 
 ;*****************************************
@@ -171,6 +172,24 @@ ENDLESS:
         HALT
        	JR 	ENDLESS 
 
+WIFIPASSWORD__SETUP:
+	LD	IX, PASSWDENTRY
+        ; Limit passwd size to 28. Sorry about that.
+	LD	(IX+TEXTINPUT_OFF_MAX_LEN), 28
+        LD	(IX+FRAME_OFF_WIDTH), 30
+        LD	(IX+FRAME_OFF_NUMBER_OF_LINES), 1
+        LD      (IX+FRAME_OFF_TITLEPTR), LOW(PASSWDTITLE)
+        LD      (IX+FRAME_OFF_TITLEPTR+1), HIGH(PASSWDTITLE)
+
+        RET
+
+
+
+
+
+
+
+
 
 STATUSCHANGEDHANDLERTABLE:
 	DEFW	MAINMENU__STATUSCHANGED
@@ -223,9 +242,9 @@ _nl2:
         CALL	MENU__INIT
 	CALL	MENU__DRAW
         
-        JR	 _lend
+        RET	;JR	 _lend
 _l1:   	CP	 STATE_SDCARDMENU
-	JR	NZ, _l1
+	JR	NZ, _l2
        	CALL	SDCARDMENU__SETUP
 	
         LD	HL, (SDMENU)
@@ -233,9 +252,20 @@ _l1:   	CP	 STATE_SDCARDMENU
         CALL	MENU__INIT
         
 	CALL	MENU__DRAW
+        RET 	;JR	_lend
 
-
-        JR	_lend
+_l2:   	CP	STATE_WIFIPASSWORD
+	JR	NZ, _lend
+       	CALL	WIFIPASSWORD__SETUP
+	
+        LD	HL, (PASSWDENTRY)
+        LD	D, 14 ; line to display menu at.
+        CALL	TEXTINPUT__INIT
+        
+	CALL	TEXTINPUT__DRAW
+        ;JR	_lend
+        
+        
 _lend:
 	RET
         
@@ -316,6 +346,7 @@ _endl1: HALT
 	include "menu_defs.asm"
         include "menu.asm"
         include "frame.asm"
+        include "textinput.asm"
         include "mainmenu.asm"
         include "wifimenu.asm"
         include "sdcardmenu.asm"
@@ -332,6 +363,7 @@ INTERNALERRORSTR: DB "Internal ERROR, aborting" ; Fallback to EMPTYSYRING
 EMPTYSYRING:	DB 0
 COPYRIGHT:DB	"ZX Interface Z (C) Alvieboy 2020", 0
 
+PASSWDTITLE: DB "WiFi password", 0
 MENUTITLE:
 	DB 	"ZX Interface Z", 0
 ENTRY1: DB	"Configure WiFI", 0

@@ -48,6 +48,28 @@ PRINTSTRING:
         INC	HL
         JR 	PRINTSTRING
 
+; PRINTSTRINGCNT:	Print NULL-terminated string in HL
+; Inputs
+;	HL:	Pointer to string
+; 	DE:	Target screen address
+; Outputs:
+;	C:	Number of chars printed
+;	DE:	Updated screen address
+; Clobbers:
+;	AF HL
+
+PRINTSTRINGCNT:
+	LD	C,0
+	LD 	A,(HL)
+        OR	A
+        RET 	Z
+        INC	C
+        PUSH	HL	
+        CALL	PRINTCHAR
+        POP	HL
+        INC	HL
+        JR 	PRINTSTRING
+
 ; PRINTSTRINGPAD:	Print NULL-terminated string in HL, padding to at least "A" spaces
 ;			Assumed "A" is at least size of string.
 ; Inputs

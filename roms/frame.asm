@@ -1,10 +1,22 @@
+include "frame_defs.asm"
+;
+; Frame functions.
+;
+; Functions in this file:
+;
+; FRAME__INIT:	Initialize a new frame
+; FRAME__DRAW:	Draw a frame
+; FRAME__CLEAR:	Clear a previously-drawn frame
+
+
 ; Initialize a frame
 ; Inputs:
-;	IX:	pointer to frame structure
+;	IX:	pointer to frame structure. See "frame_defs.asm" for information on the fields.
+;	D:	Row/line where to display frame.
 ; Clobbers: A BC DE HL
 ;
 FRAME__INIT:
-        ; Get menu width
+        ; Get frame  width
 	LD      A, (IX + FRAME_OFF_WIDTH)
 	SRA     A       ; Divide by 2.
 	LD      C, A   
@@ -64,9 +76,11 @@ HEADER$:
         RET
 
 
-	; Draw a menu/whatever frame
+	; Draw a frame
         ; Inputs:
-        ;	IX: Pointer to frame structure
+        ;	IX: Pointer to frame structure. Should have been previously initialized
+        ;	    by calling FRAME__INIT
+        ;
         ; Clobbers: DE, BC, HL, A
         
 FRAME__DRAW:
