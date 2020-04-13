@@ -29,6 +29,11 @@ NEXTBAND$:
 	LD 	D,A			; copy back into destination MSB	
 	RET
 
+	;
+        ; Draw char pointed by HL
+        ; Inputs:	
+        ;	HL: pointer to char bitmap
+        ; Clobbers: A
 DRAWCHAR:
 	PUSH	BC
         PUSH	DE
