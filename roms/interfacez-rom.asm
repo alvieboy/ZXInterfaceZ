@@ -120,7 +120,7 @@ RAM_DONE:
 	LD	HL, HEAP
         LD	A, $00
         CALL 	LOADRESOURCE
-        JR	Z, ENDLESS
+        JP	Z, 0
         
 	LD	HL, HEAP
         LD	DE, LINE23
@@ -141,14 +141,31 @@ RAM_DONE:
         LD	A, $01
         CALL 	LOADRESOURCE
         CP	$FF
-        JR	Z, ENDLESS
+        JP	Z, 0
 
 	LD	HL, HEAP
         LD	DE, SCREEN
         CALL	DISPLAYBITMAP
 
-
-	;LD	HL,$0523	; The keyboard repeat and delay values
+        ; Attribute settins.
+        ; Lines 1 to 4 have bright.
+        
+        LD	DE, ATTR
+        LD	B, 128
+        LD	A, %01111000
+_a1:
+	LD	(DE), A
+        INC	DE
+        DJNZ    _a1
+        
+        CALL	GRAPHICS_SDOFF
+        CALL	GRAPHICS_WIFIOFF
+	
+        LD 	HL, DISCONNECTED
+        LD	A, 1
+        CALL	GRAPHICS_WIFIPRINT
+        
+        ;LD	HL,$0523	; The keyboard repeat and delay values
 	;LD	(REPDEL),HL	; are loaded to REPDEL and REPPER.
         ;LD	A, $FF
         ;LD	(KSTATE_0),A	; set KSTATE_0 to $FF.
@@ -166,18 +183,17 @@ RAM_DONE:
         CALL	ENTERSTATE
         
         
-ENDLESS:
+_loop:
 	CALL	SYSTEM_STATUS
 	CALL	KEY_INPUT
         HALT
-       	JR 	ENDLESS 
+       	JR 	_loop
 
 WIFIPASSWORD__SETUP:
 	LD	IX, PASSWDENTRY
         ; Limit passwd size to 28. Sorry about that.
 	LD	(IX+TEXTINPUT_OFF_MAX_LEN), 28
         LD	(IX+FRAME_OFF_WIDTH), 30
-        LD	(IX+FRAME_OFF_NUMBER_OF_LINES), 1
         LD      (IX+FRAME_OFF_TITLEPTR), LOW(PASSWDTITLE)
         LD      (IX+FRAME_OFF_TITLEPTR+1), HIGH(PASSWDTITLE)
 
@@ -187,23 +203,85 @@ WIFIPASSWORD__SETUP:
 
         RET
 
+WIFIPASSWORD__HANDLEKEY:
+	RET
 
 
+IGNORE:	
+	RET
 
 
+GRAPHICS_SDON:
+	PUSH 	IX
+	LD	IX, ATTR
+        LD	(IX+1), %01100000
+        LD	(IX+33), %01100000
+	POP 	IX
+        RET
 
+GRAPHICS_SDOFF:
+	PUSH 	IX
+	LD	IX, ATTR
+        LD	(IX+1), %00111000
+        LD	(IX+33), %00111000
+	POP	IX
+        RET
+        
+GRAPHICS_WIFION:
+        LD	A, %01111001
+GR1:
+	PUSH 	IX
+	LD	IX, ATTR        
+        LD	(IX+64), A
+        LD	(IX+65), A
+        LD	(IX+66), A
+        LD	(IX+96), A
+        LD	(IX+97), A
+        LD	(IX+98), A
+        POP 	IX
+        RET
 
+GRAPHICS_WIFIOFF:
+	LD	A, %01111000
+        JR 	GR1
 
+;	A: 0 (STA) or 1(AP) mode
+;	HL:	SSID
+
+GRAPHICS_WIFIPRINT:
+	LD	DE, LINE3 + 3
+        LD	C, %01111000 ; Normal color
+	CP	0
+        JR	Z, _stamode
+        PUSH	HL
+        LD	A, 'A'
+        CALL	PRINTCHAR
+        LD	A, 'P'
+        CALL	PRINTCHAR
+        INC	DE
+        POP	HL
+        LD	C, %00001110 ; Color for AP mode text
+_stamode:
+	CALL	PRINTSTRING
+        PUSH 	IX
+        LD	IX, ATTR+96+3
+        LD	A, C
+        LD	(IX), A
+        LD	(IX+1), A
+        POP 	IX
+        RET
 
 STATUSCHANGEDHANDLERTABLE:
 	DEFW	MAINMENU__STATUSCHANGED
         DEFW	WIFICONFIG__STATUSCHANGED
         DEFW	SDCARDMENU__STATUSCHANGED
+        DEFW	IGNORE
 
 HANDLEKEYANDLERTABLE:
 	DEFW	MAINMENU__HANDLEKEY
         DEFW    WIFICONFIG__HANDLEKEY
         DEFW	SDCARDMENU__HANDLEKEY
+        DEFW	WIFIPASSWORD__HANDLEKEY
 
 	; Enter new state in A
 ENTERSTATE:
@@ -268,8 +346,6 @@ _l2:   	CP	STATE_WIFIPASSWORD
         
         LD	HL, PASSWDENTRY
 	CALL	TEXTINPUT__DRAW
-        ;CALL 	DEBUGHEXHL
-        _end: jr _end
         ;JR	_lend
         
         
@@ -285,6 +361,7 @@ SYSTEM_STATUS:
         LD	IX, STATUSBUF        ; Check system status flags. Use IX for dereferencing with BIT later on
         LD	A, (PREVSTATUS)
         XOR	(IX)            ; Compute differences between this status and prev. status
+        LD	(IX+1), A	; Save STATUSXOR
         CP	0
         CALL	NZ, PROCESSSTATUSCHANGE	; Process status change if anything changed
 
@@ -292,8 +369,63 @@ SYSTEM_STATUS:
 	LD	(PREVSTATUS), A
         
         RET
+        
+LOCALSTATUSCHANGED:
+	BIT	0, (IX+1)                 	; Bit 1 is WIFI Mode flag
+        CALL	NZ, LOCALWIFIMODESTATUSCHANGED
+	BIT	1, (IX+1)                 	; Bit 1 is WIFI Connected flag
+        CALL	NZ, LOCALWIFICONNECTEDSTATUSCHANGED
+	BIT	2, (IX+1)                 	; Bit 1 is WIFI Connected flag
+        CALL	NZ, LOCALWIFISCANNINGSTATUSCHANGED
+	BIT	3, (IX+1)                    ; Bit 3 is SD Card connected flag.
+        JP	NZ, LOCALSDCARDSTATUSCHANGED
+        RET
+
+LOCALWIFIMODESTATUSCHANGED: ; Wifi mode changed (STA<->AP)
+        CALL	GETSSID
+        BIT	0, (IX) ; Get WIFI mode
+        LD	HL, SSID
+        JR	Z, _stamode
+        ; AP mode
+        XOR	A
+        JP	GRAPHICS_WIFIPRINT
+_stamode:
+	LD	A, 1
+        JP	GRAPHICS_WIFIPRINT
+        
+;	RET
+
+LOCALWIFICONNECTEDSTATUSCHANGED: ; Wifi connection status changed (connected/disconnected)
+        BIT	1, (IX) ; Get WIFI connect status
+        JP	Z, GRAPHICS_WIFIOFF
+        ; On. Check WiFI mode
+        CALL	GRAPHICS_WIFION
+        BIT	0, (IX+1);  IF Wifi mode changed, ignore
+        RET	NZ
+        JP	LOCALWIFIMODESTATUSCHANGED
+	;RET
+
+LOCALWIFISCANNINGSTATUSCHANGED: ; Wifi scanning status changed (scanning/not scanning)
+        BIT	2, (IX) ; Get WIFI connect status
+	RET
+
+LOCALSDCARDSTATUSCHANGED: ; SD card status changed (present/not present)
+        BIT	3, (IX) ; Get SD
+        JP	Z, GRAPHICS_SDOFF
+        JP	GRAPHICS_SDON
+
+GETSSID:
+	LD	HL, SSID
+        LD	A, $04
+        CALL	LOADRESOURCE
+        JR	Z, INTERNALERROR
+        RET
 
 PROCESSSTATUSCHANGE:
+	PUSH	AF
+        ; Local status change.
+        CALL	LOCALSTATUSCHANGED
+        POP	AF
 	LD	HL, STATUSCHANGEDHANDLERTABLE
 	JR	CALLSTATUSFUN
 HANDLEKEY:
@@ -373,7 +505,8 @@ COPYRIGHT:DB	"ZX Interface Z (C) Alvieboy 2020", 0
 PASSWDTITLE: DB "WiFi password", 0
 
 PASSWDTMP: DB "Spectrum", 0
-
+DISCONNECTED:	DB	"No WiFi", 0
+SCANNING:	DB	"Scanning...", 0
 MENUTITLE:
 	DB 	"ZX Interface Z", 0
 ENTRY1: DB	"Configure WiFI", 0

@@ -36,6 +36,8 @@ PREVSTATUS	equ 	$5C1F
 MENU1		equ	$5C20 ; 4 entries: size: 9+(4*2) = 9+16 = 25
 PASSWDENTRY     equ	$5C40
 
+SSID		equ	$5CB0 
+
 WIFIPASSWD      equ	$5CD0 ; TODO.
 
 STATUSBUF	equ	$5CF0 
@@ -43,6 +45,10 @@ HEAP		equ	$5D00
 
 
 SCREEN		equ	$4000
+LINE1		equ 	$4020
+LINE2		equ 	$4040
+LINE3		equ 	$4060
+LINE4		equ 	$4080
 LINE23		equ 	$50E0
 LINE22		equ 	$50C0
 LINE21		equ 	$50A0

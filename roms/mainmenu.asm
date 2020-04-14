@@ -67,51 +67,38 @@ ENTRY5HANDLER:
         
 MAINMENU__SETUP:
        	LD	IX, MENU1
-        LD	A, 28  			; Menu width 24
-        LD	(IX + FRAME_OFF_WIDTH), A
-        LD	A, 4                    ; Menu visible entries
-        LD	(IX + FRAME_OFF_NUMBER_OF_LINES), A
-        LD	A, 5                    ; Menu actual entries
-        LD	(IX + MENU_OFF_DATA_ENTRIES), A
-        XOR	A
-        LD 	(IX+ MENU_OFF_SELECTED_ENTRY), A		; Selected entry
-        LD	HL, MENUTITLE
-        LD	(IX+FRAME_OFF_TITLEPTR), L
-        LD	(IX+FRAME_OFF_TITLEPTR+1), H
+        LD	(IX + FRAME_OFF_WIDTH), 28 ; Menu width 24
+        LD	(IX + FRAME_OFF_NUMBER_OF_LINES), 4 ; Menu visible entries
+        LD	(IX + MENU_OFF_DATA_ENTRIES), 5 ; Menu actual entries 
+        LD 	(IX + MENU_OFF_SELECTED_ENTRY), 0 ; Selected entry
+        LD	(IX+FRAME_OFF_TITLEPTR), LOW(MENUTITLE)
+        LD	(IX+FRAME_OFF_TITLEPTR+1), HIGH(MENUTITLE)
         ; Entry 1
-        LD	HL, ENTRY1
-        LD	(IX+MENU_OFF_FIRST_ENTRY),A ; Flags
-        LD	(IX+MENU_OFF_FIRST_ENTRY+1), L
-        LD	(IX+MENU_OFF_FIRST_ENTRY+2), H
+        LD	(IX+MENU_OFF_FIRST_ENTRY), 0 ; Flags
+        LD	(IX+MENU_OFF_FIRST_ENTRY+1), LOW(ENTRY1)
+        LD	(IX+MENU_OFF_FIRST_ENTRY+2), HIGH(ENTRY1);
 
-        LD	HL, ENTRY2
-        LD	A,1
-        LD	(IX+MENU_OFF_FIRST_ENTRY+3),A ; Flags
-        LD	(IX+MENU_OFF_FIRST_ENTRY+4), L
-        LD	(IX+MENU_OFF_FIRST_ENTRY+5), H
+        LD	(IX+MENU_OFF_FIRST_ENTRY+3), 1 ; Flags
+        LD	(IX+MENU_OFF_FIRST_ENTRY+4), LOW(ENTRY2)
+        LD	(IX+MENU_OFF_FIRST_ENTRY+5), HIGH(ENTRY2);
         
-        XOR	A
-        LD	HL, ENTRY3
-        LD	(IX+MENU_OFF_FIRST_ENTRY+6),A ; Flags
-        LD	(IX+MENU_OFF_FIRST_ENTRY+7), L
-        LD	(IX+MENU_OFF_FIRST_ENTRY+8), H
+        LD	(IX+MENU_OFF_FIRST_ENTRY+6), 0 ; Flags
+        LD	(IX+MENU_OFF_FIRST_ENTRY+7), LOW(ENTRY3)
+        LD	(IX+MENU_OFF_FIRST_ENTRY+8), HIGH(ENTRY3)
         
-        LD	HL, ENTRY4
-        LD	(IX+MENU_OFF_FIRST_ENTRY+9),A ; Flags
-        LD	(IX+MENU_OFF_FIRST_ENTRY+10), L
-        LD	(IX+MENU_OFF_FIRST_ENTRY+11), H
+        LD	(IX+MENU_OFF_FIRST_ENTRY+9), 0 ; Flags
+        LD	(IX+MENU_OFF_FIRST_ENTRY+10), LOW(ENTRY4)
+        LD	(IX+MENU_OFF_FIRST_ENTRY+11), HIGH(ENTRY4)
 
-        LD	HL, ENTRY5
-        LD	(IX+MENU_OFF_FIRST_ENTRY+12),A ; Flags
-        LD	(IX+MENU_OFF_FIRST_ENTRY+13), L
-        LD	(IX+MENU_OFF_FIRST_ENTRY+14), H
+        LD	(IX+MENU_OFF_FIRST_ENTRY+12), 0 ; Flags
+        LD	(IX+MENU_OFF_FIRST_ENTRY+13), LOW(ENTRY5)
+        LD	(IX+MENU_OFF_FIRST_ENTRY+14), HIGH(ENTRY5)
 
-	LD	(IX+MENU_OFF_CALLBACKPTR), low(MENUCALLBACKTABLE)
-        LD	(IX+MENU_OFF_CALLBACKPTR+1), high(MENUCALLBACKTABLE)
+	LD	(IX+MENU_OFF_CALLBACKPTR), LOW(MENUCALLBACKTABLE)
+        LD	(IX+MENU_OFF_CALLBACKPTR+1), HIGH(MENUCALLBACKTABLE)
 
-	LD	A, 0 ; TEST ONLY
-        LD 	(IX+MENU_OFF_DISPLAY_OFFSET), A
-        LD 	(IX+MENU_OFF_SELECTED_ENTRY), A
+        LD 	(IX+MENU_OFF_DISPLAY_OFFSET), 0
+        LD 	(IX+MENU_OFF_SELECTED_ENTRY), 0
         RET
 
 MENUCALLBACKTABLE:
