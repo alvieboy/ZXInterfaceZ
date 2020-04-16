@@ -30,12 +30,15 @@ PREVKEY		equ     $5C13
 CURKEY		equ     $5C15
 KFLAG		equ     $5C17
 
+WIFIFLAGS	equ 	$5C1B
 SDMENU		equ 	$5C1C ; To store SD card menu location in RAM
+WIFIAPMENU	equ 	SDMENU ; Reuse.
 STATE		equ 	$5C1E
-PREVSTATUS	equ 	$5C1F
+PREVSTATUS	equ 	$5C1F ; Previous status
 MENU1		equ	$5C20 ; 4 entries: size: 9+(4*2) = 9+16 = 25
 PASSWDENTRY     equ	$5C40
 
+TEXTMESSAGEAREA	equ	$5CA0 
 SSID		equ	$5CB0 
 
 WIFIPASSWD      equ	$5CD0 ; TODO.

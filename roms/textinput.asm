@@ -16,6 +16,10 @@ TEXTINPUT__DRAWCONTENT:
         ; Print cursor
         LD	A, 'L'
         CALL	PRINTCHAR
+        ; In the eventuality of backspace, clear next char as well
+        LD	A, ' '
+        CALL	PRINTCHAR
+        
         ; In "C" we still have the number of chars printed.
         ;LD	A,C
         LD	L, (IX+FRAME_OFF_ATTRPTR)
@@ -80,10 +84,48 @@ TEXTINPUT__DRAW:
         POP	IX
 	CALL	FRAME__DRAW
         ; Draw contents
+TEXTINPUT__DRAWCONTENT_NO_DE
         LD	E, (IX+FRAME_OFF_SCREENPTR)
         LD	D, (IX+FRAME_OFF_SCREENPTR+1)
         INC	DE
         JP	TEXTINPUT__DRAWCONTENT
 
 
+TEXTINPUT__HANDLEKEY:
+	PUSH	HL
+        POP	IX
+        ;CALL	DEBUGHEXHL
+        LD	DE, (CURKEY)
 
+        CALL	KEYTOASCII
+        
+        CP	$FF
+        RET	Z
+
+        LD	L, (IX+TEXTINPUT_OFF_STRINGPTR)
+        LD	H, (IX+TEXTINPUT_OFF_STRINGPTR+1)
+        
+        CP	$08 ; Backspace
+        JR	Z, _backspace
+        CP	$0D ; Enter
+        JR	Z, _enter
+        CP	$1B ; ESCAPE/Break
+        JR	Z, _cancel
+        
+        ;
+        ; Append
+        ;
+        CALL	STRAPPENDCHAR
+_update:
+        ; Redraw - could be faster
+        CALL 	TEXTINPUT__DRAWCONTENT_NO_DE
+        LD	A, $FF
+        RET
+_backspace:
+        CALL	STRREMOVELASTCHAR
+        JR	_update
+_enter:	LD	A, 0
+	RET
+_cancel:
+	LD	A, 1
+        RET

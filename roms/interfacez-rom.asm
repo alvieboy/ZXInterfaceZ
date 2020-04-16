@@ -5,11 +5,12 @@ include "macros.asm"
 
 
 ; Main state machine
-STATE_MAINMENU 		EQU 0
-STATE_WIFICONFIG 	EQU 1
-STATE_SDCARDMENU 	EQU 2
-STATE_WIFIPASSWORD 	EQU 3
-STATE_UNKNOWN  		EQU $FF
+STATE_UNKNOWN  		EQU 0
+STATE_MAINMENU 		EQU 1
+STATE_WIFICONFIGAP 	EQU 2
+STATE_SDCARDMENU 	EQU 3
+STATE_WIFIPASSWORD 	EQU 4
+STATE_WIFICONFIGSTA 	EQU 5
 
 ;*****************************************
 ;** Part 1. RESTART ROUTINES AND TABLES **
@@ -177,8 +178,9 @@ _a1:
 
   	IM 	1
         LD	IY, IYBASE
-        EI
-        
+        EI  	
+        XOR 	A  	
+        LD	(STATE), A
         LD	A, STATE_MAINMENU
         CALL	ENTERSTATE
         
@@ -188,23 +190,6 @@ _loop:
 	CALL	KEY_INPUT
         HALT
        	JR 	_loop
-
-WIFIPASSWORD__SETUP:
-	LD	IX, PASSWDENTRY
-        ; Limit passwd size to 28. Sorry about that.
-	LD	(IX+TEXTINPUT_OFF_MAX_LEN), 28
-        LD	(IX+FRAME_OFF_WIDTH), 30
-        LD      (IX+FRAME_OFF_TITLEPTR), LOW(PASSWDTITLE)
-        LD      (IX+FRAME_OFF_TITLEPTR+1), HIGH(PASSWDTITLE)
-
-	LD	(IX+TEXTINPUT_OFF_STRINGPTR), LOW(PASSWDTMP)
-        LD	(IX+TEXTINPUT_OFF_STRINGPTR+1), HIGH(PASSWDTMP)
-
-
-        RET
-
-WIFIPASSWORD__HANDLEKEY:
-	RET
 
 
 IGNORE:	
@@ -243,8 +228,13 @@ GR1:
 
 GRAPHICS_WIFIOFF:
 	LD	A, %01111000
-        JR 	GR1
-
+        CALL	GR1
+        ; Write "disconnected" area
+        LD	HL, DISCONNECTED
+	LD	DE, LINE3 + 3
+        LD	A, 30
+	CALL	PRINTSTRINGPAD
+        RET
 ;	A: 0 (STA) or 1(AP) mode
 ;	HL:	SSID
 
@@ -252,6 +242,7 @@ GRAPHICS_WIFIPRINT:
 	LD	DE, LINE3 + 3
         LD	C, %01111000 ; Normal color
 	CP	0
+        LD	A, 30 ; for string padding
         JR	Z, _stamode
         PUSH	HL
         LD	A, 'A'
@@ -261,8 +252,9 @@ GRAPHICS_WIFIPRINT:
         INC	DE
         POP	HL
         LD	C, %00001110 ; Color for AP mode text
+        LD	A, 27 ; For string padding
 _stamode:
-	CALL	PRINTSTRING
+	CALL	PRINTSTRINGPAD
         PUSH 	IX
         LD	IX, ATTR+96+3
         LD	A, C
@@ -272,85 +264,91 @@ _stamode:
         RET
 
 STATUSCHANGEDHANDLERTABLE:
+        DEFW	IGNORE
 	DEFW	MAINMENU__STATUSCHANGED
         DEFW	WIFICONFIG__STATUSCHANGED
         DEFW	SDCARDMENU__STATUSCHANGED
         DEFW	IGNORE
+        DEFW	IGNORE
 
 HANDLEKEYANDLERTABLE:
+        DEFW	IGNORE
 	DEFW	MAINMENU__HANDLEKEY
         DEFW    WIFICONFIG__HANDLEKEY
         DEFW	SDCARDMENU__HANDLEKEY
-        DEFW	WIFIPASSWORD__HANDLEKEY
+        DEFW	IGNORE
+        DEFW	IGNORE
 
-	; Enter new state in A
-ENTERSTATE:
-	; Ignore if we are already on that state.
-        ;CP	(STATE)
-	PUSH 	AF
-        ;
-        ; Check previous state.
-	;
-        LD	A, (STATE)
-        CP	STATE_MAINMENU  ; Coming from main menu?
-        JR	NZ, _nl1        ; No.
-        
-        LD	HL, MENU1    	; Yes. Coming from main menu, clear it.
+ENTERSTATEHANDLERTABLE:
+        DEFW	IGNORE
+	DEFW	ENTER_MAINMENU
+        DEFW 	ENTER_WIFICONFIGAP
+        DEFW	ENTER_SDCARD
+        DEFW	ENTER_WIFICONFIGSTA
+        DEFW	IGNORE
+
+LEAVESTATEHANDLERTABLE:
+        DEFW	IGNORE
+	DEFW	LEAVE_MAINMENU
+        DEFW 	LEAVE_WIFICONFIGAP
+        DEFW	LEAVE_SDCARD
+        DEFW	LEAVE_WIFICONFIGSTA
+        DEFW	IGNORE
+
+
+LEAVE_MAINMENU:
+        LD	HL, MENU1
         LD	A, $38
-        CALL	MENU__CLEAR
-        JR	_nl2
-_nl1:   CP	STATE_SDCARDMENU  ; Coming from SD card menu?
-        JR	NZ, _nl2        ; No.
+        JP	MENU__CLEAR
 
-        LD	HL, (SDMENU)  	; Yes. Coming from SD menu, clear it.
+LEAVE_SDCARD:
+        LD	HL, (SDMENU)
         LD	A, $38
-        CALL	MENU__CLEAR
+        JP	MENU__CLEAR
 
-
-        
-_nl2:
-        POP	AF
-        LD	(STATE), A ; Set up state.
-        ;
-        ;
-        ; Check new state
-        CP	STATE_MAINMENU
-        JR 	NZ, _l1
-	; ENTER STATE: MAINMENU
-
+ENTER_MAINMENU:
 	CALL	MAINMENU__SETUP
 	LD	HL, MENU1
         LD	D, 6 ; line to display menu at.
         CALL	MENU__INIT
-	CALL	MENU__DRAW
-        
-        RET	;JR	 _lend
-_l1:   	CP	 STATE_SDCARDMENU
-	JR	NZ, _l2
-       	CALL	SDCARDMENU__SETUP
-	
+	JP	MENU__DRAW
+
+ENTER_SDCARD:
+       	CALL	SDCARDMENU__SETUP	
         LD	HL, (SDMENU)
         LD	D, 5 ; line to display menu at.
         CALL	MENU__INIT
+	JP	MENU__DRAW
         
-	CALL	MENU__DRAW
-        RET 	;JR	_lend
-
-_l2:   	CP	STATE_WIFIPASSWORD
-	JR	NZ, _lend
-       	CALL	WIFIPASSWORD__SETUP
-	
-        LD	HL, PASSWDENTRY
-        LD	D, 14 ; line to display menu at.
-        CALL	TEXTINPUT__INIT
-        
-        LD	HL, PASSWDENTRY
-	CALL	TEXTINPUT__DRAW
-        ;JR	_lend
-        
-        
-_lend:
+LEAVE_WIFICONFIGAP:
 	RET
+
+ENTER_WIFICONFIGAP:
+	LD	HL, SCANNING
+	CALL 	TEXTMESSAGE__SHOW
+        LD	A, 0 
+        LD	(WIFIFLAGS), A
+        ; Request scan
+        LD	A, $02
+        JP	WRITECMDFIFO
+
+ENTER_WIFICONFIGSTA:
+	RET
+LEAVE_WIFICONFIGSTA:
+	RET
+        
+	; Enter new state in A
+ENTERSTATE:
+	; Ignore if we are already on that state.
+	PUSH 	AF
+        LD	HL, LEAVESTATEHANDLERTABLE
+        LD	A, (STATE)
+        CALL	CALLTABLE
+        POP	AF
+        
+        LD	(STATE), A ; Set up new state.
+        LD	HL, ENTERSTATEHANDLERTABLE
+        JP	CALLTABLE
         
 SYSTEM_STATUS:
 	LD	A, $2           ; Load resource #2 (status flag)
@@ -375,7 +373,7 @@ LOCALSTATUSCHANGED:
         CALL	NZ, LOCALWIFIMODESTATUSCHANGED
 	BIT	1, (IX+1)                 	; Bit 1 is WIFI Connected flag
         CALL	NZ, LOCALWIFICONNECTEDSTATUSCHANGED
-	BIT	2, (IX+1)                 	; Bit 1 is WIFI Connected flag
+	BIT	2, (IX+1)                 	; Bit 2 is WIFI Scanning
         CALL	NZ, LOCALWIFISCANNINGSTATUSCHANGED
 	BIT	3, (IX+1)                    ; Bit 3 is SD Card connected flag.
         JP	NZ, LOCALSDCARDSTATUSCHANGED
@@ -419,6 +417,7 @@ GETSSID:
         LD	A, $04
         CALL	LOADRESOURCE
         JR	Z, INTERNALERROR
+        LD	(HL), 0 ; NULL-terminate the string.
         RET
 
 PROCESSSTATUSCHANGE:
@@ -443,7 +442,22 @@ CALLSTATUSFUN:
         PUSH	HL
         LD	A, B
         RET
+	
         
+        
+        ; Call a table entry
+        ; HL:	table 
+        ; A:	table index
+CALLTABLE:
+        ADD	A, A ; a = a*2
+        ADD_HL_A
+	LD	A, (HL)
+        INC 	HL
+	LD	H, (HL)
+	LD	L, A
+        PUSH	HL
+        RET
+    
 KEY_INPUT:	
 	BIT	5,(IY+(FLAGS-IYBASE))	; test FLAGS  - has a new key been pressed ?
 	RET	Z		; return if not.
@@ -486,6 +500,8 @@ _endl1: HALT
         include "menu.asm"
         include "frame.asm"
         include "textinput.asm"
+        include "textmessage.asm"
+        include "string.asm"
         include "mainmenu.asm"
         include "wifimenu.asm"
         include "sdcardmenu.asm"
@@ -505,12 +521,5 @@ COPYRIGHT:DB	"ZX Interface Z (C) Alvieboy 2020", 0
 PASSWDTITLE: DB "WiFi password", 0
 
 PASSWDTMP: DB "Spectrum", 0
-DISCONNECTED:	DB	"No WiFi", 0
+DISCONNECTED:	DB	"Disconnected", 0
 SCANNING:	DB	"Scanning...", 0
-MENUTITLE:
-	DB 	"ZX Interface Z", 0
-ENTRY1: DB	"Configure WiFI", 0
-ENTRY2: DB	"Load from SD Card", 0
-ENTRY3: DB	"Show version", 0
-ENTRY4: DB	"Goto BASIC", 0
-ENTRY5: DB	"Hidden entry", 0

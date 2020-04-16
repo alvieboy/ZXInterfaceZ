@@ -86,8 +86,163 @@ KEYBOARD:	CALL	KEY_SCAN	; routine KEY_SCAN
                 LD	(PREVKEY), DE
 					; Notify key pressed
                 LD	(CURKEY), DE
-                ; IY might be changed outside interrupt.
                 LD	IY, IYBASE
                 SET	5, (IY+(FLAGS-IYBASE))
                 RET
+
+	; Input: DE
+KEYTOASCII:
+	LD	C, 0
+	LD	A, D
+        CP	$27 ; Caps shift
+        JR 	NZ, _nocapsshift
+        ; Caps key on.
+        LD	L, LOW(CAPSSHIFT_KEYS)
+        LD	H, HIGH(CAPSSHIFT_KEYS)
+        JR	_l1
+_nocapsshift:
+        CP 	$18 ; Symbol shift
+        JR	Z, _symbolshift
+        ; Otherwise, normal
+_regularkey:
+        ; Regular key
+        LD	L, LOW(NORMAL_KEYS)
+        LD	H, HIGH(NORMAL_KEYS)
+        ; Make sure we do not overflow table
+_l1:    LD	A, E
+	CP	$FF
+        JR	Z, _invalidkey      
+	CP	$27
+        JR	NC, _invalidkey
+        ADD_HL_A
+        LD	A,(HL)
+        RET
+_invalidkey:
+	LD	A, $FF
+        RET
+_symbolshift:
+	LD	L, LOW(SYM_KEYS)
+        LD	H, HIGH(SYM_KEYS)
+        JR	_l1
+
+CAPSSHIFT_KEYS:	DEFB	$42		; B
+		DEFB	$48		; H
+		DEFB	$59		; Y
+		DEFB	$36		; 6
+		DEFB	$35		; 5
+		DEFB	$54		; T
+		DEFB	$47		; G
+		DEFB	$56		; V
+		DEFB	$4E		; N
+		DEFB	$4A		; J
+		DEFB	$55		; U
+		DEFB	$37		; 7
+		DEFB	$34		; 4
+		DEFB	$52		; R
+		DEFB	$46		; F
+		DEFB	$43		; C
+		DEFB	$4D		; M
+		DEFB	$4B		; K
+		DEFB	$49		; I
+		DEFB	$38		; 8
+		DEFB	$33		; 3
+		DEFB	$45		; E
+		DEFB	$44		; D
+		DEFB	$58		; X
+		DEFB	$FF		; SYMBOL SHIFT
+		DEFB	$4C		; L
+		DEFB	$4F		; O
+		DEFB	$39		; 9
+		DEFB	$32		; 2
+		DEFB	$57		; W
+		DEFB	$53		; S
+		DEFB	$5A		; Z
+		DEFB	$1B		; SPACE/ BREAK (ESC)
+		DEFB	$FF		; ENTER
+		DEFB	$50		; P
+		DEFB	$08		; 0 - Backspace/DELETE
+		DEFB	$31		; 1
+		DEFB	$51		; Q
+		DEFB	$41		; A
+
+NORMAL_KEYS:	DEFB	$62		; B
+		DEFB	$68		; H
+		DEFB	$79		; Y
+		DEFB	$36		; 6
+		DEFB	$35		; 5
+		DEFB	$74		; T
+		DEFB	$67		; G
+		DEFB	$76		; V
+		DEFB	$6E		; N
+		DEFB	$6A		; J
+		DEFB	$75		; U
+		DEFB	$37		; 7
+		DEFB	$34		; 4
+		DEFB	$72		; R
+		DEFB	$66		; F
+		DEFB	$63		; C
+		DEFB	$6D		; M
+		DEFB	$6B		; K
+		DEFB	$69		; I
+		DEFB	$38		; 8
+		DEFB	$33		; 3
+		DEFB	$65		; E
+		DEFB	$64		; D
+		DEFB	$78		; X
+		DEFB	$FF		; SYMBOL SHIFT
+		DEFB	$6C		; L
+		DEFB	$6F		; O
+		DEFB	$39		; 9
+		DEFB	$32		; 2
+		DEFB	$77		; W
+		DEFB	$73		; S
+		DEFB	$7A		; Z
+		DEFB	$20		; SPACE
+		DEFB	$0D		; ENTER
+		DEFB	$70		; P
+		DEFB	$30		; 0 
+		DEFB	$31		; 1
+		DEFB	$71		; Q
+		DEFB	$61		; A
+
+SYM_KEYS:	DEFB	'*'		; B
+		DEFB	$FF		; H
+		DEFB	'['		; Y EXTENDED
+		DEFB	'&'		; 6
+		DEFB	'%'		; 5
+		DEFB	'>'		; T
+		DEFB	'}'		; G EXTENDED
+		DEFB	'/'		; V
+		DEFB	','		; N
+		DEFB	'-'		; J
+		DEFB	']'		; U EXTENDED
+		DEFB	$27		; 7
+		DEFB	'$'		; 4
+		DEFB	'<'		; R
+		DEFB	'{'		; F EXTENDED
+		DEFB	'?'		; C
+		DEFB	'.'		; M
+		DEFB	'+'		; K
+		DEFB	$FF		; I
+		DEFB	'('		; 8
+		DEFB	'#'		; 3
+		DEFB	$FF		; E
+		DEFB	'\'		; D EXTENDED
+		DEFB	$FF		; X  !!!!!WARNING!!!!!! - not using 163. Might crash
+		DEFB	$FF		; SYMBOL SHIFT
+		DEFB	'='		; L
+		DEFB	';'		; O
+		DEFB	')'		; 9
+		DEFB	'@'		; 2
+		DEFB	$FF		; W
+		DEFB	'|'		; S EXTENDED
+		DEFB	':'		; Z
+		DEFB	$20		; SPACE
+		DEFB	$0D		; ENTER
+		DEFB	'"'		; P
+		DEFB	$08		; 0 - Backspace/DELETE
+		DEFB	'!'		; 1
+		DEFB	$FF		; Q
+		DEFB	'~'		; A EXTENDED
+
 

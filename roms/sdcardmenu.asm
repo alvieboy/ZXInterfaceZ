@@ -9,8 +9,7 @@ SDCARDMENU__STATUSCHANGED:
         JP	ENTERSTATE
         
 SDCARDMENU__HANDLEKEY:
-	LD	HL, (SDMENU)
-        
+        LD	HL, (SDMENU)
         CP	$26 	; A key
         JR	NZ, _n1
         JP	MENU__CHOOSENEXT
@@ -31,12 +30,7 @@ SDCARDMENU__SETUP:
         ; Load SD card root
         LD	A, $03 ; Id: DIRECTORYRESOURCE
         CALL	LOADRESOURCE
-        JR	NZ, _rok
-	; Could not load resource...
-        
-        ; TBD
-        JP	INTERNALERROR
-_rok:
+        JP	Z, INTERNALERROR
 	; HL points to "free" area after listing resource. 
         ; Use it to set up menu
         PUSH	HL
@@ -60,10 +54,8 @@ _l1:
         LD	(IX+FRAME_OFF_WIDTH), A
         LD	(IX+FRAME_OFF_NUMBER_OF_LINES), C 	; Max visible entries
         LD	(IX+MENU_OFF_DATA_ENTRIES), B 		; Total number of entries
-        LD	A, LOW(SDMENUTITLE)
-        LD	(IX+FRAME_OFF_TITLEPTR), A
-        LD	A, HIGH(SDMENUTITLE)
-        LD	(IX+FRAME_OFF_TITLEPTR+1), A
+        LD	(IX+FRAME_OFF_TITLEPTR), LOW(SDMENUTITLE)
+        LD	(IX+FRAME_OFF_TITLEPTR+1), HIGH(SDMENUTITLE)
         ; Now, copy entries. Number is still in B
 	; TODO: check for zero entries
         ;DEC	B

@@ -23,8 +23,10 @@ DEBUGHEXHL:
 DEBUGHEXA:
 	PUSH	DE
         PUSH 	BC
+        PUSH	AF
         LD	DE, LINE21
         CALL	PRINTHEX
+	POP 	AF
         POP	BC
         POP	DE
         RET
