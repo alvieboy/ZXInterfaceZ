@@ -22,7 +22,11 @@ SCANFINSIHED:
 
         LD	A, 1 
         LD	(WIFIFLAGS), A ; 2 - menu entry
-
+        ; Clear password
+        LD	DE, WIFIPASSWD
+        XOR	A
+        LD	(DE), A
+        
 	; HL points to "free" area after listing resource. 
         ; Use it to set up menu
         PUSH	HL
@@ -151,6 +155,10 @@ PASSWDCANCEL:
 
 PASSWDFINISHED:
 
+        LD	HL, PASSWDENTRY
+        LD	A, $38
+        CALL	FRAME__CLEAR
+        
 WIFIACTIVATE:
 	; Now, we need to iterate and find the entry "flags", which is one-byte before the 
         ; AP name.
@@ -174,8 +182,14 @@ WIFIACTIVATE:
 
         ; Bit '0' means if we need or not a password for AP.
         BIT	0, A
-        JR	NZ, WIFIASKPASSWORD
+        JR	Z, _nopwdneeded
+        ; We need a password. Check if we already have one.
+        LD	DE, PASSWDENTRY
+        LD	A, (DE)
+        CP	0
+        JR	Z, WIFIASKPASSWORD
         
+_nopwdneeded
         ; No password needed. Just set up AP.
         INC	HL ; Get HL back to string pointer.
 
@@ -200,7 +214,7 @@ _l3:
         CALL	WRITECMDFIFO
         DJNZ 	_l3
         ; Check password, send if needed
-        LD	HL, PASSWDENTRY
+        LD	HL, WIFIPASSWD
         PUSH 	HL
         CALL	STRLEN
         POP	HL
