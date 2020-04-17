@@ -184,7 +184,7 @@ WIFIACTIVATE:
         BIT	0, A
         JR	Z, _nopwdneeded
         ; We need a password. Check if we already have one.
-        LD	DE, PASSWDENTRY
+        LD	DE, WIFIPASSWD
         LD	A, (DE)
         CP	0
         JR	Z, WIFIASKPASSWORD
@@ -280,4 +280,6 @@ WIFIASKPASSWORD:
         
 WIFIAPMENUTITLE:
 	DB "Choose AP", 0
+PASSWDTITLE: 
+	DB "WiFi password", 0
         

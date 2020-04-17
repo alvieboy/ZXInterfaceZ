@@ -232,17 +232,17 @@ GRAPHICS_WIFIOFF:
         ; Write "disconnected" area
         LD	HL, DISCONNECTED
 	LD	DE, LINE3 + 3
-        LD	A, 30
+        LD	A, 23
 	CALL	PRINTSTRINGPAD
         RET
 ;	A: 0 (STA) or 1(AP) mode
 ;	HL:	SSID
 
 GRAPHICS_WIFIPRINT:
-	LD	DE, LINE3 + 3
+	LD	DE, LINE3 + 2
         LD	C, %01111000 ; Normal color
 	CP	0
-        LD	A, 30 ; for string padding
+        LD	A, 23 ; for string padding
         JR	Z, _stamode
         PUSH	HL
         LD	A, 'A'
@@ -252,7 +252,7 @@ GRAPHICS_WIFIPRINT:
         INC	DE
         POP	HL
         LD	C, %00001110 ; Color for AP mode text
-        LD	A, 27 ; For string padding
+        LD	A, 20 ; For string padding
 _stamode:
 	CALL	PRINTSTRINGPAD
         PUSH 	IX
@@ -517,8 +517,6 @@ _endl1: HALT
 INTERNALERRORSTR: DB "Internal ERROR, aborting" ; Fallback to EMPTYSYRING
 EMPTYSYRING:	DB 0
 COPYRIGHT:DB	"ZX Interface Z (C) Alvieboy 2020", 0
-
-PASSWDTITLE: DB "WiFi password", 0
 
 PASSWDTMP: DB "Spectrum", 0
 DISCONNECTED:	DB	"Disconnected", 0
