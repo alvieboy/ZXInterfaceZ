@@ -44,6 +44,8 @@ int fpga__init()
 {
     fpga__init_spi();
     fpga__read_id();
+    fpga__set_trigger(FPGA_FLAG_TRIG_CMDFIFO_RESET | FPGA_FLAG_TRIG_RESOURCEFIFO_RESET);
+    fpga__set_trigger(FPGA_FLAG_TRIG_INTACK);
     return 0;
 }
 
@@ -193,6 +195,10 @@ int fpga__reset_to_custom_rom(bool activate_retn_hook)
 
 int fpga__load_resource_fifo(const uint8_t *data, unsigned len, int timeout)
 {
+    printf("Load res: ");
+    dump__buffer(data,len);
+    printf("\n");
+
 #define LOCAL_CHUNK_SIZE 512
     uint8_t txbuf[LOCAL_CHUNK_SIZE+1];
 
@@ -353,6 +359,22 @@ void fpga__trigger_reconfiguration()
     gpio_set_level(PIN_NUM_NCONFIG, 1);
 }
 
+
+int fpga__read_command_fifo()
+{
+    uint8_t buf[3];
+    buf[0] = 0xFB;
+    buf[1] = 0x00;
+    buf[2] = 0x00;
+    spi__transceive(spi0_fpga, buf, 3);
+    printf("Cmd fifo state: ");
+    dump__buffer(buf, 3);
+    printf("\n");
+    if (buf[1]==0xff) {
+        return -1;
+    }
+    return buf[2];
+}
 
 
 

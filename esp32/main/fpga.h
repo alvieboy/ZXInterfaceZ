@@ -51,6 +51,8 @@ typedef struct
 #define FPGA_FLAG_TRIG_FORCEROMONRETN     (1<<1)
 #define FPGA_FLAG_TRIG_FORCEROMCS_ON      (1<<2)
 #define FPGA_FLAG_TRIG_FORCEROMCS_OFF     (1<<3)
+#define FPGA_FLAG_TRIG_INTACK             (1<<4)
+#define FPGA_FLAG_TRIG_CMDFIFO_RESET      (1<<5)
 
 
 /* Registers */
@@ -67,7 +69,7 @@ void fpga__set_trigger(uint8_t trig);
 void fpga__get_framebuffer(uint8_t *target);
 void fpga__set_register(uint8_t reg, uint32_t value);
 uint32_t fpga__get_register(uint8_t reg);
-
+uint32_t fpga__read_id(void);
 void fpga__set_capture_mask(uint32_t mask);
 void fpga__set_capture_value(uint32_t value);
 int fpga__get_captures(uint8_t *target);
@@ -95,6 +97,7 @@ static inline void fpga__clear_flags(uint8_t disable)
     fpga__set_clear_flags(0, disable);
 }
 uint32_t fpga__get_capture_status(void);
+int fpga__read_command_fifo();
 
 
 
