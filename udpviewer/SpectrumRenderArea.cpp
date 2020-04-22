@@ -91,7 +91,7 @@ void SpectrumRenderArea::render(bool flashonly)
 
 void SpectrumRenderArea::finaliseImage()
 {
-    //qDebug()<<"Finalise image";
+    qDebug()<<"Finalise image";
     QPainter painter(image);
 
     QPoint location(BORDER_LR + ZOOMMUL*240,

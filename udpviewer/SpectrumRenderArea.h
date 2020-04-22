@@ -14,6 +14,8 @@ public:
 
     void setFPS(int fps) {
         m_fps=fps;
+        if (fps==0)
+            finishFrame();
     }
 
 public slots:
