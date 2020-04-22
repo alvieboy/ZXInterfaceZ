@@ -7,8 +7,8 @@ ENTITY tb_interfacez_top IS
 END tb_interfacez_top;
 
 ARCHITECTURE sim OF tb_interfacez_top IS
-  -- constants                                                 
--- signals
+  -- constants
+  -- signals
   SIGNAL A_BUS_OE_io : STD_LOGIC;
   SIGNAL ASDO_s: STD_LOGIC;
   SIGNAL CLK_i : STD_LOGIC;
@@ -135,39 +135,39 @@ BEGIN
   );
 
   -- SDRAM
-  sdram_inst: entity work.mt48lc16m16a2
-    GENERIC MAP (
-        addr_bits => 13,
-        data_bits => 16,
-        col_bits  => 9,
-        index     => 0,
-	      fname     => "sdram.srec"
-    )
-    PORT MAP (
-        Dq(7 downto 0)    => SDRAM_D_io,
-        Addr  => SDRAM_A_o,
-        Ba    => SDRAM_BA_o,
-        Clk   => SDRAM_CK_o,
-        Cke   => SDRAM_CKE_o,
-        Cs_n  => SDRAM_CS_o,
-        Ras_n => SDRAM_NRAS_o,
-        Cas_n => SDRAM_NCAS_o,
-        We_n  => SDRAM_NWE_o,
-        Dqm   => "11"
-    );
+  --sdram_inst: entity work.mt48lc16m16a2
+  --  GENERIC MAP (
+  --      addr_bits => 13,
+  --      data_bits => 16,
+  --      col_bits  => 9,
+  --      index     => 0,
+	--      fname     => "sdram.srec"
+  --  )
+  --  PORT MAP (
+  --      Dq(7 downto 0)    => SDRAM_D_io,
+  --      Addr  => SDRAM_A_o,
+  --      Ba    => SDRAM_BA_o,
+  --      Clk   => SDRAM_CK_o,
+  --      Cke   => SDRAM_CKE_o,
+  --      Cs_n  => SDRAM_CS_o,
+  --      Ras_n => SDRAM_NRAS_o,
+  --      Cas_n => SDRAM_NCAS_o,
+  --      We_n  => SDRAM_NWE_o,
+  --      Dqm   => "11"
+  --  );
 
   vcc <= 0.0, 3.3 after 50 ns;
 
-  flash_inst: entity work.M25P16
-    port map (
-      VCC => vcc,
-		  C   => DCLK_s,
-      D   => ASDO_s,
-      S   => ESP_IO27_io,
-      W   => '1',
-      HOLD => '1',
-		  Q   => DATA0_s
-    );
+  --flash_inst: entity work.M25P16
+  --  port map (
+  --    VCC => vcc,
+	--	  C   => DCLK_s,
+  --    D   => ASDO_s,
+  --    S   => ESP_IO27_io,
+  --    W   => '1',
+  --    HOLD => '1',
+	--	  Q   => DATA0_s
+  --  );
 
   spect: block
     signal spect_clk: std_logic := '0';

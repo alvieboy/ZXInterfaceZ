@@ -132,7 +132,7 @@ end process;
 				 
 	full <= ifull;
 
-	ifull <= '0' when (iempty = '1') else -- just in case add_RD_WS is reset to all zero's
+	ifull <= --'0' when (iempty = '1') else -- just in case add_RD_WS is reset to all zero's
 	         '0' when (add_RD_WS /= add_WR_GC) else ---- instend of "11 zero's" 
 	         '1';
 

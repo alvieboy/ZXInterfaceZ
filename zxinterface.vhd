@@ -54,6 +54,7 @@ entity zxinterface is
     TP6           : out std_logic;
     --
     spec_int_o    : out std_logic;
+    spec_nreq_o   : out std_logic; -- Spectrum data request
     -- Wishbone bus (master)
     wb_dat_o      : out std_logic_vector(7 downto 0);
     wb_dat_i      : in std_logic_vector(7 downto 0);
@@ -212,8 +213,31 @@ architecture beh of zxinterface is
   signal resfifo_full_s         : std_logic_vector(3 downto 0); -- main clock
   signal resfifo_empty_s        : std_logic;                    -- SPI clock
 
+  signal cmdfifo_wr_s           : std_logic;
+  signal cmdfifo_rd_spiclk_s    : std_logic;
+  signal cmdfifo_write_s        : std_logic_vector(7 downto 0);
+  --signal cmdfifo_reset_s        : std_logic;
+  signal cmdfifo_read_spiclk_s  : std_logic_vector(7 downto 0);
+  signal cmdfifo_full_s         : std_logic;
+  signal cmdfifo_empty_spiclk_s : std_logic;
+  signal cmdfifo_empty_s        : std_logic;
+  signal cmdfifo_reset_spiclk_s : std_logic;
+  signal cmdfifo_intack_spisck_s: std_logic;
+  signal cmdfifo_intack_s       : std_logic; -- intack in CLK domain
+
   signal d_io_read_p_s          : std_logic;
   signal d_io_write_p_s         : std_logic;
+  signal port_fe_s              : std_logic_vector(5 downto 0);
+
+  signal border_seq_s           : std_logic_vector(2 downto 0);
+  signal border_off_s           : natural;
+
+  signal start_delay_s          : std_logic_vector(7 downto 0);
+
+  signal spec_nreq_r            : std_logic;
+  constant SPEC_NREC_DELAY_MAX  : natural := 31;
+
+  signal spec_nreq_delay_r      : natural range 0 to SPEC_NREC_DELAY_MAX;
 
 begin
 
@@ -274,9 +298,7 @@ begin
     end if;
   end process;
 
-  D_BUS_DIR_o   <= '1' --when dbus_oe_s='0' and dbus_oe_q_r='0' else '0';
-                       when  dbus_oe_s='0' else '0';
-
+  D_BUS_DIR_o   <= '1' when dbus_oe_s='0' else '0';
 
   memrd_s       <=  NOT XMREQ_sync_s AND NOT XRD_sync_s;
   memwr_s       <=  NOT XMREQ_sync_s AND NOT XWR_sync_s;
@@ -348,8 +370,6 @@ begin
     end if;
   end process;
 
-  --PC_s <= XA_sync_s(13 downto 0);
-
   r: if ROM_ENABLED generate
   rom: entity work.generic_dp_ram
     generic map (
@@ -399,15 +419,34 @@ begin
       dat_i   => d_r, -- Resynced with delay
       dat_o   => iodata_s,
       enable_o  => io_enable_s,
+      port_fe_o => port_fe_s,
 
       resfifo_rd_o    => resfifo_rd_s,
       resfifo_read_i  => resfifo_read_s,
-      resfifo_empty_i => resfifo_empty_s
+      resfifo_empty_i => resfifo_empty_s,
+
+      cmdfifo_wr_o    => cmdfifo_wr_s,
+      cmdfifo_write_o => cmdfifo_write_s,
+      cmdfifo_full_i  => cmdfifo_full_s
+  );
+
+
+  start_delay_s <= x"02";
+
+  border_capture_inst: entity work.border_capture
+    port map (
+      clk_i         => clk_i,
+      arst_i        => arst_i,
+
+      border_ear_i  => port_fe_s(3 downto 0),
+      start_delay_i => start_delay_s,
+      seq_o         => border_seq_s,
+      off_o         => border_off_s,
+      intr_i        => intr_p_s
     );
 
   data_o_s <= romdata_o_s when rom_enable_s='1' else
-              --ramdata_o_s when ram_enable_s='1' else
-              iodata_s    when io_enable_s='1' else (others => '0');
+      iodata_s when io_enable_s='1' else (others => '0');
 
 
 
@@ -463,7 +502,9 @@ begin
 
   dbus_oe_s <= rom_active_s or io_active_s;
 
-
+  --
+  -- Resource FIFO. This FIFO is between ESP and spectrum. ESP writes, Spectrum reads.
+  --
   resourcefifo_inst: entity work.gh_fifo_async_sr_wf
   generic map (
     add_width   => 10, -- 1024 entries
@@ -484,6 +525,27 @@ begin
     qqqfull     => resfifo_full_s(3),
     empty       => resfifo_empty_s
   );
+
+  --
+  -- Command FIFO. This FIFO is between Spectrum and ESP. Spectrum writes, ESP32 reads.
+  --
+  cmdfifo_inst: entity work.command_fifo
+  port map (
+    wclk_i     => clk_i,
+    rclk_i      => SPI_SCK_i,
+    arst_i      => arst_i,
+    wr_i        => cmdfifo_wr_s,
+    rd_i        => cmdfifo_rd_spiclk_s,
+    rreset_i    => cmdfifo_reset_spiclk_s,
+    wD_i        => cmdfifo_write_s,
+    rQ_o        => cmdfifo_read_spiclk_s,
+    wfull_o     => cmdfifo_full_s,
+    wempty_o    => cmdfifo_empty_s,
+    rempty_o    => cmdfifo_empty_spiclk_s
+  );
+
+
+
 
   qspi_inst: entity work.spi_interface
   port map (
@@ -533,9 +595,17 @@ begin
     resfifo_wr_o    => resfifo_wr_s,
     resfifo_write_o => resfifo_write_s,
     resfifo_full_i  => resfifo_full_s,
+    -- Command FIFO
+
+    cmdfifo_reset_o       => cmdfifo_reset_spiclk_s,
+    cmdfifo_rd_o          => cmdfifo_rd_spiclk_s,
+    cmdfifo_read_i        => cmdfifo_read_spiclk_s,
+    cmdfifo_empty_i       => cmdfifo_empty_spiclk_s,
+    cmdfifo_intack_o      => cmdfifo_intack_spisck_s,
+
 
     forceromonretn_trig_o => forceromonretn_trig_spisck_s,
-    forceromcs_trig_on_o => forceromcs_spisck_on_s,
+    forceromcs_trig_on_o  => forceromcs_spisck_on_s,
     forceromcs_trig_off_o => forceromcs_spisck_off_s
 
   );
@@ -566,6 +636,35 @@ begin
 
   capsync_sync: entity work.sync generic map (RESET => '0')
       port map ( clk_i => clk_i, arst_i => arst_i, din_i => spect_capsyncen_spisck_s, dout_o => spect_capsyncen_s );
+
+  intack_sync: entity work.async_pulse2
+      port map (
+        clki_i => SPI_SCK_i,
+        clko_i => clk_i,
+        arst_i => arst_i,
+        pulse_i => cmdfifo_intack_spisck_s,
+        pulse_o => cmdfifo_intack_s
+      );
+
+  -- Interrupt generation for command FIFO
+  process(clk_i, arst_i)
+  begin
+    if arst_i='1' then
+      spec_nreq_r   <= '1';
+      spec_nreq_delay_r <= SPEC_NREC_DELAY_MAX;
+
+    elsif rising_edge(clk_i) then
+      if (spec_nreq_delay_r/=0) then
+        spec_nreq_delay_r <= spec_nreq_delay_r - 1;
+      end if;
+      if cmdfifo_empty_s='0' and spec_nreq_delay_r=0 then   -- !! Empty is generated by read (SPI)
+        spec_nreq_r <= '0';
+      elsif cmdfifo_intack_s='1' then
+        spec_nreq_r <= '1';
+        spec_nreq_delay_r <= SPEC_NREC_DELAY_MAX;
+      end if;
+    end if;
+  end process;
 
 
   process(clk_i, arst_i)
@@ -762,6 +861,7 @@ begin
   TP6 <= XMREQ_sync_s;
 
   spec_int_o <= '1' when spect_inten_s='0' else XINT_sync_s;
+  spec_nreq_o <= spec_nreq_r;
 
 end beh;
 

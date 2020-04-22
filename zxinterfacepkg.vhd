@@ -7,6 +7,7 @@ package zxinterfacepkg is
 
   constant COMPRESS_BITS: natural := 7;
 
+  constant CLK_KHZ: natural := 96000;
 
   constant CAPTURE_MEMWIDTH_BITS: natural := 11;
   constant SCREENCAP_ENABLED: boolean := true;
@@ -22,6 +23,6 @@ package zxinterfacepkg is
 
 end package;
 
-package body zxinterfacepkg is
+--package body zxinterfacepkg is
 
-end package body;
+--end package body;

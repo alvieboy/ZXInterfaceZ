@@ -73,7 +73,9 @@ begin
       outreg_r      <= (others => '0');
       --nibbleout_r   <= '1';
     elsif falling_edge(SCK_i) then
-      outen_r <= txden_i;
+      if txready_r='1' then
+        outen_r <= txden_i;
+      end if;
       if txden_i='1' then
         if txload_i='1' and txready_r='1' then
           outreg_r <= txdat_i;

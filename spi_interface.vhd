@@ -7,56 +7,62 @@ use work.zxinterfacepkg.all;
 
 entity spi_interface is
   port (
-    SCK_i         : in std_logic;
-    CSN_i         : in std_logic;
-    arst_i        : in std_logic;
+    SCK_i                 : in std_logic;
+    CSN_i                 : in std_logic;
+    arst_i                : in std_logic;
 
-    --D_io          : inout std_logic_vector(3 downto 0);
-    MOSI_i        : in std_logic;
-    MISO_o        : out std_logic;
+    MOSI_i                : in std_logic;
+    MISO_o                : out std_logic;
 
-    fifo_empty_i  : in std_logic;
-    fifo_rd_o     : out std_logic;
-    fifo_data_i   : in std_logic_vector(31 downto 0);
+    fifo_empty_i          : in std_logic;
+    fifo_rd_o             : out std_logic;
+    fifo_data_i           : in std_logic_vector(31 downto 0);
 
-    vidmem_en_o   : out std_logic;
-    vidmem_adr_o  : out std_logic_vector(12 downto 0);
-    vidmem_data_i : in std_logic_vector(7 downto 0);
+    vidmem_en_o           : out std_logic;
+    vidmem_adr_o          : out std_logic_vector(12 downto 0);
+    vidmem_data_i         : in std_logic_vector(7 downto 0);
 
-    capmem_en_o   : out std_logic;
-    capmem_adr_o  : out std_logic_vector(CAPTURE_MEMWIDTH_BITS-1 downto 0);
-    capmem_data_i : in std_logic_vector(35 downto 0);
+    capmem_en_o           : out std_logic;
+    capmem_adr_o          : out std_logic_vector(CAPTURE_MEMWIDTH_BITS-1 downto 0);
+    capmem_data_i         : in std_logic_vector(35 downto 0);
 
     -- Synchronous to SCK_i
-    capture_run_o : out std_logic;
-    capture_clr_o : out std_logic;
-    capture_cmp_o : out std_logic;
-    capture_len_i : in std_logic_vector(CAPTURE_MEMWIDTH_BITS-1 downto 0);
-    capture_trig_i  : in std_logic;
-    capture_trig_mask_o : out std_logic_vector(31 downto 0);
-    capture_trig_val_o  : out std_logic_vector(31 downto 0);
+    capture_run_o         : out std_logic;
+    capture_clr_o         : out std_logic;
+    capture_cmp_o         : out std_logic;
+    capture_len_i         : in std_logic_vector(CAPTURE_MEMWIDTH_BITS-1 downto 0);
+    capture_trig_i        : in std_logic;
+    capture_trig_mask_o   : out std_logic_vector(31 downto 0);
+    capture_trig_val_o    : out std_logic_vector(31 downto 0);
 
-    rom_en_o      : out std_logic;
-    rom_we_o      : out std_logic;
-    rom_di_o      : out std_logic_vector(7 downto 0);
-    rom_addr_o    : out std_logic_vector(13 downto 0);
+    rom_en_o              : out std_logic;
+    rom_we_o              : out std_logic;
+    rom_di_o              : out std_logic_vector(7 downto 0);
+    rom_addr_o            : out std_logic_vector(13 downto 0);
 
+    rstfifo_o             : out std_logic;
+    rstspect_o            : out std_logic;
+    intenable_o           : out std_logic;
+    capsyncen_o           : out std_logic;
+    frameend_o            : out std_logic;
 
-    rstfifo_o     : out std_logic;
-    rstspect_o    : out std_logic;
-    intenable_o   : out std_logic;
-    capsyncen_o   : out std_logic;
-    frameend_o    : out std_logic;
     forceromcs_trig_on_o  : out std_logic;
-    forceromcs_trig_off_o  : out std_logic;
-    forceromonretn_trig_o: out std_logic; -- single tick, SPI sck
+    forceromcs_trig_off_o : out std_logic;
+    forceromonretn_trig_o : out std_logic; -- single tick, SPI sck
     -- Resource FIFO
 
+    resfifo_reset_o       : out std_logic;
+    resfifo_wr_o          : out std_logic;
+    resfifo_write_o       : out std_logic_vector(7 downto 0);
+    resfifo_full_i        : in std_logic_vector(3 downto 0);
 
-    resfifo_reset_o : out std_logic;
-    resfifo_wr_o    : out std_logic;
-    resfifo_write_o : out std_logic_vector(7 downto 0);
-    resfifo_full_i  : in std_logic_vector(3 downto 0)
+    -- Command FIFO
+
+    cmdfifo_reset_o       : out std_logic;
+    cmdfifo_rd_o          : out std_logic;
+    cmdfifo_read_i        : in std_logic_vector(7 downto 0);
+    cmdfifo_empty_i       : in std_logic;
+    cmdfifo_intack_o      : out std_logic -- Interrupt acknowledge
   );
 
 end entity spi_interface;
@@ -106,7 +112,8 @@ architecture beh of spi_interface is
     WRITEROM1,
     WRITEROM2,
     WRITEROM,
-    WRRESFIFO
+    WRRESFIFO,
+    READFIFOCMDDATA
   );
 
   signal state_r      : state_type;
@@ -154,28 +161,39 @@ begin
   process(SCK_i, arst_i)
   begin
     if arst_i='1' then
-      flags_r <= (others => '0');
-      resfifo_reset_o <= '0';
+
+      flags_r               <= (others => '0');
+      resfifo_reset_o       <= '0';
       forceromonretn_trig_o <= '0';
-      forceromcs_trig_on_o <= '0';
+      forceromcs_trig_on_o  <= '0';
       forceromcs_trig_off_o <= '0';
+      cmdfifo_intack_o      <= '0';
+      cmdfifo_reset_o       <= '0';
     elsif rising_edge(SCK_i) then
-      resfifo_reset_o <= '0';
+
+      resfifo_reset_o       <= '0';
       forceromonretn_trig_o <= '0';
-      forceromcs_trig_on_o <= '0';
+      forceromcs_trig_on_o  <= '0';
       forceromcs_trig_off_o <= '0';
+      cmdfifo_intack_o      <= '0';
+      cmdfifo_reset_o       <= '0';
+
       if state_r=SETFLAGS1 then
         if dat_valid_s='1' then
           flags_r(7 downto 0) <= dat_s;
         end if;
       elsif state_r=SETFLAGS2 then
         if dat_valid_s='1' then
-          resfifo_reset_o <= dat_s(0);
+          resfifo_reset_o       <= dat_s(0);
           forceromonretn_trig_o <= dat_s(1);
-          forceromcs_trig_on_o <= dat_s(2);
+          forceromcs_trig_on_o  <= dat_s(2);
           forceromcs_trig_off_o <= dat_s(3);
+          -- Command FIFO interrupt acknowledge
+          cmdfifo_intack_o      <= dat_s(4);
+          cmdfifo_reset_o       <= dat_s(5);
         end if;
       end if;
+
     end if;
   end process;
 
@@ -194,26 +212,29 @@ begin
   rom_di_o <= dat_s;
   rom_addr_o <= std_logic_vector(rom_addr_r);
 
-  resfifo_wr_o <= '1' when state_r=WRRESFIFO and dat_valid_s='1' else '0';
-  resfifo_write_o <= dat_s;
+  resfifo_wr_o      <= '1' when state_r=WRRESFIFO and dat_valid_s='1' else '0';
+  resfifo_write_o   <= dat_s;
 
 
   process(SCK_i, CSN_i, arst_i)
     variable caplen_v:  std_logic_vector(31 downto 0);
   begin
     if CSN_i='1' then
-      state_r <= IDLE;
-      txden_s <= '0';
-      txload_s <= '0';
-      fifo_rd_o <= '0';
-      vidmem_en_o <= '0';
-      frame_end_r <= '0';
-      capmem_adr_r <= (others=>'0');
-      wreg_en_r <= '0';
+      state_r       <= IDLE;
+      txden_s       <= '0';
+      txload_s      <= '0';
+      fifo_rd_o     <= '0';
+      cmdfifo_rd_o  <= '0';
+      vidmem_en_o   <= '0';
+      frame_end_r   <= '0';
+      capmem_adr_r  <= (others=>'0');
+      wreg_en_r     <= '0';
+
     elsif rising_edge(SCK_i) then
 
-      fifo_rd_o <= '0';
-      capmem_en_o <= '0';
+      fifo_rd_o     <= '0';
+      cmdfifo_rd_o  <= '0';
+      capmem_en_o   <= '0';
 
       case state_r is
         when IDLE =>
@@ -224,7 +245,7 @@ begin
               when x"DE" => -- Read status
                 txden_s <= '1';
                 txload_s <= '1';
-                txdat_s <= "000" & resfifo_full_i & fifo_empty_i;
+                txdat_s <= "00" & cmdfifo_empty_i & resfifo_full_i & fifo_empty_i;
                 state_r <= READSTATUS;
 
               when x"DF" => -- Read video memory
@@ -293,6 +314,18 @@ begin
                 else
                   txdat_s <= x"FE";
                   state_r <= READDATA;
+                end if;
+
+              when x"FB" => -- Read FIFO command data
+                txden_s     <= '1';
+                txload_s    <= '1';
+                wordindex_r <= "00";
+                if cmdfifo_empty_i='1' then
+                  txdat_s   <= x"FF";
+                  state_r   <= UNKNOWN;
+                else
+                  txdat_s   <= x"FE";
+                  state_r   <= READFIFOCMDDATA;
                 end if;
 
               when x"9E" | x"9F" => -- Read ID
@@ -446,6 +479,15 @@ begin
             fifo_rd_o <= '1';
           end if;
 
+        when READFIFOCMDDATA =>
+          txload_s  <= '1';
+          txden_s   <= '1';
+          txdat_s   <= cmdfifo_read_i;
+
+          if dat_valid_s ='1' then -- TBD: shall we use dat_valid_s?
+            cmdfifo_rd_o <= '1';
+          end if;
+
         when READCAPSTATUS =>
           txload_s <= '1';
           txden_s <= '1';
@@ -515,6 +557,9 @@ begin
 
             when others =>
           end case;
+
+        when UNKNOWN =>
+          -- Leave TXDEN.
 
         when others =>
           txload_s <= '0';

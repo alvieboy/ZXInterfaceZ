@@ -146,6 +146,7 @@ begin
       spec_int_o    => ESP_IO26_io,
       TP5           => TP5,
       TP6           => TP6,
+      spec_nreq_o   => ESP_IO14_io, -- Request from spectrum
 
       wb_dat_i      => wb_rdat,
       wb_dat_o      => wb_wdat,
