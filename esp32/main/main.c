@@ -1,28 +1,3 @@
-/* SPI Master example
-
-   This example code is in the Public Domain (or CC0 licensed, at your option.)
-
-   Unless required by applicable law or agreed to in writing, this
-   software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
-   CONDITIONS OF ANY KIND, either express or implied.
-*/
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "freertos/event_groups.h"
-#include "esp_system.h"
-#include "soc/gpio_struct.h"
-#include "driver/gpio.h"
-#include "esp_wifi.h"
-#include "esp_event.h"
-#include "esp_log.h"
-#include "defs.h"
-#include "lwip/err.h"
-#include "lwip/sockets.h"
-#include "lwip/sys.h"
-#include <lwip/netdb.h>
 #include "spi.h"
 #include "fpga.h"
 #include "flash_pgm.h"
@@ -39,17 +14,13 @@
 #include "led.h"
 #include "nvs.h"
 #include "gpio.h"
-//#include "resource.h"
 #include "interfacez_resources.h"
 #include "spectint.h"
 #include "videostreamer.h"
 #include "netcmd.h"
 
 
-
-
-
-
+volatile int restart_requested = 0;
 
 #if 0
 static void start_capture2()
@@ -72,8 +43,6 @@ static void start_capture()
 }
 #endif
 
-
-volatile int restart_requested = 0;
 
 void request_restart()
 {
