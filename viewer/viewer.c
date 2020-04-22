@@ -794,7 +794,6 @@ int main(int argc, char **argv)
     }
 
     SDL_VERSION(&wminfo.version); /* initialize info structure with SDL version info */
-
     if (!SDL_GetWindowWMInfo(window,
                              &wminfo)) {
         SDL_Log("Cannot get window information");
