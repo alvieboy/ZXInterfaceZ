@@ -97,7 +97,7 @@ architecture beh of videogen is
 
   constant test0: videoconf_type := (
     h => (
-      ddisplay      => 514,
+      ddisplay      => 512+2,
       dfront        => 515,
       dsync         => 516,
       dtotal        => 517,
@@ -107,12 +107,34 @@ architecture beh of videogen is
     v => (
       ddisplay      => 386,
       dfront        => 387,
-      dsync         => 383,
+      dsync         => 388,
       dtotal        => 389,
       ddisplaystart => 1,
       ddisplayend   => 1+384
     ),
     dbltriple => '0',
+    hsync     =>  '1',
+    vsync     =>  '1'
+  );
+
+  constant test1: videoconf_type := (
+    h => (
+      ddisplay      => 768+2,
+      dfront        => 768+2+1,
+      dsync         => 768+2+2,
+      dtotal        => 768+2+3,
+      ddisplaystart => 1,     -- (720-(256*2))/2
+      ddisplayend   => 1+768
+    ),
+    v => (
+      ddisplay      => 576+2,
+      dfront        => 576+2+1,
+      dsync         => 576+2+2,
+      dtotal        => 576+2+3,
+      ddisplaystart => 1,
+      ddisplayend   => 1+576
+    ),
+    dbltriple => '1',
     hsync     =>  '1',
     vsync     =>  '1'
   );
@@ -123,12 +145,15 @@ architecture beh of videogen is
   begin
     if mode='0' then
       vp_v := v0;
+      -- synthesis translate_off
+      vp_v := test0;
+      -- synthesis translate_on
     else
       vp_v := v1;
+      -- synthesis translate_off
+      vp_v := test1;
+      -- synthesis translate_on
     end if;
-    -- synthesis translate_off
-    vp_v := test0;
-    -- synthesis translate_on
     return vp_v;
   end function;
 
@@ -188,6 +213,7 @@ begin
     ven_o         => ven_o,
     vbusy_i       => vbusy_i,
     vdata_i       => vdata_i,
+    vidmode_i     => vidmode_i,
     --vborder_i     => vborder_i,
 
     -- Fifo

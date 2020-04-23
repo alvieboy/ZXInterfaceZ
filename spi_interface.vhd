@@ -46,6 +46,8 @@ entity spi_interface is
     capsyncen_o           : out std_logic;
     frameend_o            : out std_logic;
 
+    vidmode_o             : out std_logic;
+
     forceromcs_trig_on_o  : out std_logic;
     forceromcs_trig_off_o : out std_logic;
     forceromonretn_trig_o : out std_logic; -- single tick, SPI sck
@@ -204,6 +206,7 @@ begin
   capture_cmp_o <= flags_r(4); -- Compress
   intenable_o   <= flags_r(5); -- Interrupt enable
   capsyncen_o   <= flags_r(6); -- Capture sync
+  vidmode_o     <= flags_r(7); -- 
   --forceromcs_o  <= flags_r(7);
 
 

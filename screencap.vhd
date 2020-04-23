@@ -31,7 +31,13 @@ entity screencap is
     -- Modeline "800x600"x75.0   49.50  800 816 896 1056  600 601 604 625 +hsync +vsync (46.9 kHz e)
     vidmode_i     : in std_logic;
     pixclk_i      : in std_logic;
-    pixrst_i      : in std_logic
+    pixrst_i      : in std_logic;
+
+    hsync_o       : out std_logic;
+    vsync_o       : out std_logic;
+    bright_o      : out std_logic;
+    grb_o         : out std_logic_vector(2 downto 0)
+
   );
 
 end entity screencap;
@@ -158,10 +164,10 @@ begin
       vborder_i     => border_i,
 
       -- video out
-      hsync_o       => open,
-      vsync_o       => open,
-      bright_o      => open,
-      grb_o         => open
+      hsync_o       => hsync_o,
+      vsync_o       => vsync_o,
+      bright_o      => bright_o,
+      grb_o         => grb_o
     );
 
 end beh;

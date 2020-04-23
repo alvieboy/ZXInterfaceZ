@@ -52,13 +52,14 @@ entity interfacez_top is
     FLED_o        : out std_logic_vector(2 downto 0);
 
     -- RAM interface
-    RAMD_io       : inout std_logic_vector(4 downto 0);
+    RAMD_io       : inout std_logic_vector(7 downto 0);
     RAMCLK_o      : out std_logic;
     RAMNCS_o      : out std_logic;
 
     -- USB PHY
     USB_VP_i      : in std_logic;
     USB_VM_i      : in std_logic;
+    USB_RCV_i     : in std_logic;
     USB_OE_o      : out std_logic;
     USB_SOFTCON_o : out std_logic;
     USB_SPEED_o   : out std_logic;
@@ -71,6 +72,7 @@ entity interfacez_top is
     EXT_io        : inout std_logic_vector(7 downto 0);
 
     -- Testpoints
+    TP4_o         : out std_logic;
     TP5_o         : out std_logic
   );
 end interfacez_top;
@@ -92,6 +94,11 @@ architecture str of interfacez_top is
   signal wb_ack       : std_logic;
   signal wb_stall     : std_logic;
 
+  signal videoclk_s   : std_logic_vector(1 downto 0);
+  signal hsync_s      : std_logic;
+  signal vsync_s      : std_logic;
+  signal bright_s     : std_logic;
+  signal grb_s        : std_logic_vector(2 downto 0);
 
 begin
 
@@ -107,7 +114,9 @@ begin
       inclk0  => CLK_i,
       c0      => sysclk_s,
       c1      => open,--sdramclk2_s,
-      c2      => capclk_s,
+      --c2      => open,--capclk_s,
+      c3      => videoclk_s(1),  -- 40Mhz
+      c4      => videoclk_s(0),   -- 28.24Mhz
       locked  => plllock_s
   );
 
@@ -115,6 +124,7 @@ begin
     port map (
       clk_i         => sysclk_s,
       capclk_i      => capclk_s,
+      videoclk_i    => videoclk_s,
       arst_i        => sysrst_s,
       D_BUS_DIR_o   => D_BUS_DIR_o,
       D_BUS_OE_io   => D_BUS_OE_io,
@@ -141,8 +151,25 @@ begin
       SPI_D_io(3)   => ESP_QHD_io, -- Hold
       spec_int_o    => ESP_IO26_io,
       TP5           => TP5_o,
-      spec_nreq_o   => ESP_IO27_io -- Request from spectrum
+      spec_nreq_o   => ESP_IO27_io, -- Request from spectrum
+          -- video out
+      hsync_o       => hsync_s,
+      vsync_o       => vsync_s,
+      bright_o      => bright_s,
+      grb_o         => grb_s
     );
+
+  EXT_io(0) <= hsync_s;
+  EXT_io(1) <= vsync_s;
+  EXT_io(2) <= grb_s(1); -- Red 1
+  EXT_io(3) <= bright_s and grb_s(1); -- Red 0
+
+  EXT_io(4) <= grb_s(2); -- Green 1
+  EXT_io(5) <= bright_s and grb_s(2); -- Green 0
+
+  EXT_io(6) <= grb_s(0); -- Blue 1
+  EXT_io(7) <= bright_s and grb_s(0); -- Blue 0
+
 
 
   -- Temporary USB.

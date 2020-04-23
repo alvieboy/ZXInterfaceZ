@@ -8,6 +8,8 @@ entity zxinterface is
   port (
     clk_i         : in std_logic;
     capclk_i      : in std_logic; -- for captures
+    videoclk_i    : in std_logic_vector(1 downto 0); -- 28.24Mhz/40Mhz input
+
     arst_i        : in std_logic;
 
     D_BUS_DIR_o   : out std_logic;
@@ -48,7 +50,14 @@ entity zxinterface is
     TP6           : out std_logic;
     --
     spec_int_o    : out std_logic;
-    spec_nreq_o   : out std_logic -- Spectrum data request
+    spec_nreq_o   : out std_logic; -- Spectrum data request
+
+    -- video out
+    hsync_o       : out std_logic;
+    vsync_o       : out std_logic;
+    bright_o      : out std_logic;
+    grb_o         : out std_logic_vector(2 downto 0)
+
   );
 
 end entity zxinterface;
@@ -62,6 +71,15 @@ architecture beh of zxinterface is
 			acq_clk        : in std_logic                     := 'X'              -- clk
 		);
 	end component signaltap1;
+
+  component clockmux is
+		port (
+			inclk1x   : in  std_logic := 'X'; -- inclk1x
+			inclk0x   : in  std_logic := 'X'; -- inclk0x
+			clkselect : in  std_logic := 'X'; -- clkselect
+			outclk    : out std_logic         -- outclk
+		);
+	end component clockmux;
 
   signal dbus_oe_s          : std_logic;   -- Tri-state control
   signal dbus_oe_q_r        : std_logic;   -- Tri-state control latch
@@ -224,9 +242,28 @@ architecture beh of zxinterface is
   signal spec_nreq_delay_r      : natural range 0 to SPEC_NREC_DELAY_MAX;
 
   signal pixclk_s               : std_logic;
-  signal pixrst_s               : std_logic;
+  signal vidmode_s              : std_logic;
+  signal pixrst_s               : std_logic := '1';
 
 begin
+
+  u0 : component clockmux
+		port map (
+			inclk1x   => videoclk_i(0),
+			inclk0x   => videoclk_i(1),
+			clkselect => vidmode_s,
+			outclk    => pixclk_s
+    );
+
+  process(pixclk_s)
+  begin
+    if rising_edge(pixclk_s) then
+      pixrst_s <= '0';
+    end if;
+  end process;
+
+
+
 
   ck_sync: entity work.sync generic map (RESET => '0')
     port map ( clk_i => clk_i, arst_i => arst_i, din_i => XCK_i, dout_o => XCK_sync_s );
@@ -570,6 +607,7 @@ begin
     capture_trig_mask_o => capture_trig_mask_spisck_s,
     capture_trig_val_o  => capture_trig_val_spisck_s,
 
+    vidmode_o     => vidmode_s,
 
     rstfifo_o     => fifo_reset_s,
     rstspect_o    => spect_reset_s,
@@ -712,7 +750,7 @@ begin
       intr_i        => intr_p_s,
       framecmplt_i  => framecmplt_s,
       --
-      vidmode_i     => '0',
+      vidmode_i     => vidmode_s,
       border_i      => port_fe_s(2 downto 0),
       pixclk_i      => pixclk_s,
       pixrst_i      => pixrst_s
@@ -849,23 +887,6 @@ begin
 
   spec_int_o <= '1' when spect_inten_s='0' else XINT_sync_s;
   spec_nreq_o <= spec_nreq_r;
-
-  -- FOR TESTING purposes only
-  process
-  begin
-    wait for 0 ps;
-    pixrst_s <= '1';
-    pixclk_s <= '0';
-    wait for 10 us;
-    pixrst_s <= '0' after 26 ns;
-    l: loop
-      pixclk_s<='1';
-      wait for 12.5 ns;
-      pixclk_s<='0';
-      wait for 12.5 ns;
-
-    end loop;
-  end process;
 
 
 end beh;

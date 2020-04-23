@@ -98,7 +98,7 @@ architecture sim of tb_top is
 
   signal spect_clk_s: std_logic;
 
-  signal RAMD_s       : std_logic_vector(4 downto 0);
+  signal RAMD_s       : std_logic_vector(7 downto 0);
   signal RAMCLK_s      : std_logic;
   signal RAMNCS_s      : std_logic;
 
@@ -110,6 +110,7 @@ architecture sim of tb_top is
   signal USB_SPEED_s   : std_logic;
   signal USB_VMO_s     : std_logic;
   signal USB_VPO_s     : std_logic;
+  signal USB_RCV_s     : std_logic;
   -- USB power control
   signal USB_FLT_s     : std_logic;
   signal USB_PWREN_s   : std_logic;
@@ -213,6 +214,7 @@ begin
     USB_SPEED_o   => USB_SPEED_s,
     USB_VMO_o     => USB_VMO_s,
     USB_VPO_o     => USB_VPO_s,
+    USB_RCV_i     => USB_RCV_s,
     -- USB power control
     USB_FLT_i     => USB_FLT_s,
     USB_PWREN_o   => USB_PWREN_s,

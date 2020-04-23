@@ -72,57 +72,21 @@ set_global_assignment -name OUTPUT_IO_TIMING_NEAR_END_VMEAS "HALF VCCIO" -fall
 set_global_assignment -name OUTPUT_IO_TIMING_FAR_END_VMEAS "HALF SIGNAL SWING" -rise
 set_global_assignment -name OUTPUT_IO_TIMING_FAR_END_VMEAS "HALF SIGNAL SWING" -fall
 set_location_assignment PIN_10 -to A_BUS_OE_io
-set_location_assignment PIN_6 -to ASDO_o
 set_location_assignment PIN_24 -to CLK_i
 set_location_assignment PIN_129 -to CTRL_OE_io
-set_location_assignment PIN_12 -to DCLK_o
-set_location_assignment PIN_13 -to DATA0_i
-set_location_assignment PIN_8 -to NCSO_o
 set_location_assignment PIN_11 -to D_BUS_DIR_o
 set_location_assignment PIN_7 -to D_BUS_OE_io
-set_location_assignment PIN_142 -to ESP_IO14_io
-set_location_assignment PIN_137 -to ESP_IO25_io
 set_location_assignment PIN_138 -to ESP_IO26_io
 set_location_assignment PIN_141 -to ESP_IO27_io
-set_location_assignment PIN_2 -to ESP_MISO_io
-set_location_assignment PIN_144 -to ESP_MOSI_io
+set_location_assignment PIN_6 -to ESP_MISO_io
+set_location_assignment PIN_13 -to ESP_MOSI_io
 set_location_assignment PIN_3 -to ESP_NCSO_i
 set_location_assignment PIN_1 -to ESP_QHD_io
 set_location_assignment PIN_143 -to ESP_QWP_io
-set_location_assignment PIN_23 -to ESP_SCK_i
+set_location_assignment PIN_12 -to ESP_SCK_i
 set_location_assignment PIN_53 -to FORCE_INT_o
 set_location_assignment PIN_67 -to FORCE_RESET_o
 set_location_assignment PIN_132 -to FORCE_ROMCS_o
-set_location_assignment PIN_125 -to SDRAM_A_o[12]
-set_location_assignment PIN_124 -to SDRAM_A_o[11]
-set_location_assignment PIN_98 -to SDRAM_A_o[10]
-set_location_assignment PIN_121 -to SDRAM_A_o[9]
-set_location_assignment PIN_120 -to SDRAM_A_o[8]
-set_location_assignment PIN_83 -to SDRAM_A_o[7]
-set_location_assignment PIN_80 -to SDRAM_A_o[6]
-set_location_assignment PIN_77 -to SDRAM_A_o[5]
-set_location_assignment PIN_76 -to SDRAM_A_o[4]
-set_location_assignment PIN_84 -to SDRAM_A_o[3]
-set_location_assignment PIN_85 -to SDRAM_A_o[2]
-set_location_assignment PIN_86 -to SDRAM_A_o[1]
-set_location_assignment PIN_87 -to SDRAM_A_o[0]
-set_location_assignment PIN_106 -to SDRAM_D_io[7]
-set_location_assignment PIN_110 -to SDRAM_D_io[6]
-set_location_assignment PIN_111 -to SDRAM_D_io[5]
-set_location_assignment PIN_112 -to SDRAM_D_io[4]
-set_location_assignment PIN_113 -to SDRAM_D_io[3]
-set_location_assignment PIN_114 -to SDRAM_D_io[2]
-set_location_assignment PIN_115 -to SDRAM_D_io[1]
-set_location_assignment PIN_119 -to SDRAM_D_io[0]
-set_location_assignment PIN_99 -to SDRAM_BA_o[1]
-set_location_assignment PIN_100 -to SDRAM_BA_o[0]
-set_location_assignment PIN_127 -to SDRAM_CK_o
-set_location_assignment PIN_126 -to SDRAM_CKE_o
-set_location_assignment PIN_101 -to SDRAM_CS_o
-set_location_assignment PIN_128 -to SDRAM_DQM_o
-set_location_assignment PIN_104 -to SDRAM_NCAS_o
-set_location_assignment PIN_103 -to SDRAM_NRAS_o
-set_location_assignment PIN_105 -to SDRAM_NWE_o
 set_location_assignment PIN_28 -to XA_i[15]
 set_location_assignment PIN_30 -to XA_i[14]
 set_location_assignment PIN_31 -to XA_i[13]
@@ -162,18 +126,10 @@ set_global_assignment -name RESERVE_FLASH_NCE_AFTER_CONFIGURATION "USE AS REGULA
 set_global_assignment -name RESERVE_DCLK_AFTER_CONFIGURATION "USE AS REGULAR IO"
 set_global_assignment -name TOP_LEVEL_ENTITY interfacez_top
 set_instance_assignment -name IO_MAXIMUM_TOGGLE_RATE "0 MHz" -to D_BUS_DIR_o
-set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to SDRAM_A_o[*]
-set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to SDRAM_D_io[*]
-set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to SDRAM_BA_o[*]
-set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to SDRAM_NCAS_o
-set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to SDRAM_NRAS_o
-set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to SDRAM_NWE_o
-set_instance_assignment -name FAST_INPUT_REGISTER ON -to SDRAM_D_io[*]
+set_instance_assignment -name IO_MAXIMUM_TOGGLE_RATE "0 MHz" -to ESP_MOSI_io
 set_global_assignment -name PROJECT_IP_REGENERATION_POLICY ALWAYS_REGENERATE_IP
 set_global_assignment -name GENERATE_RBF_FILE ON
 set_global_assignment -name GENERATE_JBC_FILE ON
-set_location_assignment PIN_136 -to TP5
-set_location_assignment PIN_135 -to TP6
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to XA_i[0]
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to XA_i[1]
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to XA_i[2]
@@ -208,6 +164,10 @@ set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to XMREQ_i
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to XM1_i
 set_global_assignment -name ENABLE_INIT_DONE_OUTPUT OFF
 set_global_assignment -name ON_CHIP_BITSTREAM_DECOMPRESSION ON
+set_global_assignment -name QSYS_FILE clockmux.qsys
+set_global_assignment -name VHDL_FILE videogen_fifo.vhd
+set_global_assignment -name VHDL_FILE videogen.vhd
+set_global_assignment -name SOURCE_FILE clockmux/clockmux.cmp
 set_global_assignment -name VHDL_FILE command_fifo.vhd
 set_global_assignment -name VHDL_FILE async_pulse2.vhd
 set_global_assignment -name VHDL_FILE border_capture.vhd
@@ -229,7 +189,7 @@ set_global_assignment -name VHDL_FILE qspi_slave.vhd
 set_global_assignment -name SDC_FILE interfacez.out.sdc
 set_global_assignment -name VHDL_FILE wishbonepkg.vhd
 set_global_assignment -name VHDL_FILE sdram_hamster.vhd
-set_global_assignment -name VHDL_FILE sdram_ctrl.vhd
+set_global_assignment -name VHDL_FILE .vhd
 set_global_assignment -name VHDL_FILE oddrff_altera.vhd
 set_global_assignment -name VHDL_FILE rstgen.vhd
 set_global_assignment -name VHDL_FILE interfacez_top.vhd
@@ -240,6 +200,43 @@ set_global_assignment -name VHDL_FILE zxinterface.vhd
 set_global_assignment -name VHDL_FILE busopdet.vhd
 set_global_assignment -name SOURCE_FILE db/interfacez.cmp.rdb
 set_global_assignment -name SIGNALTAP_FILE signaltap1/synthesis/stp2.stp
-set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top
 set_global_assignment -name QIP_FILE videopll.qip
 set_global_assignment -name QIP_FILE videopllreconfig.qip
+set_instance_assignment -name IO_STANDARD "3.3-V LVCMOS" -to EXT_io[7]
+set_location_assignment PIN_121 -to EXT_io[7]
+set_location_assignment PIN_124 -to EXT_io[6]
+set_location_assignment PIN_125 -to EXT_io[5]
+set_location_assignment PIN_126 -to EXT_io[4]
+set_location_assignment PIN_127 -to EXT_io[3]
+set_location_assignment PIN_128 -to EXT_io[2]
+set_location_assignment PIN_133 -to EXT_io[1]
+set_location_assignment PIN_137 -to FORCE_NMI_o
+set_location_assignment PIN_76 -to FLED_o[0]
+set_location_assignment PIN_77 -to FLED_o[1]
+set_location_assignment PIN_80 -to FLED_o[2]
+set_location_assignment PIN_135 -to EXT_io[0]
+set_location_assignment PIN_136 -to FORCE_IORQULA_o
+set_location_assignment PIN_2 -to LED2_o
+set_location_assignment PIN_84 -to RAMCLK_o
+set_location_assignment PIN_83 -to RAMD_io[4]
+set_location_assignment PIN_100 -to RAMD_io[3]
+set_location_assignment PIN_87 -to RAMD_io[2]
+set_location_assignment PIN_98 -to RAMD_io[1]
+set_location_assignment PIN_99 -to RAMD_io[0]
+set_location_assignment PIN_103 -to RAMNCS_o
+set_location_assignment PIN_115 -to USB_FLT_i
+set_location_assignment PIN_110 -to USB_OE_o
+set_location_assignment PIN_119 -to USB_PWREN_o
+set_location_assignment PIN_111 -to USB_SOFTCON_o
+set_location_assignment PIN_112 -to USB_SPEED_o
+set_location_assignment PIN_104 -to USB_VM_i
+set_location_assignment PIN_114 -to USB_VMO_o
+set_location_assignment PIN_105 -to USB_VP_i
+set_location_assignment PIN_113 -to USB_VPO_o
+set_location_assignment PIN_144 -to TP5_o
+set_location_assignment PIN_85 -to RAMD_io[7]
+set_location_assignment PIN_86 -to RAMD_io[6]
+set_location_assignment PIN_101 -to RAMD_io[5]
+set_location_assignment PIN_8 -to TP4_o
+set_location_assignment PIN_106 -to USB_RCV_i
+set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top
