@@ -19,6 +19,8 @@ entity zxinterface is
     FORCE_ROMCS_o : out std_logic;
     FORCE_RESET_o : out std_logic;
     FORCE_INT_o   : out std_logic;
+    FORCE_NMI_o   : out std_logic;
+    FORCE_IORQULA_o   : out std_logic;
 
     -- ZX Spectrum address bus
     XA_i          : in std_logic_vector(15 downto 0);
@@ -40,31 +42,13 @@ entity zxinterface is
     SPI_SCK_i     : in std_logic;
     SPI_NCS_i     : in std_logic;
     SPI_D_io      : inout std_logic_vector(3 downto 0);
-    ESP_AS_NCS    : in std_logic;
-
-    -- Active serial flash connections.
-
-    ASDO_o        : out std_logic;
-    NCSO_o        : out std_logic;
-    DCLK_o        : out std_logic;
-    DATA0_i       : in  std_logic;
 
     -- Debug
     TP5           : out std_logic;
     TP6           : out std_logic;
     --
     spec_int_o    : out std_logic;
-    spec_nreq_o   : out std_logic; -- Spectrum data request
-    -- Wishbone bus (master)
-    wb_dat_o      : out std_logic_vector(7 downto 0);
-    wb_dat_i      : in std_logic_vector(7 downto 0);
-    wb_adr_o      : out std_logic_vector(23 downto 0);
-    wb_we_o       : out std_logic;
-    wb_cyc_o      : out std_logic;
-    wb_stb_o      : out std_logic;
-    wb_sel_o      : out std_logic_vector(3 downto 0);
-    wb_ack_i      : in std_logic;
-    wb_stall_i    : in std_logic
+    spec_nreq_o   : out std_logic -- Spectrum data request
   );
 
 end entity zxinterface;
@@ -238,6 +222,9 @@ architecture beh of zxinterface is
   constant SPEC_NREC_DELAY_MAX  : natural := 31;
 
   signal spec_nreq_delay_r      : natural range 0 to SPEC_NREC_DELAY_MAX;
+
+  signal pixclk_s               : std_logic;
+  signal pixrst_s               : std_logic;
 
 begin
 
@@ -723,8 +710,14 @@ begin
 
       capsyncen_i   => spect_capsyncen_s,
       intr_i        => intr_p_s,
-      framecmplt_i  => framecmplt_s
+      framecmplt_i  => framecmplt_s,
+      --
+      vidmode_i     => '0',
+      border_i      => port_fe_s(2 downto 0),
+      pixclk_i      => pixclk_s,
+      pixrst_i      => pixrst_s
     );
+
   end generate;
 
   nsc: if not SCREENCAP_ENABLED generate
@@ -839,29 +832,41 @@ begin
   end generate;
 
   mosi_s          <= SPI_D_io(0);
-
-  --spi_data_s      <= SPI_D_io;
-  --SPI_D_io <= spi_data_s;
-
   SPI_D_io(0)     <= 'Z';       -- MOSI - Change when Quadmode is enabled
-  SPI_D_io(1)     <= DATA0_i WHEN ESP_AS_NCS='0' ELSE miso_s; -- MISO
+  SPI_D_io(1)     <= miso_s;
   SPI_D_io(2)     <= 'Z';
   SPI_D_io(3)     <= 'Z';
-
-  ASDO_o        <= SPI_D_io(0) WHEN ESP_AS_NCS='0' else 'Z';
-  NCSO_o        <= ESP_AS_NCS;
-  DCLK_o        <= SPI_SCK_i WHEN ESP_AS_NCS='0' else '0';
 
 
   FORCE_ROMCS_o <= spect_forceromcs_bussync_s;
   FORCE_RESET_o <= spect_reset_s;
   FORCE_INT_o   <= '0';
+  FORCE_NMI_o   <= '0';
+  FORCE_IORQULA_o <= '0';
 
-  TP5 <= clk_i;
-  TP6 <= XMREQ_sync_s;
+  --TP5 <= clk_i;
+  TP5 <= XMREQ_sync_s;
 
   spec_int_o <= '1' when spect_inten_s='0' else XINT_sync_s;
   spec_nreq_o <= spec_nreq_r;
+
+  -- FOR TESTING purposes only
+  process
+  begin
+    wait for 0 ps;
+    pixrst_s <= '1';
+    pixclk_s <= '0';
+    wait for 10 us;
+    pixrst_s <= '0' after 26 ns;
+    l: loop
+      pixclk_s<='1';
+      wait for 12.5 ns;
+      pixclk_s<='0';
+      wait for 12.5 ns;
+
+    end loop;
+  end process;
+
 
 end beh;
 

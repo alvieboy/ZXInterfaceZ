@@ -66,9 +66,32 @@ begin
           Data_o.Data <= d_io;
           rd_o    <= '1';
           ioreq_o <= '1';
-    --READIO,
-    --WRITEMEM,
-    --READMEM
+
+        when WRITEMEM =>
+          wait until rising_edge(clk_i);
+          a_o <= Cmd_i.Address;
+          wait until falling_edge(clk_i);
+          mreq_o <= '0';
+          d_io    <= Cmd_i.Data;
+          wait until falling_edge(clk_i);
+          wr_o    <= '0';
+          wait until falling_edge(clk_i);
+          wr_o    <= '1';
+          mreq_o <= '1';
+          d_io    <= (others => 'Z');
+
+        when READMEM =>
+          wait until rising_edge(clk_i);
+          a_o <= Cmd_i.Address;
+          wait until falling_edge(clk_i);
+          mreq_o <= '0';
+          rd_o    <= '0';
+          --d_io    <= Cmd_i.Data;
+          wait until falling_edge(clk_i);
+          wait until falling_edge(clk_i);
+          Data_o.Data <= d_io;
+          rd_o    <= '1';
+          mreq_o <= '1';
 
         when others =>
       end case;

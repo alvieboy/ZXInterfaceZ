@@ -5,13 +5,6 @@ entity interfacez_top is
   port (
     CLK_i         : in std_logic;
 
-
-    -- SPI flash
-    ASDO_o        : out std_logic;
-    NCSO_o        : out std_logic;
-    DCLK_o        : out std_logic;
-    DATA0_i       : in  std_logic;
-
     -- ZX Spectrum address bus
     XA_i          : in std_logic_vector(15 downto 0);
 
@@ -28,19 +21,6 @@ entity interfacez_top is
     XM1_i         : in std_logic;
     XRFSH_i       : in std_logic;
 
-    -- SDRAM interconnection
-
-    SDRAM_A_o     : out std_logic_vector(12 downto 0);
-    SDRAM_D_io    : inout std_logic_vector(7 downto 0);
-    SDRAM_BA_o    : out std_logic_vector(1 downto 0);
-    SDRAM_CS_o    : out std_logic;
-    SDRAM_NRAS_o  : out std_logic;
-    SDRAM_NCAS_o  : out std_logic;
-    SDRAM_NWE_o   : out std_logic;
-    SDRAM_CKE_o   : out std_logic;
-    SDRAM_CK_o    : out std_logic;
-    SDRAM_DQM_o   : out std_logic;
-
     -- Buffer control
 
     D_BUS_DIR_o   : out std_logic;
@@ -52,12 +32,13 @@ entity interfacez_top is
     FORCE_ROMCS_o : out std_logic;
     FORCE_RESET_o : out std_logic;
     FORCE_INT_o   : out std_logic;
+    FORCE_NMI_o   : out std_logic;
+    FORCE_IORQULA_o: out std_logic;
+
 
     -- ESP32 IOs
-    ESP_IO25_io   : inout std_logic;
     ESP_IO26_io   : inout std_logic;
     ESP_IO27_io   : inout std_logic;
-    ESP_IO14_io   : inout std_logic;
 
     -- ESP32 SPI interface
     ESP_QHD_io    : inout std_logic;
@@ -66,8 +47,31 @@ entity interfacez_top is
     ESP_SCK_i     : in std_logic;
     ESP_QWP_io    : inout std_logic;
     ESP_MOSI_io   : inout std_logic;
-    TP5           : out std_logic;
-    TP6           : out std_logic
+    -- LED outputs
+    LED2_o        : out std_logic;
+    FLED_o        : out std_logic_vector(2 downto 0);
+
+    -- RAM interface
+    RAMD_io       : inout std_logic_vector(4 downto 0);
+    RAMCLK_o      : out std_logic;
+    RAMNCS_o      : out std_logic;
+
+    -- USB PHY
+    USB_VP_i      : in std_logic;
+    USB_VM_i      : in std_logic;
+    USB_OE_o      : out std_logic;
+    USB_SOFTCON_o : out std_logic;
+    USB_SPEED_o   : out std_logic;
+    USB_VMO_o     : out std_logic;
+    USB_VPO_o     : out std_logic;
+    -- USB power control
+    USB_FLT_i     : in std_logic;
+    USB_PWREN_o   : out std_logic;
+    -- Extension connector
+    EXT_io        : inout std_logic_vector(7 downto 0);
+
+    -- Testpoints
+    TP5_o         : out std_logic
   );
 end interfacez_top;
 
@@ -77,9 +81,6 @@ architecture str of interfacez_top is
   signal sysrst_s     : std_logic;
   signal plllock_s    : std_logic;
   signal capclk_s     : std_logic;
-
-  signal sdramclk2_s  : std_logic;
-
 
   signal wb_rdat      : std_logic_vector(7 downto 0);
   signal wb_wdat      : std_logic_vector(7 downto 0);
@@ -105,7 +106,7 @@ begin
     port map (
       inclk0  => CLK_i,
       c0      => sysclk_s,
-      c1      => sdramclk2_s,
+      c1      => open,--sdramclk2_s,
       c2      => capclk_s,
       locked  => plllock_s
   );
@@ -138,58 +139,22 @@ begin
       SPI_D_io(1)   => ESP_MISO_io,
       SPI_D_io(2)   => ESP_QWP_io, -- Write-Protect
       SPI_D_io(3)   => ESP_QHD_io, -- Hold
-      ASDO_o        => ASDO_o,
-      NCSO_o        => NCSO_o,
-      DCLK_o        => DCLK_o,
-      DATA0_i       => DATA0_i,
-      ESP_AS_NCS    => ESP_IO27_io,
       spec_int_o    => ESP_IO26_io,
-      TP5           => TP5,
-      TP6           => TP6,
-      spec_nreq_o   => ESP_IO14_io, -- Request from spectrum
-
-      wb_dat_i      => wb_rdat,
-      wb_dat_o      => wb_wdat,
-      wb_adr_o      => wb_adr,
-      wb_we_o       => wb_we,
-      wb_cyc_o      => wb_cyc,
-      wb_stb_o      => wb_stb,
-     -- wb_sel_o      => wb_sel,
-      wb_ack_i      => wb_ack,
-      wb_stall_i    => wb_stall
+      TP5           => TP5_o,
+      spec_nreq_o   => ESP_IO27_io -- Request from spectrum
     );
 
-  sdram_inst: entity work.sdram_ctrl
-  port map (
-    wb_clk_i    => sysclk_s,
-    wb_rst_i    => sysrst_s,
 
-    wb_dat_o    => wb_rdat,
-    wb_dat_i    => wb_wdat,
-    wb_adr_i    => wb_adr,
-    wb_we_i     => wb_we,
-    wb_cyc_i    => wb_cyc,
-    wb_stb_i    => wb_stb,
-    --wb_sel_i    => wb_sel,
-    wb_ack_o    => wb_ack,
-    wb_stall_o  => wb_stall,
-
-    -- extra clocking
-    clk_off_3ns => sdramclk2_s,
-
-    -- SDRAM signals
-    DRAM_ADDR   => SDRAM_A_o,
-    DRAM_BA     => SDRAM_BA_o,
-    DRAM_CAS_N  => SDRAM_NCAS_o,
-    DRAM_CKE    => SDRAM_CKE_o,
-    DRAM_CLK    => SDRAM_CK_o,
-    DRAM_CS_N   => SDRAM_CS_o,
-    DRAM_DQ     => SDRAM_D_io,
-    DRAM_DQM    => SDRAM_DQM_o,
-    DRAM_RAS_N  => SDRAM_NRAS_o,
-    DRAM_WE_N   => SDRAM_NWE_o
-  );
-
+  -- Temporary USB.
+  USB_OE_o      <= '0';
+  USB_SOFTCON_o <= '0';
+  USB_SPEED_o   <= '0';
+  USB_VMO_o     <= '0';
+  USB_VPO_o     <= '1';
+  USB_PWREN_o   <= '0';
+  -- Temporary RAM
+  RAMCLK_o      <= '0';
+  RAMNCS_o      <= '0';
 
 end str;
 
