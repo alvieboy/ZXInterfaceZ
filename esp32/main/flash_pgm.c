@@ -1,3 +1,5 @@
+#ifdef  ENABLE_FLASHPGM
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/event_groups.h"
@@ -433,11 +435,11 @@ static void flash_pgm__task(void *pvParameters)
 
 void flash_pgm__init()
 {
-    spi__init_device(&spi0_as_flash, 10000000, PIN_NUM_AS_CSN);
+    //spi__init_device(&spi0_as_flash, 10000000, PIN_NUM_AS_CSN);
 
-    flash_pgm__as_flash_init();
+    //flash_pgm__as_flash_init();
 
-    xTaskCreate(flash_pgm__task, "cmd_server", 4096, NULL, 5, NULL);
+    //xTaskCreate(flash_pgm__task, "cmd_server", 4096, NULL, 5, NULL);
 }
 
 
@@ -513,3 +515,5 @@ int flash_pgm__program_page( int address, const uint8_t *data, int size)
     return 0;
 }
 
+
+#endif

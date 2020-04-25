@@ -82,11 +82,13 @@ int fpga__reset_to_custom_rom(bool activate_retn_hook);
 int fpga__load_resource_fifo(const uint8_t *data, unsigned len, int timeout);
 
 
+int fpga__passiveserialconfigure(const uint8_t *data, unsigned len);
+#if 0
 int fpga__startprogram(fpga_program_state_t*);
 int fpga__program(fpga_program_state_t*,const uint8_t *data, unsigned len);
 int fpga__finishprogram(fpga_program_state_t*);
 void fpga__trigger_reconfiguration(void);
-
+#endif
 
 static inline void fpga__set_flags(uint8_t enable)
 {

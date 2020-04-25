@@ -181,7 +181,10 @@ begin
   USB_PWREN_o   <= '0';
   -- Temporary RAM
   RAMCLK_o      <= '0';
-  RAMNCS_o      <= '0';
+  RAMNCS_o      <= '1';
+
+  FLED_o        <= (others => '1');
+  LED2_o        <= '1';
 
 end str;
 

@@ -18,7 +18,7 @@
 #include "spectint.h"
 #include "videostreamer.h"
 #include "netcmd.h"
-
+#include "sdcard.h"
 
 volatile int restart_requested = 0;
 
@@ -59,13 +59,20 @@ void app_main()
     led__set(LED1, 1);
     led__set(LED2, 0);
     spi__init_bus();
-
-//    sdcard__init();
+    sdcard__init();
     nvs__init();
     wifi__init();
 
 
-    fpga__init();
+    if (fpga__init()<0) {
+        ESP_LOGE(TAG, "Cannot proceed without FPGA!");
+        while (1) {
+            led__set(LED1, 1);
+            vTaskDelay(100 / portTICK_RATE_MS);
+            led__set(LED1, 0);
+            vTaskDelay(100 / portTICK_RATE_MS);
+        }
+    }
     resource__init();
 
     resource__register( 0x00, &versionresource);
@@ -74,8 +81,9 @@ void app_main()
     resource__register( 0x05, &aplistresource.r);
 
     spectcmd__init();
+#if 0
     flash_pgm__init();
-
+#endif
     videostreamer__init();
     netcmd__init();
     spectint__init();

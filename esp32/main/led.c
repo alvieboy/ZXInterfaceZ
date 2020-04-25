@@ -9,7 +9,7 @@ void led__set(led_t led, uint8_t on)
     if (led==LED1) {
         gpio = PIN_NUM_LED1;
     } else {
-        gpio = PIN_NUM_LED2;
+        return;// -1;//gpio = PIN_NUM_LED2;
     }
     gpio_set_level(gpio, !on);
 }

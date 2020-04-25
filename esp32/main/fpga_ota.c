@@ -1,3 +1,4 @@
+
 #include <string.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -18,6 +19,8 @@
 #include "netcomms.h"
 #include "fpga.h"
 
+
+#if 0
 static int fpga_ota__chunk(command_t *cmdt);
 
 static fpga_program_state_t pgmstate;
@@ -61,6 +64,9 @@ static int fpga_ota__chunk(command_t *cmdt)
     // Image header checked
     err = fpga__program(&pgmstate, (const void *)cmdt->rx_buffer, cmdt->len);
 
+    if (err!=0)
+        return -1;
+
     cmdt->romoffset += cmdt->len;
     cmdt->len = 0; // Reset receive ptr.
     remain = cmdt->romsize - cmdt->romoffset;
@@ -87,4 +93,9 @@ static int fpga_ota__chunk(command_t *cmdt)
     return COMMAND_CONTINUE;
 }
 
-
+#else
+int fpga_ota__performota(command_t *cmdt, int argc, char **argv)
+{
+    return -1;
+}
+#endif
