@@ -40,8 +40,6 @@ architecture beh of videogen_fifo is
     LATCH_ATTR
   );
 
-  constant PIXEL_BYTES: natural := 6144;
-
   function tovideoaddress(index: in unsigned(14 downto 0)) return std_logic_vector is
     variable v: unsigned(12 downto 0);
   begin
@@ -190,9 +188,9 @@ begin
         ven_o   <= '0';
         fifo_wr_s   <= '1';
 
-        w.counter := increment_counter(r.counter, vidmode_i);
+        w.counter := increment_counter(r.counter, not vidmode_i);
 
-        if not max_counter(r.counter, vidmode_i) then
+        if not max_counter(r.counter, not vidmode_i) then
           --w.counter := r.counter + 1;
           w.state := FETCH_DATA;
         else

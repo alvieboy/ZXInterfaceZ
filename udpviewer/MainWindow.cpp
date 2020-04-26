@@ -131,6 +131,9 @@ MainWindow::MainWindow(const char *host)
     QPushButton *capture = new QPushButton("Capture", mainWidget);
     vlayout1->addWidget(capture);
 
+    QPushButton *wide = new QPushButton("SetModeWide", mainWidget);
+    vlayout1->addWidget(wide);
+
     
 
     m_connecting = false;
@@ -142,6 +145,7 @@ MainWindow::MainWindow(const char *host)
     connect(reset, &QPushButton::clicked, this, &MainWindow::onResetClicked);
     connect(resetcustom, &QPushButton::clicked, this, &MainWindow::onResetToCustomClicked);
     connect(capture, &QPushButton::clicked, this, &MainWindow::onCaptureClicked);
+    connect(wide, &QPushButton::clicked, this, &MainWindow::onWideClicked);
 
 
     m_linebuffer = new LineBuffer(8192, this);
@@ -413,7 +417,7 @@ void MainWindow::uploadFPGA(const QString &filename)
 
 void MainWindow::onResetClicked()
 {
-    sendReceive(m_zxaddress, &MainWindow::progressReceived, true, "reset cap 0x0FFFFF00 0x05000100 ");
+    sendReceive(m_zxaddress, &MainWindow::progressReceived, true, "vgamode 1");
 }
 
 void MainWindow::onResetToCustomClicked()
@@ -593,4 +597,8 @@ void MainWindow::onStatusLineReceived(QString status)
     } else if (status.startsWith("P:")) {
         processStatus(status.right(status.length()-2));
     }
+}
+
+void MainWindow::onWideClicked()
+{
 }

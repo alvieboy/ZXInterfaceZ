@@ -21,7 +21,6 @@ entity videogen is
     vbusy_i       : in std_logic;
     vdata_i       : in std_logic_vector(7 downto 0); -- Bitmap data
     vborder_i     : in std_logic_vector(2 downto 0);
-
     -- video out
     hsync_o       : out std_logic;
     vsync_o       : out std_logic;
@@ -47,6 +46,7 @@ architecture beh of videogen is
     dbltriple : std_logic;
     hsync     : std_logic;
     vsync     : std_logic;
+    flashdly  : natural;
   end record videoconf_type;
 
   -- Modeline "800x600"x60.3   40.00  800 840 968 1056  600 601 605 628 +hsync +vsync (37.9 kHz e)
@@ -57,7 +57,7 @@ architecture beh of videogen is
       dsync         => 968,
       dtotal        => 1056,
       ddisplaystart => 16,     -- (800-(256*3))/2
-      ddisplayend   => 16+786
+      ddisplayend   => 16+768
     ),
     v => (
       ddisplay      => 600,
@@ -65,11 +65,12 @@ architecture beh of videogen is
       dsync         => 605,
       dtotal        => 628,
       ddisplaystart => 8,
-      ddisplayend   => 8+384
+      ddisplayend   => 8+576
     ),
     dbltriple =>  '1', -- Triplicate pixels
     hsync     =>  '1',
-    vsync     =>  '1'
+    vsync     =>  '1',
+    flashdly  =>  89 -- (60/1.5)-1  = 89
   );
 
   -- Modeline "720x400"x70.1   28.32  720 738 846 900  400 412 414 449 -hsync +vsync (31.5 kHz e)
@@ -92,7 +93,8 @@ architecture beh of videogen is
     ),
     dbltriple => '0',
     hsync     =>  '0',
-    vsync     =>  '1'
+    vsync     =>  '1',
+    flashdly  => 104
   );
 
   constant test0: videoconf_type := (
@@ -114,7 +116,8 @@ architecture beh of videogen is
     ),
     dbltriple => '0',
     hsync     =>  '1',
-    vsync     =>  '1'
+    vsync     =>  '1',
+    flashdly  =>  1
   );
 
   constant test1: videoconf_type := (
@@ -136,7 +139,8 @@ architecture beh of videogen is
     ),
     dbltriple => '1',
     hsync     =>  '1',
-    vsync     =>  '1'
+    vsync     =>  '1',
+    flashdly  =>  1
   );
 
 
@@ -177,8 +181,11 @@ architecture beh of videogen is
   signal attr_s     : std_logic_vector(7 downto 0);
   signal poffset_r  : unsigned(2 downto 0);
   signal prepeat_r  : unsigned(1 downto 0);
-  signal invert_s   : std_logic;
+  signal invert_r   : std_logic;
   signal vsync_s    : std_logic;
+  signal vsync_pulse_s : std_logic;
+
+  signal flashcnt_r : natural;
 
 begin
 
@@ -198,8 +205,6 @@ begin
                          vcounter<videoparam(vidmode_i).v.ddisplayend else '0';
 
   display_s <= hdisplay_s and vdisplay_s;
-
-  invert_s <= '0'; -- TBD
 
 
   -- FIFO and filler
@@ -277,16 +282,41 @@ begin
     variable vm_v: videoconf_type;
   begin
     if pixrst_i='1' then
-      vsync_s <= '1';
+      vsync_s       <= '1';
+      vsync_pulse_s <= '0';
     elsif rising_edge(pixclk_i) then
+      vsync_pulse_s <= '0';
       vm_v := videoparam(vidmode_i);
-      if vcounter>=vm_v.v.dfront and hcounter<vm_v.v.dsync then
+      if vcounter>=vm_v.v.dfront and vcounter<vm_v.v.dsync then
         vsync_o <= vm_v.vsync;
         vsync_s <= '1';
+        if vsync_s='0' then
+          vsync_pulse_s <= '1';
+        else
+          vsync_pulse_s <= '0';
+        end if;
       else
         vsync_o <= not vm_v.vsync;
         vsync_s <= '0';
         end if;
+    end if;
+  end process;
+
+  process(pixclk_i, pixrst_i)
+    variable vm_v: videoconf_type;
+  begin
+    if pixrst_i='1' then
+      invert_r    <= '1';
+      flashcnt_r  <= 0;
+    elsif rising_edge(pixclk_i) then
+      vm_v := videoparam(vidmode_i);
+      if vsync_pulse_s='1' then
+        if flashcnt_r=0 then
+          invert_r <= not invert_r;
+        else
+          flashcnt_r <= vm_v.flashdly;
+        end if;
+      end if;
     end if;
   end process;
 
@@ -310,7 +340,7 @@ begin
         bright_o  <= '0';
       else
         if display_s='1' then -- Either display image or border
-          pix_v     := pixel_s( to_integer(poffset_r) );
+          pix_v     := pixel_s( 7-to_integer(poffset_r) );
 
           if prepeat_r="00" then
             poffset_r <= poffset_r + 1;
@@ -322,9 +352,9 @@ begin
           else
             prepeat_r <= prepeat_r - 1;
           end if;
-          pix_v     := pix_v xor (invert_s and attr_s(7)); -- Invert if flashing
+          pix_v     := pix_v xor (invert_r and attr_s(7)); -- Invert if flashing
           bright_o  <= attr_s(6); -- Bright attribute
-          if pix_v='0' then
+          if pix_v='1' then
             grb_o   <= attr_s(2 downto 0);
           else
             grb_o   <= attr_s(5 downto 3);

@@ -57,6 +57,7 @@ public slots:
     void onResetToCustomClicked();
     void onFpsUpdated(unsigned);
     void onCaptureClicked();
+    void onWideClicked();
     void onExit();
     void onStatusLineReceived(QString);
 protected:

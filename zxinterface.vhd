@@ -753,7 +753,12 @@ begin
       vidmode_i     => vidmode_s,
       border_i      => port_fe_s(2 downto 0),
       pixclk_i      => pixclk_s,
-      pixrst_i      => pixrst_s
+      pixrst_i      => pixrst_s,
+
+      hsync_o       => hsync_o,
+      vsync_o       => vsync_o,
+      bright_o      => bright_o,
+      grb_o         => grb_o
     );
 
   end generate;
@@ -883,7 +888,7 @@ begin
   FORCE_IORQULA_o <= '0';
 
   --TP5 <= clk_i;
-  TP5 <= XMREQ_sync_s;
+  TP5 <= pixclk_s;
 
   spec_int_o <= '1' when spect_inten_s='0' else XINT_sync_s;
   spec_nreq_o <= spec_nreq_r;

@@ -25,7 +25,7 @@ entity screencap is
     intr_i        : in std_logic;
     framecmplt_i  : in std_logic;
     border_i      : in std_logic_vector(2 downto 0);
-
+    
     -- Videogen configuration
     -- Modeline syntax: pclk hdisp hsyncstart hsyncend htotal vdisp vsyncstart vsyncend vtotal [flags] Flags (optional): +HSync, -HSync, +VSync, -VSync, Interlace, DoubleScan, CSync, +CSync, -CSync
     -- Modeline "800x600"x75.0   49.50  800 816 896 1056  600 601 604 625 +hsync +vsync (46.9 kHz e)
@@ -58,6 +58,25 @@ architecture beh of screencap is
 
 
   signal ram_addr_mux_s : std_logic_vector(12 downto 0);
+
+  component videoram
+    PORT
+    (
+      address_a		: IN STD_LOGIC_VECTOR (12 DOWNTO 0);
+      address_b		: IN STD_LOGIC_VECTOR (12 DOWNTO 0);
+      clock_a		: IN STD_LOGIC  := '1';
+      clock_b		: IN STD_LOGIC ;
+      data_a		: IN STD_LOGIC_VECTOR (7 DOWNTO 0);
+      data_b		: IN STD_LOGIC_VECTOR (7 DOWNTO 0);
+      rden_a		: IN STD_LOGIC  := '1';
+      rden_b		: IN STD_LOGIC  := '1';
+      wren_a		: IN STD_LOGIC  := '0';
+      wren_b		: IN STD_LOGIC  := '0';
+      q_a		    : OUT STD_LOGIC_VECTOR (7 DOWNTO 0);
+      q_b		    : OUT STD_LOGIC_VECTOR (7 DOWNTO 0)
+    );
+  end component;
+
 begin
 
   -- Spectrum video memory addressing
@@ -69,26 +88,21 @@ begin
   vgen_vbusy_s <= ram_we_s;
 --  vgen_vdata_s <=
 
-  screen_ram: entity work.generic_dp_ram
-  generic map (
-    address_bits  => 13, -- 8KB
-    data_bits     => 8
-
-  )
+  screen_ram: videoram
   port map (
-    clka    => clk_i,
-    ena     => '1', --ram_en_s,
-    wea     => ram_we_s,
-    addra   => ram_addr_mux_s,
-    dia     => ram_din_s,
-    doa     => vgen_vdata_s,  -- for video gen
+    clock_a   => clk_i,
+    rden_a    => vgen_ven_s,
+    wren_a    => ram_we_s,
+    address_a => ram_addr_mux_s,
+    data_a    => ram_din_s,
+    q_a       => vgen_vdata_s,  -- for video gen
 
-    clkb    => vidmem_clk_i,
-    enb     => vidmem_en_i,
-    web     => '0',
-    dib     => x"00",
-    addrb   => vidmem_adr_i,
-    dob     => vidmem_data_o
+    clock_b   => vidmem_clk_i,
+    rden_b    => vidmem_en_i,
+    wren_b    => '0',
+    data_b    => x"00",
+    address_b => vidmem_adr_i,
+    q_b       => vidmem_data_o
   );
 
   fifo_rd_o <= (not fifo_empty_i) and run_r;
