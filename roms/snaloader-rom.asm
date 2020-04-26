@@ -19,8 +19,7 @@
 	ORG	$0000
 			       
 START:	DI			; disable interrupts.
-	LD	DE,$FFFF	; top of possible physical RAM.
-	JP	ROM_CHECK	; jump forward to common code at START_NEW.
+	JP	RAM_DONE
 
 
 	ORG	$0008
@@ -80,42 +79,13 @@ RESTOREREGS:
         EI			; FILL EI or DI, depending. We should time this so that no interrupt can come before JP
 RETINST:RETN
         
-ROM_CHECK:
-	LD	A,$07		; select a white border
-	OUT	($FE),A		; and set it now.
-	LD	A,$3F		; load accumulator with last page in ROM.
-	LD	I,A		; set the I register - this remains constant
-				; and can't be in range $40 - $7F as 'snow'
-				; appears on the screen.
-RAM_CHECK:	
-	LD	H,D		; transfer the top value to
-	LD	L,E		; the HL register pair.
-					;;;$11DC
-RAM_FILL:
-	LD	(HL),$02	; load with 2 - red ink on black paper
-	DEC	HL		; next lower
-	CP	H		; have we reached ROM - $3F ?
-	JR	NZ,RAM_FILL	; back to RAM_FILL if not.
-RAM_READ:	
-	AND	A		; clear carry - prepare to subtract
-	SBC	HL,DE		; subtract and add back setting
-	ADD	HL,DE		; carry when back at start.
-	INC	HL		; and increment for next iteration.
-	JR	NC,RAM_DONE	; forward to RAM_DONE if we've got back to
-				; starting point with no errors.
-	DEC	(HL)		; decrement to 1.
-	JR	Z,RAM_DONE	; forward to RAM_DONE if faulty.
-
-	DEC	(HL)		; decrement to zero.
-	JR	Z,RAM_READ	; back to RAM_READ if zero flag was set.
-
 RAM_DONE:
-	DEC	HL
-        DEC	HL
+	LD	HL, $5F00
         LD	SP, HL
         
         LD	HL, $4000
         LD	DE, $BFFF
+        LD	B, %00000001
 LOADER:
 	IN	A, ($0B)
         OR	A
@@ -124,6 +94,10 @@ LOADER:
         LD	(HL), A
 	INC	HL
 	DEC	DE
+        LD	A, B
+        XOR	%00000011
+        OUT	($FE), A
+        LD	B, A
     	LD	A, D
         OR 	E
     	JR	NZ, LOADER
