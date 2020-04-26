@@ -124,17 +124,14 @@ static int fpga__configurefromflash()
 
 int fpga__init()
 {
+    uint32_t id;
     fpga__init_spi();
 
     if (fpga__configurefromflash()<0)
         return -1;
-
-    uint32_t id = fpga__read_id();
-
-    if ((id & 0xff) == 0xff) {
-
-        return -1;
-    }
+    do {
+        id = fpga__read_id();
+    } while ((id & 0xff) == 0xff);
     fpga__set_trigger(FPGA_FLAG_TRIG_CMDFIFO_RESET | FPGA_FLAG_TRIG_RESOURCEFIFO_RESET);
     fpga__set_trigger(FPGA_FLAG_TRIG_INTACK);
     return 0;
@@ -395,9 +392,13 @@ int fpga__passiveserialconfigure(const uint8_t *data, unsigned len)
         len-=chunk;
     }
 
-    if (gpio__waitpin( PIN_NUM_CONF_DONE, 1, 500)<0) {
-        ESP_LOGW(TAG,"FPGA pin CONF_DONE failed to go LOW!");
-        return -1;
+    while(1) {
+        if (gpio__waitpin( PIN_NUM_CONF_DONE, 1, 1000)<0) {
+            ESP_LOGW(TAG,"FPGA pin CONF_DONE failed to go LOW!");
+        } else {
+            break;
+        }
+        ESP_LOGI(TAG, "CONF_DONE: %d", gpio_get_level(PIN_NUM_CONF_DONE) );
     }
 
     return 0;

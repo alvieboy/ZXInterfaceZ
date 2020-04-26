@@ -73,6 +73,9 @@ void app_main()
             vTaskDelay(100 / portTICK_RATE_MS);
         }
     }
+
+    spectint__init();
+
     resource__init();
 
     resource__register( 0x00, &versionresource);
@@ -86,7 +89,6 @@ void app_main()
 #endif
     videostreamer__init();
     netcmd__init();
-    spectint__init();
 
     // Start capture
     //start_capture();

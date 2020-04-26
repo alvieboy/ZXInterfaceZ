@@ -11,7 +11,7 @@ struct resource_entry
     struct resource_entry *next;
 };
 
-struct resource_entry *resource_root;
+struct resource_entry *resource_root = NULL;
 
 void resource__init(void)
 {
@@ -40,14 +40,20 @@ struct resource *resource__find(uint8_t id)
 
 void resource__register(uint8_t id, struct resource *res)
 {
-    struct resource_entry **parent = &resource_root;
-    while ((*parent)->next) {
-        parent = &((*parent)->next);
-    }
+    ESP_LOGI(TAG, "Registering resource id %d", id);
     struct resource_entry *this = (struct resource_entry*)malloc(sizeof(struct resource_entry));
     this->next = NULL;
     this->res = res;
-    (*parent)->next = this;
+
+    if (resource_root==NULL) {
+        resource_root = this;
+    } else {
+        struct resource_entry *parent = resource_root;
+        while (parent->next) {
+            parent = parent->next;
+        }
+        parent->next = this;
+    }
 }
 
 int resource__sendtofifo(struct resource *res)

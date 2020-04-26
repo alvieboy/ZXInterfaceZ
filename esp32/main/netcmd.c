@@ -265,6 +265,22 @@ static int netcmd__reset_custom_spectrum(command_t *cmdt, int argc, char **argv)
 }
 
 
+static int netcmd__vgamode(command_t *cmdt, int argc, char **argv)
+{
+    int mode;
+    if (strtoint(argv[0], &mode)<0) {
+        return -1;
+    }
+    if (mode) {
+        fpga__set_flags(FPGA_FLAG_VIDMODEWIDE);
+    }
+    else {
+        fpga__clear_flags(FPGA_FLAG_VIDMODEWIDE);
+    }
+    return 0;
+}
+
+
 struct commandhandler_t hand[] = {
     { CMD("fb"), &netcmd__send_framebuffer },
     { CMD("cap"), &netcmd__send_captures },
@@ -277,6 +293,7 @@ struct commandhandler_t hand[] = {
     { CMD("fpgaota"), &fpga_ota__performota },
     { CMD("uploadsna"), &sna__uploadsna },
     { CMD("uploadres"), &res__upload },
+    { CMD("vgamode"), &netcmd__vgamode },
 };
 
 
