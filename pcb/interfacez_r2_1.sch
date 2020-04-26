@@ -8508,8 +8508,8 @@ EIA Code 3216, Size A, 3.2 mm x 1.6 mm, grid 0.0125 inch</description>
 <part name="RN5" library="resistor-dil" deviceset="4R-N" device="EXB28V" value="330R"/>
 <part name="RN6" library="resistor-dil" deviceset="4R-N" device="EXB28V" value="330R"/>
 <part name="IC4" library="GadgetFactory" deviceset="74*245" device="" value="74LCX245FT"/>
-<part name="RN7" library="resistor-dil" deviceset="4R-N" device="EXB28V" value="330R"/>
-<part name="RN8" library="resistor-dil" deviceset="4R-N" device="EXB28V" value="330R"/>
+<part name="RN7" library="resistor-dil" deviceset="4R-N" device="EXB28V" value="33R"/>
+<part name="RN8" library="resistor-dil" deviceset="4R-N" device="EXB28V" value="33R"/>
 <part name="R8" library="GadgetFactory" deviceset="R" device="0603" value="10K"/>
 <part name="R9" library="GadgetFactory" deviceset="R" device="0603" value="10K"/>
 <part name="R10" library="GadgetFactory" deviceset="R" device="0603" value="10K"/>
