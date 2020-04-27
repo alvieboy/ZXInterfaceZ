@@ -35,7 +35,7 @@ uint8_t status_resource__type(struct resource *res)
     return RESOURCE_TYPE_INTEGER;
 }
 
-uint8_t status_resource__len(struct resource *res)
+uint16_t status_resource__len(struct resource *res)
 {
     return sizeof(uint8_t);
 }

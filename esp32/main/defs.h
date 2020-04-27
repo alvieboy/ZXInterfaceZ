@@ -55,6 +55,14 @@ static inline uint32_t getbe32(const uint8_t *source)
     return ret;
 }
 
+static inline uint16_t getbe16(const uint8_t *source)
+{
+    uint16_t ret = ((((uint16_t)source[0]) << 8) +
+        ((uint16_t)source[1]));
+    return ret;
+}
+
 void request_restart();
+
 
 #endif

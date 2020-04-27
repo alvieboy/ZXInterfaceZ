@@ -26,11 +26,13 @@ void gpio__init()
 
     io_conf.mode         = GPIO_MODE_OUTPUT;
     io_conf.pin_bit_mask =
-        (1ULL<<PIN_NUM_CS);
+        (1ULL<<PIN_NUM_CS) |
+        (1ULL<<PIN_NUM_PULLUP_EN);
 
     gpio_config(&io_conf);
 
     gpio_set_level(PIN_NUM_CS, 1);
+    gpio_set_level(PIN_NUM_PULLUP_EN, 0);
 
 
     io_conf.mode         = GPIO_MODE_INPUT;

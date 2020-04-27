@@ -91,6 +91,8 @@ int fpga__finishprogram(fpga_program_state_t*);
 void fpga__trigger_reconfiguration(void);
 #endif
 
+uint8_t fpga__get_status();
+
 static inline void fpga__set_flags(uint8_t enable)
 {
     fpga__set_clear_flags(enable, 0);
@@ -101,7 +103,7 @@ static inline void fpga__clear_flags(uint8_t disable)
 }
 uint32_t fpga__get_capture_status(void);
 int fpga__read_command_fifo();
-
+uint16_t fpga__get_spectrum_pc();
 
 
 #endif

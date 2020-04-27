@@ -18,7 +18,7 @@ struct resource
 {
     void (*update)(struct resource *);
     uint8_t (*type)(struct resource *);
-    uint8_t (*len)(struct resource *);
+    uint16_t (*len)(struct resource *);
     int (*sendToFifo)(struct resource *);
 };
 

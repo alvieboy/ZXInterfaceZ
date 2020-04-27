@@ -98,7 +98,7 @@ int generate_pbm_bitmap(int outfile, const std::string &filename)
         return -1;
     }
 
-    resource_size = 3+((in_pbm.width>>3)*in_pbm.height);
+    resource_size = 2+((in_pbm.width>>3)*in_pbm.height);
 
     
     uint8_t id = 0x02;

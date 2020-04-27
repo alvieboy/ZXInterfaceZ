@@ -62,16 +62,17 @@ uint8_t flash_resource__type(struct resource *r)
     return fr->data->type;
 }
 
-uint8_t flash_resource__len(struct resource *r)
+uint16_t flash_resource__len(struct resource *r)
 {
     struct flash_resource *fr = (struct flash_resource*)r;
+    ESP_LOGI(TAG,"Flash resource size: %d", fr->data->len);
     return fr->data->len;
 }
 
 int flash_resource__sendToFifo(struct resource *r)
 {
     struct flash_resource *fr = (struct flash_resource*)r;
-    return fpga__load_resource_fifo( fr->data->data, fr->data->len + 3, RESOURCE_DEFAULT_TIMEOUT);
+    return fpga__load_resource_fifo( fr->data->data, fr->data->len, RESOURCE_DEFAULT_TIMEOUT);
 }
 
 static struct flash_resource flashresource = {

@@ -34,7 +34,7 @@ uint8_t version_resource__type(struct resource *res)
     return RESOURCE_TYPE_STRING;
 }
 
-uint8_t version_resource__len(struct resource *res)
+uint16_t version_resource__len(struct resource *res)
 {
     return versionstringlen;
 }

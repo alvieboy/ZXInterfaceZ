@@ -17,7 +17,7 @@ struct status_resource
 void status_resource__update(struct resource *res);
 int status_resource__sendToFifo(struct resource *res);
 uint8_t status_resource__type(struct resource *res);
-uint8_t status_resource__len(struct resource *res);
+uint16_t status_resource__len(struct resource *res);
 
 #define STATUS_RESOURCE_DEF { \
     .update = &status_resource__update, \

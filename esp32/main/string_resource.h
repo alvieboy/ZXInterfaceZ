@@ -12,7 +12,7 @@ struct string_resource
 
 int string_resource__sendToFifo(struct resource *res);
 uint8_t string_resource__type(struct resource *res);
-uint8_t string_resource__len(struct resource *res);
+uint16_t string_resource__len(struct resource *res);
 
 #define STRING_RESOURCE_DEF { \
     .update = NULL, \

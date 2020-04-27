@@ -146,6 +146,16 @@ uint8_t fpga__get_status()
     return buf[1];
 }
 
+uint16_t fpga__get_spectrum_pc()
+{
+    uint8_t buf[3];
+    buf[0] = 0x40;
+    buf[1] = 0x00;
+    buf[2] = 0x00;
+    spi__transceive(spi0_fpga, buf, sizeof(buf));
+    return getbe16(&buf[1]);
+}
+
 void fpga__set_clear_flags(uint8_t enable, uint8_t disable)
 {
     uint8_t newflags = (latched_flags & ~disable) | enable;

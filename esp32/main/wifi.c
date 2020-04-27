@@ -29,12 +29,12 @@ char wifi_ssid[33];
 
 bool wifi__isconnected()
 {
-    return xEventGroupGetBits(&s_wifi_event_group) & WIFI_CONNECTED_BIT;
+    return xEventGroupGetBits(s_wifi_event_group) & WIFI_CONNECTED_BIT;
 }
 
 bool wifi__scanning()
 {
-    return xEventGroupGetBits(&s_wifi_event_group) & WIFI_SCANNING_BIT;
+    return xEventGroupGetBits(s_wifi_event_group) & WIFI_SCANNING_BIT;
 }
 
 bool wifi__issta()
@@ -223,6 +223,8 @@ void wifi_init_softap()
 
 void wifi_init_wpa2()
 {
+    issta = true;
+
     ESP_ERROR_CHECK(tcpip_adapter_dhcps_stop(TCPIP_ADAPTER_IF_AP));
 
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
@@ -247,8 +249,10 @@ void wifi_init_wpa2()
                                          )
                    );
 
+    strcpy(wifi_ssid, (char*)wifi_config.sta.ssid );
+
     esp_wifi_set_ps (WIFI_PS_NONE);
-    ESP_ERROR_CHECK( esp_wifi_set_bandwidth(ESP_IF_WIFI_STA, WIFI_BW_HT20) );
+    ESP_ERROR_CHECK( esp_wifi_set_bandwidth(ESP_IF_WIFI_STA, WIFI_BW_HT40) );
 
 
 

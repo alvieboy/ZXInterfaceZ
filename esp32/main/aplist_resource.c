@@ -46,7 +46,7 @@ uint8_t aplist_resource__type(struct resource*r)
     return RESOURCE_TYPE_APLIST;
 }
 
-uint8_t aplist_resource__len(struct resource*r)
+uint16_t aplist_resource__len(struct resource*r)
 {
     struct aplist_resource *ar = (struct aplist_resource*)r;
     return ar->bufpos;

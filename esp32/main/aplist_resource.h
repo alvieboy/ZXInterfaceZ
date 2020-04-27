@@ -18,7 +18,7 @@ int aplist_resource__setnumaps(struct aplist_resource*, uint8_t num);
 int aplist_resource__addap(struct aplist_resource*, uint8_t flags, const char *ssid, uint8_t ssidlen);
 
 uint8_t aplist_resource__type(struct resource*);
-uint8_t aplist_resource__len(struct resource*);
+uint16_t aplist_resource__len(struct resource*);
 int aplist_resource__sendToFifo(struct resource *);
 
 #define APLIST_RESOURCE_DEF  { \

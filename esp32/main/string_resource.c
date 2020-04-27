@@ -19,7 +19,7 @@ uint8_t string_resource__type(struct resource *res)
     return RESOURCE_TYPE_STRING;
 }
 
-uint8_t string_resource__len(struct resource *res)
+uint16_t string_resource__len(struct resource *res)
 {
     struct string_resource *sr =(struct string_resource*)res;
     return strlen(sr->str) + 1;

@@ -49,6 +49,15 @@ void request_restart()
     restart_requested = 1;
 }
 
+void gpio__press_event(gpio_num_t gpio)
+{
+    if (gpio==PIN_NUM_SWITCH) {
+        uint16_t pc = fpga__get_spectrum_pc();
+        ESP_LOGI(TAG, "Spectrum PC: 0x%04x",pc);
+    }
+}
+
+
 void app_main()
 {
     int lstatus = 0;
@@ -106,7 +115,7 @@ void app_main()
         if (restart_requested)
             do_restart = 1;
 
-        vTaskDelay(1000 / portTICK_RATE_MS);
+        vTaskDelay(100 / portTICK_RATE_MS);
 
        // ESP_LOGI(TAG,"Interrupts: %d\n", (int)interrupt_count);
        // ESP_LOGI(TAG, "CMD IN %d", gpio_get_level(PIN_NUM_CMD_INTERRUPT));
@@ -114,5 +123,6 @@ void app_main()
         if (do_restart)
             esp_restart();
 
+        fpga__get_status();
     }
 }

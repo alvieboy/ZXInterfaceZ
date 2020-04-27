@@ -23,9 +23,11 @@ struct resource *resource__find(uint8_t id)
 {
     struct resource_entry *node = resource_root;
     while (node) {
+        ESP_LOGI(TAG, "Search resource %d against %d\n", id, node->id);
         if (node->id == id) {
             return node->res;
         }
+        node = node->next;
     }
     // See if resource is in flash.
 
@@ -44,6 +46,7 @@ void resource__register(uint8_t id, struct resource *res)
     struct resource_entry *this = (struct resource_entry*)malloc(sizeof(struct resource_entry));
     this->next = NULL;
     this->res = res;
+    this->id = id;
 
     if (resource_root==NULL) {
         resource_root = this;
@@ -75,7 +78,7 @@ int resource__sendtofifo(struct resource *res)
         return r;
 
     uint16_t len = res->len(res);
-
+    ESP_LOGI(TAG,"Resource len: %d\n", len);
     r = fpga__load_resource_fifo((uint8_t*)&len, sizeof(len), RESOURCE_DEFAULT_TIMEOUT);
     if (r<0)
         return r;
