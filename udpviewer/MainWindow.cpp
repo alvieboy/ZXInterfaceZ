@@ -417,7 +417,7 @@ void MainWindow::uploadFPGA(const QString &filename)
 
 void MainWindow::onResetClicked()
 {
-    sendReceive(m_zxaddress, &MainWindow::progressReceived, true, "vgamode 1");
+    sendReceive(m_zxaddress, &MainWindow::progressReceived, true, "reset");
 }
 
 void MainWindow::onResetToCustomClicked()

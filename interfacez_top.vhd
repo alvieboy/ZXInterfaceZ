@@ -84,6 +84,8 @@ architecture str of interfacez_top is
   signal plllock_s    : std_logic;
   signal capclk_s     : std_logic;
 
+  signal FORCE_ROMCS_s: std_logic;
+
   signal wb_rdat      : std_logic_vector(7 downto 0);
   signal wb_wdat      : std_logic_vector(7 downto 0);
   signal wb_adr       : std_logic_vector(23 downto 0);
@@ -99,6 +101,7 @@ architecture str of interfacez_top is
   signal vsync_s      : std_logic;
   signal bright_s     : std_logic;
   signal grb_s        : std_logic_vector(2 downto 0);
+  signal spec_nreq_s  : std_logic;
 
 begin
 
@@ -130,7 +133,7 @@ begin
       D_BUS_OE_io   => D_BUS_OE_io,
       CTRL_OE_io    => CTRL_OE_io,
       A_BUS_OE_io   => A_BUS_OE_io,
-      FORCE_ROMCS_o => FORCE_ROMCS_o,
+      FORCE_ROMCS_o => FORCE_ROMCS_s,
       FORCE_RESET_o => FORCE_RESET_o,
       FORCE_INT_o   => FORCE_INT_o,
       XA_i          => XA_i,
@@ -151,13 +154,15 @@ begin
       SPI_D_io(3)   => ESP_QHD_io, -- Hold
       spec_int_o    => ESP_IO26_io,
       TP5           => TP5_o,
-      spec_nreq_o   => ESP_IO27_io, -- Request from spectrum
+      spec_nreq_o   => spec_nreq_s, -- Request from spectrum
           -- video out
       hsync_o       => hsync_s,
       vsync_o       => vsync_s,
       bright_o      => bright_s,
       grb_o         => grb_s
     );
+
+  FORCE_ROMCS_o <= FORCE_ROMCS_s;
 
   EXT_io(0) <= hsync_s;
   EXT_io(1) <= vsync_s;
@@ -171,6 +176,8 @@ begin
   EXT_io(7) <= bright_s and grb_s(0); -- Blue 0
 
 
+  FORCE_ROMCS_o <= FORCE_ROMCS_s;
+  ESP_IO27_io     <= spec_nreq_s;
 
   -- Temporary USB.
   USB_OE_o      <= '0';
@@ -183,7 +190,9 @@ begin
   RAMCLK_o      <= '0';
   RAMNCS_o      <= '1';
 
-  FLED_o        <= (others => '1');
+  FLED_o(0)     <= '1';
+  FLED_o(1)     <= '1';
+  FLED_o(2)     <= not FORCE_ROMCS_s;
   LED2_o        <= '1';
 
 end str;

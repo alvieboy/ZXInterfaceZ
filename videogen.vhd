@@ -70,7 +70,7 @@ architecture beh of videogen is
     dbltriple =>  '1', -- Triplicate pixels
     hsync     =>  '1',
     vsync     =>  '1',
-    flashdly  =>  89 -- (60/1.5)-1  = 89
+    flashdly  =>  39 -- (60/1.5)-1  = 39
   );
 
   -- Modeline "720x400"x70.1   28.32  720 738 846 900  400 412 414 449 -hsync +vsync (31.5 kHz e)
@@ -94,7 +94,7 @@ architecture beh of videogen is
     dbltriple => '0',
     hsync     =>  '0',
     vsync     =>  '1',
-    flashdly  => 104
+    flashdly  => 46
   );
 
   constant test0: videoconf_type := (
@@ -313,8 +313,9 @@ begin
       if vsync_pulse_s='1' then
         if flashcnt_r=0 then
           invert_r <= not invert_r;
-        else
           flashcnt_r <= vm_v.flashdly;
+        else
+          flashcnt_r <= flashcnt_r - 1;
         end if;
       end if;
     end if;

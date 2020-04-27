@@ -14,6 +14,8 @@ entity spi_interface is
     MOSI_i                : in std_logic;
     MISO_o                : out std_logic;
 
+    pc_i                  : in std_logic_vector(15 downto 0);
+  
     fifo_empty_i          : in std_logic;
     fifo_rd_o             : out std_logic;
     fifo_data_i           : in std_logic_vector(31 downto 0);
@@ -92,6 +94,7 @@ architecture beh of spi_interface is
 
   signal regs32_r     : regs32_type;
   signal current_reg_r: natural range 0 to NUMREGS32-1;
+  signal pc_latch_r   : std_logic_vector(7 downto 0);
 
   type state_type is (
     IDLE,
@@ -115,7 +118,8 @@ architecture beh of spi_interface is
     WRITEROM2,
     WRITEROM,
     WRRESFIFO,
-    READFIFOCMDDATA
+    READFIFOCMDDATA,
+    RDPC1
   );
 
   signal state_r      : state_type;
@@ -257,6 +261,14 @@ begin
                 txdat_s <= "00000000";
                 state_r <= RDVIDMEM1;
 
+              when x"40" => -- Read last PC
+                pc_latch_r <= pc_i(7 downto 0);
+                txden_s <= '1';
+                txload_s <= '1';
+                txdat_s <= pc_i(15 downto 8);
+                state_r <= RDPC1;
+
+
               when x"E0" => -- Read capture memory
                 txden_s <= '1';
                 txload_s <= '1';
@@ -342,6 +354,14 @@ begin
                 -- Unknown command
                 state_r <= UNKNOWN;
             end case;
+          end if;
+
+        when RDPC1 =>
+          txden_s <= '1';
+          txload_s <= '1';
+          txdat_s <= pc_latch_r;
+          if dat_valid_s='1' then
+            state_r <= UNKNOWN;
           end if;
 
         when SETREG32_INDEX =>
