@@ -10,7 +10,8 @@ package bfm_spectrum_p is
     WRITEIO,
     READIO,
     WRITEMEM,
-    READMEM
+    READMEM,
+    READOPCODE
   );
 
   type Data_Spectrum_type is record
@@ -20,6 +21,7 @@ package bfm_spectrum_p is
 
   type Cmd_Spectrum_type is record
     Cmd       : SpectrumCmd;
+    Refresh   : std_logic_vector(15 downto 0);
     Address   : std_logic_vector(15 downto 0);
     Data      : std_logic_vector(7 downto 0);
   end record;
@@ -33,7 +35,9 @@ package bfm_spectrum_p is
       wr_o    : out std_logic;
       rd_o    : out std_logic;
       mreq_o  : out std_logic;
+      rfsh_o  : out std_logic;
       ioreq_o : out std_logic;
+      m1_o    : out std_logic;
       a_o     : out std_logic_vector(15 downto 0);
       d_io    : inout std_logic_vector(7 downto 0)
     );

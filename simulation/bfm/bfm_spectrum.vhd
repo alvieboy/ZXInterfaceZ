@@ -14,6 +14,8 @@ entity bfm_spectrum is
     wr_o    : out std_logic;
     rd_o    : out std_logic;
     mreq_o  : out std_logic;
+    m1_o    : out std_logic;
+    rfsh_o  : out std_logic;
     ioreq_o : out std_logic;
     a_o     : out std_logic_vector(15 downto 0);
     d_io    : inout std_logic_vector(7 downto 0)
@@ -32,6 +34,8 @@ begin
     rd_o      <= '1';
     mreq_o    <= '1';
     ioreq_o   <= '1';
+    m1_o      <= '1';
+    rfsh_o    <= '1';
     d_io      <= (others => 'Z');
 
     l1: loop
@@ -92,6 +96,30 @@ begin
           Data_o.Data <= d_io;
           rd_o    <= '1';
           mreq_o <= '1';
+
+        when READOPCODE =>
+          wait until rising_edge(clk_i);
+          a_o <= Cmd_i.Address;
+          m1_o    <= '0';
+          wait until falling_edge(clk_i);
+          mreq_o  <= '0';
+          rd_o    <= '0';
+          --d_io    <= Cmd_i.Data;
+          wait until rising_edge(clk_i);
+          wait until rising_edge(clk_i);
+          Data_o.Data <= d_io;
+          rd_o    <= '1';
+          mreq_o  <= '1';
+          m1_o    <= '1';
+          -- Perform refresh request
+          a_o     <= Cmd_i.Refresh;
+          rfsh_o  <= '0';
+          wait until falling_edge(clk_i);
+          mreq_o  <= '0';
+          wait until falling_edge(clk_i);
+          mreq_o  <= '1';
+          --wait until rising_edge(clk_i);
+          rfsh_o  <= '1' after 20 ns;
 
         when others =>
       end case;

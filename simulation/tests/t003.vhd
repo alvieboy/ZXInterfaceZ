@@ -72,6 +72,14 @@ begin
     Spectrum_Cmd.Cmd      <= WRITEMEM;
     wait until Spectrum_Data.Busy = false;
     Spectrum_Cmd.Cmd      <= NONE;
+    wait for 20 ns;
+
+    Spectrum_Cmd.Address  <= x"0066";
+    Spectrum_Cmd.Cmd      <= READOPCODE;
+    Spectrum_Cmd.Refresh  <= x"0000";
+    wait until Spectrum_Data.Busy = false;
+    Spectrum_Cmd.Cmd      <= NONE;
+    wait for 20 ns;
 
     
     wait for 1000 ms;

@@ -169,7 +169,9 @@ begin
       mreq_o  => XMREQ_s,
       ioreq_o => XIORQ_s,
       a_o     => XA_s,
-      d_io    => XD_io
+      d_io    => XD_io,
+      m1_o    => XM1_s,
+      rfsh_o  => XRFSH_s
     );
 
   ctrlpins_inst: entity work.bfm_ctrlpins
