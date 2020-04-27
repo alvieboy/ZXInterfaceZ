@@ -24,8 +24,10 @@ DEBUGHEXA:
 	PUSH	DE
         PUSH 	BC
         PUSH	AF
+        PUSH	HL
         LD	DE, LINE21
         CALL	PRINTHEX
+        POP	HL
 	POP 	AF
         POP	BC
         POP	DE

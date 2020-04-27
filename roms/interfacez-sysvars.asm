@@ -30,6 +30,9 @@ PREVKEY		equ     $5C13
 CURKEY		equ     $5C15
 KFLAG		equ     $5C17
 
+CURRSTATUS	equ 	$5C19 ; Current status
+CURRSTATUSXOR	equ 	$5C1A ; Current status XOR previous status
+
 WIFIFLAGS	equ 	$5C1B
 SDMENU		equ 	$5C1C ; To store SD card menu location in RAM
 WIFIAPMENU	equ 	SDMENU ; Reuse.
@@ -56,3 +59,6 @@ LINE23		equ 	$50E0
 LINE22		equ 	$50C0
 LINE21		equ 	$50A0
 ATTR		equ	$5800
+
+
+

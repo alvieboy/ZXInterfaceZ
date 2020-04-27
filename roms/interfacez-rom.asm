@@ -354,18 +354,21 @@ SYSTEM_STATUS:
 	LD	A, $2           ; Load resource #2 (status flag)
         LD	HL, STATUSBUF        ; Into our STATUSBUF area
         CALL	LOADRESOURCE
-        CP 	$FF             ; If not valid (can this happen?) exits.
-        RET 	Z
-        LD	IX, STATUSBUF        ; Check system status flags. Use IX for dereferencing with BIT later on
+        CP 	RESOURCE_TYPE_INTEGER  ; If not valid (can this happen?) exits.
+        JP	NZ, INTERNALERROR
+        
+        LD	IX, CURRSTATUS   ; Check system status flags. Use IX for dereferencing with BIT later on
+        LD	HL, STATUSBUF        ; Into our STATUSBUF area
+        LD	A, (HL)
+        LD	(IX), A
         LD	A, (PREVSTATUS)
         XOR	(IX)            ; Compute differences between this status and prev. status
         LD	(IX+1), A	; Save STATUSXOR
         CP	0
         CALL	NZ, PROCESSSTATUSCHANGE	; Process status change if anything changed
 
-        LD	A, (STATUSBUF) 	; Store status for next check	
+        LD	A, (IX) 	; Store status for next check
 	LD	(PREVSTATUS), A
-        
         RET
         
 LOCALSTATUSCHANGED:
@@ -485,6 +488,7 @@ ALOOP:
         RET
 
 INTERNALERROR:
+	CALL	DEBUGHEXA
 	LD	DE, LINE23
         LD	HL, INTERNALERRORSTR
         LD	A, 32
