@@ -16,6 +16,7 @@ entity insn_detector is
     pc_o        : out std_logic_vector(15 downto 0);
     pc_valid_o  : out std_logic;
 
+    nmi_access_o: out std_logic;
     retn_det_o  : out std_logic  -- RETN detected
   );
 end entity insn_detector;
@@ -24,7 +25,7 @@ architecture beh of insn_detector is
 
   signal retn_detected_r  :  std_logic;
   signal retn_q_r         :  std_logic;
-
+  signal nmi_access_r     :  std_logic;
 begin
 
   process(clk_i, arst_i)
@@ -33,10 +34,13 @@ begin
 
       retn_q_r        <= '0';
       retn_detected_r <= '0';
+      nmi_access_r    <= '0';
 
     elsif rising_edge(clk_i) then
       retn_detected_r <= '0';
+      nmi_access_r    <= '0';
       pc_valid_o      <= '0';
+
       if valid_i='1' then
 
         if m1_i='0' then
@@ -52,18 +56,25 @@ begin
               retn_detected_r<='1';
             end if;
           else
-            if d_i=x"ED" then
+            if d_i=x"ED" and m1_i='0' then
               retn_q_r<='1';
             end if;
           end if;
         end if; -- not ROM address
+
+        -- Detect entry in NMI handler
+        if a_i=x"0066" and m1_i='0' then
+          nmi_access_r <= '1';
+        end if;
+
       else -- not valid
         --retn_q_r <= '0';
       end if;
     end if;
   end process;
 
-  retn_det_o <= retn_detected_r;
+  retn_det_o    <= retn_detected_r;
+  nmi_access_o  <= nmi_access_r;
 
 end beh;
 

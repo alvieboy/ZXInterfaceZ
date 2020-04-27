@@ -12,11 +12,13 @@ entity interfacez_io is
     clk_i     : in std_logic;
     rst_i     : in std_logic;
 
-    ioreq_i   : in std_logic;
-    rd_i      : in std_logic;
+    --ioreq_i   : in std_logic;
+    --rd_i      : in std_logic;
     wrp_i     : in std_logic;
     rdp_i     : in std_logic;
-    adr_i     : in std_logic_vector(7 downto 0);
+    active_i  : in std_logic;
+
+    adr_i     : in std_logic_vector(15 downto 0);
     dat_i     : in std_logic_vector(7 downto 0);
     dat_o     : out std_logic_vector(7 downto 0);
     enable_o  : out std_logic;
@@ -54,7 +56,7 @@ begin
 
   addr_match_s<='1' when adr_i(0)='1' else '0';
 
-	enable_s  <=  (not ioreq_i) and addr_match_s and not rd_i;
+	enable_s  <=  active_i and addr_match_s; -- Report all IOs
 
   process(clk_i, rst_i)
   begin
@@ -80,8 +82,8 @@ begin
 
       -- WRITE REQUEST from Spectrum.
 
-      if ioreq_i='0' and wrp_i='1' then
-        case adr_i is
+      if wrp_i='1' then
+        case adr_i(7 downto 0) is
           when x"0B" => -- FIFO status/control
           when x"09" => -- Command FIFO write.
             cmdfifo_write_r <= dat_i;
@@ -93,8 +95,8 @@ begin
 
       end if;
 
-      if ioreq_i='0' and rdp_i='1' then
-        case adr_i is
+      if rdp_i='1' then
+        case adr_i(7 downto 0) is
 
           when x"05" => -- Testing only.
 

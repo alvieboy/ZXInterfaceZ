@@ -1,6 +1,7 @@
 library IEEE;
 use IEEE.STD_LOGIC_1164.all;
 use IEEE.numeric_std.all;
+
 entity busopdet is
   port (
     clk_i     : in std_logic;

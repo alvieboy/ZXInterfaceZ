@@ -13,7 +13,6 @@ entity zxinterface is
     arst_i        : in std_logic;
 
     D_BUS_DIR_o   : out std_logic;
-
     D_BUS_OE_io   : inout std_logic;
     CTRL_OE_io    : inout std_logic;
     A_BUS_OE_io   : inout std_logic;
@@ -81,43 +80,11 @@ architecture beh of zxinterface is
 		);
 	end component clockmux;
 
-  signal dbus_oe_s          : std_logic;   -- Tri-state control
-  signal dbus_oe_q_r        : std_logic;   -- Tri-state control latch
-  signal data_o_s           : std_logic_vector(7 downto 0); -- Data out signal.
+--  signal data_o_s           : std_logic_vector(7 downto 0); -- Data out signal.
 
   signal romdata_o_s        : std_logic_vector(7 downto 0); -- ROM Data out signal.
   signal ramdata_o_s        : std_logic_vector(7 downto 0); -- RAM Data out signal.
 
-  signal XCK_sync_s         : std_logic;
-  signal XINT_sync_s        : std_logic;
-  signal XMREQ_sync_s       : std_logic;
-  signal XIORQ_sync_s       : std_logic;
-  signal XRD_sync_s         : std_logic;
-  signal XWR_sync_s         : std_logic;
-  signal XM1_sync_s         : std_logic;
-  signal XRFSH_sync_s       : std_logic;
-  signal XA_sync_s          : std_logic_vector(15 downto 0);
-  signal XD_sync_s          : std_logic_vector(7 downto 0);
-
-  --signal PC_s               : natural;
-
-
-  signal memrd_s            : std_logic; -- Memory read request
-  signal memrd_latch_s      : std_logic;
-  signal memrd_p_s          : std_logic; -- Memory read pulse
-  signal memwr_s            : std_logic; 
-  signal memwr_latch_s      : std_logic;
-  signal memwr_p_s          : std_logic; 
-  signal iord_s             : std_logic; 
-  signal iord_latch_s       : std_logic;
-  signal iord_p_s           : std_logic; 
-  signal iowr_s             : std_logic; 
-  signal iowr_latch_s       : std_logic;
-  signal iowr_p_s           : std_logic;
-
-  signal intr_s             : std_logic;
-  signal intr_latch_s       : std_logic;
-  signal intr_p_s           : std_logic;
 
 
   signal rom_enable_s       : std_logic;
@@ -136,18 +103,23 @@ architecture beh of zxinterface is
   signal fifo_size_s        : unsigned(7 downto 0);
   signal fifo_reset_s       : std_logic;
 
-  signal a_r                : std_logic_vector(15 downto 0); -- Latched address
-  signal d_r                : std_logic_vector(7 downto 0); -- Latched data (read). Read accesses from CPU
-  --signal d_write_r          : std_logic_vector(7 downto 0); -- Latched data (write). Write accesses from CPU
-  signal d_wr_valid_s       : std_logic;
-  signal d_rd_valid_s       : std_logic;
-  signal d_io_mem_s         : std_logic; -- '1': IO, '0': Mem
+  signal m1_s               : std_logic;
+  signal intr_p_s           : std_logic;
+  signal bus_idle_s         : std_logic;
 
-  constant C_CAPTURE_DELAY  : natural := 16;
+  signal a_s                : std_logic_vector(15 downto 0); -- Latched address
+  signal d_s                : std_logic_vector(7 downto 0); -- Latched data (read). Read accesses from CPU
 
-  signal d_wr_cap_shr_r     : std_logic_vector(C_CAPTURE_DELAY-1 downto 0);
-  signal d_rd_cap_shr_r     : std_logic_vector(C_CAPTURE_DELAY-1 downto 0);
-  signal d_io_mem_shr_r     : std_logic_vector(C_CAPTURE_DELAY-1 downto 0);
+  signal data_o_s           : std_logic_vector(7 downto 0); -- Data to Spectrum, multiplexed
+  signal data_o_valid_s     : std_logic;
+  --_vector(7 downto 0); -- Data to Spectrum, multiplexed
+
+  signal io_rd_p_s          : std_logic; -- IO read pulse
+  signal io_wr_p_s          : std_logic; -- IO write pulse
+  signal mem_rd_p_s         : std_logic; -- Mem read pulse
+  signal mem_wr_p_s         : std_logic; -- Mem write pulse
+  signal opcode_rd_p_s      : std_logic; -- Opcode read
+  signal mem_active_s       : std_logic; -- Memory access active
 
   signal mosi_s             : std_logic;
   signal miso_s             : std_logic;
@@ -227,8 +199,8 @@ architecture beh of zxinterface is
   signal cmdfifo_intack_spisck_s: std_logic;
   signal cmdfifo_intack_s       : std_logic; -- intack in CLK domain
 
-  signal d_io_read_p_s          : std_logic;
-  signal d_io_write_p_s         : std_logic;
+  --signal d_io_read_p_s          : std_logic;
+  --signal d_io_write_p_s         : std_logic;
   signal port_fe_s              : std_logic_vector(5 downto 0);
 
   signal border_seq_s           : std_logic_vector(2 downto 0);
@@ -253,7 +225,7 @@ architecture beh of zxinterface is
 
 begin
 
-  u0 : component clockmux
+  clockmux_inst : component clockmux
 		port map (
 			inclk1x   => videoclk_i(0),
 			inclk0x   => videoclk_i(1),
@@ -268,140 +240,46 @@ begin
     end if;
   end process;
 
+  -- VGA END
 
+  businterface_inst: entity work.businterface
+    port map (
+      clk_i         => clk_i,
+      arst_i        => arst_i,
+      XA_i          => XA_i,
+      XD_io         => XD_io,
+      XCK_i         => XCK_i,
+      XINT_i        => XINT_i,
+      XMREQ_i       => XMREQ_i,
+      XIORQ_i       => XIORQ_i,
+      XRD_i         => XRD_i,
+      XWR_i         => XWR_i,
+      XM1_i         => XM1_i,
+      XRFSH_i       => XRFSH_i,
 
+      D_BUS_DIR_o   => D_BUS_DIR_o,
+      D_BUS_OE_o    => D_BUS_OE_io,
+      CTRL_OE_o     => CTRL_OE_io,
+      A_BUS_OE_o    => A_BUS_OE_io,
+  
+      d_i           => data_o_s,
+      oe_i          => data_o_valid_s,
+  
+      d_o           => d_s,
+      a_o           => a_s,
+  
+      io_rd_p_o     => io_rd_p_s,
+      io_wr_p_o     => io_wr_p_s,
+      io_active_o   => io_active_s,
+      mem_rd_p_o    => mem_rd_p_s,
+      mem_wr_p_o    => mem_wr_p_s,
+      mem_active_o  => mem_active_s,
+      opcode_rd_p_o => opcode_rd_p_s,
+      intr_p_o      => intr_p_s,
+      bus_idle_o    => bus_idle_s,
+      m1_o          => m1_s
+  );
 
-  ck_sync: entity work.sync generic map (RESET => '0')
-    port map ( clk_i => clk_i, arst_i => arst_i, din_i => XCK_i, dout_o => XCK_sync_s );
-
-  int_sync: entity work.sync generic map (RESET => '1')
-    port map ( clk_i => clk_i, arst_i => arst_i, din_i => XINT_i, dout_o => XINT_sync_s );
-
-  m1_sync: entity work.sync generic map (RESET => '1')
-    port map ( clk_i => clk_i, arst_i => arst_i, din_i => XM1_i, dout_o => XM1_sync_s );
-
-  mreq_sync: entity work.sync generic map (RESET => '1')
-    port map ( clk_i => clk_i, arst_i => arst_i, din_i => XMREQ_i, dout_o => XMREQ_sync_s );
-
-  ioreq_sync: entity work.sync generic map (RESET => '1')
-    port map ( clk_i => clk_i, arst_i => arst_i, din_i => XIORQ_i, dout_o => XIORQ_sync_s );
-
-  rd_sync: entity work.sync generic map (RESET => '1')
-    port map ( clk_i => clk_i, arst_i => arst_i, din_i => XRD_i, dout_o => XRD_sync_s );
-
-  wr_sync: entity work.sync generic map (RESET => '1')
-    port map ( clk_i => clk_i, arst_i => arst_i, din_i => XWR_i, dout_o => XWR_sync_s );
-
-  a_sync: entity work.syncv generic map (RESET => '0', WIDTH => 16)
-    port map ( clk_i => clk_i, arst_i => arst_i, din_i => XA_i, dout_o => XA_sync_s );
-
-  d_sync: entity work.syncv generic map (RESET => '0', WIDTH => 8)
-    port map ( clk_i => clk_i, arst_i => arst_i, din_i => XD_io, dout_o => XD_sync_s );
-
-
-  process(clk_i, arst_i)
-  begin
-    if arst_i='1' then
-      dbus_oe_q_r <= '0';
-    elsif rising_edge(clk_i) then
-      dbus_oe_q_r <= dbus_oe_s;
-    end if;
-  end process;
-
-  -- Requirement for OE sequencing.
-  --
-  -- Req. OE   Clock0                       Clock1
-  --  0->1     Dir=1, nOEo=0, OE=0 [01]     Dir=1, nOEo=0, OE=1  [11]
-  --  1->0     Dir=1, nOEo=0, OE=0 [10]     Dir=0, nOEo=0, OE=0  [00]
-
-
-  XD_io         <= (others =>'Z') when dbus_oe_s='0' or dbus_oe_q_r='0' else data_o_s;
-
-
-  process(arst_i, clk_i)
-  begin
-    if arst_i='1' then
-      D_BUS_OE_io   <= '1';
-      CTRL_OE_io    <= '1';
-      A_BUS_OE_io   <= '1';
-    elsif rising_edge(clk_i) then
-      D_BUS_OE_io   <= '0';
-      CTRL_OE_io    <= '0';
-      A_BUS_OE_io   <= '0';
-    end if;
-  end process;
-
-  D_BUS_DIR_o   <= '1' when dbus_oe_s='0' else '0';
-
-  memrd_s       <=  NOT XMREQ_sync_s AND NOT XRD_sync_s;
-  memwr_s       <=  NOT XMREQ_sync_s AND NOT XWR_sync_s;
-  iord_s        <=  NOT XIORQ_sync_s AND NOT XRD_sync_s;
-  iowr_s        <=  NOT XIORQ_sync_s AND NOT XWR_sync_s;
-  intr_s        <=  NOT XINT_sync_s;
-
-  -- Delay data capture signal.
-  process(clk_i, arst_i)
-    variable write_access_v: std_logic;
-    variable read_access_v: std_logic;
-    variable io_access_v: std_logic;
-  begin
-    if arst_i='1' then
-      d_wr_cap_shr_r <= (others => '0');
-      d_rd_cap_shr_r <= (others => '0');
-      d_io_mem_shr_r <= (others => '0'); -- '1': IO, '0': Mem
-    elsif rising_edge(clk_i) then
-      write_access_v      :=  memwr_p_s or iowr_p_s;
-      read_access_v       :=  memrd_p_s or iord_p_s;
-      io_access_v         :=  iowr_p_s or iord_p_s;
-
-      d_wr_cap_shr_r      <= d_wr_cap_shr_r(C_CAPTURE_DELAY-2 downto 0) & write_access_v;
-      d_rd_cap_shr_r      <= d_rd_cap_shr_r(C_CAPTURE_DELAY-2 downto 0) & read_access_v;
-      d_io_mem_shr_r      <= d_io_mem_shr_r(C_CAPTURE_DELAY-2 downto 0) & io_access_v;
-      --d_wr_io_mem_shr_r   <= d_wr_io_mem_shr_r(C_CAPTURE_DELAY-2 downto 0) & io_p_s;
-    end if;
-  end process;
-
-  -- Capture input data after specific delay
-  process(clk_i, arst_i)
-  begin
-    if rising_edge(clk_i) then
-      if d_wr_cap_shr_r(C_CAPTURE_DELAY-2)='1' or
-         d_rd_cap_shr_r(C_CAPTURE_DELAY-2)='1' then
-
-        d_r <= XD_sync_s;
-      --end if;
-      --if d_rd_cap_shr_r(C_CAPTURE_DELAY-2)='1' then
---        d_read_r <= XD_sync_s;
-      end if;
-    end if;
-  end process;
-
-  d_wr_valid_s <= d_wr_cap_shr_r(C_CAPTURE_DELAY-1);
-  d_rd_valid_s <= d_rd_cap_shr_r(C_CAPTURE_DELAY-1);
-
-  -- In conjunction with d_valid_s, it tells if it is an IO access or a MEM access
-  d_io_mem_s <= d_io_mem_shr_r(C_CAPTURE_DELAY-1);
-
-  memrddet_inst: entity work.busopdet
-    port map ( clk_i => clk_i, arst_i => arst_i, access_i => memrd_s, latch_o => memrd_latch_s, access_o => memrd_p_s );
-  memwrdet_inst: entity work.busopdet
-    port map ( clk_i => clk_i, arst_i => arst_i, access_i => memwr_s, latch_o => memwr_latch_s, access_o => memwr_p_s );
-  iorddet_inst: entity work.busopdet
-    port map ( clk_i => clk_i, arst_i => arst_i, access_i => iord_s, latch_o => iord_latch_s, access_o => iord_p_s );
-  iowrdet_inst: entity work.busopdet
-    port map ( clk_i => clk_i, arst_i => arst_i, access_i => iowr_s, latch_o => iowr_latch_s, access_o => iowr_p_s );
-  intrdet_inst: entity work.busopdet
-    port map ( clk_i => clk_i, arst_i => arst_i, access_i => intr_s, latch_o => intr_latch_s, access_o => intr_p_s );
-
-  process(clk_i, arst_i)
-  begin
-    if arst_i='1' then
-    elsif rising_edge(clk_i) then
-      if memrd_latch_s='1' or memwr_latch_s='1' or iord_latch_s='1' or iowr_latch_s='1' then
-        a_r <= XA_i;
-      end if;
-    end if;
-  end process;
 
   r: if ROM_ENABLED generate
   rom: entity work.generic_dp_ram
@@ -415,7 +293,7 @@ begin
       wea     => '0',
       dia     => "00000000",
       doa     => romdata_o_s,
-      addra   => XA_sync_s(13 downto 0),
+      addra   => a_s(13 downto 0),
 
       clkb    => SPI_SCK_i,
       enb     => rom_wc_en_s,
@@ -430,29 +308,25 @@ begin
     romdata_o_s <= (others => '0');
   end generate;
 
+  data_o_s <= romdata_o_s when rom_enable_s='1' else
+      iodata_s when io_enable_s='1' else (others => '0');
 
-
-  rom_enable_s  <= (not XMREQ_sync_s) and not (XA_sync_s(15) or XA_sync_s(14)) and not (XRD_sync_s);
-
-
-  d_io_write_p_s  <=  d_io_mem_s and d_wr_valid_s; -- IO write pulse
-  d_io_read_p_s   <=  iord_p_s;--d_io_mem_s and d_rd_valid_s; -- IO read pulse
+  rom_enable_s  <= mem_active_s and not (a_s(15) or a_s(14));
 
   io_inst: entity work.interfacez_io
     port map (
-      clk_i   => clk_i,
-      rst_i   => arst_i,
+      clk_i           => clk_i,
+      rst_i           => arst_i,
 
-      ioreq_i => XIORQ_sync_s,
-      rd_i    => XRD_sync_s,
-      wrp_i   => d_io_write_p_s,
-      rdp_i   => d_io_read_p_s,
-      adr_i   => XA_sync_s(7 downto 0),
-      
-      dat_i   => d_r, -- Resynced with delay
-      dat_o   => iodata_s,
-      enable_o  => io_enable_s,
-      port_fe_o => port_fe_s,
+      wrp_i           => io_wr_p_s,
+      rdp_i           => io_rd_p_s,
+      active_i        => io_active_s,
+      adr_i           => a_s,
+      dat_i           => d_s,
+      dat_o           => iodata_s,
+      enable_o        => io_enable_s,
+
+      port_fe_o       => port_fe_s,
 
       resfifo_rd_o    => resfifo_rd_s,
       resfifo_read_i  => resfifo_read_s,
@@ -475,13 +349,8 @@ begin
       start_delay_i => start_delay_s,
       seq_o         => border_seq_s,
       off_o         => border_off_s,
-      intr_i        => intr_p_s
+      intr_i        => '0'--intr_p_s
     );
-
-  data_o_s <= romdata_o_s when rom_enable_s='1' else
-      iodata_s when io_enable_s='1' else (others => '0');
-
-
 
   -- RAM write access captures
 
@@ -524,39 +393,33 @@ begin
   fifo_read_s(31 downto 25) <= (others => '0');
   fifo_2_read_s(31 downto 25) <= (others => '0');
 
-  fifo_wr_s     <= d_wr_valid_s;
-  --fifo_rd_s     <= '0';
-  fifo_write_s  <= d_io_mem_s & d_r & a_r;
+  fifo_wr_s     <= mem_wr_p_s OR io_wr_p_s;
+  fifo_write_s  <= io_wr_p_s & d_s & a_s;
 
   -- ROM is active on access if FORCE romcs is '1'
 
-  rom_active_s <= rom_enable_s and spect_forceromcs_bussync_s;
-  io_active_s  <= io_enable_s and NOT XRD_sync_s;
+  rom_active_s    <= rom_enable_s and spect_forceromcs_bussync_s;
+  --io_active_s     <= io_enable_s;-- and NOT XRD_sync_s;
 
-  dbus_oe_s <= rom_active_s or io_active_s;
+  data_o_valid_s  <= rom_active_s or io_active_s;
 
   --
   -- Resource FIFO. This FIFO is between ESP and spectrum. ESP writes, Spectrum reads.
   --
-  resourcefifo_inst: entity work.gh_fifo_async_sr_wf
-  generic map (
-    add_width   => 10, -- 1024 entries
-    data_width   => 8
-  )
+  resourcefifo_inst: entity work.resource_fifo
   port map (
-    clk_WR      => SPI_SCK_i,
-    clk_RD      => clk_i,
-    rst         => arst_i,
-    srst        => resfifo_reset_s,
-    wr          => resfifo_wr_s,
-    rd          => resfifo_rd_s,
-    D           => resfifo_write_s,
-    Q           => resfifo_read_s,
-    full        => resfifo_full_s(0),
-    qfull       => resfifo_full_s(1),
-    hfull       => resfifo_full_s(2),
-    qqqfull     => resfifo_full_s(3),
-    empty       => resfifo_empty_s
+    wclk_i      => SPI_SCK_i,
+    rclk_i      => clk_i,
+    aclr_i      => resfifo_reset_s,
+    wen_i       => resfifo_wr_s,
+    ren_i       => resfifo_rd_s,
+    wdata_i     => resfifo_write_s,
+    rdata_o     => resfifo_read_s,
+    wfull_o     => resfifo_full_s(0),
+    wqfull_o    => resfifo_full_s(1),
+    whfull_o    => resfifo_full_s(2),
+    wqqqfull_o  => resfifo_full_s(3),
+    rempty_o    => resfifo_empty_s
   );
 
   --
@@ -730,10 +593,10 @@ begin
     port map (
       clk_i       => clk_i,
       arst_i      => arst_i,
-      valid_i     => d_rd_valid_s,
-      a_i         => a_r,
-      d_i         => d_r,
-      m1_i        => XM1_sync_s,
+      valid_i     => mem_rd_p_s,
+      a_i         => a_s,
+      d_i         => d_s,
+      m1_i        => m1_s,
       pc_o        => pc_s,
       pc_valid_o  => pc_valid_s,
       retn_det_o  => retn_det_s
@@ -743,7 +606,9 @@ begin
   begin
     if arst_i='1' then
     elsif rising_edge(clk_i) then
-      pc_r <= pc_s;
+      if pc_valid_s='1' then
+        pc_r <= pc_s;
+      end if;
     end if;
   end process;
 
@@ -795,85 +660,6 @@ begin
     vidmem_data_s   <= (others =>'0');
   end generate;
 
-
-  cs: if CAPTURE_ENABLED generate
-  capture: block
-    constant TICK_MAX: natural := 4;
-
-    signal tickcnt_r: natural range 0 to TICK_MAX-1;
-    signal tick_r   : std_logic;
-
-    signal capdata_s              : std_logic_vector(35-COMPRESS_BITS downto 0);
-
-
-  begin
-
-    clr_sync: entity work.sync generic map (RESET => '0')
-      port map ( clk_i => clk_i, arst_i => arst_i, din_i => capture_clr_spisck_s, dout_o => capture_clr_s );
-
-    cmp_sync: entity work.sync generic map (RESET => '0')
-      port map ( clk_i => clk_i, arst_i => arst_i, din_i => capture_cmp_spisck_s, dout_o => capture_cmp_s );
-
-    run_sync: entity work.sync generic map (RESET => '0')
-      port map ( clk_i => clk_i, arst_i => arst_i, din_i => capture_run_spisck_s, dout_o => capture_run_s );
-
-    --len_syncv: entity work.syncv generic map (RESET => '0', WIDTH => capture_len_s'length)
-    --  port map ( clk_i => clk_i, arst_i => arst_i, din_i => capture_len_spisck_s, dout_o => capture_len_s );
-
-    trigmask_syncv: entity work.syncv generic map (RESET => '1', WIDTH => 36-COMPRESS_BITS)
-      port map ( clk_i => clk_i, arst_i => arst_i, din_i => capture_trig_mask_spisck_s(35-COMPRESS_BITS downto 0), dout_o => capture_trig_mask_s );
-
-    trigval_syncv: entity work.syncv generic map (RESET => '0', WIDTH => 36-COMPRESS_BITS)
-      port map ( clk_i => clk_i, arst_i => arst_i, din_i => capture_trig_val_spisck_s(35-COMPRESS_BITS downto 0), dout_o => capture_trig_val_s );
-
-
-    capdata_s <= XCK_sync_s & XMREQ_sync_s & XIORQ_sync_s & XRD_sync_s & XWR_sync_s & XA_sync_s & XD_sync_s;
-  
-    -- Stick generator
-    process(clk_i,arst_i)
-    begin
-      if arst_i='1' then
-        tick_r <= '0';
-        tickcnt_r <= TICK_MAX-1;
-      elsif rising_edge(clk_i) then
-        tick_r <= '0';
-        if tickcnt_r=0 then
-          tick_r <= '1';
-          tickcnt_r <= TICK_MAX-1;
-        else
-          tickcnt_r <= tickcnt_r -1;
-        end if;
-      end if;
-    end process;
-
-  logiccap_inst: entity work.logiccapture
-  generic map (
-    COMPRESS_BITS => COMPRESS_BITS,
-    MEMWIDTH_BITS =>CAPTURE_MEMWIDTH_BITS
-  )
-  port map (
-    clk_i       => clk_i,
-    arst_i      => arst_i,
-    stick_i     => tick_r,
-
-    clr_i       => capture_clr_s,
-    run_i       => capture_run_s,
-
-    din_i       => capdata_s,
-    compress_i  => capture_cmp_s,
-    clen_o      => capture_len_s,
-    trig_mask_i => capture_trig_mask_s,
-    trig_val_i  => capture_trig_val_s,
-    trig_o      => capture_triggered_s,
-
-    ramclk_i    => SPI_SCK_i,
-    ramen_i     => capmem_en_s,
-    ramaddr_i   => capmem_adr_s,
-    ramdo_o     => capmem_data_s
-  );
-  end block;
-  end generate;
-
   --
   -- Do NOT allow changes to ROMCS while bus is busy, wait for bus idle
   --
@@ -882,24 +668,11 @@ begin
     if arst_i='1' then
       spect_forceromcs_bussync_s <= '0';
     elsif rising_edge(clk_i) then
-      if XRD_sync_s='1' AND XWR_sync_s='1' AND XMREQ_sync_s='1' AND XIORQ_sync_s='1' then
+      if bus_idle_s='1' then
         spect_forceromcs_bussync_s <= spect_forceromcs_s;
       end if;
     end if;
   end process;
-
-
-  st: if SIGTAP_ENABLED generate
-    capdin_s <= XMREQ_sync_s & XIORQ_sync_s & XRD_sync_s & XWR_sync_s & XA_sync_s & XD_sync_s;
-
-  	u0 : signaltap1
-		port map (
-			acq_data_in    => capdin_s,
-			acq_trigger_in(0) => XMREQ_sync_s,
-			acq_clk        => capclk_i
-		);
-
-  end generate;
 
   mosi_s          <= SPI_D_io(0);
   SPI_D_io(0)     <= 'Z';       -- MOSI - Change when Quadmode is enabled
@@ -917,7 +690,7 @@ begin
   --TP5 <= clk_i;
   TP5 <= pixclk_s;
 
-  spec_int_o <= '1' when spect_inten_s='0' else XINT_sync_s;
+  spec_int_o <= '1' when spect_inten_s='0' else XINT_i;--sync_s; TBD
   spec_nreq_o <= spec_nreq_r;
 
 
