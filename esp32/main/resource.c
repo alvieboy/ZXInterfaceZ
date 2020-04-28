@@ -23,7 +23,6 @@ struct resource *resource__find(uint8_t id)
 {
     struct resource_entry *node = resource_root;
     while (node) {
-        ESP_LOGI(TAG, "Search resource %d against %d\n", id, node->id);
         if (node->id == id) {
             return node->res;
         }
@@ -78,7 +77,7 @@ int resource__sendtofifo(struct resource *res)
         return r;
 
     uint16_t len = res->len(res);
-    ESP_LOGI(TAG,"Resource len: %d\n", len);
+
     r = fpga__load_resource_fifo((uint8_t*)&len, sizeof(len), RESOURCE_DEFAULT_TIMEOUT);
     if (r<0)
         return r;

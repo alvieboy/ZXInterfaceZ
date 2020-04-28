@@ -293,9 +293,11 @@ int fpga__reset_to_custom_rom(bool activate_retn_hook)
 
 int fpga__load_resource_fifo(const uint8_t *data, unsigned len, int timeout)
 {
+#if 0
     printf("Load res: ");
     dump__buffer(data,len);
     printf("\n");
+#endif
 
 #define LOCAL_CHUNK_SIZE 512
     uint8_t txbuf[LOCAL_CHUNK_SIZE+1];
@@ -315,7 +317,7 @@ int fpga__load_resource_fifo(const uint8_t *data, unsigned len, int timeout)
             maxsize = (FPGA_RESOURCE_FIFO_SIZE*4/3)-1;
         }
 
-        ESP_LOGI(TAG,"Resource FIFO stat %02x avail size %d, len %d", stat, maxsize, len);
+        //ESP_LOGI(TAG,"Resource FIFO stat %02x avail size %d, len %d", stat, maxsize, len);
 
         if (maxsize > LOCAL_CHUNK_SIZE)
             maxsize = LOCAL_CHUNK_SIZE;
@@ -323,7 +325,7 @@ int fpga__load_resource_fifo(const uint8_t *data, unsigned len, int timeout)
         if (maxsize>len)
             maxsize = len;
 
-        ESP_LOGI(TAG,"Resource FIFO upload size %d", maxsize);
+        //ESP_LOGI(TAG,"Resource FIFO upload size %d", maxsize);
 
         // Upload chunk to resource fifo.
         if (maxsize>0) {
@@ -423,9 +425,11 @@ int fpga__read_command_fifo()
     buf[1] = 0x00;
     buf[2] = 0x00;
     spi__transceive(spi0_fpga, buf, 3);
+#if 0
     printf("Cmd fifo state: ");
     dump__buffer(buf, 3);
     printf("\n");
+#endif
     if (buf[1]==0xff) {
         return -1;
     }

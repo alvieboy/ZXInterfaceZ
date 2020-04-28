@@ -177,7 +177,7 @@ static void videostreamer__server_task(void *pvParameters)
     ESP_LOGI(TAG, "VideoStreamer task initialised");
     do {
         io_num = spectint__getinterrupt();
-        ESP_LOGI(TAG, "I %d", io_num);
+        //ESP_LOGI(TAG, "I %d", io_num);
         if(io_num)
         {
             if (io_num==PIN_NUM_SPECT_INTERRUPT) {
@@ -210,7 +210,6 @@ static void videostreamer__server_task(void *pvParameters)
                 }
             } else if (io_num==PIN_NUM_CMD_INTERRUPT) {
                 // Command request
-                ESP_LOGI(TAG,"Command request");
                 spectcmd__request();
             } else {
                 // Switch request

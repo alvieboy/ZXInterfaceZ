@@ -30,12 +30,12 @@ static int spectcmd__check()
     int ret = 0;
     uint8_t error_resp = 0xff;
 
-    ESP_LOGI(TAG,"Command in: %02x", command_buffer[0]);
+ //   ESP_LOGI(TAG,"Command in: %02x", command_buffer[0]);
     switch (command_buffer[0]) {
     case SPECTCMD_CMD_GETRESOURCE:
 
         if (cmdptr<2) {
-            ESP_LOGI(TAG, "Need more data");
+    //        ESP_LOGI(TAG, "Need more data");
             break;
         }
 
@@ -43,12 +43,13 @@ static int spectcmd__check()
 
         r = resource__find(command_buffer[1]);
         if (r!=NULL) {
-            ESP_LOGI(TAG, "Found internal resource");
+        //    ESP_LOGI(TAG, "Found internal resource");
             return spectcmd__loadresource(r);
         } else {
-            ESP_LOGI(TAG, "Resource %d not found", command_buffer[1]);
             // Send null.
             ret = fpga__load_resource_fifo(&error_resp, sizeof(error_resp), RESOURCE_DEFAULT_TIMEOUT);
+            if (ret<0)
+                ESP_LOGI(TAG, "Resource %d not found", command_buffer[1]);
         }
         break;
     default:
