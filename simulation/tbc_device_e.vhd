@@ -12,15 +12,15 @@ use work.bfm_ctrlpins_p.all;
 
 entity tbc_device is
   port (
-    SysRst_Cmd      : out Cmd_Reset_type;
-    SysClk_Cmd      : out Cmd_Clock_type;
+    SysRst_Cmd      : out Cmd_Reset_type := Cmd_Reset_Defaults;
+    SysClk_Cmd      : out Cmd_Clock_type := Cmd_Clock_Defaults;
 
-    SpectRst_Cmd    : out Cmd_Reset_type;
-    SpectClk_Cmd    : out Cmd_Clock_type;
+    SpectRst_Cmd    : out Cmd_Reset_type := Cmd_Reset_Defaults;
+    SpectClk_Cmd    : out Cmd_Clock_type := Cmd_Clock_Defaults;
 
-    Spimaster_Cmd   : out Cmd_Spimaster_type;
-    Spectrum_Cmd    : out Cmd_Spectrum_type;
-    CtrlPins_Cmd    : out Cmd_CtrlPins_type;
+    Spimaster_Cmd   : out Cmd_Spimaster_type := Cmd_Spimaster_Defaults;
+    Spectrum_Cmd    : out Cmd_Spectrum_type   := Cmd_Spectrum_Defaults;
+    CtrlPins_Cmd    : out Cmd_CtrlPins_type   := Cmd_CtrlPins_Defaults;
 
     -- Inputs
     Spimaster_Data  : in Data_Spimaster_type;

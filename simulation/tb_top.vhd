@@ -35,31 +35,31 @@ architecture sim of tb_top is
   end component;
 
 
-  signal SysRst_Cmd_s     : Cmd_Reset_type;
-  signal SysClk_Cmd_s     : Cmd_Clock_type;
-  signal SpectRst_Cmd_s   : Cmd_Reset_type;
-  signal SpectClk_Cmd_s   : Cmd_Clock_type;
-  signal Spimaster_Cmd_s  : Cmd_Spimaster_type;
-  signal Spectrum_Cmd_s   : Cmd_Spectrum_type;
-  signal CtrlPins_Cmd_s   : Cmd_CtrlPins_type;
+  signal SysRst_Cmd_s     : Cmd_Reset_type := Cmd_Reset_Defaults;
+  signal SysClk_Cmd_s     : Cmd_Clock_type := Cmd_Clock_Defaults;
+  signal SpectRst_Cmd_s   : Cmd_Reset_type := Cmd_Reset_Defaults;
+  signal SpectClk_Cmd_s   : Cmd_Clock_type := Cmd_Clock_Defaults;
+  signal Spimaster_Cmd_s  : Cmd_Spimaster_type := Cmd_Spimaster_Defaults;
+  signal Spectrum_Cmd_s   : Cmd_Spectrum_type  := Cmd_Spectrum_Defaults;
+  signal CtrlPins_Cmd_s   : Cmd_CtrlPins_type  := Cmd_CtrlPins_Defaults;
 
   signal Spimaster_Data_s : Data_Spimaster_type;
   signal Spectrum_Data_s  : Data_Spectrum_type;
   signal CtrlPins_Data_s  : Data_CtrlPins_type;
 
 
-  SIGNAL A_BUS_OE_io : STD_LOGIC;
+  SIGNAL A_BUS_OE_s : STD_LOGIC;
   SIGNAL ASDO_s: STD_LOGIC;
   SIGNAL CLK_s : STD_LOGIC;
-  SIGNAL CTRL_OE_io : STD_LOGIC;
-  SIGNAL D_BUS_DIR_o : STD_LOGIC;
-  SIGNAL D_BUS_OE_io : STD_LOGIC;
+  SIGNAL CTRL_OE_s : STD_LOGIC;
+  SIGNAL D_BUS_DIR_s : STD_LOGIC;
+  SIGNAL D_BUS_OE_s : STD_LOGIC;
   SIGNAL DATA0_s : STD_LOGIC;
   SIGNAL DCLK_s : STD_LOGIC;
-  SIGNAL ESP_IO14_io : STD_LOGIC;
-  SIGNAL ESP_IO25_io : STD_LOGIC;
-  SIGNAL ESP_IO26_io : STD_LOGIC;
-  SIGNAL ESP_IO27_io : STD_LOGIC;
+  --SIGNAL ESP_IO14_io : STD_LOGIC := 'Z';
+  --SIGNAL ESP_IO25_io : STD_LOGIC := 'Z';
+  SIGNAL ESP_IO26_s : STD_LOGIC := 'Z';
+  SIGNAL ESP_IO27_s : STD_LOGIC := 'Z';
   SIGNAL ESP_MISO_s : STD_LOGIC;
   SIGNAL ESP_MOSI_s : STD_LOGIC;
   SIGNAL ESP_NCSO_s : STD_LOGIC;
@@ -179,20 +179,20 @@ begin
       Cmd_i     => CtrlPins_Cmd_s,
       Data_o    => CtrlPins_Data_s,
 
-      IO26_io => ESP_IO26_io,
-      IO27_io => ESP_IO27_io
+      IO26_i => ESP_IO26_s,
+      IO27_i => ESP_IO27_s
     );
 
   DUT: entity work.interfacez_top
 	PORT MAP (
     -- list connections between master ports and signals
-    A_BUS_OE_io => A_BUS_OE_io,
+    A_BUS_OE_o => A_BUS_OE_s,
     CLK_i => CLK_s,
-    CTRL_OE_io => CTRL_OE_io,
-    D_BUS_DIR_o => D_BUS_DIR_o,
-    D_BUS_OE_io => D_BUS_OE_io,
-    ESP_IO26_io => ESP_IO26_io,
-    ESP_IO27_io => ESP_IO27_io,
+    CTRL_OE_o => CTRL_OE_s,
+    D_BUS_DIR_o => D_BUS_DIR_s,
+    D_BUS_OE_o => D_BUS_OE_s,
+    ESP_IO26_o => ESP_IO26_s,
+    ESP_IO27_o => ESP_IO27_s,
     ESP_MISO_io => ESP_MISO_s,
     ESP_MOSI_io => ESP_MOSI_s,
     ESP_NCSO_i => ESP_NCSO_s,
@@ -221,7 +221,7 @@ begin
     USB_FLT_i     => USB_FLT_s,
     USB_PWREN_o   => USB_PWREN_s,
     -- Extension connector
-    EXT_io        => EXT_s,
+    EXT_o        => EXT_s,
 
 
     XA_i => XA_s,

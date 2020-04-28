@@ -43,6 +43,12 @@ package bfm_spectrum_p is
     );
   end component bfm_spectrum;
 
+  constant Cmd_Spectrum_Defaults: Cmd_Spectrum_type := (
+    Cmd     => NONE,
+    Refresh => x"0000",
+    Address => x"0000",
+    Data    => x"00"
+  );
   
 
 end package;

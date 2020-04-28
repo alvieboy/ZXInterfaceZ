@@ -71,13 +71,13 @@ set_global_assignment -name OUTPUT_IO_TIMING_NEAR_END_VMEAS "HALF VCCIO" -rise
 set_global_assignment -name OUTPUT_IO_TIMING_NEAR_END_VMEAS "HALF VCCIO" -fall
 set_global_assignment -name OUTPUT_IO_TIMING_FAR_END_VMEAS "HALF SIGNAL SWING" -rise
 set_global_assignment -name OUTPUT_IO_TIMING_FAR_END_VMEAS "HALF SIGNAL SWING" -fall
-set_location_assignment PIN_10 -to A_BUS_OE_io
+set_location_assignment PIN_10 -to A_BUS_OE_o
 set_location_assignment PIN_24 -to CLK_i
-set_location_assignment PIN_129 -to CTRL_OE_io
+set_location_assignment PIN_129 -to CTRL_OE_o
 set_location_assignment PIN_11 -to D_BUS_DIR_o
-set_location_assignment PIN_7 -to D_BUS_OE_io
-set_location_assignment PIN_138 -to ESP_IO26_io
-set_location_assignment PIN_141 -to ESP_IO27_io
+set_location_assignment PIN_7 -to D_BUS_OE_o
+set_location_assignment PIN_138 -to ESP_IO26_o
+set_location_assignment PIN_141 -to ESP_IO27_o
 set_location_assignment PIN_6 -to ESP_MISO_io
 set_location_assignment PIN_13 -to ESP_MOSI_io
 set_location_assignment PIN_3 -to ESP_NCSO_i
@@ -165,18 +165,18 @@ set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to XM1_i
 set_global_assignment -name ENABLE_INIT_DONE_OUTPUT OFF
 set_global_assignment -name ON_CHIP_BITSTREAM_DECOMPRESSION ON
 set_instance_assignment -name IO_STANDARD "3.3-V LVCMOS" -to EXT_io[7]
-set_location_assignment PIN_121 -to EXT_io[7]
-set_location_assignment PIN_124 -to EXT_io[6]
-set_location_assignment PIN_125 -to EXT_io[5]
-set_location_assignment PIN_126 -to EXT_io[4]
-set_location_assignment PIN_127 -to EXT_io[3]
-set_location_assignment PIN_128 -to EXT_io[2]
-set_location_assignment PIN_133 -to EXT_io[1]
+set_location_assignment PIN_121 -to EXT_o[7]
+set_location_assignment PIN_124 -to EXT_o[6]
+set_location_assignment PIN_125 -to EXT_o[5]
+set_location_assignment PIN_126 -to EXT_o[4]
+set_location_assignment PIN_127 -to EXT_o[3]
+set_location_assignment PIN_128 -to EXT_o[2]
+set_location_assignment PIN_133 -to EXT_o[1]
 set_location_assignment PIN_137 -to FORCE_NMI_o
 set_location_assignment PIN_76 -to FLED_o[0]
 set_location_assignment PIN_77 -to FLED_o[1]
 set_location_assignment PIN_80 -to FLED_o[2]
-set_location_assignment PIN_135 -to EXT_io[0]
+set_location_assignment PIN_135 -to EXT_o[0]
 set_location_assignment PIN_136 -to FORCE_IORQULA_o
 set_location_assignment PIN_2 -to LED2_o
 set_location_assignment PIN_84 -to RAMCLK_o

@@ -18,7 +18,7 @@ end entity async_pulse;
 
 architecture behave of async_pulse is
 
-   signal q1_r,q2,q3,q4: std_logic := '0';
+   signal q1_r,q2,q3,q4: std_logic := C_POLARITY;
 
    SIGNAL sync1_r    : STD_LOGIC;
    SIGNAL sync2_r    : STD_LOGIC;

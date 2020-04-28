@@ -208,8 +208,8 @@ begin
 
   memrd_s <= rd_dly_s AND NOT XMREQ_sync_s;
   memwr_s <= wr_dly_s AND NOT XMREQ_sync_s;
-  iord_s  <= rd_dly_s AND NOT XIORQ_sync_s AND NOT XM1_sync_s;
-  iowr_s  <= wr_dly_s AND NOT XIORQ_sync_s AND NOT XM1_sync_s;
+  iord_s  <= rd_dly_s AND NOT XIORQ_sync_s AND XM1_sync_s;
+  iowr_s  <= wr_dly_s AND NOT XIORQ_sync_s AND XM1_sync_s;
 
   memrddet_inst: entity work.busopdet
     port map ( clk_i => clk_i, arst_i => arst_i, access_i => memrd_s, latch_o => memrd_latch_s, access_o => memrd_p_s );

@@ -11,8 +11,8 @@ end entity rstgen;
 
 architecture beh of rstgen is
 
-  signal rstq1_r  : std_logic := '0';
-  signal rstq2_r  : std_logic := '0';
+  signal rstq1_r  : std_logic := '1';
+  signal rstq2_r  : std_logic := '1';
 
 begin
 

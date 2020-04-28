@@ -9,8 +9,8 @@ entity bfm_ctrlpins is
       Cmd_i   : in Cmd_CtrlPins_type;
       Data_o  : out Data_CtrlPins_type;
 
-      IO26_io : inout std_logic;
-      IO27_io : inout std_logic
+      IO26_i : in std_logic;
+      IO27_i : in std_logic
     );
 end entity bfm_ctrlpins;
 
@@ -18,7 +18,7 @@ architecture sim of bfm_ctrlpins is
 
 begin
 
-  Data_o.IO26 <= IO26_io;
-  Data_o.IO27 <= IO27_io;
+  Data_o.IO26 <= IO26_i;
+  Data_o.IO27 <= IO27_i;
 
 end sim;

@@ -13,9 +13,9 @@ entity zxinterface is
     arst_i        : in std_logic;
 
     D_BUS_DIR_o   : out std_logic;
-    D_BUS_OE_io   : inout std_logic;
-    CTRL_OE_io    : inout std_logic;
-    A_BUS_OE_io   : inout std_logic;
+    D_BUS_OE_o    : out std_logic;
+    CTRL_OE_o     : out std_logic;
+    A_BUS_OE_o    : out std_logic;
 
     FORCE_ROMCS_o : out std_logic;
     FORCE_RESET_o : out std_logic;
@@ -211,7 +211,7 @@ architecture beh of zxinterface is
   signal spec_nreq_r            : std_logic;
   constant SPEC_NREC_DELAY_MAX  : natural := 31;
 
-  signal spec_nreq_delay_r      : natural range 0 to SPEC_NREC_DELAY_MAX;
+  signal spec_nreq_delay_r      : natural range 0 to SPEC_NREC_DELAY_MAX := SPEC_NREC_DELAY_MAX;
 
   signal pixclk_s               : std_logic;
   signal vidmode_s              : std_logic;
@@ -223,20 +223,34 @@ architecture beh of zxinterface is
   signal pc_r                   : std_logic_vector(15 downto 0);
   signal pc_spisck_r            : std_logic_vector(15 downto 0);
 
+  signal vidmode_resync_r       : std_logic_vector(1 downto 0);
+
 begin
 
   clockmux_inst : component clockmux
 		port map (
 			inclk1x   => videoclk_i(0),
 			inclk0x   => videoclk_i(1),
-			clkselect => vidmode_s,
+			clkselect => vidmode_resync_r(1),
 			outclk    => pixclk_s
     );
 
-  process(pixclk_s)
+  process(pixclk_s, arst_i)
   begin
-    if rising_edge(pixclk_s) then
+    if arst_i='1' then
+      pixrst_s <= '1';
+    elsif rising_edge(pixclk_s) then
       pixrst_s <= '0';
+    end if;
+  end process;
+
+  process(pixclk_s, arst_i)
+  begin
+    if arst_i='1' then
+      vidmode_resync_r <= "00";
+    elsif rising_edge(pixclk_s) then
+      vidmode_resync_r(1) <= vidmode_resync_r(0);
+      vidmode_resync_r(0) <= vidmode_s;
     end if;
   end process;
 
@@ -258,9 +272,9 @@ begin
       XRFSH_i       => XRFSH_i,
 
       D_BUS_DIR_o   => D_BUS_DIR_o,
-      D_BUS_OE_o    => D_BUS_OE_io,
-      CTRL_OE_o     => CTRL_OE_io,
-      A_BUS_OE_o    => A_BUS_OE_io,
+      D_BUS_OE_o    => D_BUS_OE_o,
+      CTRL_OE_o     => CTRL_OE_o,
+      A_BUS_OE_o    => A_BUS_OE_o,
   
       d_i           => data_o_s,
       oe_i          => data_o_valid_s,
@@ -401,7 +415,7 @@ begin
   rom_active_s    <= rom_enable_s and spect_forceromcs_bussync_s;
   --io_active_s     <= io_enable_s;-- and NOT XRD_sync_s;
 
-  data_o_valid_s  <= rom_active_s or io_active_s;
+  data_o_valid_s  <= rom_active_s or io_enable_s;--io_active_s;
 
   --
   -- Resource FIFO. This FIFO is between ESP and spectrum. ESP writes, Spectrum reads.
@@ -642,7 +656,7 @@ begin
       intr_i        => intr_p_s,
       framecmplt_i  => framecmplt_s,
       --
-      vidmode_i     => vidmode_s,
+      vidmode_i     => vidmode_resync_r(1),
       border_i      => port_fe_s(2 downto 0),
       pixclk_i      => pixclk_s,
       pixrst_i      => pixrst_s,

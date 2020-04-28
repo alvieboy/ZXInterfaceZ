@@ -26,11 +26,13 @@ package bfm_ctrlpins_p is
       Cmd_i   : in Cmd_CtrlPins_type;
       Data_o  : out Data_CtrlPins_type;
 
-      IO26_io : inout std_logic;
-      IO27_io : inout std_logic
+      IO26_i : in std_logic;
+      IO27_i : in std_logic
     );
   end component bfm_ctrlpins;
 
-  
+  constant Cmd_CtrlPins_Defaults : Cmd_CtrlPins_type := (
+    Cmd => NONE
+  );
 
 end package;

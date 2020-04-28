@@ -73,7 +73,7 @@ begin
       resfifo_rd_o <= '0';
       cmdfifo_wr_r <= '0';
 
-      if wrp_i='1' and adr_i=x"FE" then -- ULA write
+      if wrp_i='1' and adr_i(7 downto 0)=x"FE" then -- ULA write
         port_fe_r <= dat_i(5 downto 0);
         -- synthesis translate_off
         report "SET BORDER: "&hstr(dat_i);

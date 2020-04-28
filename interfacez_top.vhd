@@ -24,9 +24,9 @@ entity interfacez_top is
     -- Buffer control
 
     D_BUS_DIR_o   : out std_logic;
-    D_BUS_OE_io   : inout std_logic;
-    CTRL_OE_io    : inout std_logic;
-    A_BUS_OE_io   : inout std_logic;
+    D_BUS_OE_o    : out std_logic;
+    CTRL_OE_o     : out std_logic;
+    A_BUS_OE_o    : out std_logic;
 
     -- ZX Spectrum control
     FORCE_ROMCS_o : out std_logic;
@@ -37,8 +37,8 @@ entity interfacez_top is
 
 
     -- ESP32 IOs
-    ESP_IO26_io   : inout std_logic;
-    ESP_IO27_io   : inout std_logic;
+    ESP_IO26_o   : out std_logic;
+    ESP_IO27_o   : out std_logic;
 
     -- ESP32 SPI interface
     ESP_QHD_io    : inout std_logic;
@@ -69,7 +69,7 @@ entity interfacez_top is
     USB_FLT_i     : in std_logic;
     USB_PWREN_o   : out std_logic;
     -- Extension connector
-    EXT_io        : inout std_logic_vector(7 downto 0);
+    EXT_o         : out std_logic_vector(7 downto 0);
 
     -- Testpoints
     TP4_o         : out std_logic;
@@ -130,9 +130,9 @@ begin
       videoclk_i    => videoclk_s,
       arst_i        => sysrst_s,
       D_BUS_DIR_o   => D_BUS_DIR_o,
-      D_BUS_OE_io   => D_BUS_OE_io,
-      CTRL_OE_io    => CTRL_OE_io,
-      A_BUS_OE_io   => A_BUS_OE_io,
+      D_BUS_OE_o    => D_BUS_OE_o,
+      CTRL_OE_o     => CTRL_OE_o,
+      A_BUS_OE_o    => A_BUS_OE_o,
       FORCE_ROMCS_o => FORCE_ROMCS_s,
       FORCE_RESET_o => FORCE_RESET_o,
       FORCE_INT_o   => FORCE_INT_o,
@@ -152,7 +152,7 @@ begin
       SPI_D_io(1)   => ESP_MISO_io,
       SPI_D_io(2)   => ESP_QWP_io, -- Write-Protect
       SPI_D_io(3)   => ESP_QHD_io, -- Hold
-      spec_int_o    => ESP_IO26_io,
+      spec_int_o    => ESP_IO26_o,
       TP5           => TP5_o,
       spec_nreq_o   => spec_nreq_s, -- Request from spectrum
           -- video out
@@ -164,20 +164,20 @@ begin
 
   FORCE_ROMCS_o <= FORCE_ROMCS_s;
 
-  EXT_io(0) <= hsync_s;
-  EXT_io(1) <= vsync_s;
-  EXT_io(2) <= grb_s(1); -- Red 1
-  EXT_io(3) <= bright_s and grb_s(1); -- Red 0
+  EXT_o(0) <= hsync_s;
+  EXT_o(1) <= vsync_s;
+  EXT_o(2) <= grb_s(1); -- Red 1
+  EXT_o(3) <= bright_s and grb_s(1); -- Red 0
 
-  EXT_io(4) <= grb_s(2); -- Green 1
-  EXT_io(5) <= bright_s and grb_s(2); -- Green 0
+  EXT_o(4) <= grb_s(2); -- Green 1
+  EXT_o(5) <= bright_s and grb_s(2); -- Green 0
 
-  EXT_io(6) <= grb_s(0); -- Blue 1
-  EXT_io(7) <= bright_s and grb_s(0); -- Blue 0
+  EXT_o(6) <= grb_s(0); -- Blue 1
+  EXT_o(7) <= bright_s and grb_s(0); -- Blue 0
 
 
   FORCE_ROMCS_o <= FORCE_ROMCS_s;
-  ESP_IO27_io     <= spec_nreq_s;
+  ESP_IO27_o     <= spec_nreq_s;
 
   -- Temporary USB.
   USB_OE_o      <= '0';

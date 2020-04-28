@@ -16,7 +16,7 @@ end entity delay_filter;
 
 architecture beh of delay_filter is
 
-  signal q_r:   natural range 0 to DELAY-1;
+  signal q_r:   natural range 0 to DELAY-1 := DELAY-1;
   signal o_r:   std_logic;
 
 begin

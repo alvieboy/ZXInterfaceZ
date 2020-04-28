@@ -6,7 +6,7 @@ use work.bfm_clock_p.all;
 
 entity bfm_clock is
   port (
-    Cmd_i:  in Cmd_Clock_type;
+    Cmd_i:  in Cmd_Clock_type := Cmd_Clock_Defaults;
     -- Outputs.
     clk_o:  out std_logic
   );
