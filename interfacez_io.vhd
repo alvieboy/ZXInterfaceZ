@@ -16,7 +16,9 @@ entity interfacez_io is
     --rd_i      : in std_logic;
     wrp_i     : in std_logic;
     rdp_i     : in std_logic;
+    rdp_dly_i : in std_logic;
     active_i  : in std_logic;
+    ulahack_i : in std_logic;
 
     adr_i     : in std_logic_vector(15 downto 0);
     dat_i     : in std_logic_vector(7 downto 0);
@@ -24,6 +26,9 @@ entity interfacez_io is
     enable_o  : out std_logic;
 
     port_fe_o : out std_logic_vector(5 downto 0);
+    audio_i   : in std_logic;
+
+    forceiorqula_o  : out std_logic;
 
     -- Resource request control
     spec_nreq_o : out std_logic; -- Spectrum data request.
@@ -51,7 +56,8 @@ architecture beh of interfacez_io is
   signal testdata_r       : unsigned(7 downto 0);
   signal cmdfifo_write_r  : std_logic_vector(7 downto 0);
   signal cmdfifo_wr_r     : std_logic;
-
+  signal uladata_r        : std_logic_vector(7 downto 0);
+  signal forceoutput_s    : std_logic;
 begin
 
   addr_match_s<='1' when adr_i(0)='1' else '0';
@@ -121,10 +127,31 @@ begin
     end if;
   end process;
 
-  dat_o           <= dataread_r;
+  process(clk_i, rst_i)
+  begin
+    if rst_i='1' then
+      forceiorqula_o  <= '0';
+      forceoutput_s <= '1';
+      --
+    elsif rising_edge(clk_i) then
+      if rdp_dly_i='1' and ulahack_i='1' and adr_i(0)='0' then
+        -- ULA read. Capture ULA data
+        uladata_r <= dat_i(7) & audio_i & dat_i(5 downto 0);
+        -- Start delay. Force IRQULA immediatly
+        forceiorqula_o <= '1';
+        forceoutput_s <= '1';
+      end if;
+      if active_i='0' then
+        forceiorqula_o <= '0';
+        forceoutput_s <='0';
+      end if;
+    end if;
+  end process;
+
+  dat_o           <= dataread_r when forceoutput_s='0' else uladata_r;
   port_fe_o       <= port_fe_r;
-  enable_o        <= enable_s;
+  enable_o        <= enable_s or forceoutput_s;
   cmdfifo_write_o <= cmdfifo_write_r;
   cmdfifo_wr_o    <= cmdfifo_wr_r;
-
+ 
 end beh;

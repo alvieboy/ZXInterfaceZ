@@ -36,6 +36,7 @@ entity businterface is
     oe_i          : in std_logic;                      -- Data valid/Output enable
 
     d_o           : out std_logic_vector(7 downto 0);  -- Data from spectrum
+    d_unlatched_o : out std_logic_vector(7 downto 0);  -- Data from spectrum (unlatched)
     a_o           : out std_logic_vector(15 downto 0);  -- Address from spectrum
 
     m1_o          : out std_logic;
@@ -44,9 +45,11 @@ entity businterface is
 
     io_rd_p_o     : out std_logic; -- IO read pulse
     io_wr_p_o     : out std_logic; -- IO write pulse
+    io_rd_p_dly_o : out std_logic; -- IO read pulse (delayed)
     io_active_o   : out std_logic; -- IO active. Stays high until RD/WR is released
     mem_rd_p_o    : out std_logic; -- Memory read pulse
     mem_wr_p_o    : out std_logic; -- Memory write pulse
+    mem_rd_p_dly_o: out std_logic; -- Memory read pulse (delayed)
     mem_active_o  : out std_logic; -- Mem active. Stays high until RD/WR is released
     opcode_rd_p_o : out std_logic -- Opcode(M1) read pulse
   );
@@ -91,9 +94,14 @@ architecture beh of businterface is
   signal intr_s             : std_logic;
   signal intr_latch_s       : std_logic;
   signal intr_p_s           : std_logic;
+  signal mem_rd_p_dly_s     : std_logic;
 
   signal a_r                : std_logic_vector(15 downto 0);
   signal d_r                : std_logic_vector(7 downto 0);
+
+  -- MemRD delayed for capture.
+  signal memrd_dly_q        : std_logic_vector(7 downto 0);
+  signal iord_dly_q         : std_logic_vector(7 downto 0); -- TODO: check if we can merge these two
 
 begin
 
@@ -234,6 +242,20 @@ begin
         a_r <= XA_sync_s;
         d_r <= XD_sync_s;
       end if;
+      d_unlatched_o <= XD_sync_s;
+    end if;
+  end process;
+
+  process(clk_i, arst_i)
+  begin
+    if arst_i='1' then
+      memrd_dly_q   <= (others => '0');
+      iord_dly_q   <= (others => '0');
+    elsif rising_edge(clk_i) then
+      memrd_dly_q(7 downto 1) <= memrd_dly_q(6 downto 0);
+      memrd_dly_q(0) <= memrd_p_s;
+      iord_dly_q(7 downto 1) <= iord_dly_q(6 downto 0);
+      iord_dly_q(0) <= iord_p_s;
     end if;
   end process;
 
@@ -250,6 +272,8 @@ begin
   m1_o          <= XM1_sync_s;
   intr_p_o      <= intr_p_s;
   bus_idle_o    <= XRD_sync_s AND XWR_sync_s AND XMREQ_sync_s AND XIORQ_sync_s;
+  mem_rd_p_dly_o <= memrd_dly_q(7);
+  io_rd_p_dly_o <= iord_dly_q(7);
 
 
 end beh;

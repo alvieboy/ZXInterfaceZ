@@ -49,6 +49,22 @@ package bfm_spectrum_p is
     Address => x"0000",
     Data    => x"00"
   );
-  
+
+  procedure SpectrumReadIO(signal Cmd: out Cmd_Spectrum_type; signal Data: in Data_Spectrum_type;
+    Address: in std_logic_vector(15 downto 0); Dout: out std_logic_vector(7 downto 0));
 
 end package;
+
+package body bfm_spectrum_p is
+
+  procedure SpectrumReadIO(signal Cmd: out Cmd_Spectrum_type; signal Data: in Data_Spectrum_type;
+    Address: in std_logic_vector(15 downto 0); Dout: out std_logic_vector(7 downto 0)) is
+  begin
+    Cmd.Address  <= Address;
+    Cmd.Cmd      <= READIO;
+    wait until Data.Busy = false;
+    Cmd.Cmd      <= NONE;
+    wait for 0 ps;
+    Dout := Data.Data;
+  end procedure;
+end package body;

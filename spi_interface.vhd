@@ -49,16 +49,27 @@ entity spi_interface is
     frameend_o            : out std_logic;
 
     vidmode_o             : out std_logic;
+    ulahack_o             : out std_logic;
 
     forceromcs_trig_on_o  : out std_logic;
     forceromcs_trig_off_o : out std_logic;
     forceromonretn_trig_o : out std_logic; -- single tick, SPI sck
+    forcenmi_trig_on_o    : out std_logic; -- single tick, SPI sck
+    forcenmi_trig_off_o   : out std_logic; -- single tick, SPI sck
     -- Resource FIFO
 
     resfifo_reset_o       : out std_logic;
     resfifo_wr_o          : out std_logic;
     resfifo_write_o       : out std_logic_vector(7 downto 0);
     resfifo_full_i        : in std_logic_vector(3 downto 0);
+
+    -- TAP player FIFO
+    tapfifo_reset_o       : out std_logic;
+    tapfifo_wr_o          : out std_logic;
+    tapfifo_write_o       : out std_logic_vector(7 downto 0);
+    tapfifo_full_i        : in std_logic;
+    tapfifo_used_i        : in std_logic_vector(9 downto 0);
+    tap_enable_o          : out std_logic;
 
     -- Command FIFO
 
@@ -109,6 +120,7 @@ architecture beh of spi_interface is
     READCAPSTATUS,
     SETFLAGS1,
     SETFLAGS2,
+    SETFLAGS3,
     SETREG32_INDEX,
     SETREG32_1,
     SETREG32_2,
@@ -118,6 +130,8 @@ architecture beh of spi_interface is
     WRITEROM2,
     WRITEROM,
     WRRESFIFO,
+    WRTAPFIFO,
+    RDTAPFIFOUSAGE,
     READFIFOCMDDATA,
     RDPC1
   );
@@ -132,6 +146,7 @@ architecture beh of spi_interface is
   signal capture_trig_sync_s  : std_logic;
 
   signal wreg_en_r        : std_logic;
+  signal tapfifo_used_lsb_r : std_logic_vector(7 downto 0);
 
 begin
 
@@ -173,6 +188,8 @@ begin
       forceromonretn_trig_o <= '0';
       forceromcs_trig_on_o  <= '0';
       forceromcs_trig_off_o <= '0';
+      forcenmi_trig_on_o    <= '0';
+      forcenmi_trig_off_o   <= '0';
       cmdfifo_intack_o      <= '0';
       cmdfifo_reset_o       <= '0';
     elsif rising_edge(SCK_i) then
@@ -181,6 +198,8 @@ begin
       forceromonretn_trig_o <= '0';
       forceromcs_trig_on_o  <= '0';
       forceromcs_trig_off_o <= '0';
+      forcenmi_trig_on_o    <= '0';
+      forcenmi_trig_off_o   <= '0';
       cmdfifo_intack_o      <= '0';
       cmdfifo_reset_o       <= '0';
 
@@ -197,6 +216,12 @@ begin
           -- Command FIFO interrupt acknowledge
           cmdfifo_intack_o      <= dat_s(4);
           cmdfifo_reset_o       <= dat_s(5);
+          forcenmi_trig_on_o    <= dat_s(6);
+          forcenmi_trig_off_o   <= dat_s(7); -- this might not be necessary.
+        end if;
+      elsif state_r=SETFLAGS3 then
+        if dat_valid_s='1' then
+          flags_r(15 downto 8) <= dat_s;
         end if;
       end if;
 
@@ -210,7 +235,12 @@ begin
   capture_cmp_o <= flags_r(4); -- Compress
   intenable_o   <= flags_r(5); -- Interrupt enable
   capsyncen_o   <= flags_r(6); -- Capture sync
-  vidmode_o     <= flags_r(7); -- 
+  vidmode_o     <= flags_r(7); --
+
+  ulahack_o     <= flags_r(8); --
+  tapfifo_reset_o<=flags_r(9); --
+  tap_enable_o  <= flags_r(10); --
+
   --forceromcs_o  <= flags_r(7);
 
 
@@ -221,6 +251,9 @@ begin
 
   resfifo_wr_o      <= '1' when state_r=WRRESFIFO and dat_valid_s='1' else '0';
   resfifo_write_o   <= dat_s;
+
+  tapfifo_wr_o      <= '1' when state_r=WRTAPFIFO and dat_valid_s='1' else '0';
+  tapfifo_write_o   <= dat_s;
 
 
   process(SCK_i, CSN_i, arst_i)
@@ -294,11 +327,25 @@ begin
                 rom_addr_r <= (others => '0');
                 state_r <= WRITEROM1;
 
-              when x"E3" => -- Write FIFO contents
+              when x"E3" => -- Write Resource FIFO contents
                 txden_s <= '1';
                 txload_s <= '1';
                 txdat_s <= "00000000";
                 state_r <= WRRESFIFO;
+
+              when x"E4" => -- Write TAP FIFO contents
+                txden_s <= '1';
+                txload_s <= '1';
+                txdat_s <= "00000000";
+                state_r <= WRTAPFIFO;
+
+              when x"E5" => -- Get TAP FIFO usage
+                txden_s <= '1';
+                txload_s <= '1';
+                txdat_s <= tapfifo_full_i & "00000" & tapfifo_used_i(9 downto 8);
+                txdat_s <= "000000" & tapfifo_used_i(9 downto 8);
+                tapfifo_used_lsb_r <= tapfifo_used_i(7 downto 0);
+                state_r <= RDTAPFIFOUSAGE;
 
               when x"EC" => -- Set flags
                 txden_s <= '1';
@@ -360,6 +407,14 @@ begin
           txden_s <= '1';
           txload_s <= '1';
           txdat_s <= pc_latch_r;
+          if dat_valid_s='1' then
+            state_r <= UNKNOWN;
+          end if;
+
+        when RDTAPFIFOUSAGE =>
+          txden_s <= '1';
+          txload_s <= '1';
+          txdat_s <= tapfifo_used_lsb_r;
           if dat_valid_s='1' then
             state_r <= UNKNOWN;
           end if;
@@ -440,6 +495,7 @@ begin
           end if;
 
         when WRRESFIFO =>
+        when WRTAPFIFO =>
           
         when READSTATUS =>
           txload_s <= '1';
@@ -478,6 +534,12 @@ begin
           end if;
 
         when SETFLAGS2 =>
+          
+          if dat_valid_s='1' then
+            state_r <= SETFLAGS3;
+          end if;
+
+        when SETFLAGS3 =>
           
           if dat_valid_s='1' then
             state_r <= UNKNOWN;

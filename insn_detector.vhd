@@ -52,7 +52,7 @@ begin
         if a_i(15)='0' and a_i(14)='0' then
           if retn_q_r='1' then
             retn_q_r<='0';
-            if (d_i=x"45") then
+            if (d_i=x"45" and m1_i='0') then
               retn_detected_r<='1';
             end if;
           else

@@ -4,7 +4,7 @@ use IEEE.numeric_std.all;
 LIBRARY altera_mf;
 USE altera_mf.all;
 
-entity resource_fifo is
+entity tap_fifo is
   port (
     -- Write port
     wclk_i    : in std_logic;
@@ -29,9 +29,9 @@ entity resource_fifo is
     -- Others
     aclr_i    : in std_logic
   );
-end entity resource_fifo;
+end entity tap_fifo;
 
-architecture beh of resource_fifo is
+architecture beh of tap_fifo is
 
 	COMPONENT dcfifo
 	GENERIC (
@@ -75,7 +75,7 @@ begin
 	GENERIC MAP (
 		intended_device_family => "Cyclone IV E",
 		lpm_numwords => 1024,
-		lpm_showahead => "ON",
+		lpm_showahead => "OFF",
 		lpm_type => "dcfifo",
 		lpm_width => 8,
 		lpm_widthu => 10,

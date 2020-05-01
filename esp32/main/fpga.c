@@ -12,7 +12,7 @@
 #include "esp_spi_flash.h"
 
 static spi_device_handle_t spi0_fpga;
-static uint8_t latched_flags = 0;
+static fpga_flags_t latched_flags = 0;
 
 static const uint8_t bitRevTable[256] =
 {
@@ -156,12 +156,14 @@ uint16_t fpga__get_spectrum_pc()
     return getbe16(&buf[1]);
 }
 
-void fpga__set_clear_flags(uint8_t enable, uint8_t disable)
+void fpga__set_clear_flags(fpga_flags_t enable, fpga_flags_t disable)
 {
-    uint8_t newflags = (latched_flags & ~disable) | enable;
-    uint8_t buf[2];
+    fpga_flags_t newflags = (latched_flags & ~disable) | enable;
+    uint8_t buf[4];
     buf[0] = 0xEC;
-    buf[1] = newflags;
+    buf[1] = newflags&0xff;
+    buf[2] = 0x00;
+    buf[3] = newflags>>8;
     spi__transceive(spi0_fpga, buf, sizeof(buf));
     latched_flags = newflags;
 }
@@ -170,9 +172,9 @@ void fpga__set_trigger(uint8_t trig)
 {
     uint8_t buf[4];
     buf[0] = 0xEC;
-    buf[1] = latched_flags;
+    buf[1] = latched_flags & 0xff;
     buf[2] = trig;
-    buf[3] = 0x00; // Extra SPI clocks
+    buf[3] = latched_flags >> 8;
     spi__transceive(spi0_fpga, buf, sizeof(buf));
 }
 
@@ -329,7 +331,6 @@ int fpga__load_resource_fifo(const uint8_t *data, unsigned len, int timeout)
 
         // Upload chunk to resource fifo.
         if (maxsize>0) {
-            memset(txbuf,0xF7, sizeof(txbuf));
             txbuf[0] = 0xE3;
             memcpy(&txbuf[1], data, maxsize);
             spi__transceive(spi0_fpga, txbuf, maxsize+1);
@@ -436,8 +437,46 @@ int fpga__read_command_fifo()
     return buf[2];
 }
 
+uint16_t fpga__get_tap_fifo_usage()
+{
+    uint8_t buf[3];
+    buf[0] = 0xE5;
+    buf[1] = 0x00;
+    buf[2] = 0x00;
+    spi__transceive(spi0_fpga, buf, 3);
+    return getbe16(&buf[1]);
+}
 
 
+int fpga__load_tap_fifo(const uint8_t *data, unsigned len, int timeout)
+{
+#define TAP_LOCAL_CHUNK_SIZE 256
+    uint8_t txbuf[TAP_LOCAL_CHUNK_SIZE+1];
+
+    uint16_t stat = fpga__get_tap_fifo_usage();
+//    ESP_LOGI(TAG, "TAP stat %04x\n", stat);
+
+    if (stat& 0x8000)
+        return 0; // FIFO full
+
+    uint16_t maxsize = FPGA_TAP_FIFO_SIZE - stat; // Get available size.
+
+
+    if (maxsize > TAP_LOCAL_CHUNK_SIZE)
+        maxsize = TAP_LOCAL_CHUNK_SIZE;
+
+    if (maxsize>len)
+        maxsize = len;
+
+    // Upload chunk
+    if (maxsize>0) {
+        txbuf[0] = 0xE4;
+        memcpy(&txbuf[1], data, maxsize);
+        spi__transceive(spi0_fpga, txbuf, maxsize+1);
+    }
+
+    return maxsize;
+}
 
 
 

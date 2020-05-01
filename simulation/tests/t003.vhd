@@ -26,6 +26,7 @@ begin
     wait until Spectrum_Data.Busy = false;
     Spectrum_Cmd.Cmd      <= NONE;
 
+
     -- Write a simple pattern on screen.
 
     Spectrum_Cmd.Address  <= x"4000";

@@ -202,6 +202,10 @@ set_location_assignment PIN_101 -to RAMD_io[5]
 set_location_assignment PIN_8 -to TP4_o
 set_location_assignment PIN_106 -to USB_RCV_i
 set_global_assignment -name CYCLONEIII_CONFIGURATION_SCHEME "PASSIVE SERIAL"
+set_global_assignment -name VHDL_FILE tap_engine.vhd
+set_global_assignment -name VHDL_FILE tap_pulse.vhd
+set_global_assignment -name VHDL_FILE tap_player.vhd
+set_global_assignment -name VHDL_FILE tap_fifo.vhd
 set_global_assignment -name VHDL_FILE resource_fifo.vhd
 set_global_assignment -name VHDL_FILE delay_filter.vhd
 set_global_assignment -name VHDL_FILE glitch_filter.vhd

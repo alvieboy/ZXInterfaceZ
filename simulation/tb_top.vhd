@@ -7,6 +7,8 @@ use work.bfm_clock_p.all;
 use work.bfm_spimaster_p.all;
 use work.bfm_spectrum_p.all;
 use work.bfm_ctrlpins_p.all;
+use work.bfm_rom_p.all;
+use work.bfm_ula_p.all;
 
 use work.txt_util.all;
 
@@ -26,11 +28,13 @@ architecture sim of tb_top is
     Spimaster_Cmd   : out Cmd_Spimaster_type;
     Spectrum_Cmd    : out Cmd_Spectrum_type;
     CtrlPins_Cmd    : out Cmd_CtrlPins_type;
+    Rom_Cmd         : out Cmd_Rom_type;
+    Ula_Cmd         : out Cmd_Ula_type;
     -- Inputs
     Spimaster_Data  : in Data_Spimaster_type;
     Spectrum_Data   : in Data_Spectrum_type;
-    CtrlPins_Data   : in Data_CtrlPins_type
-
+    CtrlPins_Data   : in Data_CtrlPins_type;
+    Ula_Data        : in Data_Ula_type
   );
   end component;
 
@@ -42,11 +46,13 @@ architecture sim of tb_top is
   signal Spimaster_Cmd_s  : Cmd_Spimaster_type := Cmd_Spimaster_Defaults;
   signal Spectrum_Cmd_s   : Cmd_Spectrum_type  := Cmd_Spectrum_Defaults;
   signal CtrlPins_Cmd_s   : Cmd_CtrlPins_type  := Cmd_CtrlPins_Defaults;
+  signal Rom_Cmd_s        : Cmd_Rom_type  := Cmd_Rom_Defaults;
+  signal Ula_Cmd_s        : Cmd_Ula_type  := Cmd_Ula_Defaults;
 
   signal Spimaster_Data_s : Data_Spimaster_type;
   signal Spectrum_Data_s  : Data_Spectrum_type;
   signal CtrlPins_Data_s  : Data_CtrlPins_type;
-
+  signal Ula_Data_s       : Data_Ula_type;
 
   SIGNAL A_BUS_OE_s : STD_LOGIC;
   SIGNAL ASDO_s: STD_LOGIC;
@@ -66,9 +72,9 @@ architecture sim of tb_top is
   SIGNAL ESP_QHD_io : STD_LOGIC;
   SIGNAL ESP_QWP_io : STD_LOGIC;
   SIGNAL ESP_SCK_s : STD_LOGIC;
-  SIGNAL FORCE_INT_o : STD_LOGIC;
-  SIGNAL FORCE_RESET_o : STD_LOGIC;
-  SIGNAL FORCE_ROMCS_o : STD_LOGIC;
+  SIGNAL FORCE_INT_s : STD_LOGIC;
+  SIGNAL FORCE_RESET_s : STD_LOGIC;
+  SIGNAL FORCE_ROMCS_s : STD_LOGIC;
   SIGNAL FORCE_NMI_s : STD_LOGIC;
   SIGNAL FORCE_IORQULA_s : STD_LOGIC;
   SIGNAL NCSO_o : STD_LOGIC;
@@ -128,10 +134,13 @@ begin
       Spimaster_Cmd   => Spimaster_Cmd_s,
       Spectrum_Cmd    => Spectrum_Cmd_s,
       CtrlPins_Cmd    => CtrlPins_Cmd_s,
+      Rom_Cmd         => Rom_Cmd_s,
+      Ula_Cmd         => Ula_Cmd_s,
       -- Outputs
       Spimaster_Data  => Spimaster_Data_s,
       Spectrum_Data   => Spectrum_Data_s,
-      CtrlPins_Data   => CtrlPins_Data_s
+      CtrlPins_Data   => CtrlPins_Data_s,
+      Ula_Data        => Ula_Data_s
     );
 
   sysclk_inst: entity work.bfm_clock
@@ -174,13 +183,40 @@ begin
       rfsh_o  => XRFSH_s
     );
 
+  rom_inst: entity work.bfm_rom
+    port map (
+      Cmd_i   => Rom_Cmd_s,
+      A_i     => XA_s,
+      MREQn_i => XMREQ_s,
+      D_o     => XD_io,
+      RDn_i   => XRD_s,
+      OEn_i   => FORCE_ROMCS_s
+    );
+
+  ula_inst: entity work.bfm_ula
+    port map (
+      Cmd_i   => Ula_Cmd_s,
+      Data_o  => Ula_Data_s,
+      A_i     => XA_s,
+      D_io    => XD_io,
+      IOREQn_i=> XIORQ_s,
+      RDn_i   => XRD_s,
+      WRn_i   => XWR_s,
+      OEn_i   => FORCE_IORQULA_s
+    );
+
   ctrlpins_inst: entity work.bfm_ctrlpins
     port map (
       Cmd_i     => CtrlPins_Cmd_s,
       Data_o    => CtrlPins_Data_s,
 
       IO26_i => ESP_IO26_s,
-      IO27_i => ESP_IO27_s
+      IO27_i => ESP_IO27_s,
+      FORCE_RESET_i => FORCE_RESET_s,
+      FORCE_ROMCS_i => FORCE_ROMCS_s,
+      FORCE_NMI_i   => FORCE_NMI_s,
+      FORCE_IORQULA_i => FORCE_IORQULA_s
+
     );
 
   DUT: entity work.interfacez_top
@@ -199,9 +235,9 @@ begin
     ESP_QHD_io => ESP_QHD_io,
     ESP_QWP_io => ESP_QWP_io,
     ESP_SCK_i => ESP_SCK_s,
-    FORCE_INT_o => FORCE_INT_o,
-    FORCE_RESET_o => FORCE_RESET_o,
-    FORCE_ROMCS_o => FORCE_ROMCS_o,
+    FORCE_INT_o => FORCE_INT_s,
+    FORCE_RESET_o => FORCE_RESET_s,
+    FORCE_ROMCS_o => FORCE_ROMCS_s,
     FORCE_NMI_o   => FORCE_NMI_s,
     FORCE_IORQULA_o => FORCE_IORQULA_s,
 

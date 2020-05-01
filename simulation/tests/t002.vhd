@@ -28,14 +28,6 @@ begin
 
     wait for 32 * 10.41 ns;
 
-    Spectrum_Cmd.Address <= x"00FE";
-    Spectrum_Cmd.Cmd     <= READIO;
-    wait for 0 ps;
-    wait until Spectrum_Data.Busy = false;
-    Spectrum_Cmd.Cmd     <= NONE;
-    wait for 10 ns;
-
-
     Check( "1: CtrlPins27 is 1", CtrlPins_Data.IO27 , '1');
 
     dcalc: for i in 0 to 64 loop

@@ -46,7 +46,7 @@ entity zxinterface is
 
     -- Debug
     TP5           : out std_logic;
-    TP6           : out std_logic;
+    --TP6           : out std_logic;
     --
     spec_int_o    : out std_logic;
     spec_nreq_o   : out std_logic; -- Spectrum data request
@@ -109,6 +109,7 @@ architecture beh of zxinterface is
 
   signal a_s                : std_logic_vector(15 downto 0); -- Latched address
   signal d_s                : std_logic_vector(7 downto 0); -- Latched data (read). Read accesses from CPU
+  signal d_unlatched_s      : std_logic_vector(7 downto 0); -- Un-latched data (read). Read accesses from CPU
 
   signal data_o_s           : std_logic_vector(7 downto 0); -- Data to Spectrum, multiplexed
   signal data_o_valid_s     : std_logic;
@@ -144,6 +145,10 @@ architecture beh of zxinterface is
   signal forceromcs_spisck_off_s: std_logic;
   signal forceromcs_off_s: std_logic;
   signal forceromonretn_r: std_logic;
+  signal forcenmi_spisck_on_s: std_logic;
+  signal forcenmi_spisck_off_s: std_logic;
+  signal forcenmi_on_s: std_logic;
+  signal forcenmi_off_s: std_logic;
 
   signal retn_det_s   : std_logic;
   signal spect_capsyncen_s: std_logic;
@@ -187,6 +192,17 @@ architecture beh of zxinterface is
   signal resfifo_full_s         : std_logic_vector(3 downto 0); -- main clock
   signal resfifo_empty_s        : std_logic;                    -- SPI clock
 
+  signal tapfifo_reset_s        : std_logic;
+  signal tapfifo_reset_spisck_s : std_logic;
+  signal tapfifo_wr_s           : std_logic;
+  signal tapfifo_write_s        : std_logic_vector(7 downto 0);
+  signal tapfifo_full_s         : std_logic;
+  signal tapfifo_used_s         : std_logic_vector(9 downto 0);
+  signal tap_enable_spisck_s    : std_logic;
+  signal tap_enable_s           : std_logic;
+  signal tap_audio_s            : std_logic;
+
+
   signal cmdfifo_wr_s           : std_logic;
   signal cmdfifo_rd_spiclk_s    : std_logic;
   signal cmdfifo_write_s        : std_logic_vector(7 downto 0);
@@ -224,8 +240,16 @@ architecture beh of zxinterface is
   signal pc_spisck_r            : std_logic_vector(15 downto 0);
 
   signal vidmode_resync_r       : std_logic_vector(1 downto 0);
+  signal nmi_access_s           : std_logic;
+  signal mem_rd_p_dly_s         : std_logic;
+  signal io_rd_p_dly_s          : std_logic;
+
+  signal nmi_r                  : std_logic;
+  signal ulahack_s              : std_logic;
+  signal ulahack_spisck_s       : std_logic;
 
 begin
+  
 
   clockmux_inst : component clockmux
 		port map (
@@ -280,12 +304,15 @@ begin
       oe_i          => data_o_valid_s,
   
       d_o           => d_s,
+      d_unlatched_o => d_unlatched_s,
       a_o           => a_s,
   
       io_rd_p_o     => io_rd_p_s,
+      io_rd_p_dly_o => io_rd_p_dly_s,
       io_wr_p_o     => io_wr_p_s,
       io_active_o   => io_active_s,
       mem_rd_p_o    => mem_rd_p_s,
+      mem_rd_p_dly_o=> mem_rd_p_dly_s, -- Used for opcode capture
       mem_wr_p_o    => mem_wr_p_s,
       mem_active_o  => mem_active_s,
       opcode_rd_p_o => opcode_rd_p_s,
@@ -334,13 +361,17 @@ begin
 
       wrp_i           => io_wr_p_s,
       rdp_i           => io_rd_p_s,
+      rdp_dly_i       => io_rd_p_dly_s,
       active_i        => io_active_s,
       adr_i           => a_s,
-      dat_i           => d_s,
+      dat_i           => d_unlatched_s,
       dat_o           => iodata_s,
       enable_o        => io_enable_s,
+      forceiorqula_o  => FORCE_IORQULA_o,
+      audio_i         => '0',
 
       port_fe_o       => port_fe_s,
+      ulahack_i       => ulahack_s,
 
       resfifo_rd_o    => resfifo_rd_s,
       resfifo_read_i  => resfifo_read_s,
@@ -497,6 +528,7 @@ begin
     capture_trig_val_o  => capture_trig_val_spisck_s,
 
     vidmode_o     => vidmode_s,
+    ulahack_o     => ulahack_spisck_s,
 
     rstfifo_o     => fifo_reset_s,
     rstspect_o    => spect_reset_s,
@@ -509,6 +541,14 @@ begin
     resfifo_wr_o    => resfifo_wr_s,
     resfifo_write_o => resfifo_write_s,
     resfifo_full_i  => resfifo_full_s,
+    -- TAP fifo/control
+    tapfifo_reset_o   => tapfifo_reset_spisck_s,
+    tapfifo_wr_o      => tapfifo_wr_s,
+    tapfifo_write_o   => tapfifo_write_s,
+    tapfifo_full_i    => tapfifo_full_s,
+    tapfifo_used_i    => tapfifo_used_s,
+    tap_enable_o      => tap_enable_spisck_s,
+
     -- Command FIFO
 
     cmdfifo_reset_o       => cmdfifo_reset_spiclk_s,
@@ -520,8 +560,9 @@ begin
 
     forceromonretn_trig_o => forceromonretn_trig_spisck_s,
     forceromcs_trig_on_o  => forceromcs_spisck_on_s,
-    forceromcs_trig_off_o => forceromcs_spisck_off_s
-
+    forceromcs_trig_off_o => forceromcs_spisck_off_s,
+    forcenmi_trig_on_o    => forcenmi_spisck_on_s,
+    forcenmi_trig_off_o    => forcenmi_spisck_off_s
   );
 
   fmretn: entity work.async_pulse port map (
@@ -545,11 +586,34 @@ begin
     pulse_o   => forceromcs_off_s
   );
 
+  fmnmion: entity work.async_pulse port map (
+    clk_i     => clk_i,
+    rst_i     => arst_i,
+    pulse_i   => forcenmi_spisck_on_s,
+    pulse_o   => forcenmi_on_s
+  );
+
+  fmnmioff: entity work.async_pulse port map (
+    clk_i     => clk_i,
+    rst_i     => arst_i,
+    pulse_i   => forcenmi_spisck_off_s,
+    pulse_o   => forcenmi_off_s
+  );
+
   specinten_sync: entity work.sync generic map (RESET => '0')
       port map ( clk_i => clk_i, arst_i => arst_i, din_i => spect_inten_spisck_s, dout_o => spect_inten_s );
 
   capsync_sync: entity work.sync generic map (RESET => '0')
       port map ( clk_i => clk_i, arst_i => arst_i, din_i => spect_capsyncen_spisck_s, dout_o => spect_capsyncen_s );
+
+  ulahack_sync: entity work.sync generic map (RESET => '0')
+      port map ( clk_i => clk_i, arst_i => arst_i, din_i => ulahack_spisck_s, dout_o => ulahack_s );
+
+  tapen_sync: entity work.sync generic map (RESET => '0')
+      port map ( clk_i => clk_i, arst_i => arst_i, din_i => tap_enable_spisck_s, dout_o => tap_enable_s );
+
+  tapreset_sync: entity work.sync generic map (RESET => '0')
+      port map ( clk_i => clk_i, arst_i => arst_i, din_i => tapfifo_reset_spisck_s, dout_o => tapfifo_reset_s );
 
   intack_sync: entity work.async_pulse2
       port map (
@@ -582,6 +646,25 @@ begin
     end if;
   end process;
 
+  -- TAP player.
+
+  tap_engine_inst: entity work.tap_engine
+  port map (
+    clk_i     => clk_i,
+    arst_i    => arst_i,
+
+    enable_i  => tap_enable_s,
+    restart_i => tapfifo_reset_s,
+
+    fclk_i    => SPI_SCK_i,
+    fdata_i   => tapfifo_write_s,
+    fwr_i     => tapfifo_wr_s,
+    ffull_o   => tapfifo_full_s,
+    fused_o   => tapfifo_used_s,
+
+    audio_o   => tap_audio_s
+  );
+
 
   process(clk_i, arst_i)
   begin
@@ -603,17 +686,36 @@ begin
     end if;
   end process;
 
+  process(clk_i, arst_i)
+  begin
+    if arst_i='1' then
+      nmi_r <= '0';
+    elsif rising_edge(clk_i) then
+
+      if forcenmi_off_s='1' then
+        nmi_r <= '0';
+      elsif forcenmi_on_s='1' then
+        nmi_r <= '1';
+      end if;
+
+      if nmi_access_s='1' then -- Entered NMI.
+        nmi_r <= '0';
+      end if;
+    end if;
+  end process;
+
   insndet_inst: entity work.insn_detector
     port map (
       clk_i       => clk_i,
       arst_i      => arst_i,
-      valid_i     => mem_rd_p_s,
+      valid_i     => mem_rd_p_dly_s,
       a_i         => a_s,
-      d_i         => d_s,
+      d_i         => d_unlatched_s,
       m1_i        => m1_s,
       pc_o        => pc_s,
       pc_valid_o  => pc_valid_s,
-      retn_det_o  => retn_det_s
+      retn_det_o  => retn_det_s,
+      nmi_access_o=> nmi_access_s
     );
 
   process(clk_i, arst_i)
@@ -698,11 +800,11 @@ begin
   FORCE_ROMCS_o <= spect_forceromcs_bussync_s;
   FORCE_RESET_o <= spect_reset_s;
   FORCE_INT_o   <= '0';
-  FORCE_NMI_o   <= '0';
-  FORCE_IORQULA_o <= '0';
+  FORCE_NMI_o   <= nmi_r;
+  --FORCE_IORQULA_o <= '0';
 
   --TP5 <= clk_i;
-  TP5 <= pixclk_s;
+  TP5 <= tap_audio_s;
 
   spec_int_o <= '1' when spect_inten_s='0' else XINT_i;--sync_s; TBD
   spec_nreq_o <= spec_nreq_r;

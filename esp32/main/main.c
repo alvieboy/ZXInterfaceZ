@@ -19,6 +19,7 @@
 #include "videostreamer.h"
 #include "netcmd.h"
 #include "sdcard.h"
+#include "tapplayer.h"
 
 volatile int restart_requested = 0;
 
@@ -98,7 +99,7 @@ void app_main()
 #endif
     videostreamer__init();
     netcmd__init();
-
+    tapplayer__init();
     // Start capture
     //start_capture();
 

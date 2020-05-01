@@ -85,6 +85,8 @@ architecture str of interfacez_top is
   signal capclk_s     : std_logic;
 
   signal FORCE_ROMCS_s: std_logic;
+  signal FORCE_NMI_s  : std_logic;
+  signal FORCE_IORQULA_s: std_logic;
 
   signal wb_rdat      : std_logic_vector(7 downto 0);
   signal wb_wdat      : std_logic_vector(7 downto 0);
@@ -136,6 +138,8 @@ begin
       FORCE_ROMCS_o => FORCE_ROMCS_s,
       FORCE_RESET_o => FORCE_RESET_o,
       FORCE_INT_o   => FORCE_INT_o,
+      FORCE_NMI_o   => FORCE_NMI_s,
+      FORCE_IORQULA_o => FORCE_IORQULA_s,
       XA_i          => XA_i,
       XD_io         => XD_io,
       XCK_i         => XCK_i,
@@ -176,7 +180,10 @@ begin
   EXT_o(7) <= bright_s and grb_s(0); -- Blue 0
 
 
-  FORCE_ROMCS_o <= FORCE_ROMCS_s;
+  FORCE_ROMCS_o   <= FORCE_ROMCS_s;
+  FORCE_NMI_o     <= FORCE_NMI_s;
+  FORCE_IORQULA_o <= FORCE_IORQULA_s;
+
   ESP_IO27_o     <= spec_nreq_s;
 
   -- Temporary USB.

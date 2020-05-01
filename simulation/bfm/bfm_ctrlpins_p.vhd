@@ -12,6 +12,10 @@ package bfm_ctrlpins_p is
   type Data_CtrlPins_type is record
     IO26      : std_logic;
     IO27      : std_logic;
+    RESET     : std_logic;
+    ROMCS     : std_logic;
+    NMI       : std_logic;
+    IORQULA   : std_logic;
 
     Busy      : boolean;
     Data      : std_logic_vector(7 downto 0);
@@ -23,11 +27,15 @@ package bfm_ctrlpins_p is
 
   component bfm_ctrlpins is
     port (
-      Cmd_i   : in Cmd_CtrlPins_type;
-      Data_o  : out Data_CtrlPins_type;
+      Cmd_i           : in Cmd_CtrlPins_type;
+      Data_o          : out Data_CtrlPins_type;
 
-      IO26_i : in std_logic;
-      IO27_i : in std_logic
+      IO26_i          : in std_logic;
+      IO27_i          : in std_logic;
+      FORCE_RESET_i   : in std_logic;
+      FORCE_ROMCS_i   : in std_logic;
+      fORCE_NMI_i     : in std_logic;
+      FORCE_IORQULA_i : in std_logic
     );
   end component bfm_ctrlpins;
 
