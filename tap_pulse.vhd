@@ -83,14 +83,14 @@ begin
       when LOADDATA =>
         rd_o    <= '0';
         w.state := PULSEHIGH;
-        w.audio := not r.audio; --'1';
+        w.audio := not r.audio;
         w.dly   := pulse_high(data_i);
       when PULSEHIGH =>
         rd_o    <= '0';
         if tstate_i='1' then
           if r.dly=0 then
             w.state := PULSELOW;
-            w.audio := not r.audio; --'0';
+            w.audio := not r.audio;
             w.dly   := pulse_low(data_i);
           else
             w.dly := r.dly - 1;
@@ -106,8 +106,8 @@ begin
             if ready_i='1' then
               w.state := LOADDATA;
             else
-              -- Generate the high pulse when we are to stop.
-              w.audio := not r.audio;--'1';
+              -- Generate the pulse when we are to stop.
+              w.audio := not r.audio;
             end if;
           else
             w.dly := r.dly - 1;
