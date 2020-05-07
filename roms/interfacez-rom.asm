@@ -70,7 +70,11 @@ KEY_INT:	PUSH	BC		; save the other
 
 
 	ORG	$0066
-NMIH:	RETN
+NMIH:	PUSH AF
+	JP	NMIHANDLER
+	;POP AF
+        
+	;RETN
 
 	ORG 	$0080
 	
@@ -114,12 +118,18 @@ RAM_DONE:
 
         CALL 	SETATTRS
 	
-        LD	A, $1
+        ;
+        ; DEBUG ONLY
+        ;
+        ;JP 	EXTRAMTEST
+        JP 	KEYBTEST
+        
+        LD	A, $7
         OUT	($FE),A
 
 
 	LD	HL, HEAP
-        LD	A, $00
+        LD	A, RESOURCE_ID_VERSION
         CALL 	LOADRESOURCE
         JP	Z, 0
         
@@ -494,7 +504,7 @@ INTERNALERROR:
         LD	A, 32
         CALL	PRINTSTRINGPAD
 	LD	DE, LINE22
-        LD	HL, EMPTYSYRING
+        LD	HL, EMPTYSTRING
         LD	A, 32
         CALL	PRINTSTRINGPAD
 _endl1: HALT
@@ -509,17 +519,20 @@ _endl1: HALT
         include "mainmenu.asm"
         include "wifimenu.asm"
         include "sdcardmenu.asm"
+        include "nmimenu.asm"
         include "keyboard.asm"
 	include	"charmap.asm"
         include	"resource.asm"
         include	"graphics.asm"
+	include "nmihandler.asm"
         include	"print.asm"
         include	"debug.asm"
-
+	include "keybtest.asm"
+        
                ; 00000000001111111111222222222233
                ; 01234567890123456789012345678901
 INTERNALERRORSTR: DB "Internal ERROR, aborting" ; Fallback to EMPTYSYRING
-EMPTYSYRING:	DB 0
+EMPTYSTRING:	DB 0
 COPYRIGHT:DB	"ZX Interface Z (C) Alvieboy 2020", 0
 
 PASSWDTMP: DB "Spectrum", 0

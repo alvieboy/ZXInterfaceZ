@@ -202,6 +202,61 @@ set_location_assignment PIN_101 -to RAMD_io[5]
 set_location_assignment PIN_8 -to TP4_o
 set_location_assignment PIN_106 -to USB_RCV_i
 set_global_assignment -name CYCLONEIII_CONFIGURATION_SCHEME "PASSIVE SERIAL"
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to RAMCLK_o
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to RAMNCS_o
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to RAMD_io[0]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to RAMD_io[1]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to RAMD_io[2]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to RAMD_io[3]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to RAMD_io[4]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to RAMD_io[5]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to RAMD_io[6]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to RAMD_io[7]
+set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to RAMD_io[0]
+set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to RAMD_io[1]
+set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to RAMD_io[2]
+set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to RAMD_io[3]
+set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to RAMD_io[4]
+set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to RAMD_io[5]
+set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to RAMD_io[6]
+set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to RAMD_io[7]
+set_global_assignment -name EDA_TEST_BENCH_ENABLE_STATUS TEST_BENCH_MODE -section_id eda_simulation
+set_global_assignment -name EDA_NATIVELINK_SIMULATION_TEST_BENCH t006 -section_id eda_simulation
+set_global_assignment -name EDA_TEST_BENCH_NAME t006 -section_id eda_simulation
+set_global_assignment -name EDA_DESIGN_INSTANCE_NAME uut -section_id t006
+set_global_assignment -name EDA_TEST_BENCH_MODULE_NAME t006 -section_id t006
+set_global_assignment -name EDA_TEST_BENCH_FILE simulation/bfm/bfm_reset.vhd -section_id t006
+set_global_assignment -name EDA_TEST_BENCH_FILE simulation/bfm/bfm_spimaster_p.vhd -section_id t006
+set_global_assignment -name EDA_TEST_BENCH_FILE simulation/bfm/bfm_rom_p.vhd -section_id t006
+set_global_assignment -name EDA_TEST_BENCH_FILE simulation/bfm/bfm_reset_pb.vhd -section_id t006
+set_global_assignment -name EDA_TEST_BENCH_FILE simulation/bfm/bfm_rom.vhd -section_id t006
+set_global_assignment -name EDA_TEST_BENCH_FILE simulation/bfm/bfm_clock_p.vhd -section_id t006
+set_global_assignment -name EDA_TEST_BENCH_FILE simulation/bfm/bfm_reset_p.vhd -section_id t006
+set_global_assignment -name EDA_TEST_BENCH_FILE simulation/bfm/bfm_spimaster.vhd -section_id t006
+set_global_assignment -name EDA_TEST_BENCH_FILE simulation/bfm/bfm_clock.vhd -section_id t006
+set_global_assignment -name EDA_TEST_BENCH_FILE simulation/bfm/bfm_qspiram_p.vhd -section_id t006
+set_global_assignment -name EDA_TEST_BENCH_FILE simulation/bfm/bfm_audiocap_p.vhd -section_id t006
+set_global_assignment -name EDA_TEST_BENCH_FILE simulation/bfm/bfm_spectrum.vhd -section_id t006
+set_global_assignment -name EDA_TEST_BENCH_FILE simulation/bfm/bfm_spectrum_p.vhd -section_id t006
+set_global_assignment -name EDA_TEST_BENCH_FILE simulation/bfm/bfm_ula.vhd -section_id t006
+set_global_assignment -name EDA_TEST_BENCH_FILE simulation/bfm/bfm_ula_p.vhd -section_id t006
+set_global_assignment -name EDA_TEST_BENCH_FILE simulation/bfm/bfm_ctrlpins.vhd -section_id t006
+set_global_assignment -name EDA_TEST_BENCH_FILE simulation/bfm/bfm_ctrlpins_p.vhd -section_id t006
+set_global_assignment -name EDA_TEST_BENCH_FILE simulation/bfm/bfm_qspiram.vhd -section_id t006
+set_global_assignment -name EDA_TEST_BENCH_FILE simulation/bfm/bfm_audiocap.vhd -section_id t006
+set_global_assignment -name EDA_TEST_BENCH_FILE simulation/tests/t006.vhd -section_id t006
+set_global_assignment -name EDA_TEST_BENCH_FILE simulation/tests/t002.vhd -section_id t006
+set_global_assignment -name EDA_TEST_BENCH_FILE simulation/tests/t007.vhd -section_id t006
+set_global_assignment -name EDA_TEST_BENCH_FILE simulation/tests/t003.vhd -section_id t006
+set_global_assignment -name EDA_TEST_BENCH_FILE simulation/tests/t004.vhd -section_id t006
+set_global_assignment -name EDA_TEST_BENCH_FILE simulation/tests/t005.vhd -section_id t006
+set_global_assignment -name EDA_TEST_BENCH_FILE simulation/tests/t001.vhd -section_id t006
+set_instance_assignment -name IO_MAXIMUM_TOGGLE_RATE "100 MHz" -to RAMCLK_o
+set_global_assignment -name VHDL_FILE ram_adaptor.vhd
+set_global_assignment -name VHDL_FILE obuf.vhd
+set_global_assignment -name VHDL_FILE iobuf.vhd
+set_global_assignment -name VHDL_FILE ahbpkg.vhd
+set_global_assignment -name VHDL_FILE psram.vhd
 set_global_assignment -name VHDL_FILE tap_engine.vhd
 set_global_assignment -name VHDL_FILE tap_pulse.vhd
 set_global_assignment -name VHDL_FILE tap_player.vhd

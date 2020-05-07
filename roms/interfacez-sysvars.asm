@@ -47,7 +47,9 @@ SSID		equ	$5CB0
 WIFIPASSWD      equ	$5CD0 ; TODO.
 
 STATUSBUF	equ	$5CF0 
-HEAP		equ	$5D00 
+
+
+HEAP		equ	$5E00 
 
 
 SCREEN		equ	$4000
@@ -59,6 +61,14 @@ LINE23		equ 	$50E0
 LINE22		equ 	$50C0
 LINE21		equ 	$50A0
 ATTR		equ	$5800
+SCREENSIZE	equ     $1B00
 
 
 
+; NMI areas.
+NMI_SCRATCH	equ 	$5D00
+NMIEXIT		equ 	$5D02
+NMI_MENU 	equ 	$5D03
+SNAFILENAME	equ	$5D20
+NMICMD_RESPONSE equ	$5D40
+NMI_SPVAL	equ 	$5FFE

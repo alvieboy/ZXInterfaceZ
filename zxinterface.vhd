@@ -3,10 +3,12 @@ use IEEE.STD_LOGIC_1164.all;
 use IEEE.numeric_std.all;
 library work;
 use work.zxinterfacepkg.all;
+use work.ahbpkg.all;
 
 entity zxinterface is
   port (
     clk_i         : in std_logic;
+    clk48_i       : in std_logic;
     capclk_i      : in std_logic; -- for captures
     videoclk_i    : in std_logic_vector(1 downto 0); -- 28.24Mhz/40Mhz input
 
@@ -48,8 +50,29 @@ entity zxinterface is
     TP5           : out std_logic;
     --TP6           : out std_logic;
     --
+
+    -- USB PHY
+    USB_VP_i      : in std_logic;
+    USB_VM_i      : in std_logic;
+    USB_RCV_i     : in std_logic;
+    USB_OE_o      : out std_logic;
+    USB_SOFTCON_o : out std_logic;
+    USB_SPEED_o   : out std_logic;
+    USB_VMO_o     : out std_logic;
+    USB_VPO_o     : out std_logic;
+    -- USB power control
+    USB_FLT_i     : in std_logic;
+    USB_PWREN_o   : out std_logic;
+
     spec_int_o    : out std_logic;
     spec_nreq_o   : out std_logic; -- Spectrum data request
+
+    -- RAM interface
+    RAMD_i        : in std_logic_vector(7 downto 0);
+    RAMD_o        : out std_logic_vector(7 downto 0);
+    RAMD_oe_o     : out std_logic_vector(7 downto 0);
+    RAMCLK_o      : out std_logic;
+    RAMNCS_o      : out std_logic;
 
     -- video out
     hsync_o       : out std_logic;
@@ -245,11 +268,45 @@ architecture beh of zxinterface is
   signal io_rd_p_dly_s          : std_logic;
 
   signal nmi_r                  : std_logic;
+  signal in_nmi_rom_r           : std_logic;
   signal ulahack_s              : std_logic;
   signal ulahack_spisck_s       : std_logic;
 
+  signal psram_ahb_m2s          : AHB_M2S;
+  signal psram_ahb_s2m          : AHB_S2M;
+
+  signal ram_addr_s             : std_logic_vector(15 downto 0);
+  signal ram_dat_wr_s           : std_logic_vector(7 downto 0);
+  signal ram_dat_rd_s           : std_logic_vector(7 downto 0);
+  signal ram_wr_s               : std_logic;
+  signal ram_rd_s               : std_logic;
+  signal ram_ack_s              : std_logic;
+
+  signal ahb_spi_m2s            : AHB_M2S;
+  signal ahb_spi_s2m            : AHB_S2M;
+
+  signal ahb_spect_m2s          : AHB_M2S;
+  signal ahb_spect_s2m          : AHB_S2M;
+
+  signal ahb_null_m2s           : AHB_M2S;
+  signal ahb_null_s2m           : AHB_S2M;
+
+  signal extram_addr_s          : std_logic_vector(31 downto 0);
+  signal extram_dat_s           : std_logic_vector(31 downto 0);
+  signal extram_req_s           : std_logic;
+  signal extram_valid_s         : std_logic;
+
+  signal rst48_s                : std_logic;
 begin
-  
+
+  rst48_inst: entity work.rstgen
+    port map (
+      arst_i  => arst_i,
+      clk_i   => clk48_i,
+      rst_o   => rst48_s
+    );
+
+
 
   clockmux_inst : component clockmux
 		port map (
@@ -368,7 +425,7 @@ begin
       dat_o           => iodata_s,
       enable_o        => io_enable_s,
       forceiorqula_o  => FORCE_IORQULA_o,
-      audio_i         => '0',
+      audio_i         => tap_audio_s,
 
       port_fe_o       => port_fe_s,
       ulahack_i       => ulahack_s,
@@ -379,7 +436,14 @@ begin
 
       cmdfifo_wr_o    => cmdfifo_wr_s,
       cmdfifo_write_o => cmdfifo_write_s,
-      cmdfifo_full_i  => cmdfifo_full_s
+      cmdfifo_full_i  => cmdfifo_full_s ,
+
+      ram_addr_o      => ram_addr_s,
+      ram_dat_o       => ram_dat_wr_s,
+      ram_dat_i       => ram_dat_rd_s,
+      ram_wr_o        => ram_wr_s,
+      ram_rd_o        => ram_rd_s,
+      ram_ack_i       => ram_ack_s
   );
 
 
@@ -442,6 +506,8 @@ begin
   fifo_write_s  <= io_wr_p_s & d_s & a_s;
 
   -- ROM is active on access if FORCE romcs is '1'
+
+  -- TODO: we should have more then one ROM here.
 
   rom_active_s    <= rom_enable_s and spect_forceromcs_bussync_s;
   --io_active_s     <= io_enable_s;-- and NOT XRD_sync_s;
@@ -557,6 +623,11 @@ begin
     cmdfifo_empty_i       => cmdfifo_empty_spiclk_s,
     cmdfifo_intack_o      => cmdfifo_intack_spisck_s,
 
+
+    extram_addr_o         => extram_addr_s,
+    extram_dat_i          => extram_dat_s,
+    extram_req_o          => extram_req_s,
+    extram_valid_i        => extram_valid_s,
 
     forceromonretn_trig_o => forceromonretn_trig_spisck_s,
     forceromcs_trig_on_o  => forceromcs_spisck_on_s,
@@ -690,16 +761,24 @@ begin
   begin
     if arst_i='1' then
       nmi_r <= '0';
+      in_nmi_rom_r <= '0';
     elsif rising_edge(clk_i) then
 
       if forcenmi_off_s='1' then
         nmi_r <= '0';
+        in_nmi_rom_r <='0';
       elsif forcenmi_on_s='1' then
         nmi_r <= '1';
+        -- Force ROMCS
       end if;
 
       if nmi_access_s='1' then -- Entered NMI.
+        in_nmi_rom_r <= nmi_r;
         nmi_r <= '0';
+      end if;
+
+      if retn_det_s='1' then -- If we detect a RETN, leave ROM.
+        in_nmi_rom_r <= '0';
       end if;
     end if;
   end process;
@@ -785,10 +864,100 @@ begin
       spect_forceromcs_bussync_s <= '0';
     elsif rising_edge(clk_i) then
       if bus_idle_s='1' then
-        spect_forceromcs_bussync_s <= spect_forceromcs_s;
+        spect_forceromcs_bussync_s <= spect_forceromcs_s or in_nmi_rom_r;  -- Also force ROM on NMI.
       end if;
     end if;
   end process;
+
+  psram_inst: entity work.psram
+    port map (
+      clk_i   => clk_i,
+      arst_i  => arst_i,
+
+      ahb_i   => psram_ahb_m2s,
+      ahb_o   => psram_ahb_s2m,
+
+      cs_n_o  => RAMNCS_o,
+      clk_o   => RAMCLK_o,
+      d_o     => RAMD_o(3 downto 0),
+      oe_o    => RAMD_oe_o(3 downto 0),
+      d_i     => RAMD_i(3 downto 0)
+    );
+
+  ramadapt_inst: entity work.ram_adaptor
+    port map (
+      clk_i           => clk_i,
+      arst_i          => arst_i,
+      ahb_i           => ahb_spect_s2m,
+      ahb_o           => ahb_spect_m2s,
+
+      ram_addr_i      => ram_addr_s,
+      ram_dat_o       => ram_dat_rd_s,
+      ram_dat_i       => ram_dat_wr_s,
+      ram_wr_i        => ram_wr_s,
+      ram_rd_i        => ram_rd_s,
+      ram_ack_o       => ram_ack_s
+  );
+
+
+  arb_inst: entity work.ahb_arb
+    port map (
+      CLK         => clk_i,
+      RST         => arst_i,
+
+      HMAST0_I    => ahb_spect_m2s,
+      HMAST0_O    => ahb_spect_s2m,
+
+      HMAST1_I    => ahb_spi_m2s,
+      HMAST1_O    => ahb_spi_s2m,
+
+      HMAST2_I    => ahb_null_m2s,
+      HMAST2_O    => ahb_null_s2m,
+
+      HMAST3_I    => ahb_null_m2s,
+      HMAST3_O    => ahb_null_s2m,
+
+      HSLAV_I     => psram_ahb_s2m,
+      HSLAV_O     => psram_ahb_m2s
+    );
+
+
+  ahbr_inst: entity work.ahbreq_sync
+  port map (
+    mclk_i    => clk_i,
+    marst_i   => arst_i,
+
+    sclk_i    => SPI_SCK_i,
+    sarst_i   => '0', -- TODO
+
+    addr_i    => extram_addr_s,
+    trans_i   => extram_req_s,
+    valid_o   => extram_valid_s,
+    data_o    => extram_dat_s,
+
+    m_i       => ahb_spi_s2m,
+    m_o       => ahb_spi_m2s
+  );
+
+--  usb_inst: ENTITY work.usbhostctrl
+--  PORT map (
+--    usbclk_i      => clk48_i,
+--    arst_i        => rst48_s,
+--    -- Interface to transceiver
+--    softcon_o     => USB_SOFTCON_o,
+--    noe_o         => USB_OE_o,
+--    speed_o       => USB_SPEED_o,
+--    vpo_o         => USB_VPO_o,
+--    vmo_o         => USB_VMO_o,
+--
+--    rcv_i         => USB_RCV_i,
+--    vp_i          => USB_VP_i,
+--    vm_i          => USB_VM_i,
+--    pwren_o       => USB_PWREN_o,
+--    pwrflt_i      => USB_FLT_i
+--  );
+
+
 
   mosi_s          <= SPI_D_io(0);
   SPI_D_io(0)     <= 'Z';       -- MOSI - Change when Quadmode is enabled
@@ -809,6 +978,7 @@ begin
   spec_int_o <= '1' when spect_inten_s='0' else XINT_i;--sync_s; TBD
   spec_nreq_o <= spec_nreq_r;
 
+  ahb_null_m2s <= C_AHB_NULL_M2S;
 
 end beh;
 

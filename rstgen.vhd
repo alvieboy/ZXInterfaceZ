@@ -2,8 +2,11 @@ library IEEE;
 use IEEE.STD_LOGIC_1164.all;
 
 entity rstgen is
+  generic (
+    POLARITY : std_logic := '1'
+  );
   port (
-    arstn_i     : in std_logic;
+    arst_i      : in std_logic;
     clk_i       : in std_logic;
     rst_o       : out std_logic
   );
@@ -16,9 +19,9 @@ architecture beh of rstgen is
 
 begin
 
-  process(arstn_i, clk_i)
+  process(arst_i, clk_i)
   begin
-    if arstn_i='0' then
+    if arst_i=POLARITY then
       rstq1_r <= '1';
       rstq2_r <= '1';
     elsif rising_edge(clk_i) then

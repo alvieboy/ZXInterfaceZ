@@ -132,7 +132,11 @@ L3:	LD	HL, RIGHTVERTICAL
         LD	L, (IX+FRAME_OFF_TITLEPTR)
         LD	H, (IX+FRAME_OFF_TITLEPTR+1)
         PUSH	DE
-        CALL	PRINTSTRING
+        ; Compute amount of space so we can "pad" the string
+        LD	A, (IX+FRAME_OFF_WIDTH)
+        SUB	4
+        CALL	PRINTSTRINGPAD
+        
         POP	DE
         LD	A, E
         ADD	A, (IX+FRAME_OFF_WIDTH)

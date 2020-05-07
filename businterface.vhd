@@ -101,7 +101,7 @@ architecture beh of businterface is
 
   -- MemRD delayed for capture.
   signal memrd_dly_q        : std_logic_vector(7 downto 0);
-  signal iord_dly_q         : std_logic_vector(7 downto 0); -- TODO: check if we can merge these two
+  signal iord_dly_q         : std_logic_vector(15 downto 0); -- TODO: check if we can merge these two
 
 begin
 
@@ -254,7 +254,7 @@ begin
     elsif rising_edge(clk_i) then
       memrd_dly_q(7 downto 1) <= memrd_dly_q(6 downto 0);
       memrd_dly_q(0) <= memrd_p_s;
-      iord_dly_q(7 downto 1) <= iord_dly_q(6 downto 0);
+      iord_dly_q(15 downto 1) <= iord_dly_q(14 downto 0);
       iord_dly_q(0) <= iord_p_s;
     end if;
   end process;
@@ -273,7 +273,7 @@ begin
   intr_p_o      <= intr_p_s;
   bus_idle_o    <= XRD_sync_s AND XWR_sync_s AND XMREQ_sync_s AND XIORQ_sync_s;
   mem_rd_p_dly_o <= memrd_dly_q(7);
-  io_rd_p_dly_o <= iord_dly_q(7);
+  io_rd_p_dly_o <= iord_dly_q(15);
 
 
 end beh;

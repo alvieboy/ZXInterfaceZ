@@ -83,6 +83,7 @@ architecture str of interfacez_top is
   signal sysrst_s     : std_logic;
   signal plllock_s    : std_logic;
   signal capclk_s     : std_logic;
+  signal clk48_s      : std_logic;
 
   signal FORCE_ROMCS_s: std_logic;
   signal FORCE_NMI_s  : std_logic;
@@ -105,11 +106,18 @@ architecture str of interfacez_top is
   signal grb_s        : std_logic_vector(2 downto 0);
   signal spec_nreq_s  : std_logic;
 
+  signal RAMD_o_s     : std_logic_vector(7 downto 0);
+  signal RAMD_i_s     : std_logic_vector(7 downto 0);
+  signal RAMD_oe_s    : std_logic_vector(7 downto 0);
+  signal RAMCLK_s   : std_logic;
+  signal RAMNCS_s   : std_logic;
 begin
 
   rstgen_inst: entity work.rstgen
-    port map (
-      arstn_i   => plllock_s,
+    generic map (
+      POLARITY => '0'
+    ) port map (
+      arst_i    => plllock_s,
       clk_i     => sysclk_s,
       rst_o     => sysrst_s
     );
@@ -118,7 +126,7 @@ begin
     port map (
       inclk0  => CLK_i,
       c0      => sysclk_s,
-      c1      => open,--sdramclk2_s,
+      c1      => clk48_s,--sdramclk2_s,
       --c2      => open,--capclk_s,
       c3      => videoclk_s(1),  -- 40Mhz
       c4      => videoclk_s(0),   -- 28.24Mhz
@@ -128,6 +136,7 @@ begin
   interface_inst: entity work.zxinterface
     port map (
       clk_i         => sysclk_s,
+      clk48_i       => clk48_s,
       capclk_i      => capclk_s,
       videoclk_i    => videoclk_s,
       arst_i        => sysrst_s,
@@ -156,8 +165,32 @@ begin
       SPI_D_io(1)   => ESP_MISO_io,
       SPI_D_io(2)   => ESP_QWP_io, -- Write-Protect
       SPI_D_io(3)   => ESP_QHD_io, -- Hold
-      spec_int_o    => ESP_IO26_o,
+      -- RAM interface
+      RAMD_o        => RAMD_o_s,
+      RAMD_i        => RAMD_i_s,
+      RAMD_oe_o     => RAMD_oe_s,
+      RAMCLK_o      => RAMCLK_s,
+      RAMNCS_o      => RAMNCS_s,
+
+  
+      -- USB PHY
+      USB_VP_i      => USB_VP_i,
+      USB_VM_i      => USB_VM_i,
+      USB_RCV_i     => USB_RCV_i,
+      USB_OE_o      => USB_OE_o,
+      USB_SOFTCON_o => USB_SOFTCON_o,
+      USB_SPEED_o   => USB_SPEED_o,
+      USB_VMO_o     => USB_VMO_o,
+      USB_VPO_o     => USB_VPO_o,
+      -- USB power control
+      USB_FLT_i     => USB_FLT_i,
+      USB_PWREN_o   => USB_PWREN_o,
+
+      -- Debug
       TP5           => TP5_o,
+      -- Interrupts
+
+      spec_int_o    => ESP_IO26_o,
       spec_nreq_o   => spec_nreq_s, -- Request from spectrum
           -- video out
       hsync_o       => hsync_s,
@@ -193,14 +226,39 @@ begin
   USB_VMO_o     <= '0';
   USB_VPO_o     <= '1';
   USB_PWREN_o   <= '0';
-  -- Temporary RAM
-  RAMCLK_o      <= '0';
-  RAMNCS_o      <= '1';
 
   FLED_o(0)     <= '1';
   FLED_o(1)     <= '1';
   FLED_o(2)     <= not FORCE_ROMCS_s;
   LED2_o        <= '1';
+
+  ram_buf: entity work.iobuf
+  generic map (
+    WIDTH => 4,
+    tOE   => 3.7 ns,
+    tOP   => 3.7 ns,
+    tIP   => 3.7 ns
+  )
+  port map (
+    i_i     => RAMD_o_s(3 downto 0),
+    o_o     => RAMD_i_s(3 downto 0),
+    pad_io  => RAMD_io(3 downto 0),
+    oe_i    => RAMD_oe_s(3 downto 0)
+  );
+
+  ram2_buf: entity work.obuf
+  generic map (
+    WIDTH => 2,
+    tOP   => 3.7 ns
+  )
+  port map (
+    i_i(0)    => RAMCLK_s,
+    i_i(1)    => RAMNCS_s,
+    pad_o(0)  => RAMCLK_o,
+    pad_o(1)  => RAMNCS_o
+  );
+
+
 
 end str;
 

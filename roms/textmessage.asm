@@ -7,6 +7,7 @@ TEXTMESSAGE__CLEAR:
         LD	IX, TEXTMESSAGEAREA
         JP	FRAME__CLEAR
         
+        ; Inputs: HL
 TEXTMESSAGE__SHOW:
 	CALL TEXTMESSAGE__INIT ; Sets up IX
         CALL FRAME__DRAW
@@ -32,19 +33,32 @@ _l1:
 
         LD	(IX+FRAME_OFF_TITLEPTR), LOW(TEXTMESSAGE_TITLE)
         LD	(IX+FRAME_OFF_TITLEPTR+1), HIGH(TEXTMESSAGE_TITLE)
-        LD	D, 12 ; Line to display at
+        LD	D, 8 ; Line to display at
         JP	FRAME__INIT
 
 TEXTMESSAGE__DRAWCONTENT:
         LD	E, (IX+FRAME_OFF_SCREENPTR)
         LD	D, (IX+FRAME_OFF_SCREENPTR+1)
 	CALL	MOVEDOWN ; Move to next line.
+        PUSH	DE
+        INC	DE
+       	LD	HL, EMPTYSTRING
+        LD	A, (IX+FRAME_OFF_WIDTH)
+        CALL	PRINTSTRINGPAD
+        POP 	DE
         CALL	MOVEDOWN ; Move to next line.
         INC	DE
+        PUSH	DE
         LD	L, (IX+TEXTMESSAGE_OFF_STRINGPTR)
         LD	H, (IX+TEXTMESSAGE_OFF_STRINGPTR+1)
-        
-        CALL	PRINTSTRING
+        LD	A, (IX+FRAME_OFF_WIDTH)
+        CALL	PRINTSTRINGPAD
+        POP	DE
+        CALL	MOVEDOWN
+       	LD	HL, EMPTYSTRING
+        LD	A, (IX+FRAME_OFF_WIDTH)
+        CALL	PRINTSTRINGPAD
+
 
         LD	L, (IX+FRAME_OFF_ATTRPTR)
         LD	H, (IX+FRAME_OFF_ATTRPTR+1)

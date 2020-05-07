@@ -52,6 +52,8 @@ package bfm_spectrum_p is
 
   procedure SpectrumReadIO(signal Cmd: out Cmd_Spectrum_type; signal Data: in Data_Spectrum_type;
     Address: in std_logic_vector(15 downto 0); Dout: out std_logic_vector(7 downto 0));
+  procedure SpectrumWriteIO(signal Cmd: out Cmd_Spectrum_type; signal Data: in Data_Spectrum_type;
+    Address: in std_logic_vector(15 downto 0); Din: in std_logic_vector(7 downto 0));
 
 end package;
 
@@ -66,5 +68,17 @@ package body bfm_spectrum_p is
     Cmd.Cmd      <= NONE;
     wait for 0 ps;
     Dout := Data.Data;
+  end procedure;
+
+  procedure SpectrumWriteIO(signal Cmd: out Cmd_Spectrum_type; signal Data: in Data_Spectrum_type;
+    Address: in std_logic_vector(15 downto 0); Din: in std_logic_vector(7 downto 0)) is
+  begin
+    Cmd.Address  <= Address;
+    Cmd.Cmd      <= WRITEIO;
+    Cmd.Data     <= Din;
+    wait until Data.Busy = false;
+    Cmd.Cmd      <= NONE;
+    wait for 0 ps;
+    --Dout := Data.Data;
   end procedure;
 end package body;

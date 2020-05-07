@@ -196,39 +196,16 @@ _nopwdneeded
 	; HL input is SSID.
 WIFISENDCONFIG:
         ; Send in AP name.
-        LD	A, $01 ; Setup wifi
+        LD	A, CMD_SETUP_WIFI ; Setup wifi
         CALL	WRITECMDFIFO
         LD	A, $01 ; STA mode. 
         CALL	WRITECMDFIFO
-        ; Now, send in SSID
-        ; Get SSID len first.
-        PUSH	HL
-        CALL	STRLEN
-        POP	HL
-        CALL	WRITECMDFIFO ; Send SSID len.
-        ; Send SSID
-        LD	B, A
-_l3:
-        LD	A,(HL)
-        INC	HL
-        CALL	WRITECMDFIFO
-        DJNZ 	_l3
+        ; HL has SSID
+        CALL	WRITECMDSTRING
         ; Check password, send if needed
         LD	HL, WIFIPASSWD
-        PUSH 	HL
-        CALL	STRLEN
-        POP	HL
-        CALL	WRITECMDFIFO ; Send PWD len
-        CP	0
-        JR	Z, _nopwd
-        LD	B, A
-_l5:
-        LD	A,(HL)
-        INC	HL
-        CALL	WRITECMDFIFO
-        DJNZ 	_l5
+        CALL	WRITECMDSTRING
         ; Clear PWD entry: TODO
-_nopwd:
 	; Go back to main menu
         LD	HL, (WIFIAPMENU)
         LD	A, $38

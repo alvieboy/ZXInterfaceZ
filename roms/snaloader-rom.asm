@@ -81,7 +81,7 @@ RETINST:RETN
         
 RAM_DONE:
 	LD	HL, $5F00
-        LD	SP, HL
+        LD	SP, HL  	; TBD: do we need stack?
         
         LD	HL, $4000
         LD	DE, $BFFF

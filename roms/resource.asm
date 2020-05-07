@@ -1,9 +1,4 @@
-RESOURCE_TYPE_INVALID equ $ff
-RESOURCE_TYPE_INTEGER equ $00
-RESOURCE_TYPE_STRING equ $01
-RESOURCE_TYPE_BITMAP equ $02
-RESOURCE_TYPE_DIRECTORYLIST equ $03
-RESOURCE_TYPE_APLIST equ $04
+include "resource_defs.asm"
 
 READRESFIFO:
 	IN	A, ($0B)
@@ -75,3 +70,18 @@ WAITFIFO3:
         CP	$FF
         RET
 
+WRITECMDSTRING:
+        PUSH	HL
+        CALL	STRLEN
+        POP	HL
+        CALL	WRITECMDFIFO ; Send len.
+        CP	$00
+        RET	Z	     ; Empty string, skip
+        ; Send string
+        LD	B, A
+_l3:
+        LD	A,(HL)
+        INC	HL
+        CALL	WRITECMDFIFO
+        DJNZ 	_l3
+        RET

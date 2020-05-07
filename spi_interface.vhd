@@ -77,7 +77,13 @@ entity spi_interface is
     cmdfifo_rd_o          : out std_logic;
     cmdfifo_read_i        : in std_logic_vector(7 downto 0);
     cmdfifo_empty_i       : in std_logic;
-    cmdfifo_intack_o      : out std_logic -- Interrupt acknowledge
+    cmdfifo_intack_o      : out std_logic; -- Interrupt acknowledge
+
+    -- External RAM access
+    extram_addr_o         : out std_logic_vector(31 downto 0);
+    extram_dat_i          : in std_logic_vector(31 downto 0);
+    extram_req_o          : out std_logic;
+    extram_valid_i        : in std_logic
   );
 
 end entity spi_interface;
@@ -133,7 +139,11 @@ architecture beh of spi_interface is
     WRTAPFIFO,
     RDTAPFIFOUSAGE,
     READFIFOCMDDATA,
-    RDPC1
+    RDPC1,
+    EXTRAMADDR1,
+    EXTRAMADDR2,
+    EXTRAMADDR3,
+    EXTRAMDATA
   );
 
   signal state_r      : state_type;
@@ -147,6 +157,9 @@ architecture beh of spi_interface is
 
   signal wreg_en_r        : std_logic;
   signal tapfifo_used_lsb_r : std_logic_vector(7 downto 0);
+
+  signal extram_addr_r  : std_logic_vector(23 downto 0);
+  signal extram_req_r   : std_logic := '0'; -- FIxme: needs areset
 
 begin
 
@@ -300,6 +313,12 @@ begin
                 txload_s <= '1';
                 txdat_s <= pc_i(15 downto 8);
                 state_r <= RDPC1;
+
+              when x"50" => -- Read external RAM
+                txden_s <= '1';
+                txload_s <= '1';
+                txdat_s <= "00000000";
+                state_r <= EXTRAMADDR1;
 
 
               when x"E0" => -- Read capture memory
@@ -643,6 +662,46 @@ begin
             when others =>
           end case;
 
+        when EXTRAMADDR1 =>
+          txload_s <= '1';
+          txden_s <= '1';
+          if dat_valid_s='1' then
+            extram_addr_r(23 downto 16) <= dat_s;
+            state_r <= EXTRAMADDR2;
+          end if;
+
+        when EXTRAMADDR2 =>
+          txload_s <= '1';
+          txden_s <= '1';
+          if dat_valid_s='1' then
+            extram_addr_r(15 downto 8) <= dat_s;
+            state_r <= EXTRAMADDR3;
+          end if;
+
+        when EXTRAMADDR3 =>
+          txload_s <= '1';
+          txden_s <= '1';
+          if dat_valid_s='1' then
+            extram_addr_r(7 downto 0) <= dat_s;
+            -- Request
+            extram_req_r <= not extram_req_r;
+            state_r <= EXTRAMDATA;
+          end if;
+
+        when EXTRAMDATA =>
+          txload_s <= '1';
+          txden_s <= '1';
+          txdat_s <= extram_dat_i(7 downto 0);
+          if dat_valid_s='1' then
+            --extram_addr_r(7 downto 0) <= dat_i;
+            -- Request
+            extram_req_r <= not extram_req_r;
+            state_r <= EXTRAMDATA;
+          end if;
+          if extram_valid_i='1' then
+            extram_addr_r <= std_logic_vector(unsigned(extram_addr_r) + 1);
+          end if;
+
         when UNKNOWN =>
           -- Leave TXDEN.
 
@@ -652,5 +711,9 @@ begin
       end case;
     end if;
   end process;
+
+  extram_addr_o(23 downto 0) <= extram_addr_r;
+  extram_addr_o(31 downto 24) <= (others => '0');
+  extram_req_o          <= extram_req_r;
 
 end beh;

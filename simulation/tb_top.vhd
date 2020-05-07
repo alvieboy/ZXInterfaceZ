@@ -9,7 +9,8 @@ use work.bfm_spectrum_p.all;
 use work.bfm_ctrlpins_p.all;
 use work.bfm_rom_p.all;
 use work.bfm_ula_p.all;
-
+use work.bfm_audiocap_p.all;
+use work.bfm_qspiram_p.all;
 use work.txt_util.all;
 
 ENTITY tb_top IS
@@ -30,11 +31,16 @@ architecture sim of tb_top is
     CtrlPins_Cmd    : out Cmd_CtrlPins_type;
     Rom_Cmd         : out Cmd_Rom_type;
     Ula_Cmd         : out Cmd_Ula_type;
+    Audiocap_Cmd    : out Cmd_Audiocap_type;
+    QSPIRam0_Cmd    : out Cmd_QSPIRam_type;
+    QSPIRam1_Cmd    : out Cmd_QSPIRam_type;
+
     -- Inputs
     Spimaster_Data  : in Data_Spimaster_type;
     Spectrum_Data   : in Data_Spectrum_type;
     CtrlPins_Data   : in Data_CtrlPins_type;
-    Ula_Data        : in Data_Ula_type
+    Ula_Data        : in Data_Ula_type;
+    Audiocap_Data    : in Data_Audiocap_type
   );
   end component;
 
@@ -48,11 +54,15 @@ architecture sim of tb_top is
   signal CtrlPins_Cmd_s   : Cmd_CtrlPins_type  := Cmd_CtrlPins_Defaults;
   signal Rom_Cmd_s        : Cmd_Rom_type  := Cmd_Rom_Defaults;
   signal Ula_Cmd_s        : Cmd_Ula_type  := Cmd_Ula_Defaults;
+  signal Audiocap_Cmd_s   : Cmd_Audiocap_type  := Cmd_Audiocap_Defaults;
+  signal QSPIRam0_Cmd_s   : Cmd_QSPIRam_type  := Cmd_QSPIRam_Defaults;
+  signal QSPIRam1_Cmd_s   : Cmd_QSPIRam_type  := Cmd_QSPIRam_Defaults;
 
   signal Spimaster_Data_s : Data_Spimaster_type;
   signal Spectrum_Data_s  : Data_Spectrum_type;
   signal CtrlPins_Data_s  : Data_CtrlPins_type;
   signal Ula_Data_s       : Data_Ula_type;
+  signal Audiocap_Data_s  : Data_Audiocap_type;
 
   SIGNAL A_BUS_OE_s : STD_LOGIC;
   SIGNAL ASDO_s: STD_LOGIC;
@@ -122,7 +132,7 @@ architecture sim of tb_top is
   signal USB_PWREN_s   : std_logic;
   -- Extension connector
   signal EXT_s        : std_logic_vector(7 downto 0);
-
+  signal audio_s      : std_logic;
 begin
 
    tbc: tbc_device
@@ -136,11 +146,15 @@ begin
       CtrlPins_Cmd    => CtrlPins_Cmd_s,
       Rom_Cmd         => Rom_Cmd_s,
       Ula_Cmd         => Ula_Cmd_s,
+      Audiocap_Cmd    => Audiocap_Cmd_s,
+      QSPIRam0_Cmd    => QSPIRam0_Cmd_s,
+      QSPIRam1_Cmd    => QSPIRam0_Cmd_s,
       -- Outputs
       Spimaster_Data  => Spimaster_Data_s,
       Spectrum_Data   => Spectrum_Data_s,
       CtrlPins_Data   => CtrlPins_Data_s,
-      Ula_Data        => Ula_Data_s
+      Ula_Data        => Ula_Data_s,
+      Audiocap_Data   => Audiocap_Data_s
     );
 
   sysclk_inst: entity work.bfm_clock
@@ -219,6 +233,30 @@ begin
 
     );
 
+  audiocap_inst: entity work.bfm_audiocap
+    port map (
+      Cmd_i   => Audiocap_Cmd_s,
+      Data_o  => Audiocap_Data_s,
+      audio_i => audio_s
+    );
+
+
+  psram0_inst: ENTITY work.bfm_qspiram
+    PORT MAP (
+        Cmd_i           => QSPIRam0_Cmd_s,
+        SCK_i           => RAMCLK_s,
+        CSn_i           => RAMNCS_s,
+        D_io            => RAMD_s(3 downto 0)
+    );
+
+  --psram1_inst: ENTITY work.bfm_qspiram
+  --  PORT MAP (
+  --      Cmd_i           => QSPIRam1_Cmd_s,
+  --      SCK_i           => RAMCLK_s,
+  --      CSn_i           => RAMNCS_s,
+  --      D_io            => RAMD_s(7 downto 4)
+  --  );
+
   DUT: entity work.interfacez_top
 	PORT MAP (
     -- list connections between master ports and signals
@@ -259,6 +297,7 @@ begin
     -- Extension connector
     EXT_o        => EXT_s,
 
+    TP5_o         => audio_s,
 
     XA_i => XA_s,
     XCK_i => XCK_s,

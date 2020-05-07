@@ -29,6 +29,14 @@ NEXTBAND$:
 	LD 	D,A			; copy back into destination MSB	
 	RET
 
+MOVENEXTLINE:
+	CALL	MOVEDOWN
+        LD	A, E
+        AND	%11100000
+        LD	E, A
+        RET
+        
+
 	;
         ; Draw char pointed by HL
         ; Inputs:	

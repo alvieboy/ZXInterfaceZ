@@ -35,14 +35,21 @@ entity interfacez_io is
 
     -- Resource FIFO connections
 
-    signal resfifo_rd_o           : out std_logic;
-    signal resfifo_read_i         : in std_logic_vector(7 downto 0);
-    signal resfifo_empty_i        : in std_logic;
+    resfifo_rd_o           : out std_logic;
+    resfifo_read_i         : in std_logic_vector(7 downto 0);
+    resfifo_empty_i        : in std_logic;
     -- Command FIFO connection
 
-    signal cmdfifo_wr_o           : out std_logic;
-    signal cmdfifo_write_o        : out std_logic_vector(7 downto 0);
-    signal cmdfifo_full_i         : in std_logic
+    cmdfifo_wr_o           : out std_logic;
+    cmdfifo_write_o        : out std_logic_vector(7 downto 0);
+    cmdfifo_full_i         : in std_logic;
+    -- Ram
+    ram_addr_o             : out std_logic_vector(15 downto 0);
+    ram_dat_o              : out std_logic_vector(7 downto 0);
+    ram_dat_i              : in std_logic_vector(7 downto 0);
+    ram_wr_o               : out std_logic;
+    ram_rd_o               : out std_logic;
+    ram_ack_i              : in std_logic
   );
 
 end entity interfacez_io;
@@ -54,13 +61,27 @@ architecture beh of interfacez_io is
   signal enable_s         : std_logic;
   signal dataread_r       : std_logic_vector(7 downto 0);
   signal testdata_r       : unsigned(7 downto 0);
-  signal cmdfifo_write_r  : std_logic_vector(7 downto 0);
+  signal d_write_r        : std_logic_vector(7 downto 0);
   signal cmdfifo_wr_r     : std_logic;
   signal uladata_r        : std_logic_vector(7 downto 0);
   signal forceoutput_s    : std_logic;
+  signal ram_wr_r         : std_logic;
+  signal ram_rd_r         : std_logic;
+  signal ram_addr_r       : unsigned(15 downto 0);
+  
 begin
 
-  addr_match_s<='1' when adr_i(0)='1' else '0';
+  process (adr_i)
+  begin
+    addr_match_s<='0';
+    if adr_i(0)='1' then
+      case adr_i(7 downto 0) is
+        when x"05" | x"07" | x"0B" | x"0D" | x"15" =>
+          addr_match_s<='1';
+        when others =>
+		end case;
+     end if;
+  end process;
 
 	enable_s  <=  active_i and addr_match_s; -- Report all IOs
 
@@ -73,6 +94,8 @@ begin
       resfifo_rd_o  <= '0';
       testdata_r    <= (others => '0');
       cmdfifo_wr_r  <= '0';
+      ram_wr_r      <= '0';
+      ram_rd_r      <= '0';
 
     elsif rising_edge(clk_i) then
 
@@ -92,10 +115,20 @@ begin
         case adr_i(7 downto 0) is
           when x"0B" => -- FIFO status/control
           when x"09" => -- Command FIFO write.
-            cmdfifo_write_r <= dat_i;
+            d_write_r <= dat_i;
             if cmdfifo_full_i='0' then
               cmdfifo_wr_r    <= '1';
             end if;
+          when x"11" =>
+            ram_addr_r(7 downto 0) <= unsigned(dat_i);
+          when x"13" =>
+            ram_addr_r(15 downto 8) <= unsigned(dat_i);
+
+          when x"15" => -- RAM write.
+            d_write_r     <= dat_i;
+            ram_wr_r      <= '1';
+
+
           when others =>
         end case;
 
@@ -119,11 +152,24 @@ begin
             -- Pop data on next clock cycle
             resfifo_rd_o <= '1';
             testdata_r <= testdata_r + 1;
+          when x"15" => -- RAM read
+            ram_rd_r <= '1';
 
           when others =>
-            dataread_r <= (others => '1');
+            --dataread_r <= (others => '1');
         end case;
       end if;
+
+      if ram_ack_i='1' then
+        if ram_rd_r='1' then
+          -- data
+          dataread_r <= ram_dat_i;
+        end if;
+        ram_wr_r <= '0';
+        ram_rd_r <= '0';
+        ram_addr_r <= ram_addr_r + 1;
+      end if;
+
     end if;
   end process;
 
@@ -131,17 +177,17 @@ begin
   begin
     if rst_i='1' then
       forceiorqula_o  <= '0';
-      forceoutput_s <= '1';
+      forceoutput_s <= '0';
       --
     elsif rising_edge(clk_i) then
-      if rdp_dly_i='1' and ulahack_i='1' and adr_i(0)='0' then
+      if rdp_dly_i='1' and ulahack_i='1' and adr_i(7 downto 0)=x"FE" then
         -- ULA read. Capture ULA data
         uladata_r <= dat_i(7) & audio_i & dat_i(5 downto 0);
         -- Start delay. Force IRQULA immediatly
         forceiorqula_o <= '1';
         forceoutput_s <= '1';
       end if;
-      if active_i='0' then
+      if active_i='0' or ulahack_i='0' then
         forceiorqula_o <= '0';
         forceoutput_s <='0';
       end if;
@@ -151,7 +197,11 @@ begin
   dat_o           <= dataread_r when forceoutput_s='0' else uladata_r;
   port_fe_o       <= port_fe_r;
   enable_o        <= enable_s or forceoutput_s;
-  cmdfifo_write_o <= cmdfifo_write_r;
+  cmdfifo_write_o <= d_write_r;
+  ram_dat_o       <= d_write_r;
   cmdfifo_wr_o    <= cmdfifo_wr_r;
+  ram_wr_o        <= ram_wr_r;
+  ram_rd_o        <= ram_rd_r;
+  ram_addr_o      <= std_logic_vector(ram_addr_r);
  
 end beh;
