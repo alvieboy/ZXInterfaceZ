@@ -3,6 +3,8 @@
 #include "defs.h"
 #include "driver/sdmmc_host.h"
 #include "esp_vfs_fat.h"
+#include <sys/types.h>
+#include <dirent.h>
 
 void sdcard__init()
 {
@@ -44,6 +46,21 @@ void sdcard__init()
                 "Make sure SD card lines have pull-up resistors in place.", esp_err_to_name(ret));
         }
         return;
+    }
+    ESP_LOGI(TAG, "SDMMC card mounted");
+    {
+        DIR *d;
+        d = opendir("/sdcard");
+        if (!d) {
+            ESP_LOGI(TAG, "Cannot open directory");
+        } else {
+            struct dirent *e;
+            while ((e=readdir(d))) {
+                ESP_LOGI(TAG, " * %s", e->d_name);
+            }
+            ESP_LOGI(TAG, "<< EOD");
+            closedir(d);
+        }
     }
 }
 

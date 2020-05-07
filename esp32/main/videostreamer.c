@@ -211,7 +211,11 @@ static void videostreamer__server_task(void *pvParameters)
             } else if (io_num==PIN_NUM_CMD_INTERRUPT) {
                 // Command request
                 spectcmd__request();
-            } else {
+            } else if (io_num==PIN_NUM_IO0) {
+                // Switch request
+                ESP_LOGI(TAG, "IO0 pressed");
+                gpio__press_event(PIN_NUM_IO0);
+            } else if (io_num==PIN_NUM_SWITCH) {
                 // Switch request
                 ESP_LOGI(TAG, "Switch pressed");
                 gpio__press_event(PIN_NUM_SWITCH);

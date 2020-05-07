@@ -53,8 +53,17 @@ void request_restart()
 void gpio__press_event(gpio_num_t gpio)
 {
     if (gpio==PIN_NUM_SWITCH) {
-        uint16_t pc = fpga__get_spectrum_pc();
-        ESP_LOGI(TAG, "Spectrum PC: 0x%04x",pc);
+        fpga__clear_flags(FPGA_FLAG_ULAHACK);
+
+        ESP_LOGI(TAG, "Requesting NMI!");
+        fpga__set_trigger(FPGA_FLAG_TRIG_FORCENMI_ON);
+
+        if (gpio==PIN_NUM_SWITCH) {
+            uint16_t pc = fpga__get_spectrum_pc();
+            ESP_LOGI(TAG, "Spectrum PC: 0x%04x",pc);
+        }
+    }
+    if (gpio==PIN_NUM_IO0) {
     }
 }
 

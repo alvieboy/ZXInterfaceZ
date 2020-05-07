@@ -14,7 +14,7 @@ static void tapplayer__task(void*data)
 {
     ESP_LOGI(TAG, "Starting TAP file play len %d", tapfile_len);
 
-    fpga__set_flags(FPGA_FLAG_TAPFIFO_RESET| FPGA_FLAG_TAP_ENABLED);
+    fpga__set_flags(FPGA_FLAG_TAPFIFO_RESET| FPGA_FLAG_TAP_ENABLED | FPGA_FLAG_ULAHACK);
     fpga__clear_flags(FPGA_FLAG_TAPFIFO_RESET);
 
     int len = tapfile_len;
@@ -39,8 +39,14 @@ static void tapplayer__task(void*data)
     } while (1);
 }
 
+void tapplayer__stop()
+{
+    fpga__clear_flags(FPGA_FLAG_TAP_ENABLED | FPGA_FLAG_ULAHACK);
+    fpga__set_flags(FPGA_FLAG_TAPFIFO_RESET);
+}
+
 
 void tapplayer__init()
 {
-    xTaskCreate(tapplayer__task, "tapplayer_task", 4096, NULL, 10, NULL);
+    //xTaskCreate(tapplayer__task, "tapplayer_task", 4096, NULL, 10, NULL);
 }

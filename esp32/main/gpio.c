@@ -38,6 +38,7 @@ void gpio__init()
     io_conf.mode         = GPIO_MODE_INPUT;
     io_conf.pin_bit_mask =
         (1ULL<<PIN_NUM_SWITCH) |
+        (1ULL<<PIN_NUM_IO0) |
         (1ULL<<PIN_NUM_NSTATUS) |
         (1ULL<<PIN_NUM_CONF_DONE) |
         (1ULL<<PIN_NUM_SPECT_INTERRUPT) |

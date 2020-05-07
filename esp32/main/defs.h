@@ -25,6 +25,7 @@
 
 #define PIN_NUM_IO26 26
 #define PIN_NUM_IO27 27
+#define PIN_NUM_IO0  0
 
 #define PIN_NUM_SWITCH 34
 

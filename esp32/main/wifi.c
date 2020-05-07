@@ -188,7 +188,8 @@ void wifi_init_softap()
     tcpip_adapter_ip_info_t info;
     memset(&info, 0, sizeof(info));
     IP4_ADDR(&info.ip, 192, 168, 120, 1);
-    IP4_ADDR(&info.gw, 192, 168, 120, 1);
+    IP4_ADDR(&info.gw, 0, 0, 0, 0);//192, 168, 120, 1);
+    //IP4_ADDR(&info.gw, 192, 168, 120, 1);
     IP4_ADDR(&info.netmask, 255, 255, 255, 0);
     ESP_ERROR_CHECK(tcpip_adapter_set_ip_info(TCPIP_ADAPTER_IF_AP, &info));
     ESP_ERROR_CHECK(tcpip_adapter_dhcps_start(TCPIP_ADAPTER_IF_AP));
@@ -251,8 +252,8 @@ void wifi_init_wpa2()
 
     strcpy(wifi_ssid, (char*)wifi_config.sta.ssid );
 
-    esp_wifi_set_ps (WIFI_PS_NONE);
-    ESP_ERROR_CHECK( esp_wifi_set_bandwidth(ESP_IF_WIFI_STA, WIFI_BW_HT40) );
+    //esp_wifi_set_ps (WIFI_PS_NONE);
+    ESP_ERROR_CHECK( esp_wifi_set_bandwidth(ESP_IF_WIFI_STA, WIFI_BW_HT20) );
 
 
 
@@ -267,5 +268,6 @@ void wifi__init()
     tcpip_adapter_init();
     ESP_ERROR_CHECK(esp_event_loop_create_default());
 
-    wifi_init_wpa2();
+    //wifi_init_wpa2();
+    wifi_init_softap();
 }
