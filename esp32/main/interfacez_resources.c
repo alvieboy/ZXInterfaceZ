@@ -23,3 +23,9 @@ struct string_resource wificonfigresource = {
     .r = STRING_RESOURCE_DEF,
     .str = wifi_ssid
 };
+
+struct opstatus_resource opstatusresource = {
+    .r = OPSTATUS_RESOURCE_DEF,
+    .status = 0xFF,
+    .str = ""
+};

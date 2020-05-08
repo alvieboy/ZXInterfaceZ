@@ -12,6 +12,9 @@
 #include "fpga.h"
 #include "sna.h"
 #include "dump.h"
+#include "sna_defs.h"
+#include <stdlib.h>
+
 #undef TEST_ROM
 
 extern unsigned char snaloader_rom[];
@@ -124,4 +127,171 @@ static int sna__chunk(command_t *cmdt)
     return COMMAND_CONTINUE;
 }
 
+static char sna_error[31] = {0};
 
+const char *sna__get_error_string()
+{
+    return sna_error;
+}
+
+static int sna__fix_and_write_sp(int fh)
+{
+    uint16_t sp;
+    uint8_t v;
+    int ret = 0;
+    do {
+        ret = fpga__read_extram(SNA_RAM_OFF_SPL);
+        if (ret<0)
+            break;
+        sp = ret & 0xff;
+        ret = fpga__read_extram(SNA_RAM_OFF_SPH);
+        if (ret<0)
+            break;
+        sp |= (ret<<8);
+
+        sp+=2;
+        v = sp & 0xff;
+        if (write(fh,&v, 1)!=1) {
+            ret = -2;
+            break;
+        }
+        v = (sp>>8) & 0xff;
+        if (write(fh,&v, 1)!=1) {
+            ret = -2;
+            break;
+        }
+    } while (0);
+    return ret;
+}
+
+static int sna__writefromextram(int fh, const uint32_t address)
+{
+    int r = fpga__read_extram(address);
+    uint8_t v;
+    if (r<0)
+        return -1;
+    v = r & 0xff;
+
+    r = write(fh,&v, 1);
+    if (r!=1) {
+        ESP_LOGE(TAG, "Cannot write : %d : %s\n", r, strerror(errno));
+        return -2;
+    }
+    return 0;
+}
+#define LOCAL_CHUNK_SIZE 512
+
+static int sna__writefromextramblock(int fh, uint32_t address, int len)
+{
+    struct {
+        struct extram_data_block b;
+        uint8_t data[LOCAL_CHUNK_SIZE];
+    } chunk;
+
+    while (len>0) {
+        int chunklen = len > LOCAL_CHUNK_SIZE ? LOCAL_CHUNK_SIZE :  len;
+
+        int r = fpga__read_extram_block(address, &chunk.b, chunklen);
+
+        if (r<0)
+            return -1;
+
+        if (write(fh, chunk.data, chunklen)!=chunklen) {
+            ESP_LOGE(TAG, "Cannot write chunk : %d : %s\n", r, strerror(errno));
+            return -2;
+        }
+        len -= chunklen;
+        address += chunklen;
+    }
+    return 0;
+}
+
+int sna__save_from_extram(const char *file)
+{
+    char fpath[128];
+    int ret = 0;
+    sprintf(fpath,"/sdcard/%s", file);
+    int fh = open(fpath, O_WRONLY|O_CREAT|O_TRUNC, 0666);
+    if (fh<0) {
+        ESP_LOGE(TAG,"Cannot open file %s: %s", fpath, strerror(errno));
+        strcpy(sna_error,"Cannot open file");
+        return -1;
+    }
+
+#define W(addr) if ((ret=sna__writefromextram(fh,addr))<0) break
+    do {
+
+        W(SNA_RAM_OFF_I);
+        //   1        8      word   HL',DE',BC',AF'                        Check
+        W(SNA_RAM_OFF_Lalt);
+        W(SNA_RAM_OFF_Halt);
+        W(SNA_RAM_OFF_Ealt);
+        W(SNA_RAM_OFF_Dalt);
+        W(SNA_RAM_OFF_Calt);
+        W(SNA_RAM_OFF_Balt);
+        W(SNA_RAM_OFF_Falt);
+        W(SNA_RAM_OFF_Aalt);
+        //   9        10     word   HL,DE,BC,IY,IX                         Check
+        W(SNA_RAM_OFF_L);
+        W(SNA_RAM_OFF_H);
+        W(SNA_RAM_OFF_E);
+        W(SNA_RAM_OFF_D);
+        W(SNA_RAM_OFF_C);
+        W(SNA_RAM_OFF_B);
+        W(SNA_RAM_OFF_IYL);
+        W(SNA_RAM_OFF_IYH);
+        W(SNA_RAM_OFF_IXL);
+        W(SNA_RAM_OFF_IXH);
+        //   19       1      byte   Interrupt (bit 2 contains IFF2, 1=EI/0=DI)  Check
+        W(SNA_RAM_OFF_IFF2);
+        //   20       1      byte   R                                      Check
+        W(SNA_RAM_OFF_R);
+        //   21       4      words  AF,SP                                  Check
+        W(SNA_RAM_OFF_F);
+        W(SNA_RAM_OFF_A);
+        // We need to fix SP.
+
+        ret = sna__fix_and_write_sp(fh);
+        if (ret<0)
+            break;
+
+        //W(SNA_RAM_OFF_SPL);
+        //W(SNA_RAM_OFF_SPH);
+
+        //   25       1      byte   IntMode (0=IM0/1=IM1/2=IM2)            Check
+        W(SNA_RAM_OFF_IMM);
+        //   26       1      byte   BorderColor (0..7, not used by Spectrum 1.7)  Check
+        W(SNA_RAM_OFF_BORDER);
+        //   27       49152  bytes  RAM dump 16384..65535
+
+        ret = sna__writefromextramblock(fh, SNA_RAM_OFF_CHUNK1, SNA_RAM_CHUNK1_SIZE);
+        if (ret<0) {
+            break;
+        }
+        ret = sna__writefromextramblock(fh, SNA_RAM_OFF_CHUNK2, SNA_RAM_CHUNK2_SIZE);
+        if (ret<0) {
+            break;
+        }
+    } while (0);
+
+    if (ret<0) {
+        ESP_LOGE(TAG,"Cannot save to file");
+        if (ret==-1) {
+            ESP_LOGE(TAG,"FPGA comms failure");
+            strcpy(sna_error,"FPGA Comms failure");
+        } else{
+            strcpy(sna_error,"Write error");
+            ESP_LOGE(TAG,"Write error");
+        }
+        close(fh);
+        return ret;
+    }
+
+    ret = close(fh);
+    if (ret<0) {
+        ESP_LOGE(TAG,"Error closing file");
+        strcpy(sna_error,"Write error");
+    }
+
+    return ret;
+}

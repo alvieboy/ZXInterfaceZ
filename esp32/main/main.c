@@ -102,6 +102,8 @@ void app_main()
     resource__register( 0x04, &wificonfigresource.r);
     resource__register( 0x05, &aplistresource.r);
 
+    resource__register( 0x10, &opstatusresource.r);
+
     spectcmd__init();
 #if 0
     flash_pgm__init();

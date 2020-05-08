@@ -5,11 +5,13 @@
 #include "version_resource.h"
 #include "status_resource.h"
 #include "string_resource.h"
+#include "opstatus_resource.h"
 
 
 extern struct aplist_resource aplistresource;
 extern struct status_resource statusresource;
 extern struct resource versionresource;
 extern struct string_resource wificonfigresource;
+extern struct opstatus_resource opstatusresource;
 
 #endif

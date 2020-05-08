@@ -478,5 +478,34 @@ int fpga__load_tap_fifo(const uint8_t *data, unsigned len, int timeout)
     return maxsize;
 }
 
+int fpga__read_extram(uint32_t address)
+{
+    uint8_t buf[6];
+    buf[0] = 0x50;
+    buf[1] = (address>>16) & 0xff;
+    buf[2] = (address>>8) & 0xff;
+    buf[3] = (address) & 0xff;
+    buf[4] = 0x00; // Dummy
+    buf[5] = 0x00;
+
+    if (spi__transceive(spi0_fpga, buf, 6)<0)
+        return -1;
+
+    return buf[5];
+}
+
+int fpga__read_extram_block(uint32_t address, struct extram_data_block *dest, int size)
+{
+    dest->priv[0] = 0x50;
+    dest->priv[1] = (address>>16) & 0xff;
+    dest->priv[2] = (address>>8) & 0xff;
+    dest->priv[3] = (address) & 0xff;
+    dest->priv[4] = 0x00; // Dummy
+
+    if (spi__transceive(spi0_fpga, &dest->priv[0], 5 + size)<0)
+        return -1;
+
+    return 0;
+}
 
 
