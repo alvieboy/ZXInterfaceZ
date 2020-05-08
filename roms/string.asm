@@ -3,14 +3,14 @@
 	; Returns
 	;	A: Length of string
         ; Corrupts
-        ;	C
+        ;	C HL
 STRLEN:
 	LD	C, 0
 _l1:
         LD	A, (HL)
-        INC 	HL
         CP	0
         JR	Z, _l2
+        INC 	HL
         INC	C
         JR	_l1
 _l2:	LD	A, C
@@ -19,10 +19,10 @@ _l2:	LD	A, C
 STRAPPENDCHAR:
 	PUSH 	AF
 	CALL	STRLEN
-	XOR 	A
+	POP	AF
         LD	(HL), A
-        POP	AF
-        DEC	HL
+	INC	HL
+	XOR 	A
         LD	(HL), A
         RET
 
@@ -30,7 +30,6 @@ STRREMOVELASTCHAR:
 	CALL	STRLEN
 	OR 	A
         RET	Z ; Empty string
-        DEC	HL
         DEC	HL
         XOR 	A
         LD	(HL), A

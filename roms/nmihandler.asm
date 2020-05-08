@@ -48,15 +48,30 @@ lone:
         ; Do save AF, however. It's easier to just do it here.
         ; HL still contains SP value
         LD	A, (HL)
-        OUT	(C), A          ; Ram: 0x200C
+        OUT	(C), A          ; Ram: 0x200C [flags]
         INC	HL
         LD	A, (HL)
-        OUT	(C), A          ; Ram: 0x200D
-        
+        OUT	(C), A          ; Ram: 0x200D [A]
         ; Create a new SP
         LD	HL, NMI_SPVAL
 	LD 	(NMI_SCRATCH), HL
         LD	SP, (NMI_SCRATCH)
+
+        ; Get R and IFF2
+        LD	A, R
+        OUT	(C), A	   	; Ram: 0x200E
+        ; Get flags from SP
+        LD	A, (NMI_SCRATCH)
+        OUT	(C), A	   	; Ram: 0x200F
+        
+        ; Finally, save I
+        LD	A, I
+        OUT	(C), A	   	; Ram: 0x2010
+        
+        ; Save border.
+        IN	A,($FE)
+        OUT	(C), A	   	; Ram: 0x2011
+
         ; We are good to go.
         
         LD	IY, IYBASE
@@ -156,10 +171,10 @@ NMIKEY_INPUT:
 
 SNASAVE:
 	; For SNA we need to also populate alternative registers.
-        ; These start at 0x200E
+        ; These start at 0x2012
         LD	C, $15		; Data port 
         
-        LD	A, $0E		; LSB 
+        LD	A, $12		; LSB 
         OUT	($11), A 
         LD	A, $20          ; MSB
         OUT	($13), A
@@ -167,28 +182,37 @@ SNASAVE:
         EXX	; We must not modify EX' registers!
 	PUSH	BC
         PUSH	HL
-        PUSH	AF        
+
+        EX	AF, AF'
+        PUSH	AF
         LD	A, C
         LD	C, $15
-        OUT	(C), A           ; Ram: 0x200E
-        OUT	(C), B           ; Ram: 0x200F
-        OUT	(C), E           ; Ram: 0x2010
-        OUT	(C), D           ; Ram: 0x2011
-        OUT	(C), L           ; Ram: 0x2012
-        OUT	(C), H           ; Ram: 0x2013
+        OUT	(C), A           ; Ram: 0x2012
+        OUT	(C), B           ; Ram: 0x2013
+        OUT	(C), E           ; Ram: 0x2014
+        OUT	(C), D           ; Ram: 0x2015
+        OUT	(C), L           ; Ram: 0x2016
+        OUT	(C), H           ; Ram: 0x2017
         ; Fetch AF from stack
         LD	(NMI_SCRATCH), SP
         LD	HL, (NMI_SCRATCH)
         LD	A, (HL)
-        OUT	(C), A           ; Ram: 0x2014
+        OUT	(C), A           ; Ram: 0x2018 [flags]
         INC	HL
         LD	A, (HL)
-        OUT	(C), A           ; Ram: 0x2015
+        OUT	(C), A           ; Ram: 0x2019 [A]
         
         POP	AF
+        
+        EX	AF, AF'
+
         POP	HL
         POP	BC
         EXX
+	
+        ; Still missing IM.
+        LD	A, $01           ; Ram: 0x201A [A]
+        OUT	(C), A
 
 	; In order to save SNA, finish memory save to external RAM
         ; 40960 bytes (0xA000)
@@ -196,7 +220,7 @@ SNASAVE:
         LD	D, $A0
 	LD	HL, $6000	; From 0x6000 to 0xFFFF
 _sone:
-        OTIR                   	; Starts at 0x0006
+        OTIR                   	; Starts at 0x001B
         DEC	D
         JR	NZ, _sone
         
@@ -224,8 +248,8 @@ _wait:
         LD	A, (NMICMD_RESPONSE)
         CP      STATUS_INPROGRESS
         JR	Z, _wait
-        CP	STATUS_OK
-        RET 	Z
+        ;CP	STATUS_OK
+        ;JR	Z, SHOWSUCCESS
 	LD	HL, NMICMD_RESPONSE
         INC	HL	
         ; Load error string len
@@ -259,6 +283,18 @@ _error1:
 	ENDLESS
         JP 	INTERNALERROR
         RET
+
+; Returns NZ if we have a key
+CHECKKEY:
+	BIT	5,(IY+(FLAGS-IYBASE))	; test FLAGS  - has a new key been pressed ?
+	RET	Z
+	LD	DE, (CURKEY)
+	LD	A, D
+	RES	5,(IY+(FLAGS-IYBASE))	; update FLAGS  - reset the new key flag.
+        DEC	A
+        RET	Z
+        LD	A, E
+        RET
         
 WAITFORENTER:
 	CALL	KEYBOARD
@@ -285,5 +321,71 @@ _w1:
 	JR	C,_w1
         RET
 
+ASKFILENAME:
+        CALL	RESTORESCREENAREA
+	CALL 	SETUPASKFILENAME
+
+_waitfilename:
+	; Scanning loop
+	CALL	KEYBOARD
+        CALL	CHECKKEY
+        JR	Z, _waitfilename
+        
+	LD	HL, FILENAMEENTRYWIDGET
+        CALL	TEXTINPUT__HANDLEKEY
+        CP	$FF
+        JR	Z, _waitfilename
+        
+        CALL	RESTORESCREENAREA
+
+        CP	0
+        JP	Z, SNASAVE
+
+        ; Redraw menu
+       	LD	HL, NMI_MENU
+        JP	MENU__DRAW
+
+SETUPASKFILENAME:
+	LD	IX, FILENAMEENTRYWIDGET
+	LD	(IX+TEXTINPUT_OFF_MAX_LEN), 8
+        LD	(IX+FRAME_OFF_WIDTH), 15
+        LD      (IX+FRAME_OFF_TITLEPTR), LOW(FILENAMETITLE)
+        LD      (IX+FRAME_OFF_TITLEPTR+1), HIGH(FILENAMETITLE)
+
+	LD	HL, SNAFILENAME
+
+	LD	(IX+TEXTINPUT_OFF_STRINGPTR), L
+        LD	(IX+TEXTINPUT_OFF_STRINGPTR+1), H
+
+        XOR	A
+        LD	(HL), A ; Clear password
+
+        LD	D, 14 ; line to display menu at.
+	LD	HL, FILENAMEENTRYWIDGET
+        CALL	TEXTINPUT__INIT
+        LD	HL, FILENAMEENTRYWIDGET
+	JP	TEXTINPUT__DRAW
+
+
+	; Restore a screen area from previously saved data to external RAM
+        ; DE:	pointer to screen address.
+        ; TODO: this restores everything.
+RESTORESCREENAREA:
+	; Screen area starts at 0x0006
+        ; Size: 0x1B00
+        LD	A, $06
+        OUT	($11), A         ; Set external RAM LSB
+        XOR	A
+        OUT	($13), A         ; and MSB addresses. So we start read/write at 0x0000
+	LD	HL, SCREEN
+	LD	BC, $0015
+        LD	D, $1B
+_r1:
+        INIR                   	; Starts at 0x0006
+        DEC	D
+        JR	NZ, _r1
+        RET
+        
 
 UNSPECIFIEDMSG: DB "Unspecified error", 0
+FILENAMETITLE:  DB "Save name", 0

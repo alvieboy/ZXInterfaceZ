@@ -8,7 +8,13 @@ TEXTINPUT__INIT:
 
 TEXTINPUT__DRAWCONTENT:
 	CALL	MOVEDOWN ; Move to next line.
+        PUSH	DE
+        LD	A, (IX+FRAME_OFF_WIDTH)
+        LD	HL, EMPTYSTRING
+        CALL	PRINTSTRINGPAD
+        POP 	DE
         CALL	MOVEDOWN ; Move to next line.
+        
         LD	L, (IX+TEXTINPUT_OFF_STRINGPTR)
         LD	H, (IX+TEXTINPUT_OFF_STRINGPTR+1)
         ; Print out value (and count chars)
@@ -75,8 +81,19 @@ _bline: LD	(HL), A
         INC 	HL
         DJNZ	_bline
         
-        
-        
+
+        ; Clear	last line
+
+        LD	E, (IX+FRAME_OFF_SCREENPTR)
+        LD	D, (IX+FRAME_OFF_SCREENPTR+1)
+        CALL	MOVEDOWN
+        CALL	MOVEDOWN
+        CALL	MOVEDOWN
+        LD	A, (IX+FRAME_OFF_WIDTH)
+        DEC	A
+        INC	DE
+        LD	HL, EMPTYSTRING
+        CALL	PRINTSTRINGPAD
         RET
         
 TEXTINPUT__DRAW:
@@ -113,9 +130,31 @@ TEXTINPUT__HANDLEKEY:
         JR	Z, _cancel
         
         ;
-        ; Append
+        ; Append if we still have space.
         ;
-        CALL	STRAPPENDCHAR
+        LD	D, A
+        LD	B, (IX+TEXTINPUT_OFF_MAX_LEN)
+        ;PUSH	HL
+        CALL	STRLEN
+        ;POP	HL
+        CP	B
+        RET	Z 
+
+	LD	(HL), D
+        XOR	A
+        INC	HL
+        LD	(HL), A
+; Return if not
+        ;RET	C ; Return if aleady overflown
+        
+        ;LD	A, 0
+        ;LD	(HL),A
+        ;DEC	HL
+        
+        ;POP	AF
+        ;LD	(HL),A
+        
+        ;CALL	STRAPPENDCHAR
 _update:
         ; Redraw - could be faster
         CALL 	TEXTINPUT__DRAWCONTENT_NO_DE

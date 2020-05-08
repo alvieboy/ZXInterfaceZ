@@ -127,8 +127,10 @@ L3:	LD	HL, RIGHTVERTICAL
         
         LD	E, (IX+FRAME_OFF_SCREENPTR)
         LD	D, (IX+FRAME_OFF_SCREENPTR+1)
-
-        INC	DE
+        ; We need a space first
+        LD	A, ' '
+        CALL	PRINTCHAR
+        ;INC	DE
         LD	L, (IX+FRAME_OFF_TITLEPTR)
         LD	H, (IX+FRAME_OFF_TITLEPTR+1)
         PUSH	DE
