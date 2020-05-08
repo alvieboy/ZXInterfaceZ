@@ -86,20 +86,21 @@ NMIRESTORE:
         OUT	($11), A 
         LD	A, $20          ; MSB
         OUT	($13), A
-        IN	L, (C)
-        IN	H, (C)
+        IN	L, (C)          ; Ram: 0x2006
+        IN	H, (C)          ; Ram: 0x2007
         LD	(NMI_SCRATCH), HL
         LD	SP, (NMI_SCRATCH)
         ; SP ready now.
         ; Restore IX, IY now
-        IN	A, (C)
+        IN	A, (C)          ; Ram: 0x2008
         LD	IXL, A
-        IN	A, (C)
+        IN	A, (C)          ; Ram: 0x2009
         LD	IXH, A
-        IN	A, (C)
+        IN	A, (C)          ; Ram: 0x200A
         LD	IYL, A
         IN	A, (C)
-        LD	IYH, A
+        LD	IYH, A          ; Ram: 0x200B
+        
         ; Move back to screen area.
         LD	A, $06		; LSB 
         OUT	($11), A 
@@ -122,14 +123,15 @@ _l2:
         LD	A, $00          ; MSB
         OUT	($13), A
         ; BEDLH
-       	IN	B,(C)
-        IN	E,(C)
-        IN	D,(C)
-        IN	L,(C)
-        IN	H,(C)
+       	IN	B,(C)           ; Ram: 0x0001
+        IN	E,(C)           ; Ram: 0x0002
+        IN	D,(C)           ; Ram: 0x0003
+        IN	L,(C)           ; Ram: 0x0004
+        IN	H,(C)           ; Ram: 0x0005
 	; Last one is C.
         XOR	A
-        OUT	($11), A
+        OUT	($11), A        ; Ram: 0x0000
+        OUT	($13), A        ; Ram: 0x0000
         IN	C, (C)
         ; SP is "good" here.
 	POP 	AF
@@ -267,6 +269,7 @@ _wait:
 	CALL    TEXTMESSAGE__SHOW
         CALL	WAITFORENTER
         ; Clear
+_leave:
         LD	A, $38
         CALL 	TEXTMESSAGE__CLEAR
         LD	HL, NMI_MENU
@@ -275,7 +278,9 @@ _wait:
         ;RET
 _showdefault:
 	LD	HL, UNSPECIFIEDMSG
-        JP	TEXTMESSAGE__SHOW
+        CALL	TEXTMESSAGE__SHOW
+        CALL	WAITFORENTER
+        JR	_leave
 _error1:
 	
 
