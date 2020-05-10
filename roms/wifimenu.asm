@@ -1,3 +1,5 @@
+include "command_defs.asm"
+
 WIFICONFIG__STATUSCHANGED:
 
 	BIT	2, (IX+1)                 	; Bit 2 is WIFI Scanning

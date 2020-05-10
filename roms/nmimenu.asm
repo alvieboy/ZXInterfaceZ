@@ -16,16 +16,13 @@ _n3:
 	RET
         
 
-NMIENTRY1HANDLER:
-
-NMIENTRY2HANDLER:
-	JP	ASKFILENAME
-
 NMIENTRY3HANDLER:
 
 NMIENTRY4HANDLER:
-        RET
+
 NMIENTRY5HANDLER:
+        RET
+NMIENTRY6HANDLER:
         LD	A,1
         LD	(NMIEXIT), A
         RET
@@ -33,8 +30,8 @@ NMIENTRY5HANDLER:
 NMIMENU__SETUP:
        	LD	IX, NMI_MENU
         LD	(IX + FRAME_OFF_WIDTH), 28 ; Menu width 24
-        LD	(IX + FRAME_OFF_NUMBER_OF_LINES), 5 ; Menu visible entries
-        LD	(IX + MENU_OFF_DATA_ENTRIES), 5 ; Menu actual entries 
+        LD	(IX + FRAME_OFF_NUMBER_OF_LINES), 6 ; Menu visible entries
+        LD	(IX + MENU_OFF_DATA_ENTRIES), 6 ; Menu actual entries 
         LD 	(IX + MENU_OFF_SELECTED_ENTRY), 0 ; Selected entry
         LD	(IX+FRAME_OFF_TITLEPTR), LOW(NMIMENUTITLE)
         LD	(IX+FRAME_OFF_TITLEPTR+1), HIGH(NMIMENUTITLE)
@@ -59,6 +56,10 @@ NMIMENU__SETUP:
         LD	(IX+MENU_OFF_FIRST_ENTRY+13), LOW(NMIENTRY5)
         LD	(IX+MENU_OFF_FIRST_ENTRY+14), HIGH(NMIENTRY5)
 
+        LD	(IX+MENU_OFF_FIRST_ENTRY+15), 0 ; Flags
+        LD	(IX+MENU_OFF_FIRST_ENTRY+16), LOW(NMIENTRY6)
+        LD	(IX+MENU_OFF_FIRST_ENTRY+17), HIGH(NMIENTRY6)
+
 	LD	(IX+MENU_OFF_CALLBACKPTR), LOW(NMIMENUCALLBACKTABLE)
         LD	(IX+MENU_OFF_CALLBACKPTR+1), HIGH(NMIMENUCALLBACKTABLE)
 
@@ -66,17 +67,181 @@ NMIMENU__SETUP:
         LD 	(IX+MENU_OFF_SELECTED_ENTRY), 0
         RET
 
+MOVE_HL_PAST_NULL:
+	LD	A,(HL)
+        OR	A
+        INC	HL
+        JR	NZ, MOVE_HL_PAST_NULL
+        RET
+
+SETUP_FILEMENU:
+	LD	HL, HEAP
+        ; Load directory
+	LD	A, RESOURCE_ID_DIRECTORY
+        CALL	LOADRESOURCE
+        JP	Z, INTERNALERROR
+	; HL points to "free" area after listing resource. 
+        ; Use it to set up menu
+        PUSH	HL
+        POP	IX
+        LD	(SDMENU), IX
+        LD	HL, HEAP
+        ; Use at most 16 entries.
+        LD	A, (HL) 	; Get number of dir. entries
+        LD	B, A		; Save for later
+        
+        CP	15
+        JR 	C, _l1
+    	LD	A, 15
+_l1:
+        LD	C, A
+        
+        INC	HL
+
+        ; 	Starts with directory. Use it for title
+        LD	(IX+FRAME_OFF_TITLEPTR), L
+        LD	(IX+FRAME_OFF_TITLEPTR+1), H
+        CALL	MOVE_HL_PAST_NULL ; 	Move until we get the null
+
+        ; Now, setup menu at IX
+        LD	A, 24
+        LD	(IX+FRAME_OFF_WIDTH), A
+        LD	(IX+FRAME_OFF_NUMBER_OF_LINES), C 	; Max visible entries
+        LD	(IX+MENU_OFF_DATA_ENTRIES), B 		; Total number of entries
+        ;LD	(IX+FRAME_OFF_TITLEPTR), LOW(SDMENUTITLE)
+        ;LD	(IX+FRAME_OFF_TITLEPTR+1), HIGH(SDMENUTITLE)
+        ; Now, copy entries. Number is still in B
+	; TODO: check for zero entries
+        ;DEC	B
+        ; HL points to 1st entry.
+_l4:
+	INC	HL ;Move past entry flags for now
+        LD	A, 0 ; Entry attribute
+        LD	(IX+MENU_OFF_FIRST_ENTRY), A
+	LD	(IX+MENU_OFF_FIRST_ENTRY+1), L
+        LD	(IX+MENU_OFF_FIRST_ENTRY+2), H
+        INC	IX
+        INC	IX
+        INC	IX
+        ; Now, scan for NULL termination
+_l2:    LD	A, (HL)
+        OR	A
+        INC 	HL
+        JR 	NZ, _l2
+        ; We are past NULL now.
+        ;INC HL
+        ;LD 	A,(HL)
+        ;call DEBUGHEXA
+        ;_lend: jr _lend
+
+        DJNZ	_l4
+        
+	RET
+
+
+LOADSNAPSHOT:
+	CALL 	SETUP_FILEMENU
+        LD	HL, (SDMENU)
+        LD	D, 5 ; line to display menu at.
+        CALL	MENU__INIT
+	CALL	MENU__DRAW
+_fm:
+	CALL	KEYBOARD
+        CALL	CHECKKEY
+        JR	Z, _fm
+
+	LD	HL, (SDMENU)
+        CP	$26 	; A key
+        JR	NZ, _n1
+        CALL	MENU__CHOOSENEXT
+        JR	_fm
+_n1:
+        CP	$25     ; Q key
+        JR	NZ, _n2
+        CALL	MENU__CHOOSEPREV
+        JR	_fm
+_n2:
+        CP	$21     ; ENTER key
+        JR	NZ, _n3
+       	JR	SNAPSELECTED
+_n3:
+	; Check for cancel
+       LD	DE,(CURKEY) ; Don't think is needed.
+        LD	A, D
+        CP	$27
+        JR	NZ, _n4
+        LD	A, E	
+        CP	$20
+        JR	NZ, _n4
+
+    	; Cancelled.
+        CALL	RESTORESCREENAREA
+        LD	HL, NMI_MENU
+        JP	MENU__DRAW
+_n4:
+        JR	_fm
+
+SNAPSELECTED:
+        ; 	Find entry.
+        LD	B, (IX+MENU_OFF_SELECTED_ENTRY)
+        LD	HL, HEAP
+        ; 	Move past number of entries
+        INC	HL
+        ;	Move past title
+        CALL	MOVE_HL_PAST_NULL ; 	Move until we get the null
+_scanentry:
+	XOR	A
+        OR	B
+	JR	Z, _entryfound
+        DEC	B
+        INC	HL ; Move past entry flags
+        CALL	MOVE_HL_PAST_NULL ; 	Move until we get the null
+        JR	_scanentry
+        
+_entryfound:
+	; See if it is a directory or a file. 01: dir, 00: file
+        LD	A,(HL)
+        INC	HL ; Move to entry name
+        OR	A
+        JR	Z, _entryisfile
+        ; Entry is a directory.
+        ; Send CHDIR command
+        LD	A, CMD_CHDIR
+        CALL	WRITECMDFIFO
+        CALL	WRITECMDSTRING
+        
+        ; TODO: improve this for better screen handling
+        CALL	RESTORESCREENAREA
+        LD	HL, NMI_MENU
+        CALL	MENU__DRAW
+        ; END TODO
+        
+        JP	LOADSNAPSHOT ; Do everything again!
+        
+_entryisfile:
+        CALL	RESTORESCREENAREA
+
+
+        LD	HL, NMI_MENU
+        JP	MENU__DRAW
+	RET
+
+
+
+
 NMIMENUCALLBACKTABLE:
-	DEFW NMIENTRY1HANDLER
-        DEFW NMIENTRY2HANDLER
+	DEFW LOADSNAPSHOT
+        DEFW ASKFILENAME
         DEFW NMIENTRY3HANDLER
         DEFW NMIENTRY4HANDLER
         DEFW NMIENTRY5HANDLER
+        DEFW NMIENTRY6HANDLER
 
 NMIMENUTITLE:
 	DB 	"ZX Interface Z", 0
 NMIENTRY1: DB	"Load snapshot", 0
 NMIENTRY2: DB	"Save snapshot", 0
 NMIENTRY3: DB	"Play/Stop tape", 0
-NMIENTRY4: DB	"Setup...", 0
-NMIENTRY5: DB	"Exit", 0
+NMIENTRY4: DB	"Poke...",0
+NMIENTRY5: DB	"Setup...", 0
+NMIENTRY6: DB	"Exit", 0
