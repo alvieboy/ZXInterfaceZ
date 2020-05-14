@@ -6,6 +6,7 @@
 #define OPSTATUS_IN_PROGRESS (0xfe)
 #define OPSTATUS_ERROR (0xff)
 #define OPSTATUS_OK (0x00)
+#define OPSTATUS_SUCCESS OPSTATUS_OK
 
 void opstatus__set_status(uint8_t val, const char *str);
 void opstatus__set_error(const char *str);

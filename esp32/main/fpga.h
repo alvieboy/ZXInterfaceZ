@@ -15,11 +15,6 @@ typedef struct
     //uint8_t page[FLASH_PAGE_SIZE];
 } fpga_program_state_t;
 
-struct extram_data_block {
-    uint8_t priv[5];
-    uint8_t data[0];
-};
-
 #define FPGA_SPI_CMD_READ_STATUS (0xDE)
 #define FPGA_SPI_CMD_READ_VIDEOMEM (0xDF)
 #define FPGA_SPI_CMD_READ_CAPMEM (0xE0)
@@ -117,10 +112,14 @@ uint32_t fpga__get_capture_status(void);
 int fpga__read_command_fifo();
 uint16_t fpga__get_spectrum_pc();
 int fpga__load_tap_fifo(const uint8_t *data, unsigned len, int timeout);
+
+int fpga__write_rom(unsigned offset, uint8_t val);
+
+/* EXT ram methods */
 int fpga__read_extram(uint32_t address);
-
-
-int fpga__read_extram_block(uint32_t address, struct extram_data_block *dest, int size);
+int fpga__read_extram_block(uint32_t address, uint8_t *dest, int size);
+int fpga__write_extram(uint32_t address, uint8_t val);
+int fpga__write_extram_block(uint32_t address, uint8_t *buffer, int size);
 
 
 #endif

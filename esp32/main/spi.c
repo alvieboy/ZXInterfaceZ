@@ -2,6 +2,8 @@
 #include "defs.h"
 #include <string.h>
 #include "esp_log.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
 
 static SemaphoreHandle_t *spi_sem;
 
@@ -66,6 +68,109 @@ int spi__transceive(spi_device_handle_t spi, uint8_t *buffer, unsigned len)
     }
     int ret = spi_device_polling_transmit(spi, &t);  //Transmit!
 
+
+    xSemaphoreGive(spi_sem);
+    return ret;
+}
+
+int spi__transceive_cmd8_addr24(spi_device_handle_t spi,
+                                uint8_t cmd,
+                                uint32_t addr,
+                                uint8_t *buffer,
+                                unsigned len)
+{
+    spi_transaction_ext_t ext;
+
+    if (len==0)
+        return 0;             //no need to send anything
+
+    memset(&ext, 0, sizeof(ext));       //Zero out the transaction
+
+    ext.base.length   = len*8;                 //Len is in bytes, transaction length is in bits.
+    ext.base.rxlength = (len)*8;
+    ext.base.tx_buffer = buffer;               //Data
+    ext.base.rx_buffer = buffer;               //Data
+    ext.base.flags = SPI_TRANS_VARIABLE_CMD | SPI_TRANS_VARIABLE_ADDR;
+    ext.command_bits = 8;
+    ext.address_bits = 24;
+    ext.base.cmd = (uint16_t)cmd;
+    ext.base.addr = addr;
+
+
+    if (xSemaphoreTake( spi_sem,  portMAX_DELAY )!= pdTRUE) {
+        ESP_LOGE(TAG, "Cannot take semaphore");
+        return -1;
+    }
+    int ret = spi_device_polling_transmit(spi, &ext.base);  //Transmit!
+
+
+    xSemaphoreGive(spi_sem);
+    return ret;
+}
+
+int spi__transceive_cmd8(spi_device_handle_t spi,
+                         uint8_t cmd,
+                         uint8_t *buffer,
+                         unsigned len)
+{
+    spi_transaction_ext_t ext;
+
+    if (len==0)
+        return 0;             //no need to send anything
+
+    memset(&ext, 0, sizeof(ext));       //Zero out the transaction
+
+    ext.base.length   = len*8;                 //Len is in bytes, transaction length is in bits.
+    ext.base.rxlength = (len)*8;
+    ext.base.tx_buffer = buffer;               //Data
+    ext.base.rx_buffer = buffer;               //Data
+    ext.base.flags = SPI_TRANS_VARIABLE_CMD;
+    ext.command_bits = 8;
+    ext.base.cmd = (uint16_t)cmd;
+
+
+    if (xSemaphoreTake( spi_sem,  portMAX_DELAY )!= pdTRUE) {
+        ESP_LOGE(TAG, "Cannot take semaphore");
+        return -1;
+    }
+    int ret = spi_device_polling_transmit(spi, &ext.base);  //Transmit!
+
+
+    xSemaphoreGive(spi_sem);
+    return ret;
+}
+
+int spi__transceive_cmd8_addr32(spi_device_handle_t spi,
+                                uint8_t cmd,
+                                uint32_t addr,
+                                uint8_t *buffer,
+                                unsigned len)
+{
+    spi_transaction_ext_t ext;
+
+    if (len==0)
+        return 0;             //no need to send anything
+
+    memset(&ext, 0, sizeof(ext));       //Zero out the transaction
+
+    ext.base.length   = len*8;                 //Len is in bytes, transaction length is in bits.
+    ext.base.rxlength = (len)*8;
+    ext.base.tx_buffer = buffer;               //Data
+    ext.base.rx_buffer = buffer;               //Data
+    ext.base.flags = SPI_TRANS_VARIABLE_CMD | SPI_TRANS_VARIABLE_ADDR;
+    ext.command_bits = 8;
+    ext.address_bits = 32;
+    ext.base.cmd = (uint16_t)cmd;
+    ext.base.addr = addr;
+
+//    ESP_LOGI(TAG, "%s: Take", __FUNCTION__);
+    if (xSemaphoreTake( spi_sem,  portMAX_DELAY )!= pdTRUE) {
+        ESP_LOGE(TAG, "Cannot take semaphore");
+        return -1;
+    }
+    int ret = spi_device_polling_transmit(spi, &ext.base);  //Transmit!
+
+   // ESP_LOGI(TAG, "%s: Release", __FUNCTION__);
 
     xSemaphoreGive(spi_sem);
     return ret;

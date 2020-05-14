@@ -1,6 +1,8 @@
 #include <inttypes.h>
 #include <string.h>
 #include <stdio.h>
+#include "sna_relocs.h"
+#include "fpga.h"
 
 typedef enum {
     RELOC_16,
@@ -17,23 +19,23 @@ struct relocentry
 };
 
 const struct relocentry relocmap[] = {
-    { "AF'", 0x0084, RELOC_16 },
+    { "AF'", 0x0005, RELOC_16 },
 
-    { "BC'", 0x008E, RELOC_16 },
-    { "DE'", 0x0091, RELOC_16 },
-    { "HL'", 0x0094, RELOC_16 },
-    { "I",   0x009A, RELOC_8 },
-    { "AF",  0x009E, RELOC_16 },
-    { "BC",  0x00A5, RELOC_16 },
-    { "R",   0x00AB, RELOC_8 },
-    { "BORDER",   0x00AF, RELOC_8 },
-    { "DE",   0x00B4, RELOC_16 },
-    { "IX",   0x00B8, RELOC_16 },
-    { "IY",   0x00BC, RELOC_16 },
-    { "SP",   0x00C2, RELOC_16 },
-    { "HL",   0x00C5, RELOC_16 },
-    { "IM",   0x00C8, RELOC_IM },  // 0x46, 0x56, 0x5E,
-    { "INT",  0x00C9, RELOC_EIDI},  // EI: 0xFB, DI: 0xF3
+    { "BC'", 0x000F, RELOC_16 },
+    { "DE'", 0x0012, RELOC_16 },
+    { "HL'", 0x0015, RELOC_16 },
+    { "I",   0x001B, RELOC_8 },
+    { "AF",  0x001F, RELOC_16 },
+    { "BC",  0x0026, RELOC_16 },
+    { "R",   0x002C, RELOC_8 },
+    { "BORDER",   0x0030, RELOC_8 },
+    { "DE",   0x0035, RELOC_16 },
+    { "IX",   0x0039, RELOC_16 },
+    { "IY",   0x003D, RELOC_16 },
+    { "SP",   0x0043, RELOC_16 },
+    { "HL",   0x0046, RELOC_16 },
+    { "IM",   0x0049, RELOC_IM },  // 0x46, 0x56, 0x5E,
+    { "INT",  0x004A, RELOC_EIDI},  // EI: 0xFB, DI: 0xF3
 };
 
 static const struct relocentry *findreloc(const char *name)
@@ -50,7 +52,9 @@ static const struct relocentry *findreloc(const char *name)
     return NULL;
 }
 
-static int apply_single_reloc(const char *name, const uint8_t *src, uint8_t *rom)
+// Offset shall be 0x0080 for the "old" method, and 0x3F00 for the in-main-rom method
+
+static int apply_single_reloc(const char *name, const uint8_t *src, sna_writefun fun, void *userdata, uint16_t offset)
 {
     const struct relocentry *e = findreloc(name);
     uint8_t v;
@@ -59,11 +63,11 @@ static int apply_single_reloc(const char *name, const uint8_t *src, uint8_t *rom
         return -1;
     switch (e->type) {
     case RELOC_16:
-        rom[ e->offset ] = src[0];
-        rom[ e->offset+1 ] = src[1];
+        fun(userdata, offset + e->offset, src[0]);
+        fun(userdata, offset + e->offset+1, src[1]);
         break;
     case RELOC_8:
-        rom[ e->offset ] = src[0];
+        fun(userdata, offset + e->offset, src[0]);
         break;
     case RELOC_IM:
         switch (src[0]) {
@@ -74,7 +78,7 @@ static int apply_single_reloc(const char *name, const uint8_t *src, uint8_t *rom
             fprintf(stderr,"Unknown IM mode %d\n", src[0]);
             return -1;
         }
-        rom[ e->offset ] = v;
+        fun(userdata, offset + e->offset, v);
         break;
     case RELOC_EIDI:
         if (src[0]&1) {
@@ -83,32 +87,62 @@ static int apply_single_reloc(const char *name, const uint8_t *src, uint8_t *rom
         }  else {
             v = 0xF3;
         }
-        rom[ e->offset ] = v;
+        fun(userdata, offset + e->offset, v);
         break;
     }
     return 0;
 }
 
-
-
-void sna_apply_relocs(const uint8_t *sna, uint8_t *rom)
+static void writefun_mem(void *data, unsigned offset, uint8_t val)
 {
-    apply_single_reloc("I", &sna[0], rom);
-    apply_single_reloc("HL'", &sna[1], rom);
-    apply_single_reloc("DE'", &sna[3], rom);
-    apply_single_reloc("BC'", &sna[5], rom);
-    apply_single_reloc("AF'", &sna[7], rom);
-    apply_single_reloc("HL", &sna[9], rom);
-    apply_single_reloc("DE", &sna[11], rom);
-    apply_single_reloc("BC", &sna[13], rom);
-    apply_single_reloc("IY", &sna[15], rom);
-    apply_single_reloc("IX", &sna[17], rom);
-    apply_single_reloc("INT", &sna[19], rom);
-    apply_single_reloc("R", &sna[20], rom);
-    apply_single_reloc("AF", &sna[21], rom);
-    apply_single_reloc("SP", &sna[23], rom);
-    apply_single_reloc("IM", &sna[25], rom);
-    apply_single_reloc("BORDER", &sna[26], rom);
+    uint8_t *p = (uint8_t*)data;
+    p[ offset ] = val;
+}
+
+static void writefun_extram(void *data, unsigned offset, uint8_t val)
+{
+    unsigned p = (unsigned)data;
+    fpga__write_extram(p, val);
+}
+
+static void writefun_fpgarom(void *data, unsigned offset, uint8_t val)
+{
+    fpga__write_rom(offset, val);
+}
+
+void sna_apply_relocs_mem(const uint8_t *sna, uint8_t *rom, uint16_t offset)
+{
+    sna_apply_relocs(sna, offset, &writefun_mem, rom);
+}
+
+void sna_apply_relocs_extram(const uint8_t *sna, unsigned extram_address, uint16_t offset)
+{
+    sna_apply_relocs(sna, offset, &writefun_extram, (void*)extram_address);
+}
+
+void sna_apply_relocs_fpgarom(const uint8_t *sna, uint16_t offset)
+{
+    sna_apply_relocs(sna, offset, &writefun_fpgarom, (void*)NULL);
+}
+
+void sna_apply_relocs(const uint8_t *sna, uint16_t offset, sna_writefun fun, void *userdata)
+{
+    apply_single_reloc("I", &sna[0], fun, userdata, offset);
+    apply_single_reloc("HL'", &sna[1], fun, userdata, offset);
+    apply_single_reloc("DE'", &sna[3], fun, userdata, offset);
+    apply_single_reloc("BC'", &sna[5], fun, userdata, offset);
+    apply_single_reloc("AF'", &sna[7], fun, userdata, offset);
+    apply_single_reloc("HL", &sna[9], fun, userdata, offset);
+    apply_single_reloc("DE", &sna[11], fun, userdata, offset);
+    apply_single_reloc("BC", &sna[13], fun, userdata, offset);
+    apply_single_reloc("IY", &sna[15], fun, userdata, offset);
+    apply_single_reloc("IX", &sna[17], fun, userdata, offset);
+    apply_single_reloc("INT", &sna[19], fun, userdata, offset);
+    apply_single_reloc("R", &sna[20], fun, userdata, offset);
+    apply_single_reloc("AF", &sna[21], fun, userdata, offset);
+    apply_single_reloc("SP", &sna[23], fun, userdata, offset);
+    apply_single_reloc("IM", &sna[25], fun, userdata, offset);
+    apply_single_reloc("BORDER", &sna[26], fun, userdata, offset);
 
 /*
 ;   ------------------------------------------------------------------------

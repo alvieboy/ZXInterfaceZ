@@ -1,5 +1,7 @@
 #include "dump.h"
 #include <stdio.h>
+#include "esp_log.h"
+#include "defs.h"
 
 void dump__buffer(const uint8_t *data, unsigned len)
 {
@@ -7,5 +9,5 @@ void dump__buffer(const uint8_t *data, unsigned len)
     while (len--) {
         printf(" %02x", *data++);
     }
-    printf(" ]");
+    printf(" ]\r\n");
 }

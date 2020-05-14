@@ -14,6 +14,9 @@
 #include "dump.h"
 #include "sna_defs.h"
 #include <stdlib.h>
+#include "fileaccess.h"
+
+#define TEST_WRITES
 
 #undef TEST_ROM
 
@@ -78,7 +81,7 @@ static int sna__chunk(command_t *cmdt)
 
         if ( cmdt->len > SNA_HEADER_SIZE ) {
 #ifndef TEST_ROM
-            sna_apply_relocs(cmdt->rx_buffer, snaloader_rom);
+            sna_apply_relocs_mem(cmdt->rx_buffer, snaloader_rom, 0x0080);
 #endif
             header_seen = true;
             // Forcibly move data back, this helps below.
@@ -139,15 +142,23 @@ static int sna__fix_and_write_sp(int fh)
     uint16_t sp;
     uint8_t v;
     int ret = 0;
+    ESP_LOGI(TAG, "SNA: reading from EXTRAM");
+
     do {
+        ESP_LOGI(TAG, "SNA: reading SPL from %06x", SNA_RAM_OFF_SPL);
         ret = fpga__read_extram(SNA_RAM_OFF_SPL);
         if (ret<0)
             break;
+
+        ESP_LOGI(TAG, "EXTRAM: %06x : %02x", SNA_RAM_OFF_SPL, ret);
+
         sp = ret & 0xff;
+        ESP_LOGI(TAG, "SNA: reading SPH from %06x", SNA_RAM_OFF_SPH);
         ret = fpga__read_extram(SNA_RAM_OFF_SPH);
         if (ret<0)
             break;
         sp |= (ret<<8);
+        ESP_LOGI(TAG, "EXTRAM: %06x : %02x", SNA_RAM_OFF_SPH, ret);
 
         sp+=2;
         v = sp & 0xff;
@@ -172,9 +183,11 @@ static int sna__writefromextram(int fh, const uint32_t address)
         return -1;
     v = r & 0xff;
 
+    ESP_LOGI(TAG, "EXTRAM: %06x : %02x", address, v);
+
     r = write(fh,&v, 1);
     if (r!=1) {
-        ESP_LOGE(TAG, "Cannot write : %d : %s\n", r, strerror(errno));
+        ESP_LOGE(TAG, "Cannot write : %d : %s", r, strerror(errno));
         return -2;
     }
     return 0;
@@ -183,20 +196,17 @@ static int sna__writefromextram(int fh, const uint32_t address)
 
 static int sna__writefromextramblock(int fh, uint32_t address, int len)
 {
-    struct {
-        struct extram_data_block b;
-        uint8_t data[LOCAL_CHUNK_SIZE];
-    } chunk;
+    uint8_t data[LOCAL_CHUNK_SIZE];
 
     while (len>0) {
         int chunklen = len > LOCAL_CHUNK_SIZE ? LOCAL_CHUNK_SIZE :  len;
 
-        int r = fpga__read_extram_block(address, &chunk.b, chunklen);
+        int r = fpga__read_extram_block(address, data, chunklen);
 
         if (r<0)
             return -1;
 
-        if (write(fh, chunk.data, chunklen)!=chunklen) {
+        if (write(fh, data, chunklen)!=chunklen) {
             ESP_LOGE(TAG, "Cannot write chunk : %d : %s\n", r, strerror(errno));
             return -2;
         }
@@ -212,12 +222,17 @@ int sna__save_from_extram(const char *file)
     int ret = 0;
     sprintf(fpath,"/sdcard/%s", file);
     int fh = open(fpath, O_WRONLY|O_CREAT|O_TRUNC, 0666);
+    ESP_LOGI(TAG, "Opened file %s", fpath);
     if (fh<0) {
         ESP_LOGE(TAG,"Cannot open file %s: %s", fpath, strerror(errno));
         strcpy(sna_error,"Cannot open file");
         return -1;
     }
 
+    // DEBUG ONLY
+    ESP_LOGI(TAG,"First 8 bytes of extram: ");
+    fpga__read_extram_block(0x0, (uint8_t*)fpath, 8);
+    dump__buffer((uint8_t*)fpath,8);
 #define W(addr) if ((ret=sna__writefromextram(fh,addr))<0) break
     do {
 
@@ -263,11 +278,12 @@ int sna__save_from_extram(const char *file)
         //   26       1      byte   BorderColor (0..7, not used by Spectrum 1.7)  Check
         W(SNA_RAM_OFF_BORDER);
         //   27       49152  bytes  RAM dump 16384..65535
-
+        ESP_LOGI(TAG, "Writing block data 1");
         ret = sna__writefromextramblock(fh, SNA_RAM_OFF_CHUNK1, SNA_RAM_CHUNK1_SIZE);
         if (ret<0) {
             break;
         }
+        ESP_LOGI(TAG, "Writing block data 2");
         ret = sna__writefromextramblock(fh, SNA_RAM_OFF_CHUNK2, SNA_RAM_CHUNK2_SIZE);
         if (ret<0) {
             break;
@@ -294,4 +310,94 @@ int sna__save_from_extram(const char *file)
     }
 
     return ret;
+}
+
+#define SNA_EXTRAM_ADDRESS 0x010000
+
+#undef LOCAL_CHUNK_SIZE
+#define LOCAL_CHUNK_SIZE 512
+
+int sna__load_sna_extram(const char *file)
+{
+    char fullfile[128];
+    uint8_t chunk[LOCAL_CHUNK_SIZE];
+
+    uint8_t header[SNA_HEADER_SIZE];
+
+    fullpath(file, fullfile, sizeof(fullfile)-1);
+
+    int fd = open(fullfile, O_RDONLY);
+    if (fd<0) {
+        ESP_LOGE(TAG,"Cannot open '%s': %s", fullfile, strerror(errno));
+        return -1;
+    }
+
+    // Read in SNA header
+    if (read(fd, header, sizeof(header))!=sizeof(header)) {
+        ESP_LOGE(TAG,"Cannot read SNA header: %s", strerror(errno));
+        close(fd);
+        return -1;
+    }
+
+    sna_apply_relocs_fpgarom(header, 0x3F00);
+
+    // Now, load rest of file to memory
+
+    unsigned togo = 0xC000; // 48KB
+    unsigned extram_address = SNA_EXTRAM_ADDRESS;
+
+    while (togo) {
+        int chunksize = togo>LOCAL_CHUNK_SIZE?LOCAL_CHUNK_SIZE:togo;
+        int r = read(fd, chunk, chunksize);
+        if (r!=chunksize) {
+            ESP_LOGE(TAG, "Short read from file: %s", strerror(errno));
+            close(fd);
+            return -1;
+        }
+#ifdef TEST_WRITES
+        uint8_t rdc[LOCAL_CHUNK_SIZE];
+        memcpy(rdc, chunk, chunksize);
+#endif
+        if (fpga__write_extram_block(extram_address, chunk, chunksize)<0) {
+            ESP_LOGE(TAG, "Error writing to external FPGA RAM");
+            close(fd);
+            return -1;
+        }
+#ifdef TEST_WRITES
+        if (fpga__read_extram_block(extram_address, chunk, chunksize)<0) {
+            ESP_LOGE(TAG, "Error reading from external FPGA RAM");
+            close(fd);
+            return -1;
+        }
+        if (memcmp(rdc,chunk,chunksize)!=0) {
+
+            ESP_LOGE(TAG, "ERROR comparing data!!! address:%08x", extram_address);
+            dump__buffer(rdc, 64);
+            dump__buffer(chunk, 64);
+            memcpy(chunk, rdc, sizeof(chunk) );
+            if (fpga__write_extram_block(extram_address, chunk, chunksize)<0) {
+                ESP_LOGE(TAG, "Error writing to external FPGA RAM");
+                close(fd);
+                return -1;
+            }
+
+
+
+            if (fpga__read_extram_block(extram_address, chunk, chunksize)<0) {
+                ESP_LOGE(TAG, "Error reading from external FPGA RAM");
+                close(fd);
+                return -1;
+            }
+            dump__buffer(chunk, 64);
+
+            return -1;
+        }
+#endif
+
+        extram_address += chunksize;
+        togo -= chunksize;
+    }
+
+    return 0;
+
 }

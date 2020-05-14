@@ -29,3 +29,11 @@ struct opstatus_resource opstatusresource = {
     .status = 0xFF,
     .str = ""
 };
+
+struct directory_resource directoryresource = {
+    .r = DIRECTORY_RESOURCE_DEF,
+    .alloc_size = 0,
+    .buffer = NULL,
+    .entries = 0,
+    .filter = 0
+};

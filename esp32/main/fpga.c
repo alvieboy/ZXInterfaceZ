@@ -58,26 +58,25 @@ static void fpga__init_spi()
 
 unsigned fpga__read_id()
 {
-    uint8_t idbuf[5];
+    uint8_t idbuf[4];
 
-    idbuf[0] = 0x9F;
-    idbuf[1] = 0xAA;
-    idbuf[2] = 0x55;
-    idbuf[3] = 0xAA;
-    idbuf[4] = 0x55;
+    idbuf[0] = 0xAA;
+    idbuf[1] = 0x55;
+    idbuf[2] = 0xAA;
+    idbuf[3] = 0x55;
 
 
-    int r = spi__transceive(spi0_fpga, idbuf, 5);
+    int r = spi__transceive_cmd8(spi0_fpga, 0x9F, idbuf, 4);
 
     if (r<0) {
         ESP_LOGE(TAG, "SPI transceive: error %d", r);
         return 0;
     }
     printf("FPGA id: ");
-    dump__buffer(&idbuf[1], 4);
+    dump__buffer(&idbuf[0], 4);
     printf("\r\n");
 
-    return getbe32(&idbuf[1]);
+    return getbe32(&idbuf[0]);
 }
 
 static int fpga__configurefromflash()
@@ -352,6 +351,17 @@ int fpga__load_resource_fifo(const uint8_t *data, unsigned len, int timeout)
     return 0;
 }
 
+int fpga__write_rom(unsigned offset, uint8_t val)
+{
+    uint8_t tbuf[4];
+    tbuf[0] = 0xE1;
+    tbuf[1] = (offset>>8) & 0xFF;
+    tbuf[2] = offset & 0xFF;
+    tbuf[3] = val;
+
+    return spi__transceive(spi0_fpga, tbuf, 4);
+}
+
 int fpga__upload_rom(const uint8_t *buffer, unsigned len)
 {
     uint16_t offset = 0;
@@ -494,18 +504,43 @@ int fpga__read_extram(uint32_t address)
     return buf[5];
 }
 
-int fpga__read_extram_block(uint32_t address, struct extram_data_block *dest, int size)
+int fpga__write_extram(uint32_t address, uint8_t val)
 {
-    dest->priv[0] = 0x50;
-    dest->priv[1] = (address>>16) & 0xff;
-    dest->priv[2] = (address>>8) & 0xff;
-    dest->priv[3] = (address) & 0xff;
-    dest->priv[4] = 0x00; // Dummy
+    uint8_t buf[6];
+    buf[0] = 0x51;
+    buf[1] = (address>>16) & 0xff;
+    buf[2] = (address>>8) & 0xff;
+    buf[3] = (address) & 0xff;
+    buf[4] = val;
 
-    if (spi__transceive(spi0_fpga, &dest->priv[0], 5 + size)<0)
+    if (spi__transceive(spi0_fpga, buf, 5)<0)
+        return -1;
+    return 0;
+}
+
+int fpga__read_extram_block(uint32_t address, uint8_t *dest, int size)
+{
+    return spi__transceive_cmd8_addr32(spi0_fpga,
+                                       0x50,
+                                       address<<8,
+                                       dest, size);
+}
+
+int fpga__write_extram_block(uint32_t address, uint8_t *buffer, int size)
+{
+    //ESP_LOGI(TAG, "Write RAM address 0x%06x", address);
+
+    //dump__buffer(buffer, 64);
+
+    // Workaround for weird first-byte corruption
+    if (fpga__write_extram(address, buffer[0])<0)
         return -1;
 
-    return 0;
+    return spi__transceive_cmd8_addr24(spi0_fpga,
+                                       0x51,
+                                       address,
+                                       buffer,
+                                       size);
 }
 
 

@@ -240,7 +240,7 @@ static int do_reset_spectrum(command_t *cmdt, int argc, char **argv, bool forcer
         fpga__set_clear_flags(FPGA_FLAG_CAPRUN, FPGA_FLAG_CAPCLR | FPGA_FLAG_RSTSPECT | FPGA_FLAG_COMPRESS);
 
     } else {
-        fpga__set_flags(FPGA_FLAG_RSTSPECT | FPGA_FLAG_CAPCLR);
+        fpga__set_clear_flags(FPGA_FLAG_RSTSPECT | FPGA_FLAG_CAPCLR, FPGA_FLAG_TRIG_FORCEROMONRETN);
         if (forcerom)
             fpga__set_trigger(FPGA_FLAG_TRIG_FORCEROMCS_ON);
         else
@@ -249,6 +249,7 @@ static int do_reset_spectrum(command_t *cmdt, int argc, char **argv, bool forcer
         vTaskDelay(2 / portTICK_RATE_MS);
         fpga__clear_flags(FPGA_FLAG_RSTSPECT);
     }
+    fpga__set_trigger(FPGA_FLAG_TRIG_FORCEROMCS_OFF);
     ESP_LOGI(TAG, "Reset completed");
     return 0;
 }

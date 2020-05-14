@@ -52,10 +52,14 @@ static void ip_event_handler(void* arg, esp_event_base_t event_base,
     switch (event_id) {
     case IP_EVENT_STA_GOT_IP:
         event = (ip_event_got_ip_t*) event_data;
-        ESP_LOGI(TAG, "got ip:%s",
-                 ip4addr_ntoa(&event->ip_info.ip));
+/*        ESP_LOGI(TAG, "got ip: %s",
+ ip4addr_ntoa(&event->ip_info.ip));*/
+        ESP_LOGI(TAG, "got ip: " IPSTR,
+                 IP2STR(&event->ip_info.ip));
+
         xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
         led__set(LED2, 1);
+        break;
     default:
         ESP_LOGW(TAG,"Unhandled IP event %d", event_id);
         break;
@@ -99,6 +103,7 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,
         wifi__parse_scan();
         xEventGroupClearBits(s_wifi_event_group, WIFI_SCANNING_BIT);
         //case WIFI_EVENT_STA_CONNECTED:
+        break;
     default:
         ESP_LOGW(TAG,"Unhandled WIFI event %d", event_id);
 
@@ -218,8 +223,8 @@ void wifi_init_softap()
     ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_AP, &wifi_config));
     ESP_ERROR_CHECK(esp_wifi_start());
 
-    ESP_LOGI(TAG, "wifi_init_softap finished. SSID:%s password:%s",
-             EXAMPLE_ESP_WIFI_SSID, EXAMPLE_ESP_WIFI_PASS);
+    ESP_LOGI(TAG, "wifi_init_softap finished. SSID:%s password:%s, max sta %d", 
+             EXAMPLE_ESP_WIFI_SSID, EXAMPLE_ESP_WIFI_PASS, EXAMPLE_MAX_STA_CONN);
 }
 
 void wifi_init_wpa2()

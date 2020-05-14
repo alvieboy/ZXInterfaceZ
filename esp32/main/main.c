@@ -20,6 +20,7 @@
 #include "netcmd.h"
 #include "sdcard.h"
 #include "tapplayer.h"
+#include "rom.h"
 
 volatile int restart_requested = 0;
 
@@ -99,10 +100,14 @@ void app_main()
 
     resource__register( 0x00, &versionresource);
     resource__register( 0x02, &statusresource.r);
+    resource__register( 0x03, &directoryresource.r);
     resource__register( 0x04, &wificonfigresource.r);
     resource__register( 0x05, &aplistresource.r);
-
     resource__register( 0x10, &opstatusresource.r);
+
+    if (rom__load_from_flash()!=0) {
+        ESP_LOGW(TAG,"Cannot load ROM from flash, continuing with no ROM");
+    }
 
     spectcmd__init();
 #if 0
