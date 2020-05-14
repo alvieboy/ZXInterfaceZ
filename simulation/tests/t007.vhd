@@ -32,14 +32,15 @@ begin
     l: for i in 1 to 2 loop
       SpectrumWriteIo(Spectrum_Cmd, Spectrum_Data, x"0011", x"14"); -- Address low
       SpectrumWriteIo(Spectrum_Cmd, Spectrum_Data, x"0013", x"45"); -- Address high
-      SpectrumWriteIo(Spectrum_Cmd, Spectrum_Data, x"0015", x"DE"); -- Data
-      SpectrumWriteIo(Spectrum_Cmd, Spectrum_Data, x"0015", x"AD"); -- Data
+      SpectrumWriteIo(Spectrum_Cmd, Spectrum_Data, x"0015", x"00"); -- Address high
+      SpectrumWriteIo(Spectrum_Cmd, Spectrum_Data, x"0017", x"DE"); -- Data
+      SpectrumWriteIo(Spectrum_Cmd, Spectrum_Data, x"0017", x"AD"); -- Data
   
       SpectrumWriteIo(Spectrum_Cmd, Spectrum_Data, x"0011", x"14"); -- Address low
       SpectrumWriteIo(Spectrum_Cmd, Spectrum_Data, x"0013", x"45"); -- Address high
-      SpectrumReadIo(Spectrum_Cmd, Spectrum_Data, x"0015", data); -- Data
+      SpectrumReadIo(Spectrum_Cmd, Spectrum_Data, x"0017", data); -- Data
       Check("First data read is OK", data, x"DE");
-      SpectrumReadIo(Spectrum_Cmd, Spectrum_Data, x"0015", data); -- Data
+      SpectrumReadIo(Spectrum_Cmd, Spectrum_Data, x"0017", data); -- Data
       Check("Second data read is OK", data, x"AD");
     end loop;
 
@@ -58,6 +59,49 @@ begin
 
     Check("First SPI data read is OK", spiPayload_out_s(5), x"DE");
     Check("Second SPI data read is OK", spiPayload_out_s(6), x"AD");
+
+    -- SPI ram write
+
+    spiPayload_in_s(0) <= x"51";
+    spiPayload_in_s(1) <= x"01";
+    spiPayload_in_s(2) <= x"20";
+    spiPayload_in_s(3) <= x"03";
+    spiPayload_in_s(4) <= x"c0";
+    spiPayload_in_s(5) <= x"fe";
+    spiPayload_in_s(6) <= x"ca";
+    spiPayload_in_s(7) <= x"a5";
+    Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 8, spiPayload_in_s, spiPayload_out_s);
+
+    spiPayload_in_s(0) <= x"50";
+    spiPayload_in_s(1) <= x"01";
+    spiPayload_in_s(2) <= x"20";
+    spiPayload_in_s(3) <= x"03";
+    spiPayload_in_s(4) <= x"00"; -- Dummy
+    spiPayload_in_s(5) <= x"00";
+    spiPayload_in_s(6) <= x"00";
+    spiPayload_in_s(7) <= x"00";
+    spiPayload_in_s(8) <= x"00";
+    Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 9, spiPayload_in_s, spiPayload_out_s);
+
+    Check("First SPI data read is OK", spiPayload_out_s(5), x"c0");
+    Check("Second SPI data read is OK", spiPayload_out_s(6), x"fe");
+    Check("Third SPI data read is OK", spiPayload_out_s(7), x"ca");
+    Check("Fourth SPI data read is OK", spiPayload_out_s(8), x"a5");
+
+    -- Try reading from Spectrum now.
+    SpectrumWriteIo(Spectrum_Cmd, Spectrum_Data, x"0011", x"03"); -- Address low
+    SpectrumWriteIo(Spectrum_Cmd, Spectrum_Data, x"0013", x"20"); -- Address high
+    SpectrumWriteIo(Spectrum_Cmd, Spectrum_Data, x"0015", x"01"); -- Address high
+    SpectrumReadIo(Spectrum_Cmd, Spectrum_Data, x"0017", data); -- Data
+    Check("data read is OK", data, x"c0");
+    SpectrumReadIo(Spectrum_Cmd, Spectrum_Data, x"0017", data); -- Data
+    Check("data read is OK", data, x"fe");
+    SpectrumReadIo(Spectrum_Cmd, Spectrum_Data, x"0017", data); -- Data
+    Check("data read is OK", data, x"ca");
+    SpectrumReadIo(Spectrum_Cmd, Spectrum_Data, x"0017", data); -- Data
+    Check("data read is OK", data, x"a5");
+
+
 
     FinishTest(
       SysClk_Cmd,

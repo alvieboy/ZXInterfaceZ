@@ -526,6 +526,7 @@ _endl1: HALT
         include	"resource.asm"
         include	"graphics.asm"
 	include "nmihandler.asm"
+        include "videomode.asm"
         include	"print.asm"
         include	"debug.asm"
         include	"regdebug.asm"

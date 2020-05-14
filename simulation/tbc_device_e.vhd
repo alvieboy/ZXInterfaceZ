@@ -13,6 +13,7 @@ use work.bfm_rom_p.all;
 use work.bfm_ula_p.all;
 use work.bfm_audiocap_p.all;
 use work.bfm_qspiram_p.all;
+use work.bfm_usbdevice_p.all;
 
 entity tbc_device is
   port (
@@ -30,12 +31,14 @@ entity tbc_device is
     Audiocap_Cmd    : out Cmd_Audiocap_type := Cmd_Audiocap_Defaults;
     QSPIRam0_Cmd    : out Cmd_QSPIRam_type;
     QSPIRam1_Cmd    : out Cmd_QSPIRam_type;
+    UsbDevice_Cmd   : out Cmd_UsbDevice_type;
 
     -- Inputs
     Spimaster_Data  : in Data_Spimaster_type;
     Spectrum_Data   : in Data_Spectrum_type;
     CtrlPins_Data   : in Data_CtrlPins_type;
     Ula_Data        : in Data_Ula_type;
-    Audiocap_Data    : in Data_Audiocap_type
+    Audiocap_Data   : in Data_Audiocap_type;
+    Usbdevice_Data  : in Data_Usbdevice_type
   );
 end tbc_device;

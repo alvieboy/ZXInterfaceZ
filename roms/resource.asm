@@ -34,6 +34,7 @@ WAITFIFO1:
 ; Corrupts:	HL, BC, F
 
 LOADRESOURCE:
+
 	LD	B, A
         XOR	A ; A=0
         CALL 	WRITECMDFIFO	; Send "REQUEST_RESOURCE" command
@@ -52,7 +53,8 @@ LOADRESOURCE:
         LD	D, A 	; Resource size MSB
         
         PUSH	DE	; Save resource size.
-	
+
+	       
 WAITFIFO3:
 
         CALL	READRESFIFO

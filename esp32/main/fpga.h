@@ -45,11 +45,13 @@ typedef struct
 #define FPGA_FLAG_COMPRESS (1<<4)
 #define FPGA_FLAG_ENABLE_INTERRUPT (1<<5)
 #define FPGA_FLAG_CAPSYNCEN (1<<6)
-#define FPGA_FLAG_VIDMODEWIDE (1<<7)
 
 #define FPGA_FLAG_ULAHACK (1<<8)
 #define FPGA_FLAG_TAPFIFO_RESET (1<<9)
 #define FPGA_FLAG_TAP_ENABLED (1<<10)
+
+#define FPGA_FLAG_VIDMODE0 (1<<11)
+#define FPGA_FLAG_VIDMODE1 (1<<12)
 
 
 
@@ -112,6 +114,7 @@ uint32_t fpga__get_capture_status(void);
 int fpga__read_command_fifo();
 uint16_t fpga__get_spectrum_pc();
 int fpga__load_tap_fifo(const uint8_t *data, unsigned len, int timeout);
+uint16_t fpga__get_tap_fifo_free();
 
 int fpga__write_rom(unsigned offset, uint8_t val);
 

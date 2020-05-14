@@ -119,6 +119,9 @@ _l1:
         LD	(IX+FRAME_OFF_TITLEPTR+1), H
         CALL	MOVE_HL_PAST_NULL ; 	Move until we get the null
 
+	XOR 	A
+        LD	(IX+MENU_OFF_SELECTED_ENTRY), A
+
         ; Now, setup menu at IX
         LD	A, 24
         LD	(IX+FRAME_OFF_WIDTH), A
@@ -279,7 +282,7 @@ NMIMENUCALLBACKTABLE:
         DEFW ASKFILENAME
         DEFW NMIENTRY3HANDLER
         DEFW NMIENTRY4HANDLER
-        DEFW NMIENTRY5HANDLER
+        DEFW VIDEOMODE
         DEFW NMIENTRY6HANDLER
         DEFW NMIENTRY7HANDLER
 
@@ -289,6 +292,6 @@ NMIENTRY1: DB	"Load snapshot", 0
 NMIENTRY2: DB	"Save snapshot", 0
 NMIENTRY3: DB	"Play/Stop tape", 0
 NMIENTRY4: DB	"Poke...",0
-NMIENTRY5: DB	"Setup...", 0
+NMIENTRY5: DB	"Video...", 0
 NMIENTRY6: DB	"Reset", 0
 NMIENTRY7: DB	"Exit", 0

@@ -29,6 +29,7 @@ entity interfacez_io is
     audio_i   : in std_logic;
 
     forceiorqula_o  : out std_logic;
+    keyb_trigger_o  : out std_logic;
 
     -- Resource request control
     spec_nreq_o : out std_logic; -- Spectrum data request.
@@ -44,7 +45,7 @@ entity interfacez_io is
     cmdfifo_write_o        : out std_logic_vector(7 downto 0);
     cmdfifo_full_i         : in std_logic;
     -- Ram
-    ram_addr_o             : out std_logic_vector(15 downto 0);
+    ram_addr_o             : out std_logic_vector(23 downto 0);
     ram_dat_o              : out std_logic_vector(7 downto 0);
     ram_dat_i              : in std_logic_vector(7 downto 0);
     ram_wr_o               : out std_logic;
@@ -67,16 +68,20 @@ architecture beh of interfacez_io is
   signal forceoutput_s    : std_logic;
   signal ram_wr_r         : std_logic;
   signal ram_rd_r         : std_logic;
-  signal ram_addr_r       : unsigned(15 downto 0);
-  
+  signal ram_addr_r       : unsigned(23 downto 0);
+
+  signal scratch0_r       : std_logic_vector(7 downto 0);
+  signal scratch1_r       : std_logic_vector(7 downto 0);
+
 begin
 
+  -- Address match for reads
   process (adr_i)
   begin
     addr_match_s<='0';
     if adr_i(0)='1' then
       case adr_i(7 downto 0) is
-        when x"05" | x"07" | x"0B" | x"0D" | x"15" =>
+        when x"03" | x"05" | x"07" | x"0B" | x"0D" | x"17" | x"1F"=>
           addr_match_s<='1';
         when others =>
 		end case;
@@ -113,6 +118,10 @@ begin
 
       if wrp_i='1' then
         case adr_i(7 downto 0) is
+          when x"03" =>
+            scratch0_r <= dat_i;
+          when x"05" =>
+            scratch1_r <= dat_i;
           when x"0B" => -- FIFO status/control
           when x"09" => -- Command FIFO write.
             d_write_r <= dat_i;
@@ -124,7 +133,10 @@ begin
           when x"13" =>
             ram_addr_r(15 downto 8) <= unsigned(dat_i);
 
-          when x"15" => -- RAM write.
+          when x"15" =>
+            ram_addr_r(23 downto 16) <= unsigned(dat_i);
+
+          when x"17" => -- RAM write.
             d_write_r     <= dat_i;
             ram_wr_r      <= '1';
 
@@ -137,9 +149,11 @@ begin
       if rdp_i='1' then
         case adr_i(7 downto 0) is
 
-          when x"05" => -- Testing only.
+          when x"03" =>
+            dataread_r <= scratch0_r;
 
-            dataread_r <= x"39";
+          when x"05" =>
+            dataread_r <= scratch1_r;
 
           when x"07" => -- Command FIFO status read
             dataread_r <= "0000000" & cmdfifo_full_i;
@@ -152,12 +166,17 @@ begin
             -- Pop data on next clock cycle
             resfifo_rd_o <= '1';
             testdata_r <= testdata_r + 1;
-          when x"15" => -- RAM read
+
+          when x"17" => -- RAM read
             ram_rd_r <= '1';
+
+          when x"1F" => -- Joy
+            dataread_r <= x"00";
 
           when others =>
             --dataread_r <= (others => '1');
         end case;
+
       end if;
 
       if ram_ack_i='1' then
@@ -178,8 +197,10 @@ begin
     if rst_i='1' then
       forceiorqula_o  <= '0';
       forceoutput_s <= '0';
-      --
+      keyb_trigger_o <= '0';
+    --
     elsif rising_edge(clk_i) then
+      keyb_trigger_o <= '0';
       if rdp_dly_i='1' and ulahack_i='1' and adr_i(7 downto 0)=x"FE" then
         -- ULA read. Capture ULA data
         uladata_r <= dat_i(7) & audio_i & dat_i(5 downto 0);
@@ -190,6 +211,12 @@ begin
       if active_i='0' or ulahack_i='0' then
         forceiorqula_o <= '0';
         forceoutput_s <='0';
+      end if;
+
+      if rdp_dly_i='1' and adr_i=x"7FFE" then
+        if dat_i(4 downto 0)="11100" then
+          keyb_trigger_o <= '1';
+        end if;
       end if;
     end if;
   end process;

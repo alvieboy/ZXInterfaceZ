@@ -11,7 +11,7 @@ entity videogen is
     clk_i         : in std_logic;
     rst_i         : in std_logic;
 
-    vidmode_i     : in std_logic;
+    vidmode_i     : in std_logic_vector(1 downto 0);
     pixclk_i      : in std_logic;
     pixrst_i      : in std_logic;
 
@@ -64,8 +64,8 @@ architecture beh of videogen is
       dfront        => 601,
       dsync         => 605,
       dtotal        => 628,
-      ddisplaystart => 8,
-      ddisplayend   => 8+576
+      ddisplaystart => 12,
+      ddisplayend   => 12+576
     ),
     dbltriple =>  '1', -- Triplicate pixels
     hsync     =>  '1',
@@ -96,6 +96,53 @@ architecture beh of videogen is
     vsync     =>  '1',
     flashdly  => 46
   );
+
+  constant v2: videoconf_type := (
+    h => (
+      ddisplay      => 800,
+      dfront        => 840,
+      dsync         => 968,
+      dtotal        => 1056,
+      ddisplaystart => 144,     -- (800-(256*2))/2
+      ddisplayend   => 144+(256*2)
+    ),
+    v => (
+      ddisplay      => 600,
+      dfront        => 601,
+      dsync         => 605,
+      dtotal        => 628,
+      ddisplaystart => 108,
+      ddisplayend   => 108+(192*2)
+    ),
+    dbltriple =>  '0', 
+    hsync     =>  '1',
+    vsync     =>  '1',
+    flashdly  =>  39 -- (60/1.5)-1  = 39
+  );
+  --[2132609.556] (II) modeset(0): Modeline "1024x576"x59.9   46.50  1024 1064 1160 1296  576 579 584 599 -hsync +vsync (35.9 kHz d)
+  constant v3: videoconf_type := (
+    h => (
+      ddisplay      => 1025,
+      dfront        => 1064,
+      dsync         => 1160,
+      dtotal        => 1296,
+      ddisplaystart => 256,     -- (800-(256*2))/2
+      ddisplayend   => 256+(256*2)
+    ),
+    v => (
+      ddisplay      => 576,
+      dfront        => 579,
+      dsync         => 584,
+      dtotal        => 599,
+      ddisplaystart => 96,
+      ddisplayend   => 96+(192*2)
+    ),
+    dbltriple =>  '0', 
+    hsync     =>  '0',
+    vsync     =>  '1',
+    flashdly  =>  23 
+  );
+
 
   constant test0: videoconf_type := (
     h => (
@@ -144,20 +191,32 @@ architecture beh of videogen is
   );
 
 
-  function videoparam(mode: in std_logic) return videoconf_type is
+  function videoparam(mode: in std_logic_vector(1 downto 0)) return videoconf_type is
     variable vp_v: videoconf_type;
   begin
-    if mode='0' then
-      vp_v := v0;
-      -- synthesis translate_off
-      vp_v := test0;
-      -- synthesis translate_on
-    else
-      vp_v := v1;
-      -- synthesis translate_off
-      vp_v := test1;
-      -- synthesis translate_on
-    end if;
+    case mode is
+      when "00" =>
+        vp_v := v0;
+        -- synthesis translate_off
+        vp_v := test0;
+        -- synthesis translate_on
+      when "01" =>
+        vp_v := v1;
+        -- synthesis translate_off
+        vp_v := test1;
+        -- synthesis translate_on
+      when "10" =>
+        vp_v := v2;
+        -- synthesis translate_off
+        vp_v := test1;
+        -- synthesis translate_on
+      when "11" =>
+        vp_v := v3;
+        -- synthesis translate_off
+        vp_v := test1;
+        -- synthesis translate_on
+      when others =>
+    end case;
     return vp_v;
   end function;
 

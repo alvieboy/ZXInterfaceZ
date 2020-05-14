@@ -458,6 +458,14 @@ uint16_t fpga__get_tap_fifo_usage()
 }
 
 
+uint16_t fpga__get_tap_fifo_free()
+{
+    uint16_t used = fpga__get_tap_fifo_usage();
+    if (used&0x8000)
+        return 0;
+    return FPGA_TAP_FIFO_SIZE - used;
+}
+
 int fpga__load_tap_fifo(const uint8_t *data, unsigned len, int timeout)
 {
 #define TAP_LOCAL_CHUNK_SIZE 256

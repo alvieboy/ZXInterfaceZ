@@ -48,7 +48,7 @@ entity spi_interface is
     capsyncen_o           : out std_logic;
     frameend_o            : out std_logic;
 
-    vidmode_o             : out std_logic;
+    vidmode_o             : out std_logic_vector(1 downto 0);
     ulahack_o             : out std_logic;
 
     forceromcs_trig_on_o  : out std_logic;
@@ -82,8 +82,18 @@ entity spi_interface is
     -- External RAM access
     extram_addr_o         : out std_logic_vector(31 downto 0);
     extram_dat_i          : in std_logic_vector(31 downto 0);
+    extram_dat_o          : out std_logic_vector(31 downto 0);
     extram_req_o          : out std_logic;
-    extram_valid_i        : in std_logic
+    extram_we_o           : out std_logic;
+    extram_valid_i        : in std_logic;
+
+    -- USB access
+
+    usb_rd_o              : out std_logic;
+    usb_wr_o              : out std_logic;
+    usb_addr_o            : out std_logic_vector(11 downto 0);
+    usb_dat_o             : out std_logic_vector(7 downto 0);
+    usb_dat_i             : in std_logic_vector(7 downto 0)
   );
 
 end entity spi_interface;
@@ -143,7 +153,11 @@ architecture beh of spi_interface is
     EXTRAMADDR1,
     EXTRAMADDR2,
     EXTRAMADDR3,
-    EXTRAMDATA
+    EXTRAMDATA,
+    USBADDR1,
+    USBADDR2,
+    USBREADDATA,
+    USBWRITEDATA
   );
 
   signal state_r      : state_type;
@@ -160,6 +174,14 @@ architecture beh of spi_interface is
 
   signal extram_addr_r  : std_logic_vector(23 downto 0);
   signal extram_req_r   : std_logic := '0'; -- FIxme: needs areset
+  signal extram_we_r    : std_logic := '0';
+  signal extram_wdata_r : std_logic_vector(7 downto 0);
+
+  signal usb_addr_r     : std_logic_vector(15 downto 0);
+  signal usb_addr_wr_r  : std_logic_vector(15 downto 0);
+  signal usb_rd_r       : std_logic := '0'; -- FIxme: needs areset
+  signal usb_wr_r       : std_logic := '0'; -- FIxme: needs areset
+  signal usb_is_write_r : std_logic;
 
 begin
 
@@ -248,11 +270,13 @@ begin
   capture_cmp_o <= flags_r(4); -- Compress
   intenable_o   <= flags_r(5); -- Interrupt enable
   capsyncen_o   <= flags_r(6); -- Capture sync
-  vidmode_o     <= flags_r(7); --
 
   ulahack_o     <= flags_r(8); --
   tapfifo_reset_o<=flags_r(9); --
   tap_enable_o  <= flags_r(10); --
+
+  vidmode_o(0)     <= flags_r(11); --
+  vidmode_o(1)     <= flags_r(12); --
 
   --forceromcs_o  <= flags_r(7);
 
@@ -282,12 +306,16 @@ begin
       frame_end_r   <= '0';
       capmem_adr_r  <= (others=>'0');
       wreg_en_r     <= '0';
+      usb_rd_r      <= '0';
+      usb_wr_r      <= '0';
 
     elsif rising_edge(SCK_i) then
 
       fifo_rd_o     <= '0';
       cmdfifo_rd_o  <= '0';
       capmem_en_o   <= '0';
+      usb_rd_r      <= '0';
+      usb_wr_r      <= '0';
 
       case state_r is
         when IDLE =>
@@ -318,7 +346,29 @@ begin
                 txden_s <= '1';
                 txload_s <= '1';
                 txdat_s <= "00000000";
+                extram_we_r <= '0';
                 state_r <= EXTRAMADDR1;
+
+              when x"51" => -- Write external RAM
+                txden_s <= '1';
+                txload_s <= '1';
+                txdat_s <= "00000000";
+                extram_we_r <= '1';
+                state_r <= EXTRAMADDR1;
+
+              when x"60" => -- USB read
+                txden_s <= '1';
+                txload_s <= '1';
+                txdat_s <= "00000000";
+                usb_is_write_r <= '0';
+                state_r <= USBADDR1;
+
+              when x"61" => -- USB write
+                txden_s <= '1';
+                txload_s <= '1';
+                txdat_s <= "00000000";
+                usb_is_write_r <= '1';
+                state_r <= USBADDR1;
 
 
               when x"E0" => -- Read capture memory
@@ -684,7 +734,9 @@ begin
           if dat_valid_s='1' then
             extram_addr_r(7 downto 0) <= dat_s;
             -- Request
-            extram_req_r <= not extram_req_r;
+            if extram_we_r='0' then
+              extram_req_r <= not extram_req_r;
+            end if;
             state_r <= EXTRAMDATA;
           end if;
 
@@ -692,14 +744,61 @@ begin
           txload_s <= '1';
           txden_s <= '1';
           txdat_s <= extram_dat_i(7 downto 0);
+
+
           if dat_valid_s='1' then
             --extram_addr_r(7 downto 0) <= dat_i;
+            extram_wdata_r <= dat_s;
             -- Request
             extram_req_r <= not extram_req_r;
             state_r <= EXTRAMDATA;
           end if;
           if extram_valid_i='1' then
             extram_addr_r <= std_logic_vector(unsigned(extram_addr_r) + 1);
+          end if;
+
+        when USBADDR1 =>
+          txload_s <= '1';
+          txden_s <= '1';
+          if dat_valid_s='1' then
+            usb_addr_r(15 downto 8) <= dat_s;
+            state_r <= USBADDR2;
+          end if;
+
+        when USBADDR2 =>
+          txload_s <= '1';
+          txden_s <= '1';
+          if dat_valid_s='1' then
+            usb_addr_r(7 downto 0) <= dat_s;
+            usb_addr_wr_r(15 downto 8) <= usb_addr_r(15 downto 8);
+            usb_addr_wr_r(7 downto 0) <= dat_s;
+            if usb_is_write_r='1' then
+              state_r <= USBWRITEDATA;
+            else
+              state_r <= USBREADDATA;
+            end if;
+            -- TBD: this is read
+            usb_rd_r <= '1';
+          end if;
+
+        when USBREADDATA =>
+          txload_s <= '1';
+          txden_s   <= '1';
+          txdat_s   <= usb_dat_i;
+          if dat_valid_s='1' then
+            usb_rd_r <= '1';
+            state_r <= USBREADDATA;
+          end if;
+
+        when USBWRITEDATA =>
+          txload_s <= '1';
+          txden_s   <= '1';
+          txdat_s   <= usb_dat_i;
+          if dat_valid_s='1' then
+            usb_wr_r <= '1';
+            usb_addr_r <= usb_addr_wr_r;
+            usb_addr_wr_r <= std_logic_vector(unsigned(usb_addr_wr_r) +1);
+            usb_dat_o <= dat_s;
           end if;
 
         when UNKNOWN =>
@@ -715,5 +814,13 @@ begin
   extram_addr_o(23 downto 0) <= extram_addr_r;
   extram_addr_o(31 downto 24) <= (others => '0');
   extram_req_o          <= extram_req_r;
+  extram_dat_o(7 downto 0)           <= extram_wdata_r;
+  extram_dat_o(31 downto 8)          <= (others => '0');
+  extram_we_o           <= extram_we_r;
+
+  usb_rd_o              <= usb_rd_r;
+  usb_wr_o              <= usb_wr_r;
+  usb_addr_o            <= usb_addr_r(11 downto 0);
+
 
 end beh;

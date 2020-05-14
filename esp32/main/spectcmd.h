@@ -11,6 +11,7 @@
 #define SPECTCMD_CMD_RECORDTAPE (0x09)
 #define SPECTCMD_CMD_STOPTAPE   (0x0A)
 #define SPECTCMD_CMD_ENTERDIR   (0x0B)
+#define SPECTCMD_CMD_SETVIDEOMODE (0x0C)
 
 void spectcmd__request(void);
 void spectcmd__init(void);

@@ -29,6 +29,8 @@ architecture beh of psram is
     INIT1,
     INIT2,
     INIT3,
+    INIT4,
+    INIT5,
     IDLE,
     CHIPSELECT,
     ADDRESS1,
@@ -44,8 +46,10 @@ architecture beh of psram is
     RDDATA3,
     WRDATA1,
     WRDATA2,
+    WRDATA3,
     DESELECT,
-    DESELECT_READ
+    DESELECT_WAIT1,
+    DESELECT_WAIT2
   );
 
   signal clock_enable_s : std_logic;
@@ -117,26 +121,32 @@ begin
       when INIT1   =>
       when INIT2   =>
   --      clock_enable_s <= '0';
-      when INIT3   =>
+      when INIT3 | INIT4 | INIT5  =>
         clock_enable_s <= '0';
       when IDLE    =>
         clock_enable_s <= '0';
         ahb_o.HREADY  <= '1';
       --when ADDRESS1 =>
         --ahb_o.HREADY <= wr_r; -- Ack writes in advance
-      when WRDATA2 =>
-        ahb_o.HREADY  <= '1';
+      when WRDATA3 =>
+--        clock_enable_s <= '0';
+--        ahb_o.HREADY  <= '1';
 
-      when DESELECT_READ =>
-        ahb_o.HREADY  <= '1';
+      when DESELECT_WAIT1 =>
+        --ahb_o.HREADY  <= '1';
         clock_enable_s <= '0';
+
+      when DESELECT_WAIT2 =>
+        --ahb_o.HREADY  <= '1';
+        clock_enable_s <= '1';
 
       when RDDATA2 =>
         clock_enable_s <= '0';
       when RDDATA3 =>
         clock_enable_s <= '0';
       when DESELECT =>
-        --clock_enable_s <= '0';
+        clock_enable_s <= '0';
+        ahb_o.HREADY  <= '1';
 
       when others   =>
 
@@ -172,11 +182,15 @@ begin
           else
             init_cnt_r  <= init_cnt_r - 1;
           end if;
-        when INIT2  =>
+        when INIT2 =>
+          state_r <= INIT3;
+        when INIT3  =>
+          state_r <= INIT4;
+        when INIT4  =>
           csn_r   <= '1';
-          state_r <= init3;
+          state_r <= INIT5;
 
-        when INIT3 =>
+        when INIT5 =>
           state_r <= IDLE;
 
         when IDLE =>
@@ -263,13 +277,13 @@ begin
           state_r <= RDDATA2;
         when RDDATA2 =>
           bus_oe_s    <= "0000";
-          csn_r <= '1'; -- Looks like early deselect - is not.
           data_capture_r(3 downto 0) <= d_neg_r;
           state_r <= RDDATA3;--RDDATA3;
         when RDDATA3 =>
           bus_oe_s    <= "0000";
+          csn_r <= '1'; -- Looks like early deselect - is not.
           data_capture_r(7 downto 4) <= d_neg_r;
-          state_r <= DESELECT;
+          state_r <= DESELECT_WAIT1;
 
         when WRDATA1 =>
           bus_oe_s    <= "1111";
@@ -278,11 +292,20 @@ begin
         when WRDATA2 =>
           bus_oe_s    <= "1111";
           data_out_r(3 downto 0) <= wrdata_r(7 downto 4);
+          state_r <= WRDATA3;
+
+        when WRDATA3 =>
+          bus_oe_s    <= "1111";
+          data_out_r(3 downto 0) <= (others => 'X');--wrdata_r(7 downto 4);
+          state_r <= DESELECT_WAIT1;
+
+        when DESELECT_WAIT1 =>
+          state_r <= DESELECT_WAIT2;
+
+        when DESELECT_WAIT2 =>
           state_r <= DESELECT;
+
         when DESELECT =>
-          state_r <= IDLE;
-          csn_r <= '1';
-        when DESELECT_READ =>
           state_r <= IDLE;
           csn_r <= '1';
       when others =>

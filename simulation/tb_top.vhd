@@ -11,6 +11,7 @@ use work.bfm_rom_p.all;
 use work.bfm_ula_p.all;
 use work.bfm_audiocap_p.all;
 use work.bfm_qspiram_p.all;
+use work.bfm_usbdevice_p.all;
 use work.txt_util.all;
 
 ENTITY tb_top IS
@@ -34,13 +35,15 @@ architecture sim of tb_top is
     Audiocap_Cmd    : out Cmd_Audiocap_type;
     QSPIRam0_Cmd    : out Cmd_QSPIRam_type;
     QSPIRam1_Cmd    : out Cmd_QSPIRam_type;
+    UsbDevice_Cmd   : out Cmd_UsbDevice_type;
 
     -- Inputs
     Spimaster_Data  : in Data_Spimaster_type;
     Spectrum_Data   : in Data_Spectrum_type;
     CtrlPins_Data   : in Data_CtrlPins_type;
     Ula_Data        : in Data_Ula_type;
-    Audiocap_Data    : in Data_Audiocap_type
+    Audiocap_Data   : in Data_Audiocap_type;
+    Usbdevice_Data  : in Data_Usbdevice_type
   );
   end component;
 
@@ -57,12 +60,14 @@ architecture sim of tb_top is
   signal Audiocap_Cmd_s   : Cmd_Audiocap_type  := Cmd_Audiocap_Defaults;
   signal QSPIRam0_Cmd_s   : Cmd_QSPIRam_type  := Cmd_QSPIRam_Defaults;
   signal QSPIRam1_Cmd_s   : Cmd_QSPIRam_type  := Cmd_QSPIRam_Defaults;
+  signal Usbdevice_Cmd_s  : Cmd_Usbdevice_type  := Cmd_Usbdevice_Defaults;
 
   signal Spimaster_Data_s : Data_Spimaster_type;
   signal Spectrum_Data_s  : Data_Spectrum_type;
   signal CtrlPins_Data_s  : Data_CtrlPins_type;
   signal Ula_Data_s       : Data_Ula_type;
   signal Audiocap_Data_s  : Data_Audiocap_type;
+  signal Usbdevice_Data_s : Data_Usbdevice_type;
 
   SIGNAL A_BUS_OE_s : STD_LOGIC;
   SIGNAL ASDO_s: STD_LOGIC;
@@ -119,20 +124,22 @@ architecture sim of tb_top is
   signal RAMNCS_s      : std_logic;
 
   -- USB PHY
-  signal USB_VP_s      : std_logic;
-  signal USB_VM_s      : std_logic;
+  signal USB_VP_s      : std_logic := 'L';
+  signal USB_VM_s      : std_logic := 'L';
   signal USB_OE_s      : std_logic;
   signal USB_SOFTCON_s : std_logic;
   signal USB_SPEED_s   : std_logic;
   signal USB_VMO_s     : std_logic;
   signal USB_VPO_s     : std_logic;
-  signal USB_RCV_s     : std_logic;
+  signal USB_RCV_s     : std_logic := '0';
   -- USB power control
   signal USB_FLT_s     : std_logic;
   signal USB_PWREN_s   : std_logic;
   -- Extension connector
   signal EXT_s        : std_logic_vector(7 downto 0);
   signal audio_s      : std_logic;
+  signal USB_dm_s     : std_logic;
+  signal USB_dp_s     : std_logic;
 begin
 
    tbc: tbc_device
@@ -148,13 +155,15 @@ begin
       Ula_Cmd         => Ula_Cmd_s,
       Audiocap_Cmd    => Audiocap_Cmd_s,
       QSPIRam0_Cmd    => QSPIRam0_Cmd_s,
-      QSPIRam1_Cmd    => QSPIRam0_Cmd_s,
+      QSPIRam1_Cmd    => QSPIRam1_Cmd_s,
+      Usbdevice_Cmd   => Usbdevice_Cmd_s,
       -- Outputs
       Spimaster_Data  => Spimaster_Data_s,
       Spectrum_Data   => Spectrum_Data_s,
       CtrlPins_Data   => CtrlPins_Data_s,
       Ula_Data        => Ula_Data_s,
-      Audiocap_Data   => Audiocap_Data_s
+      Audiocap_Data   => Audiocap_Data_s,
+      Usbdevice_Data  => Usbdevice_Data_s
     );
 
   sysclk_inst: entity work.bfm_clock
@@ -248,6 +257,31 @@ begin
         CSn_i           => RAMNCS_s,
         D_io            => RAMD_s(3 downto 0)
     );
+
+  usbdev_inst: ENTITY work.bfm_usbdevice
+    PORT MAP (
+        Cmd_i           => Usbdevice_Cmd_s,
+        Data_o          => Usbdevice_Data_s,
+        DM_io           => USB_dm_s,
+        DP_io           => USB_dp_s
+    );
+
+  -- USB transceiver
+
+  usbxcvr_inst: entity work.usbxcvr_sim
+    port map (
+      DP        => USB_dp_s,
+      DM        => USB_dm_s,
+      VP_o      => USB_VP_s,
+      VM_o      => USB_VM_s,
+      RCV_o     => USB_RCV_s,
+      OE_i      => USB_OE_s,
+      SOFTCON_i => USB_SOFTCON_s,
+      SPEED_i   => USB_SPEED_s,
+      VMO_i     => USB_VMO_s,
+      VPO_i     => USB_VPO_s
+    );
+  
 
   --psram1_inst: ENTITY work.bfm_qspiram
   --  PORT MAP (

@@ -170,6 +170,32 @@ static int spectcmd__loadsna()
     return ret;
 }
 
+static int spectcmd__setvideomode()
+{
+    int ret = 0;
+    if (cmdptr<2) {
+        return ret;
+    }
+    uint8_t mode = command_buffer[1];
+    if (mode>3)
+        mode = 0;
+    cmdptr = 0;
+    switch (mode) {
+    case 0:
+        fpga__clear_flags(FPGA_FLAG_VIDMODE0 | FPGA_FLAG_VIDMODE1);
+        break;
+    case 1:
+        fpga__set_clear_flags(FPGA_FLAG_VIDMODE0, FPGA_FLAG_VIDMODE1);
+        break;
+    case 2:
+        fpga__set_clear_flags(FPGA_FLAG_VIDMODE1, FPGA_FLAG_VIDMODE0);
+        break;
+    case 3:
+        fpga__set_flags(FPGA_FLAG_VIDMODE0 | FPGA_FLAG_VIDMODE1);
+        break;
+    }
+    return ret;
+}
 
 static int spectcmd__check()
 {
@@ -193,6 +219,9 @@ static int spectcmd__check()
     case SPECTCMD_CMD_LOADSNA:
         ret = spectcmd__loadsna();
         break;
+    case SPECTCMD_CMD_SETVIDEOMODE:
+        ret = spectcmd__setvideomode();
+        break;
     default:
         ESP_LOGI(TAG, "Invalid command 0x%02x", command_buffer[0]);
         cmdptr=0;
@@ -202,6 +231,7 @@ static int spectcmd__check()
 
     return ret;
 }
+
 
 void spectcmd__request()
 {

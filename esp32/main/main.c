@@ -22,6 +22,8 @@
 #include "tapplayer.h"
 #include "rom.h"
 
+static int8_t videomode = 0;
+
 volatile int restart_requested = 0;
 
 #if 0
@@ -103,6 +105,10 @@ void app_main()
     resource__register( 0x03, &directoryresource.r);
     resource__register( 0x04, &wificonfigresource.r);
     resource__register( 0x05, &aplistresource.r);
+
+    videomodeconfigresource.valptr = &videomode;
+
+    resource__register( 0x06, &videomodeconfigresource.r);
     resource__register( 0x10, &opstatusresource.r);
 
     if (rom__load_from_flash()!=0) {
@@ -118,7 +124,7 @@ void app_main()
     tapplayer__init();
     // Start capture
     //start_capture();
-
+    int isplay=0;
     while(1) {
         led__set(LED1, lstatus);
         lstatus = !lstatus;
@@ -141,5 +147,10 @@ void app_main()
             esp_restart();
 
         fpga__get_status();
+        if (isplay==0 && (gpio_get_level(PIN_NUM_IO0)==0)) {
+            isplay=1;
+            ESP_LOGI(TAG,"Request TAP play");
+            tapplayer__play("/sdcard/demo.tap");
+        }
     }
 }

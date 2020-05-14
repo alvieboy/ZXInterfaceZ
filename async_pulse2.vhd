@@ -3,6 +3,9 @@ use IEEE.STD_LOGIC_1164.ALL;
 use ieee.numeric_std.all;
 
 entity async_pulse2 is
+  generic (
+    WIDTH : natural := 3
+  );
   port (
     clki_i  : in std_logic;
     clko_i  : in std_logic;
@@ -15,9 +18,7 @@ end entity async_pulse2;
 architecture behave of async_pulse2 is
 
    SIGNAL iq_r    : std_logic;
-   SIGNAL oq1_r   : std_logic;
-   SIGNAL oq2_r   : std_logic;
-   SIGNAL oq3_r   : std_logic;
+   SIGNAL oq_r    : std_logic_vector(1 to WIDTH);
 
 begin
 
@@ -35,17 +36,18 @@ begin
   process(clko_i, arst_i)
   begin
     if arst_i='1' then
-      oq1_r   <= '0';
-      oq2_r   <= '0';
-      oq3_r   <= '0';
+      l: for i in 1 to WIDTH loop
+        oq_r(i)   <= '0';
+      end loop;
     elsif rising_edge(clko_i) then
-      oq1_r   <= iq_r;
-      oq2_r   <= oq1_r;
-      oq3_r   <= oq2_r;
+      oq_r(1)   <= iq_r;
+      l1: for i in 2 to WIDTH loop
+        oq_r(i) <= oq_r(i-1);
+      end loop;
     end if;
   end process;
 
-  pulse_o <= oq2_r xor oq3_r;
+  pulse_o <= oq_r(oq_r'HIGH-1)  xor oq_r(oq_r'HIGH);
 
 end behave;
 

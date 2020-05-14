@@ -150,6 +150,27 @@ begin
 
     Check("ROMCS is not forced", CtrlPins_Data.ROMCS, '0');
 
+    -- Activate ROMCS
+    spiPayload_in_s(0) <= x"EC";
+    spiPayload_in_s(1) <= x"00";
+    spiPayload_in_s(2) <= "00000100"; -- ForceROMCS
+    spiPayload_in_s(3) <= x"00";
+    Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 4, spiPayload_in_s, spiPayload_out_s);
+    Check("ROMCS is forced", CtrlPins_Data.ROMCS, '1');
+    wait for 1 us;
+    -- De-activate ROMCS
+    spiPayload_in_s(0) <= x"EC";
+    spiPayload_in_s(1) <= x"00";
+    spiPayload_in_s(2) <= "00001000"; -- ForceROMCS
+    spiPayload_in_s(3) <= x"00";
+
+    Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 4, spiPayload_in_s, spiPayload_out_s);
+
+    Check("ROMCS is not forced", CtrlPins_Data.ROMCS, '0');
+
+
+    wait for 3 us;
+
 
     wait for 2 us;
 

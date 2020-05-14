@@ -27,9 +27,7 @@ entity screencap is
     border_i      : in std_logic_vector(2 downto 0);
     
     -- Videogen configuration
-    -- Modeline syntax: pclk hdisp hsyncstart hsyncend htotal vdisp vsyncstart vsyncend vtotal [flags] Flags (optional): +HSync, -HSync, +VSync, -VSync, Interlace, DoubleScan, CSync, +CSync, -CSync
-    -- Modeline "800x600"x75.0   49.50  800 816 896 1056  600 601 604 625 +hsync +vsync (46.9 kHz e)
-    vidmode_i     : in std_logic;
+    vidmode_i     : in std_logic_vector(1 downto 0);
     pixclk_i      : in std_logic;
     pixrst_i      : in std_logic;
 

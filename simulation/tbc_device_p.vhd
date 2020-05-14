@@ -114,7 +114,7 @@ package body tbc_device_p is
   procedure Check(
     what: in string;
     actual: in std_logic;
-    expected: in std_logic ) is
+    expected: in std_logic) is
   begin
     if (actual /= expected) then
       report "CHECK FAILED: "&what&": expected " & str(expected)& ", got " &str(actual);

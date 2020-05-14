@@ -7,6 +7,7 @@
 #include "fileaccess.h"
 #include "strcmpi.h"
 #include "dump.h"
+#include "list.h"
 
 static bool filter_match(struct directory_resource *res, struct dirent *e)
 {
@@ -64,6 +65,27 @@ static void directory_resource__update_from_mountpoints(struct directory_resourc
     dr->alloc_size = space_needed;
     ESP_LOGI(TAG, "Published %d (root) entries", mp->count);
 
+}
+
+static int directory_resource__compare(void *a, void *b)
+{
+    int i;
+
+    char *pa = &((char*)a)[1];
+    char *pb = &((char*)b)[1];
+
+    uint8_t type_a = ((uint8_t*)a)[0];
+    uint8_t type_b = ((uint8_t*)b)[0];
+
+    if (type_a>type_b)
+        return 1;
+    if (type_a<type_b)
+        return -1;
+    // Same type
+
+    i = strcmp(pa, pb);
+    
+    return  0 - i;  // Inverse
 }
 
 void directory_resource__update(struct resource *res)
@@ -162,6 +184,53 @@ void directory_resource__update(struct resource *res)
 
     entries++;
 
+    /* Load entries and sort accordingly */
+
+    char *chbuf = (char*)malloc(space_needed);
+    char *chptr = chbuf;
+
+    if (chbuf==NULL)
+        return;
+
+    dlist_t *list = NULL;
+
+    while ((ent=readdir(dir))) {
+        if (filter_match(dr, ent)) {
+            uint8_t type;
+            int dlen;
+            char *this_element = chptr;
+
+            if (ent->d_type==DT_DIR) {
+                type = 1;
+            } else {
+                type = 0;
+            }
+            *chptr++=type;
+            dlen = strlen(ent->d_name);
+            memcpy(chptr, ent->d_name, dlen+1);
+            chptr += dlen+1;
+
+            list = dlist__insert_sorted(list, directory_resource__compare, this_element);
+        }
+    }
+    /* Re-assemble */
+    dlist_t *listptr = list;
+    while (listptr) {
+        uint8_t d;
+        uint8_t *data = dlist__data(listptr);
+        *bptr++ = *data++;
+        // Copy string over
+        do {
+            d = *data++;
+            *bptr++ = d;
+        } while (d);
+
+        listptr = dlist__next(listptr);
+    }
+    free(chbuf);
+    dlist__remove_all(list, NULL, NULL);
+
+#if 0
     while ((ent=readdir(dir))) {
         if (filter_match(dr, ent)) {
             uint8_t type;
@@ -178,6 +247,7 @@ void directory_resource__update(struct resource *res)
             bptr += dlen+1;
         }
     }
+#endif
     closedir(dir);
     dr->entries = entries;
     dr->alloc_size = space_needed;

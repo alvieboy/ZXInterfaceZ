@@ -12,7 +12,7 @@ entity ram_adaptor is
     ahb_o   : out AHB_M2S;
     ahb_i   : in AHB_S2M;
 
-    ram_addr_i             : in std_logic_vector(15 downto 0);
+    ram_addr_i             : in std_logic_vector(23 downto 0);
     ram_dat_i              : in std_logic_vector(7 downto 0);
     ram_dat_o              : out std_logic_vector(7 downto 0);
     ram_wr_i               : in std_logic;
@@ -83,8 +83,7 @@ begin
   ahb_o.HBURST              <= C_AHB_BURST_INCR;
   ahb_o.HMASTLOCK           <= '0';
   ahb_o.HWDATA(7 downto 0)  <= ram_dat_i;
-  ahb_o.HADDR(15 downto 0)  <= ram_addr_i;
-  ahb_o.HADDR(23 downto 16) <= (others =>'0');
+  ahb_o.HADDR(23 downto 0)  <= ram_addr_i;
 
 
 end beh;

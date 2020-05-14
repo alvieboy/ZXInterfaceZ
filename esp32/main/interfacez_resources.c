@@ -37,3 +37,9 @@ struct directory_resource directoryresource = {
     .entries = 0,
     .filter = 0
 };
+
+struct int8_resource videomodeconfigresource = {
+    .r = INT8_RESOURCE_DEF,
+    .valptr = NULL,
+    .latched_val = 0
+};

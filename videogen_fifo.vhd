@@ -16,7 +16,7 @@ entity videogen_fifo is
     ven_o         : out std_logic;
     vbusy_i       : in std_logic;
     vdata_i       : in std_logic_vector(7 downto 0); -- Bitmap data
-    vidmode_i     : in std_logic;
+    vidmode_i     : in std_logic_vector(1 downto 0);
 
 --    vborder_i     : in std_logic_vector(2 downto 0);
 
@@ -111,6 +111,14 @@ architecture beh of videogen_fifo is
     end if;
   end function;
 
+  function is_triple_scan(mode: in std_logic_vector(1 downto 0)) return std_logic is
+  begin
+    if mode="00" then
+      return '1';
+    end if;
+    return '0';
+  end function;
+
   type regs_type is record
     counter : unsigned(14 downto 0); -- Counts from 1 to 6144
     state   : state_type;
@@ -188,9 +196,9 @@ begin
         ven_o   <= '0';
         fifo_wr_s   <= '1';
 
-        w.counter := increment_counter(r.counter, not vidmode_i);
+        w.counter := increment_counter(r.counter, is_triple_scan(vidmode_i));
 
-        if not max_counter(r.counter, not vidmode_i) then
+        if not max_counter(r.counter, is_triple_scan(vidmode_i)) then
           --w.counter := r.counter + 1;
           w.state := FETCH_DATA;
         else

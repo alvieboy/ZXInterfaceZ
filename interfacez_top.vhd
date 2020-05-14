@@ -99,7 +99,7 @@ architecture str of interfacez_top is
   signal wb_ack       : std_logic;
   signal wb_stall     : std_logic;
 
-  signal videoclk_s   : std_logic_vector(1 downto 0);
+  signal videoclk_s   : std_logic_vector(2 downto 0);
   signal hsync_s      : std_logic;
   signal vsync_s      : std_logic;
   signal bright_s     : std_logic;
@@ -127,7 +127,7 @@ begin
       inclk0  => CLK_i,
       c0      => sysclk_s,
       c1      => clk48_s,--sdramclk2_s,
-      --c2      => open,--capclk_s,
+      c2      => videoclk_s(2),  --
       c3      => videoclk_s(1),  -- 40Mhz
       c4      => videoclk_s(0),   -- 28.24Mhz
       locked  => plllock_s
@@ -220,12 +220,12 @@ begin
   ESP_IO27_o     <= spec_nreq_s;
 
   -- Temporary USB.
-  USB_OE_o      <= '0';
-  USB_SOFTCON_o <= '0';
-  USB_SPEED_o   <= '0';
-  USB_VMO_o     <= '0';
-  USB_VPO_o     <= '1';
-  USB_PWREN_o   <= '0';
+  --USB_OE_o      <= '0';
+  --USB_SOFTCON_o <= '0';
+  --USB_SPEED_o   <= '0';
+  ------USB_VMO_o     <= '0';
+  --USB_VPO_o     <= '1';
+  --USB_PWREN_o   <= '0';
 
   FLED_o(0)     <= '1';
   FLED_o(1)     <= '1';
@@ -235,9 +235,9 @@ begin
   ram_buf: entity work.iobuf
   generic map (
     WIDTH => 4,
-    tOE   => 3.7 ns,
-    tOP   => 3.7 ns,
-    tIP   => 3.7 ns
+    tOE   => 4.361 ns,
+    tOP   => 4.7 ns,
+    tIP   => 1.55 ns
   )
   port map (
     i_i     => RAMD_o_s(3 downto 0),
@@ -249,7 +249,7 @@ begin
   ram2_buf: entity work.obuf
   generic map (
     WIDTH => 2,
-    tOP   => 3.7 ns
+    tOP   => 3.637 ns
   )
   port map (
     i_i(0)    => RAMCLK_s,

@@ -269,6 +269,7 @@ static int netcmd__reset_custom_spectrum(command_t *cmdt, int argc, char **argv)
 static int netcmd__vgamode(command_t *cmdt, int argc, char **argv)
 {
     int mode;
+    /*
     if (strtoint(argv[0], &mode)<0) {
         return -1;
     }
@@ -277,7 +278,7 @@ static int netcmd__vgamode(command_t *cmdt, int argc, char **argv)
     }
     else {
         fpga__clear_flags(FPGA_FLAG_VIDMODEWIDE);
-    }
+    } */
     return 0;
 }
 

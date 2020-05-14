@@ -54,3 +54,10 @@ configuration t007 of tb_top is
         end for;
     end for;
 end t007;
+configuration t008 of tb_top is
+    for sim
+        for tbc: tbc_device
+            use entity work.tbc_device(t008);
+        end for;
+    end for;
+end t008;

@@ -25,7 +25,7 @@ MENU__INIT:
         CALL	FRAME__INIT
         ; Add some default settings.
 	XOR	A
-        LD	(IX+MENU_OFF_SELECTED_ENTRY), A
+        ;LD	(IX+MENU_OFF_SELECTED_ENTRY), A
         LD	(IX+MENU_OFF_DISPLAY_OFFSET), A
 
 	POP     HL

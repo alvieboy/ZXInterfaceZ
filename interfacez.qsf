@@ -252,6 +252,15 @@ set_global_assignment -name EDA_TEST_BENCH_FILE simulation/tests/t004.vhd -secti
 set_global_assignment -name EDA_TEST_BENCH_FILE simulation/tests/t005.vhd -section_id t006
 set_global_assignment -name EDA_TEST_BENCH_FILE simulation/tests/t001.vhd -section_id t006
 set_instance_assignment -name IO_MAXIMUM_TOGGLE_RATE "100 MHz" -to RAMCLK_o
+set_global_assignment -name VHDL_FILE ahbreq.vhd
+set_global_assignment -name VHDL_FILE ahbreq_sync.vhd
+set_global_assignment -name VHDL_FILE usb/usbhostctrl.vhd
+set_global_assignment -name VHDL_FILE usb/usb_tx_phy.vhd
+set_global_assignment -name VHDL_FILE usb/usb_rx_phy.vhd
+set_global_assignment -name VHDL_FILE usb/usb_phy.vhd
+set_global_assignment -name VHDL_FILE usb/usb1_crc16.vhd
+set_global_assignment -name VHDL_FILE usb/usb1_crc5.vhd
+set_global_assignment -name VHDL_FILE ahb_arb.vhd
 set_global_assignment -name VHDL_FILE ram_adaptor.vhd
 set_global_assignment -name VHDL_FILE obuf.vhd
 set_global_assignment -name VHDL_FILE iobuf.vhd

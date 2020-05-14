@@ -10,7 +10,7 @@ entity zxinterface is
     clk_i         : in std_logic;
     clk48_i       : in std_logic;
     capclk_i      : in std_logic; -- for captures
-    videoclk_i    : in std_logic_vector(1 downto 0); -- 28.24Mhz/40Mhz input
+    videoclk_i    : in std_logic_vector(2 downto 0); -- 46.5Mhz/28.24Mhz/40Mhz input
 
     arst_i        : in std_logic;
 
@@ -94,15 +94,14 @@ architecture beh of zxinterface is
 		);
 	end component signaltap1;
 
-  component clockmux is
+	component clockmux is
 		port (
-			inclk1x   : in  std_logic := 'X'; -- inclk1x
-			inclk0x   : in  std_logic := 'X'; -- inclk0x
-			clkselect : in  std_logic := 'X'; -- clkselect
-			outclk    : out std_logic         -- outclk
+			inclk1x   : in  std_logic                    := 'X';             -- inclk1x
+			inclk0x   : in  std_logic                    := 'X';             -- inclk0x
+			clkselect : in  std_logic                    := 'X';
+			outclk    : out std_logic                                        -- outclk
 		);
 	end component clockmux;
-
 --  signal data_o_s           : std_logic_vector(7 downto 0); -- Data out signal.
 
   signal romdata_o_s        : std_logic_vector(7 downto 0); -- ROM Data out signal.
@@ -253,7 +252,7 @@ architecture beh of zxinterface is
   signal spec_nreq_delay_r      : natural range 0 to SPEC_NREC_DELAY_MAX := SPEC_NREC_DELAY_MAX;
 
   signal pixclk_s               : std_logic;
-  signal vidmode_s              : std_logic;
+  signal vidmode_s              : std_logic_vector(1 downto 0);
   signal pixrst_s               : std_logic := '1';
 
   signal pc_s                   : std_logic_vector(15 downto 0);
@@ -262,7 +261,7 @@ architecture beh of zxinterface is
   signal pc_r                   : std_logic_vector(15 downto 0);
   signal pc_spisck_r            : std_logic_vector(15 downto 0);
 
-  signal vidmode_resync_r       : std_logic_vector(1 downto 0);
+  signal vidmode_resync_s       : std_logic_vector(1 downto 0);
   signal nmi_access_s           : std_logic;
   signal mem_rd_p_dly_s         : std_logic;
   signal io_rd_p_dly_s          : std_logic;
@@ -275,7 +274,7 @@ architecture beh of zxinterface is
   signal psram_ahb_m2s          : AHB_M2S;
   signal psram_ahb_s2m          : AHB_S2M;
 
-  signal ram_addr_s             : std_logic_vector(15 downto 0);
+  signal ram_addr_s             : std_logic_vector(23 downto 0);
   signal ram_dat_wr_s           : std_logic_vector(7 downto 0);
   signal ram_dat_rd_s           : std_logic_vector(7 downto 0);
   signal ram_wr_s               : std_logic;
@@ -293,10 +292,22 @@ architecture beh of zxinterface is
 
   signal extram_addr_s          : std_logic_vector(31 downto 0);
   signal extram_dat_s           : std_logic_vector(31 downto 0);
+  signal extram_dat_write_s     : std_logic_vector(31 downto 0);
   signal extram_req_s           : std_logic;
+  signal extram_we_s            : std_logic;
   signal extram_valid_s         : std_logic;
 
   signal rst48_s                : std_logic;
+
+  signal usb_rd_s               : std_logic;
+  signal usb_wr_s               : std_logic;
+  signal usb_addr_s             : std_logic_vector(11 downto 0);
+  signal usb_wdat_s             : std_logic_vector(7 downto 0);
+  signal usb_rdat_s             : std_logic_vector(7 downto 0);
+
+
+  signal keyb_trigger_s         : std_logic;
+
 begin
 
   rst48_inst: entity work.rstgen
@@ -310,9 +321,11 @@ begin
 
   clockmux_inst : component clockmux
 		port map (
+			--inclk3x   => '0',--videoclk_i(2),
+			--inclk2x   => '0',--videoclk_i(0),
 			inclk1x   => videoclk_i(0),
 			inclk0x   => videoclk_i(1),
-			clkselect => vidmode_resync_r(1),
+			clkselect => vidmode_resync_s(0),
 			outclk    => pixclk_s
     );
 
@@ -325,15 +338,16 @@ begin
     end if;
   end process;
 
-  process(pixclk_s, arst_i)
-  begin
-    if arst_i='1' then
-      vidmode_resync_r <= "00";
-    elsif rising_edge(pixclk_s) then
-      vidmode_resync_r(1) <= vidmode_resync_r(0);
-      vidmode_resync_r(0) <= vidmode_s;
-    end if;
-  end process;
+  vmsync_inst: entity work.syncv
+    generic map (
+      WIDTH => 2,
+      RESET => '0'
+    ) port map (
+      clk_i   => pixclk_s,
+      arst_i  => arst_i,
+      din_i   => vidmode_s,
+      dout_o  => vidmode_resync_s
+    );
 
   -- VGA END
 
@@ -425,6 +439,7 @@ begin
       dat_o           => iodata_s,
       enable_o        => io_enable_s,
       forceiorqula_o  => FORCE_IORQULA_o,
+      keyb_trigger_o  => keyb_trigger_s,
       audio_i         => tap_audio_s,
 
       port_fe_o       => port_fe_s,
@@ -626,14 +641,22 @@ begin
 
     extram_addr_o         => extram_addr_s,
     extram_dat_i          => extram_dat_s,
+    extram_dat_o          => extram_dat_write_s,
     extram_req_o          => extram_req_s,
+    extram_we_o           => extram_we_s,
     extram_valid_i        => extram_valid_s,
 
     forceromonretn_trig_o => forceromonretn_trig_spisck_s,
     forceromcs_trig_on_o  => forceromcs_spisck_on_s,
     forceromcs_trig_off_o => forceromcs_spisck_off_s,
     forcenmi_trig_on_o    => forcenmi_spisck_on_s,
-    forcenmi_trig_off_o    => forcenmi_spisck_off_s
+    forcenmi_trig_off_o    => forcenmi_spisck_off_s,
+    -- USB
+    usb_rd_o              => usb_rd_s,
+    usb_wr_o              => usb_wr_s,
+    usb_addr_o            => usb_addr_s,
+    usb_dat_i             => usb_rdat_s,
+    usb_dat_o             => usb_wdat_s
   );
 
   fmretn: entity work.async_pulse port map (
@@ -767,7 +790,7 @@ begin
       if forcenmi_off_s='1' then
         nmi_r <= '0';
         in_nmi_rom_r <='0';
-      elsif forcenmi_on_s='1' then
+      elsif (in_nmi_rom_r='0') and (forcenmi_on_s='1' or (keyb_trigger_s='1' and spect_forceromcs_bussync_s='0')) then
         nmi_r <= '1';
         -- Force ROMCS
       end if;
@@ -837,7 +860,7 @@ begin
       intr_i        => intr_p_s,
       framecmplt_i  => framecmplt_s,
       --
-      vidmode_i     => vidmode_resync_r(1),
+      vidmode_i     => vidmode_resync_s,
       border_i      => port_fe_s(2 downto 0),
       pixclk_i      => pixclk_s,
       pixrst_i      => pixrst_s,
@@ -932,30 +955,42 @@ begin
 
     addr_i    => extram_addr_s,
     trans_i   => extram_req_s,
+    we_i      => extram_we_s,
     valid_o   => extram_valid_s,
     data_o    => extram_dat_s,
+    data_i    => extram_dat_write_s,
 
     m_i       => ahb_spi_s2m,
     m_o       => ahb_spi_m2s
   );
 
---  usb_inst: ENTITY work.usbhostctrl
---  PORT map (
---    usbclk_i      => clk48_i,
---    arst_i        => rst48_s,
---    -- Interface to transceiver
---    softcon_o     => USB_SOFTCON_o,
---    noe_o         => USB_OE_o,
---    speed_o       => USB_SPEED_o,
---    vpo_o         => USB_VPO_o,
---    vmo_o         => USB_VMO_o,
---
---    rcv_i         => USB_RCV_i,
---    vp_i          => USB_VP_i,
---    vm_i          => USB_VM_i,
---    pwren_o       => USB_PWREN_o,
---    pwrflt_i      => USB_FLT_i
---  );
+  usb_inst: ENTITY work.usbhostctrl
+  PORT map (
+    usbclk_i      => clk48_i,
+    ausbrst_i     => rst48_s,
+
+    clk_i         => SPI_SCK_i,
+    arst_i        => arst_i,
+
+    rd_i          => usb_rd_s,
+    wr_i          => usb_wr_s,
+    addr_i        => usb_addr_s,
+    dat_i         => usb_wdat_s,
+    dat_o         => usb_rdat_s,
+
+    -- Interface to transceiver
+    softcon_o     => USB_SOFTCON_o,
+    noe_o         => USB_OE_o,
+    speed_o       => USB_SPEED_o,
+    vpo_o         => USB_VPO_o,
+    vmo_o         => USB_VMO_o,
+
+    rcv_i         => USB_RCV_i,
+    vp_i          => USB_VP_i,
+    vm_i          => USB_VM_i,
+    pwren_o       => USB_PWREN_o,
+    pwrflt_i      => USB_FLT_i
+  );
 
 
 

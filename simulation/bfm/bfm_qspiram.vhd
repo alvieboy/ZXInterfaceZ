@@ -196,6 +196,32 @@ begin
       end if;
     end if;
   end process;
-  
+
+  -- Timing checks
+  process
+    variable lastclk: time;
+    variable lastsel: time;
+    variable delta: time;
+  begin
+    wait on SCK_i, CSn_i;
+    if rising_edge(SCK_i) then
+      lastclk := now;
+
+      delta := now - lastsel;
+      if delta < 2.5 ns then
+        report "TIMING VIOLATION: tCSP<2.5ns failed, tCSP=" & time'image(delta) severity failure;
+      end if;
+
+    end if;
+    if rising_edge(CSn_i) then
+      delta := now - lastclk;
+      if delta < 20 ns then
+        report "TIMING VIOLATION: tCHD<20ns failed, tCHD=" & time'image(delta) severity failure;
+      end if;
+    end if;
+    if falling_edge(CSn_i) then
+      lastsel := now;
+    end if;
+  end process;
 
 end sim;

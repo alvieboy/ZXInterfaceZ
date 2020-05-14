@@ -8808,6 +8808,8 @@ EIA Code 3216, Size A, 3.2 mm x 1.6 mm, grid 0.0125 inch</description>
 <text x="104.14" y="355.6" size="1.778" layer="97">VSPID</text>
 <text x="619.76" y="424.18" size="1.778" layer="91">CHANGE TO PS!</text>
 <text x="190.5" y="139.7" size="1.778" layer="91">DMC3400SDW-7</text>
+<text x="243.84" y="-58.42" size="1.778" layer="97">NEEDS 15K PULLDOWNS!</text>
+<text x="71.12" y="307.34" size="1.778" layer="97">IO2 NEEDS PULLDOWN FOR SERIAL PROG!</text>
 </plain>
 <instances>
 <instance part="GND1" gate="1" x="353.06" y="193.04"/>
