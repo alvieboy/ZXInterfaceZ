@@ -1,6 +1,6 @@
 ; Test address in HL
 TESTADDRESS:
-	LD	C, $15
+	LD	C, PORT_RAM_DATA
         LD	A, L
         OUT	($11), A
         LD	A, H

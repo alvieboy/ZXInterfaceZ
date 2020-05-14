@@ -27,8 +27,8 @@ STATE_WIFICONFIGSTA 	EQU 5
 			       
 START:	DI			; disable interrupts.
 	LD	DE,$FFFF	; top of possible physical RAM.
-	JP	ROM_CHECK	; jump forward to common code at START_NEW.
-
+	;JP	ROM_CHECK	; jump forward to common code at START_NEW.
+        JP	REGTEST
 
 	ORG	$0008
 		      
@@ -70,7 +70,7 @@ KEY_INT:	PUSH	BC		; save the other
 
 
 	ORG	$0066
-NMIH:	PUSH AF
+NMIH:	PUSH 	AF
 	JP	NMIHANDLER
 	;POP AF
         
@@ -510,6 +510,7 @@ INTERNALERROR:
 _endl1: HALT
 	JR _endl1
 
+	include "snaram.asm"
 	include "menu_defs.asm"
         include "menu.asm"
         include "frame.asm"
@@ -527,6 +528,7 @@ _endl1: HALT
 	include "nmihandler.asm"
         include	"print.asm"
         include	"debug.asm"
+        include	"regdebug.asm"
 	include "keybtest.asm"
         
                ; 00000000001111111111222222222233
@@ -538,3 +540,8 @@ COPYRIGHT:DB	"ZX Interface Z (C) Alvieboy 2020", 0
 PASSWDTMP: DB "Spectrum", 0
 DISCONNECTED:	DB	"Disconnected", 0
 SCANNING:	DB	"Scanning...", 0
+
+
+; THIS MUST BE THE LAST ENTRY!!!!
+	ORG ROM_PATCHED_SNALOAD
+	include "snarestore.asm"

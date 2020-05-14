@@ -22,16 +22,24 @@ NMIENTRY4HANDLER:
 
 NMIENTRY5HANDLER:
         RET
+        
 NMIENTRY6HANDLER:
+	DI
+        LD	DE, 0
+        PUSH	DE
+        RETN
+
+NMIENTRY7HANDLER:
         LD	A,1
         LD	(NMIEXIT), A
         RET
+
         
 NMIMENU__SETUP:
        	LD	IX, NMI_MENU
         LD	(IX + FRAME_OFF_WIDTH), 28 ; Menu width 24
-        LD	(IX + FRAME_OFF_NUMBER_OF_LINES), 6 ; Menu visible entries
-        LD	(IX + MENU_OFF_DATA_ENTRIES), 6 ; Menu actual entries 
+        LD	(IX + FRAME_OFF_NUMBER_OF_LINES), 7 ; Menu visible entries
+        LD	(IX + MENU_OFF_DATA_ENTRIES), 7 ; Menu actual entries 
         LD 	(IX + MENU_OFF_SELECTED_ENTRY), 0 ; Selected entry
         LD	(IX+FRAME_OFF_TITLEPTR), LOW(NMIMENUTITLE)
         LD	(IX+FRAME_OFF_TITLEPTR+1), HIGH(NMIMENUTITLE)
@@ -59,6 +67,10 @@ NMIMENU__SETUP:
         LD	(IX+MENU_OFF_FIRST_ENTRY+15), 0 ; Flags
         LD	(IX+MENU_OFF_FIRST_ENTRY+16), LOW(NMIENTRY6)
         LD	(IX+MENU_OFF_FIRST_ENTRY+17), HIGH(NMIENTRY6)
+
+        LD	(IX+MENU_OFF_FIRST_ENTRY+18), 0 ; Flags
+        LD	(IX+MENU_OFF_FIRST_ENTRY+19), LOW(NMIENTRY7)
+        LD	(IX+MENU_OFF_FIRST_ENTRY+20), HIGH(NMIENTRY7)
 
 	LD	(IX+MENU_OFF_CALLBACKPTR), LOW(NMIMENUCALLBACKTABLE)
         LD	(IX+MENU_OFF_CALLBACKPTR+1), HIGH(NMIMENUCALLBACKTABLE)
@@ -94,6 +106,10 @@ SETUP_FILEMENU:
         JR 	C, _l1
     	LD	A, 15
 _l1:
+
+        ; TEST TEST TEST
+        LD	A, 15
+
         LD	C, A
         
         INC	HL
@@ -166,7 +182,7 @@ _n2:
        	JR	SNAPSELECTED
 _n3:
 	; Check for cancel
-       LD	DE,(CURKEY) ; Don't think is needed.
+       	LD	DE,(CURKEY) ; Don't think is needed.
         LD	A, D
         CP	$27
         JR	NZ, _n4
@@ -211,20 +227,49 @@ _entryfound:
         CALL	WRITECMDSTRING
         
         ; TODO: improve this for better screen handling
-        CALL	RESTORESCREENAREA
-        LD	HL, NMI_MENU
-        CALL	MENU__DRAW
+        ;CALL	RESTORESCREENAREA
+        ;LD	HL, NMI_MENU
+        ;CALL	MENU__DRAW
         ; END TODO
         
         JP	LOADSNAPSHOT ; Do everything again!
         
 _entryisfile:
-        CALL	RESTORESCREENAREA
+
+	; Request load snapshot
+        LD 	A, CMD_LOAD_SNA
+        CALL	WRITECMDFIFO
+        ; String still in HL
+        CALL	WRITECMDSTRING
+        ;
+        ; Wait for completion
+_wait:
+        LD	HL, NMICMD_RESPONSE
+	LD	A, RESOURCE_ID_OPERATION_STATUS
+        CALL	LOADRESOURCE
+        JR	Z, _error1
+        ; Get operation status
+        LD	A, (NMICMD_RESPONSE)
+        CP      STATUS_INPROGRESS
+        JR	Z, _wait
+        CP	STATUS_OK
+        JP	Z, SNARAM
+        
+        LD	HL, NMICMD_RESPONSE
+        INC	HL	
+        JP	SHOWOPERRORMSG
+
+        
+       ; CALL	RESTORESCREENAREA
 
 
-        LD	HL, NMI_MENU
-        JP	MENU__DRAW
-	RET
+        ;LD	HL, NMI_MENU
+        ;JP	MENU__DRAW
+	;RET
+_error1:
+	JP	INTERNALERROR
+	ENDLESS
+
 
 
 
@@ -236,6 +281,7 @@ NMIMENUCALLBACKTABLE:
         DEFW NMIENTRY4HANDLER
         DEFW NMIENTRY5HANDLER
         DEFW NMIENTRY6HANDLER
+        DEFW NMIENTRY7HANDLER
 
 NMIMENUTITLE:
 	DB 	"ZX Interface Z", 0
@@ -244,4 +290,5 @@ NMIENTRY2: DB	"Save snapshot", 0
 NMIENTRY3: DB	"Play/Stop tape", 0
 NMIENTRY4: DB	"Poke...",0
 NMIENTRY5: DB	"Setup...", 0
-NMIENTRY6: DB	"Exit", 0
+NMIENTRY6: DB	"Reset", 0
+NMIENTRY7: DB	"Exit", 0

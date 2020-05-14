@@ -130,7 +130,12 @@ MENU__DRAWCONTENTS_NO_DE:
         LD	D, (IX+FRAME_OFF_SCREENPTR+1)
         INC	DE
 MENU__DRAWCONTENTS:   	; Call this instead if you already have DE pointing to the correct place.
-	LD	B, (IX+FRAME_OFF_NUMBER_OF_LINES) ; Get number of entries
+	LD	A, (IX+MENU_OFF_DATA_ENTRIES) ; Get number of entries
+        LD	B, (IX+FRAME_OFF_NUMBER_OF_LINES) ; Get number of lines
+	CP	B
+        JR	NC, _s
+        LD	B, A
+_s:     
         PUSH	IX  	;
         POP	HL      ; Move IX (menu structure) into HL
         
@@ -153,7 +158,7 @@ MD2:
         PUSH	BC
         CALL	MOVEDOWN
 	PUSH	DE
-        ; Load entry attributes
+        ; Load entry attributes - TBD
         LD	A, (HL)
         INC 	HL
         LD	C, (HL) ; Load entry..
@@ -170,6 +175,35 @@ MD2:
         POP	BC
         
         DJNZ	MD2
+        
+        ; We may need empty entries if we are short.
+	LD	B, (IX+MENU_OFF_DATA_ENTRIES) ; Get number of entries
+        LD	A, (IX+FRAME_OFF_NUMBER_OF_LINES) ; Get number of lines
+	SUB	B      ; Example: 2 entries, 14 lines. result: 12
+
+        
+        JR	C, _noempty
+        JR	Z, _noempty
+
+        ;CALL	DEBUGHEXA
+        LD	B, A
+ 	
+        ; Need "B" empty lines.
+_fillempty:
+
+        PUSH	BC
+        CALL	MOVEDOWN
+	PUSH	DE
+        LD	HL, EMPTYSTRING
+        LD	A, (IX+FRAME_OFF_WIDTH)
+        CALL 	PRINTSTRINGPAD
+        POP	DE
+        POP	BC
+        DJNZ	_fillempty
+
+
+        
+_noempty:
 
 ;	Check if we need up/down arrows.
 

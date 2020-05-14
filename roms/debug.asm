@@ -19,6 +19,14 @@ DEBUGHEXHL:
         POP	DE
         RET
 
+PRINTHEXHL:
+        LD	A, L
+        LD	B, A
+        LD	A, H
+        CALL	PRINTHEX
+        LD	A, B
+        JP 	PRINTHEX
+
 ; Debug A
 DEBUGHEXA:
 	PUSH	DE

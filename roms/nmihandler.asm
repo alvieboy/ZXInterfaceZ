@@ -1,12 +1,15 @@
+include "port_defs.asm"
 
 NMIHANDLER:
 	; Upon entry we already have AF on the stack.
         LD	A, 0
-        OUT	($11), A         ; Set external RAM LSB
-        OUT	($13), A         ; and MSB addresses. So we start read/write at 0x0000
+        OUT	(PORT_RAM_ADDR_0), A         ; Set external RAM LSB
+        OUT	(PORT_RAM_ADDR_1), A         ; 
+        OUT	(PORT_RAM_ADDR_2), A         ; and MSB addresses. So we start read/write at 0x000000
+        
         ; Save regs.
         LD	A, C
-        LD	C, $15           ; Data port for external RAM
+        LD	C, PORT_RAM_DATA           ; Data port for external RAM
         
         OUT	(C), A           ; Ram: 0x0000
         OUT	(C), B           ; Ram: 0x0001
@@ -29,7 +32,7 @@ lone:
         ; Now, SP, IX, IY. Note that SP has 4 extra bytes for AF and NMI return address.
         
         LD	(NMI_SCRATCH), SP
-        LD	HL, (NMI_SCRATCH)
+        LD	HL, (NMI_SCRATCH)     ; HL=SP
         OUT	(C), L        	; Ram: 0x2006
         OUT	(C), H        	; Ram: 0x2007
         
@@ -52,40 +55,48 @@ lone:
         INC	HL
         LD	A, (HL)
         OUT	(C), A          ; Ram: 0x200D [A]
-        ; Create a new SP
-        LD	HL, NMI_SPVAL
-	LD 	(NMI_SCRATCH), HL
-        LD	SP, (NMI_SCRATCH)
 
-        ; Get R and IFF2
+        ; Get R 
         LD	A, R
         OUT	(C), A	   	; Ram: 0x200E
+
+        LD	SP, NMI_SPVAL
+        PUSH	AF
+        
         ; Get flags from SP
-        LD	A, (NMI_SCRATCH)
+        LD	HL, NMI_SPVAL-2
+        LD	A, (HL)
         OUT	(C), A	   	; Ram: 0x200F
+        POP	AF
         
         ; Finally, save I
         LD	A, I
         OUT	(C), A	   	; Ram: 0x2010
         
+        ; 
+        
         ; Save border.
-        IN	A,($FE)
+        IN	A, (PORT_ULA)
         OUT	(C), A	   	; Ram: 0x2011
 
         ; We are good to go.
-        
+
         LD	IY, IYBASE
+
 
         CALL	NMIPROCESS
 
 NMIRESTORE:
 	; Restore SP first, since we need to manipulate RAM 
         ; in order to restore it
-        LD	C, $15		; Data port 
+        LD	C, PORT_RAM_DATA	       ; Data port 
         LD	A, $06		; LSB 
-        OUT	($11), A 
+        OUT	(PORT_RAM_ADDR_0), A 
         LD	A, $20          ; MSB
-        OUT	($13), A
+        OUT	(PORT_RAM_ADDR_1), A
+        XOR	A
+        OUT	(PORT_RAM_ADDR_2), A  
+        
         IN	L, (C)          ; Ram: 0x2006
         IN	H, (C)          ; Ram: 0x2007
         LD	(NMI_SCRATCH), HL
@@ -103,9 +114,9 @@ NMIRESTORE:
         
         ; Move back to screen area.
         LD	A, $06		; LSB 
-        OUT	($11), A 
+        OUT	(PORT_RAM_ADDR_0), A 
         LD	A, $00          ; MSB
-        OUT	($13), A
+        OUT	(PORT_RAM_ADDR_1), A
         ; Restore screen and scratchpad memory
         LD	B, $00
         LD	D, $20
@@ -119,9 +130,9 @@ _l2:
 
 
         LD	A, $01		; LSB 
-        OUT	($11), A 
+        OUT	(PORT_RAM_ADDR_0), A 
         LD	A, $00          ; MSB
-        OUT	($13), A
+        OUT	(PORT_RAM_ADDR_1), A
         ; BEDLH
        	IN	B,(C)           ; Ram: 0x0001
         IN	E,(C)           ; Ram: 0x0002
@@ -130,8 +141,8 @@ _l2:
         IN	H,(C)           ; Ram: 0x0005
 	; Last one is C.
         XOR	A
-        OUT	($11), A        ; Ram: 0x0000
-        OUT	($13), A        ; Ram: 0x0000
+        OUT	(PORT_RAM_ADDR_0), A        ; Ram: 0x0000
+        OUT	(PORT_RAM_ADDR_1), A        ; Ram: 0x0000
         IN	C, (C)
         ; SP is "good" here.
 	POP 	AF
@@ -174,12 +185,12 @@ NMIKEY_INPUT:
 SNASAVE:
 	; For SNA we need to also populate alternative registers.
         ; These start at 0x2012
-        LD	C, $15		; Data port 
+        LD	C, PORT_RAM_DATA		; Data port 
         
         LD	A, $12		; LSB 
-        OUT	($11), A 
+        OUT	(PORT_RAM_ADDR_0), A 
         LD	A, $20          ; MSB
-        OUT	($13), A
+        OUT	(PORT_RAM_ADDR_1), A
         
         EXX	; We must not modify EX' registers!
 	PUSH	BC
@@ -188,7 +199,7 @@ SNASAVE:
         EX	AF, AF'
         PUSH	AF
         LD	A, C
-        LD	C, $15
+        LD	C, PORT_RAM_DATA
         OUT	(C), A           ; Ram: 0x2012
         OUT	(C), B           ; Ram: 0x2013
         OUT	(C), E           ; Ram: 0x2014
@@ -226,20 +237,12 @@ _sone:
         DEC	D
         JR	NZ, _sone
         
-        ; Now, send in filename
-        LD	HL, SNAFILENAME
-        LD	A,0
-        LD 	(HL),A
-
         ; All saved. Now, trigger SNA save
         LD	A, CMD_SAVE_SNA
         CALL	WRITECMDFIFO 
-
-        PUSH	HL
-        CALL	STRLEN
-        POP	HL
-        
-        CALL	WRITECMDFIFO 
+        ; Now, send in filename
+        LD	HL, SNAFILENAME
+        CALL	WRITECMDSTRING
 
 _wait:
         LD	HL, NMICMD_RESPONSE
@@ -254,20 +257,7 @@ _wait:
         ;JR	Z, SHOWSUCCESS
 	LD	HL, NMICMD_RESPONSE
         INC	HL	
-        ; Load error string len
-        LD	A, (HL)
-        CP	0
-        JR	Z, _showdefault
-        PUSH	HL
-        INC	HL
-        ADD	A, L
-        LD	L, A ; Should not overflow.
-        XOR	A
-        LD	(HL), A
-        POP	HL
-        INC	HL
-	CALL    TEXTMESSAGE__SHOW
-        CALL	WAITFORENTER
+	CALL	SHOWOPERRORMSG
         ; Clear
 _leave:
         LD	A, $38
@@ -288,6 +278,27 @@ _error1:
 	ENDLESS
         JP 	INTERNALERROR
         RET
+
+SHOWOPERRORMSG:
+        ; Load error string len
+        LD	A, (HL)
+        CP	0
+        JR	Z, _showdefault
+        PUSH	HL
+        INC	HL
+        ADD	A, L
+        LD	L, A ; Should not overflow.
+        XOR	A
+        LD	(HL), A
+        POP	HL
+        INC	HL
+        JR	_l3
+_showdefault:
+	LD	HL, UNSPECIFIEDMSG
+_l3:
+	CALL    TEXTMESSAGE__SHOW
+        JP	WAITFORENTER
+
 
 ; Returns NZ if we have a key
 CHECKKEY:
@@ -379,11 +390,12 @@ RESTORESCREENAREA:
 	; Screen area starts at 0x0006
         ; Size: 0x1B00
         LD	A, $06
-        OUT	($11), A         ; Set external RAM LSB
+        OUT	(PORT_RAM_ADDR_0), A         ; Set external RAM LSB
         XOR	A
-        OUT	($13), A         ; and MSB addresses. So we start read/write at 0x0000
+        OUT	(PORT_RAM_ADDR_1), A         ; and MSB addresses. So we start read/write at 0x0000
 	LD	HL, SCREEN
-	LD	BC, $0015
+	LD	B, 0
+        LD	C, PORT_RAM_DATA
         LD	D, $1B
 _r1:
         INIR                   	; Starts at 0x0006
