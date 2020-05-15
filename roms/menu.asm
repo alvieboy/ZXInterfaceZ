@@ -28,6 +28,8 @@ MENU__INIT:
         ;LD	(IX+MENU_OFF_SELECTED_ENTRY), A
         LD	(IX+MENU_OFF_DISPLAY_OFFSET), A
 
+	LD	(IX+MENU_OFF_DRAWFUNC), LOW(MENU__DRAWITEMDEFAULT)
+        LD	(IX+MENU_OFF_DRAWFUNC+1), HIGH(MENU__DRAWITEMDEFAULT)
 	POP     HL
         RET
 
@@ -161,19 +163,27 @@ MD2:
         ; Load entry attributes - TBD
         LD	A, (HL)
         INC 	HL
+        ; We only have BC available here. Use it to load
+        ; function pointer
+        LD	BC, RETFROMDRAW
+        PUSH	BC ; Will be return address.
+        
+        LD	C, (IX+MENU_OFF_DRAWFUNC)
+        LD	B, (IX+MENU_OFF_DRAWFUNC+1)
+        PUSH	BC ; Function to call
+        
         LD	C, (HL) ; Load entry..
         INC	HL
         LD	B, (HL) ; pointer
         INC	HL
-        PUSH	HL
-        PUSH	BC
-        POP	HL
-        LD	A, (IX+FRAME_OFF_WIDTH)
-        CALL 	PRINTSTRINGPAD
-        POP	HL
+        
+        RET	; THIS IS A CALL!
+        
+RETFROMDRAW:       
+
         POP	DE
         POP	BC
-        
+
         DJNZ	MD2
         
         ; We may need empty entries if we are short.
@@ -249,6 +259,16 @@ f2:
 
 
 	RET
+
+MENU__DRAWITEMDEFAULT:
+        PUSH	HL
+        PUSH	BC
+        POP	HL
+        LD	A, (IX+FRAME_OFF_WIDTH)
+        CALL 	PRINTSTRINGPAD
+        POP	HL
+        RET
+
 
 MENU__CHOOSENEXT:
         PUSH	HL

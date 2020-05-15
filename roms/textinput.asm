@@ -22,6 +22,15 @@ TEXTINPUT__DRAWCONTENT:
         ; Print cursor
         LD	A, 'L'
         CALL	PRINTCHAR
+        ; Clear everything up to end of line
+        PUSH	BC
+        LD	A, (IX+FRAME_OFF_WIDTH)
+        SUB	C
+        DEC	A
+        DEC	A
+        LD	HL, EMPTYSTRING
+        CALL	PRINTSTRINGPAD
+        POP	BC
         ; In the eventuality of backspace, clear next char as well
         LD	A, ' '
         CALL	PRINTCHAR
@@ -138,6 +147,7 @@ TEXTINPUT__HANDLEKEY:
         CALL	STRLEN
         ;POP	HL
         CP	B
+        LD	A, $FF
         RET	Z 
 
 	LD	(HL), D

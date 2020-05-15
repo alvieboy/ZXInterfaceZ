@@ -102,15 +102,7 @@ SETUP_FILEMENU:
         LD	A, (HL) 	; Get number of dir. entries
         LD	B, A		; Save for later
         
-        CP	15
-        JR 	C, _l1
-    	LD	A, 15
-_l1:
-
-        ; TEST TEST TEST
-        LD	A, 15
-
-        LD	C, A
+        LD	C, 15
         
         INC	HL
 
@@ -148,10 +140,6 @@ _l2:    LD	A, (HL)
         INC 	HL
         JR 	NZ, _l2
         ; We are past NULL now.
-        ;INC HL
-        ;LD 	A,(HL)
-        ;call DEBUGHEXA
-        ;_lend: jr _lend
 
         DJNZ	_l4
         
@@ -159,10 +147,51 @@ _l2:    LD	A, (HL)
 
 
 LOADSNAPSHOT:
+	; Set up filtering
+        LD	A, CMD_SET_FILE_FILTER
+        CALL	WRITECMDFIFO
+        LD	A, FILE_FILTER_SNAPSHOTS
+        CALL	WRITECMDFIFO
+
+        CALL	LOADFILE
+        CP	$00
+        JR	Z, _validsnap
+	; Cancelled or error
+        CALL	RESTORESCREENAREA
+        LD	HL, NMI_MENU
+        JP	MENU__DRAW
+_validsnap:
+       	JP	REQUEST_SNAPSHOT
+
+LOADTAPE:
+	; Set up filtering
+        LD	A, CMD_SET_FILE_FILTER
+        CALL	WRITECMDFIFO
+        LD	A, FILE_FILTER_TAPES
+        CALL	WRITECMDFIFO
+
+        CALL	LOADFILE
+        CP	$00
+        JR	Z, _validtape
+	; Cancelled or error
+        
+        CALL	RESTORESCREENAREA
+        LD	HL, NMI_MENU
+        JP	MENU__DRAW
+_validtape:
+       	JP	REQUEST_TAPE
+        
+
+LOADFILE:        
 	CALL 	SETUP_FILEMENU
         LD	HL, (SDMENU)
         LD	D, 5 ; line to display menu at.
         CALL	MENU__INIT
+        ; Set up custom draw function. IX is still set up to point to SDMENU
+        ; TBD
+        
+        ;LD	(IX+MENU_OFF_DRAWFUNC), LOW(MENU_DRAW_FILENAME)
+        
 	CALL	MENU__DRAW
 _fm:
 	CALL	KEYBOARD
@@ -182,25 +211,20 @@ _n1:
 _n2:
         CP	$21     ; ENTER key
         JR	NZ, _n3
-       	JR	SNAPSELECTED
+       	JR	FILESELECTED
 _n3:
 	; Check for cancel
        	LD	DE,(CURKEY) ; Don't think is needed.
         LD	A, D
         CP	$27
-        JR	NZ, _n4
+        JR	NZ, _fm
         LD	A, E	
         CP	$20
-        JR	NZ, _n4
+        JR	NZ, _fm
+	LD	A, $FF
+        RET
 
-    	; Cancelled.
-        CALL	RESTORESCREENAREA
-        LD	HL, NMI_MENU
-        JP	MENU__DRAW
-_n4:
-        JR	_fm
-
-SNAPSELECTED:
+FILESELECTED:
         ; 	Find entry.
         LD	B, (IX+MENU_OFF_SELECTED_ENTRY)
         LD	HL, HEAP
@@ -235,10 +259,14 @@ _entryfound:
         ;CALL	MENU__DRAW
         ; END TODO
         
-        JP	LOADSNAPSHOT ; Do everything again!
+        JP	LOADFILE ; Do everything again!
         
 _entryisfile:
+	LD	A, 0
+        RET
 
+
+REQUEST_SNAPSHOT:
 	; Request load snapshot
         LD 	A, CMD_LOAD_SNA
         CALL	WRITECMDFIFO
@@ -274,13 +302,22 @@ _error1:
 	ENDLESS
 
 
+REQUEST_TAPE:
+        LD 	A, CMD_PLAY_TAPE
+        CALL	WRITECMDFIFO
+        ; String still in HL
+        CALL	WRITECMDSTRING
+	LD	A, 1
+	LD	(NMIEXIT), A
+	RET	
+        
 
 
 
 NMIMENUCALLBACKTABLE:
 	DEFW LOADSNAPSHOT
         DEFW ASKFILENAME
-        DEFW NMIENTRY3HANDLER
+        DEFW LOADTAPE
         DEFW NMIENTRY4HANDLER
         DEFW VIDEOMODE
         DEFW NMIENTRY6HANDLER
@@ -288,9 +325,9 @@ NMIMENUCALLBACKTABLE:
 
 NMIMENUTITLE:
 	DB 	"ZX Interface Z", 0
-NMIENTRY1: DB	"Load snapshot", 0
-NMIENTRY2: DB	"Save snapshot", 0
-NMIENTRY3: DB	"Play/Stop tape", 0
+NMIENTRY1: DB	"Load snapshot..", 0
+NMIENTRY2: DB	"Save snapshot..", 0
+NMIENTRY3: DB	"Play tape...", 0
 NMIENTRY4: DB	"Poke...",0
 NMIENTRY5: DB	"Video...", 0
 NMIENTRY6: DB	"Reset", 0

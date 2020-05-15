@@ -40,6 +40,7 @@ void gpio__init()
         (1ULL<<PIN_NUM_SWITCH) |
         (1ULL<<PIN_NUM_IO0) |
         (1ULL<<PIN_NUM_NSTATUS) |
+        (1ULL<<PIN_NUM_IO21) |
         (1ULL<<PIN_NUM_CONF_DONE) |
         (1ULL<<PIN_NUM_SPECT_INTERRUPT) |
         (1ULL<<PIN_NUM_CMD_INTERRUPT);

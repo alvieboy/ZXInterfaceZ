@@ -10,6 +10,7 @@
 #include "fileaccess.h"
 #include "interfacez_resources.h"
 #include "sna.h"
+#include "tapplayer.h"
 
 #define COMMAND_BUFFER_MAX 128
 static uint8_t command_buffer[COMMAND_BUFFER_MAX]; // Max 128 bytes.
@@ -170,6 +171,33 @@ static int spectcmd__loadsna()
     return ret;
 }
 
+static int spectcmd__playtape()
+{
+    char filename[32];
+    int ret = 0;
+    if (cmdptr<2) {
+        return ret;
+    }
+
+    uint8_t filenamelen = command_buffer[1];
+    int psize = 2+filenamelen;
+
+    if (cmdptr < psize)
+        return ret;
+
+    ESP_LOGI(TAG,"Playing tape");
+    cmdptr = 0;
+
+    opstatus__set_status(OPSTATUS_IN_PROGRESS,"");
+
+    memcpy(filename, &command_buffer[2], filenamelen);
+    filename[filenamelen] = '\0';
+
+    tapplayer__play(filename);
+
+    return ret;
+}
+
 static int spectcmd__setvideomode()
 {
     int ret = 0;
@@ -218,6 +246,9 @@ static int spectcmd__check()
         break;
     case SPECTCMD_CMD_LOADSNA:
         ret = spectcmd__loadsna();
+        break;
+    case SPECTCMD_CMD_PLAYTAPE:
+        ret = spectcmd__playtape();
         break;
     case SPECTCMD_CMD_SETVIDEOMODE:
         ret = spectcmd__setvideomode();

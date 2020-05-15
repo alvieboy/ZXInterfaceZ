@@ -11,8 +11,6 @@
 
 static bool filter_match(struct directory_resource *res, struct dirent *e)
 {
-    return true;
-
     const char *ext;
     if (e->d_type == DT_DIR) {
         return true;

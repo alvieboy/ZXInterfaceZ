@@ -12,6 +12,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
+#include "fileaccess.h"
 
 #define TAP_CMD_STOP 0
 #define TAP_CMD_PLAY 1
@@ -28,7 +29,8 @@ struct tapcmd
 enum tapstate {
     TAP_IDLE,
     TAP_PLAYING,
-    TAP_RECORDING
+    TAP_RECORDING,
+    TAP_WAITDRAIN
 };
 
 static enum tapstate state = TAP_IDLE;
@@ -48,7 +50,7 @@ void tapplayer__play(const char *filename)
 {
     struct tapcmd cmd;
     cmd.cmd = TAP_CMD_PLAY;
-    strcpy(&cmd.file[0], filename);
+    fullpath(filename, &cmd.file[0], sizeof(cmd.file)-1);
     xQueueSend(tap_evt_queue, &cmd, 1000);
 }
 
@@ -68,6 +70,8 @@ static void tapplayer__do_start_play(const char *filename)
             tapfh = -1;
         }
         break;
+    case TAP_WAITDRAIN:
+        return; // Don't
     }
     // Attempt to open file
     tapfh = open(filename, O_RDONLY);
@@ -158,20 +162,27 @@ static void tapplayer__task(void*data)
                             tapfh = -1;
                             break;
                         }
-                        ESP_LOGI(TAG, "Write TAP chunk %d",r);
+                        ESP_LOGI(TAG, "Write TAP chunk %d (%d, %d)",r, playsize, currplay);
                         fpga__load_tap_fifo(chunk,r,4000);
-                        playsize+=r;
+                        currplay+=r;
                         if (playsize==currplay) {
-                            ESP_LOGI(TAG, "Finished TAP play");
+                            ESP_LOGI(TAG, "Finished TAP fill");
                             close(tapfh);
                             tapfh = -1;
-                            state = TAP_IDLE;
+                            state = TAP_WAITDRAIN;
                         }
                     }
                 }
                 break;
             case TAP_IDLE:
                 break;
+            case TAP_WAITDRAIN:
+                if (fpga__tap_fifo_empty()) {
+                    ESP_LOGI(TAG, "Finished TAP play");
+                    fpga__clear_flags(FPGA_FLAG_TAP_ENABLED | FPGA_FLAG_ULAHACK);
+                    fpga__set_flags(FPGA_FLAG_TAPFIFO_RESET);
+                    state = TAP_IDLE;
+                }
             default:
                 break;
             }

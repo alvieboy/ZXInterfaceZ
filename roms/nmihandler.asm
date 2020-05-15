@@ -338,7 +338,7 @@ _w1:
         RET
 
 ASKFILENAME:
-        CALL	RESTORESCREENAREA
+        ;CALL	RESTORESCREENAREA
 	CALL 	SETUPASKFILENAME
 
 _waitfilename:
@@ -352,7 +352,7 @@ _waitfilename:
         CP	$FF
         JR	Z, _waitfilename
         
-        CALL	RESTORESCREENAREA
+        ;CALL	RESTORESCREENAREA
 
         CP	0
         JP	Z, SNASAVE
@@ -376,7 +376,7 @@ SETUPASKFILENAME:
         XOR	A
         LD	(HL), A ; Clear password
 
-        LD	D, 14 ; line to display menu at.
+        LD	D, 7 ; line to display menu at.
 	LD	HL, FILENAMEENTRYWIDGET
         CALL	TEXTINPUT__INIT
         LD	HL, FILENAMEENTRYWIDGET

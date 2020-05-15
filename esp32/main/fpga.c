@@ -133,6 +133,8 @@ int fpga__init()
     } while ((id & 0xff) == 0xff);
     fpga__set_trigger(FPGA_FLAG_TRIG_CMDFIFO_RESET | FPGA_FLAG_TRIG_RESOURCEFIFO_RESET);
     fpga__set_trigger(FPGA_FLAG_TRIG_INTACK);
+    fpga__set_clear_flags(FPGA_FLAG_ENABLE_INTERRUPT, FPGA_FLAG_RSTSPECT);
+
     return 0;
 }
 
@@ -466,6 +468,11 @@ uint16_t fpga__get_tap_fifo_free()
     return FPGA_TAP_FIFO_SIZE - used;
 }
 
+bool fpga__tap_fifo_empty()
+{
+    return fpga__get_tap_fifo_usage() == 0;
+}
+
 int fpga__load_tap_fifo(const uint8_t *data, unsigned len, int timeout)
 {
 #define TAP_LOCAL_CHUNK_SIZE 256
@@ -550,5 +557,6 @@ int fpga__write_extram_block(uint32_t address, uint8_t *buffer, int size)
                                        buffer,
                                        size);
 }
+
 
 

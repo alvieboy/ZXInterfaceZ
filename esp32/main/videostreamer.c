@@ -21,7 +21,7 @@
 // Target needs extra 4 bytes at start
 
 volatile int client_socket = -1;
-
+static volatile unsigned interrupt_count = 0;
 
 static uint8_t fb[SPECTRUM_FRAME_SIZE];
 static uint8_t fb_prev[SPECTRUM_FRAME_SIZE];
@@ -165,23 +165,29 @@ const uint8_t *videostreamer__getlastfb()
     return fb;
 }
 
-
+unsigned videostreamer__getinterrupts()
+{
+    return interrupt_count;
+}
 
 static void videostreamer__server_task(void *pvParameters)
 {
     uint32_t io_num;
     uint8_t seqno = 0;
     int error_counter = 0;
+    interrupt_count = 0;
 
     unsigned framecounter = 0;
     ESP_LOGI(TAG, "VideoStreamer task initialised");
     do {
         io_num = spectint__getinterrupt();
-        //ESP_LOGI(TAG, "I %d", io_num);
+        ESP_LOGI(TAG, "I %d", io_num);
         if(io_num)
         {
             if (io_num==PIN_NUM_SPECT_INTERRUPT) {
+                
                 framecounter++;
+                interrupt_count++;
 
                 if (framecounter == 1) {
                     framecounter = 0;

@@ -124,10 +124,10 @@ void app_main()
     tapplayer__init();
     // Start capture
     //start_capture();
-    int isplay=0;
+    unsigned iter = 0;
     while(1) {
-        led__set(LED1, lstatus);
-        lstatus = !lstatus;
+        led__set(LED1, !!(lstatus&0x4));
+        lstatus++;
         /*int sw = gpio_get_level(PIN_NUM_SWITCH);
         if (sw==0 && lastsw==1) {
             ESP_LOGI(TAG, "Start capture");
@@ -140,17 +140,15 @@ void app_main()
 
         vTaskDelay(100 / portTICK_RATE_MS);
 
-       // ESP_LOGI(TAG,"Interrupts: %d\n", (int)interrupt_count);
-       // ESP_LOGI(TAG, "CMD IN %d", gpio_get_level(PIN_NUM_CMD_INTERRUPT));
-
         if (do_restart)
             esp_restart();
 
         fpga__get_status();
-        if (isplay==0 && (gpio_get_level(PIN_NUM_IO0)==0)) {
-            isplay=1;
-            ESP_LOGI(TAG,"Request TAP play");
-            tapplayer__play("/sdcard/demo.tap");
+        iter++;
+        if (iter==50) {
+            // 5-second mark.
+            ESP_LOGI(TAG,"Interrupts: %d", videostreamer__getinterrupts());
+            iter=0;
         }
     }
 }

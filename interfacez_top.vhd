@@ -219,19 +219,12 @@ begin
 
   ESP_IO27_o     <= spec_nreq_s;
 
-  -- Temporary USB.
-  --USB_OE_o      <= '0';
-  --USB_SOFTCON_o <= '0';
-  --USB_SPEED_o   <= '0';
-  ------USB_VMO_o     <= '0';
-  --USB_VPO_o     <= '1';
-  --USB_PWREN_o   <= '0';
-
   FLED_o(0)     <= '1';
   FLED_o(1)     <= '1';
   FLED_o(2)     <= not FORCE_ROMCS_s;
   LED2_o        <= '1';
 
+  -- The delays are only used for simulation
   ram_buf: entity work.iobuf
   generic map (
     WIDTH => 4,
@@ -246,6 +239,7 @@ begin
     oe_i    => RAMD_oe_s(3 downto 0)
   );
 
+  -- The delays are only used for simulation
   ram2_buf: entity work.obuf
   generic map (
     WIDTH => 2,

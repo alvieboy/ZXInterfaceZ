@@ -14,8 +14,8 @@ void spi__init_bus()
         .miso_io_num = PIN_NUM_MISO,
         .mosi_io_num = PIN_NUM_MOSI,
         .sclk_io_num = PIN_NUM_CLK,
-        .quadwp_io_num = PIN_NUM_QWP,
-        .quadhd_io_num = PIN_NUM_QHD,
+        .quadwp_io_num = -1, //PIN_NUM_QWP,
+        .quadhd_io_num = -1,//PIN_NUM_QHD,
         .max_transfer_sz = 16384
     };
 

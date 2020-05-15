@@ -115,6 +115,7 @@ int fpga__read_command_fifo();
 uint16_t fpga__get_spectrum_pc();
 int fpga__load_tap_fifo(const uint8_t *data, unsigned len, int timeout);
 uint16_t fpga__get_tap_fifo_free();
+bool fpga__tap_fifo_empty();
 
 int fpga__write_rom(unsigned offset, uint8_t val);
 
