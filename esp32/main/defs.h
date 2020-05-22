@@ -7,7 +7,7 @@
 #define PIN_NUM_MISO 19
 #define PIN_NUM_MOSI 23
 #define PIN_NUM_CLK  18
-#define PIN_NUM_QWP  22
+//#define PIN_NUM_QWP  22
 //#define PIN_NUM_QHD  21
 #define PIN_NUM_CS   5
 
@@ -25,6 +25,7 @@
 
 #define PIN_NUM_IO26 26
 #define PIN_NUM_IO21 21
+#define PIN_NUM_IO22 22
 #define PIN_NUM_IO27 27
 #define PIN_NUM_IO0  0
 
@@ -39,7 +40,7 @@
 #define PIN_NUM_CMD_INTERRUPT PIN_NUM_IO27
 
 #define PIN_NUM_SPECT_INTERRUPT PIN_NUM_IO26
-#define PIN_NUM_50HZ_INTERRUPT PIN_NUM_IO21
+#define PIN_NUM_USB_INTERRUPT PIN_NUM_IO22
 
 #define SPECTRUM_FRAME_SIZE (0x1b00)
 

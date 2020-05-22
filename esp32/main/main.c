@@ -21,6 +21,7 @@
 #include "sdcard.h"
 #include "tapplayer.h"
 #include "rom.h"
+#include "usb_ll.h"
 
 static int8_t videomode = 0;
 
@@ -122,6 +123,7 @@ void app_main()
     videostreamer__init();
     netcmd__init();
     tapplayer__init();
+    usb_ll__init();
     // Start capture
     //start_capture();
     unsigned iter = 0;
@@ -147,7 +149,7 @@ void app_main()
         iter++;
         if (iter==50) {
             // 5-second mark.
-            ESP_LOGI(TAG,"Interrupts: %d", videostreamer__getinterrupts());
+            //ESP_LOGI(TAG,"Interrupts: %d", videostreamer__getinterrupts());
             iter=0;
         }
     }

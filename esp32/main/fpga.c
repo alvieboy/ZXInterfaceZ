@@ -559,4 +559,38 @@ int fpga__write_extram_block(uint32_t address, uint8_t *buffer, int size)
 }
 
 
+int fpga__read_usb(uint16_t address)
+{
+    uint8_t v;
+    int r = fpga__read_usb_block(address, &v, 1);
+    if (r<0)
+        return r;
+    return v;
+
+}
+
+int fpga__read_usb_block(uint16_t address, uint8_t *dest, int size)
+{
+    return spi__transceive_cmd8_addr24(spi0_fpga,
+                                       0x60,
+                                       (address<<8), // Room for dummy
+                                       dest,
+                                       size);
+}
+int fpga__write_usb(uint16_t address, uint8_t val)
+{
+    uint8_t v = val;
+    return fpga__write_usb_block(address, &v, 1);
+}
+
+int fpga__write_usb_block(uint16_t address, uint8_t *buffer, int size)
+{
+    int r = spi__transceive_cmd8_addr16(spi0_fpga,
+                                        0x61,
+                                        address,
+                                        buffer,
+                                        size);
+    return r;
+}
+
 

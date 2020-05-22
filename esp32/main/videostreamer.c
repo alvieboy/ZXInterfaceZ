@@ -17,7 +17,7 @@
 #include "fpga.h"
 #include "spectcmd.h"
 #include "gpio.h"
-
+#include "usb_ll.h"
 // Target needs extra 4 bytes at start
 
 volatile int client_socket = -1;
@@ -181,7 +181,7 @@ static void videostreamer__server_task(void *pvParameters)
     ESP_LOGI(TAG, "VideoStreamer task initialised");
     do {
         io_num = spectint__getinterrupt();
-        ESP_LOGI(TAG, "I %d", io_num);
+        //ESP_LOGI(TAG, "I %d", io_num);
         if(io_num)
         {
             if (io_num==PIN_NUM_SPECT_INTERRUPT) {
@@ -225,6 +225,8 @@ static void videostreamer__server_task(void *pvParameters)
                 // Switch request
                 ESP_LOGI(TAG, "Switch pressed");
                 gpio__press_event(PIN_NUM_SWITCH);
+            } else if (io_num==PIN_NUM_USB_INTERRUPT) {
+                usb_ll__interrupt();
             }
         }
     } while (1);

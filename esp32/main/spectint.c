@@ -23,7 +23,7 @@ void spectint__init()
     gpio_set_intr_type(PIN_NUM_CMD_INTERRUPT, GPIO_INTR_NEGEDGE);
     gpio_set_intr_type(PIN_NUM_SWITCH, GPIO_INTR_NEGEDGE);
     gpio_set_intr_type(PIN_NUM_IO0, GPIO_INTR_NEGEDGE);
-
+    gpio_set_intr_type(PIN_NUM_USB_INTERRUPT, GPIO_INTR_NEGEDGE);
     interrupt_count = 0;
 
     //install gpio isr service
@@ -33,6 +33,7 @@ void spectint__init()
     ESP_ERROR_CHECK(gpio_isr_handler_add(PIN_NUM_CMD_INTERRUPT, spectint__isr_handler, (void*) PIN_NUM_CMD_INTERRUPT));
     ESP_ERROR_CHECK(gpio_isr_handler_add(PIN_NUM_SWITCH, spectint__isr_handler, (void*) PIN_NUM_SWITCH));
     ESP_ERROR_CHECK(gpio_isr_handler_add(PIN_NUM_IO0, spectint__isr_handler, (void*) PIN_NUM_IO0));
+    ESP_ERROR_CHECK(gpio_isr_handler_add(PIN_NUM_USB_INTERRUPT, spectint__isr_handler, (void*) PIN_NUM_USB_INTERRUPT));
 }
 
 int spectint__getinterrupt()
