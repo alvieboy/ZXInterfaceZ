@@ -36,7 +36,7 @@ architecture beh of ram_adaptor is
   signal r: regs_type;
 begin
 
-  process(clk_i, arst_i, ram_wr_i)
+  process(clk_i, arst_i, ram_wr_i, r, ahb_i, ram_rd_i)
     variable w: regs_type;
   begin
     w := r;
@@ -82,8 +82,10 @@ begin
   ahb_o.HSIZE               <= C_AHB_SIZE_BYTE;
   ahb_o.HBURST              <= C_AHB_BURST_INCR;
   ahb_o.HMASTLOCK           <= '0';
+  ahb_o.HPROT               <= "0000";
   ahb_o.HWDATA(7 downto 0)  <= ram_dat_i;
+  ahb_o.HWDATA(31 downto 15)<= (others => 'X');
   ahb_o.HADDR(23 downto 0)  <= ram_addr_i;
-
+  ahb_o.HADDR(31 downto 24) <= (others => '0');
 
 end beh;

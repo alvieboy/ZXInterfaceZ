@@ -43,7 +43,7 @@ end entity screencap;
 architecture beh of screencap is
 
   signal buf_idx_r    : std_logic;
-  signal ram_en_s     : std_logic;
+  --signal ram_en_s     : std_logic;
   signal ram_we_s     : std_logic;
   signal ram_addr_s   : std_logic_vector(12 downto 0);
   signal ram_din_s    : std_logic_vector(7 downto 0);
@@ -129,7 +129,7 @@ begin
   begin
     if rst_i='1' then
     elsif rising_edge(clk_i) then
-      ram_en_s <='0';
+      --ram_en_s <='0';
       ram_we_s <='0';
       if fifo_empty_i='0' and run_r='1' then
         -- Process data.
@@ -142,7 +142,7 @@ begin
           -- 0101 1100 1111 1111
           if (addr_v >= x"4000") and (addr_v < x"5B00") then
             ram_addr_s <= std_logic_vector(addr_v(12 downto 0));
-            ram_en_s  <= '1';
+            --ram_en_s  <= '1';
             ram_we_s  <= '1';
             ram_din_s <= data_v;
             report "Video data";

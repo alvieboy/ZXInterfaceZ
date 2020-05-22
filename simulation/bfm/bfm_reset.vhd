@@ -11,7 +11,7 @@ entity bfm_reset is
     port (
       Cmd_i:  in Cmd_Reset_type;
       -- Outputs.
-      rst_o:  out std_logic
+      rst_o:  out std_logic := not RESET_POLARITY
     );
 end entity bfm_reset;
 

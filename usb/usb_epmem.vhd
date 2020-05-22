@@ -8,14 +8,14 @@ entity usb_epmem is
       uclk_i    : in std_logic;
       urd_i     : in std_logic;
       uwr_i     : in std_logic;
-      uaddr_i   : in std_logic_vector(10 downto 0);
+      uaddr_i   : in std_logic_vector(9 downto 0);
       udata_o   : out std_logic_vector(7 downto 0);
       udata_i   : in std_logic_vector(7 downto 0);
 
       hclk_i    : in std_logic;
       hrd_i     : in std_logic;
       hwr_i     : in std_logic;
-      haddr_i   : in std_logic_vector(10 downto 0);
+      haddr_i   : in std_logic_vector(9 downto 0);
       hdata_o   : out std_logic_vector(7 downto 0);
       hdata_i   : in std_logic_vector(7 downto 0)
   );
@@ -26,25 +26,22 @@ architecture beh of usb_epmem is
 
 begin
 
-  mem_inst: entity work.generic_dp_ram2
-    generic map (
-      address_bits    => 11,
-      data_bits       => 8
-    )
-    port map (
-      clka    => uclk_i,
-      rda     => urd_i,
-      wea     => uwr_i,
-      addra   => uaddr_i,
-      dia     => udata_i,
-      doa     => udata_o,
-      clkb    => hclk_i,
-      rdb     => hrd_i,
-      web     => hwr_i,
-      addrb   => haddr_i,
-      dib     => hdata_i,
-      dob     => hdata_o
-    );
+  epram_inst : entity work.epram
+  PORT MAP (
+		address_a	 => uaddr_i,
+		clock_a	 => uclk_i,
+		data_a	 => udata_i,
+		rden_a	 => urd_i,
+		wren_a	 => uwr_i,
+		q_a	 => udata_o,
+
+		q_b	 => hdata_o,
+		wren_b	 => hwr_i,
+		rden_b	 => hrd_i,
+		data_b	 => hdata_i,
+		clock_b	 => hclk_i,
+		address_b	 => haddr_i
+	);
 
 end beh;
 

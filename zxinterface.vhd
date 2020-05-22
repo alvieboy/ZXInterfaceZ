@@ -44,8 +44,9 @@ entity zxinterface is
     -- SPI
     SPI_SCK_i     : in std_logic;
     SPI_NCS_i     : in std_logic;
-    SPI_D_io      : inout std_logic_vector(3 downto 0);
-
+    --SPI_D_io      : inout std_logic_vector(3 downto 0);
+    SPI_MISO_o    : out std_logic;
+    SPI_MOSI_i    : in std_logic;
     -- Debug
     TP5           : out std_logic;
     --TP6           : out std_logic;
@@ -63,6 +64,7 @@ entity zxinterface is
     -- USB power control
     USB_FLT_i     : in std_logic;
     USB_PWREN_o   : out std_logic;
+    USB_INTN_o    : out std_logic;
 
     spec_int_o    : out std_logic;
     spec_nreq_o   : out std_logic; -- Spectrum data request
@@ -301,10 +303,11 @@ architecture beh of zxinterface is
 
   signal usb_rd_s               : std_logic;
   signal usb_wr_s               : std_logic;
-  signal usb_addr_s             : std_logic_vector(11 downto 0);
+  signal usb_int_s              : std_logic;
+  signal usb_int_async_s        : std_logic;
+  signal usb_addr_s             : std_logic_vector(10 downto 0);
   signal usb_wdat_s             : std_logic_vector(7 downto 0);
   signal usb_rdat_s             : std_logic_vector(7 downto 0);
-
 
   signal keyb_trigger_s         : std_logic;
 
@@ -656,7 +659,8 @@ begin
     usb_wr_o              => usb_wr_s,
     usb_addr_o            => usb_addr_s,
     usb_dat_i             => usb_rdat_s,
-    usb_dat_o             => usb_wdat_s
+    usb_dat_o             => usb_wdat_s,
+    usb_int_i             => usb_int_s
   );
 
   fmretn: entity work.async_pulse port map (
@@ -977,7 +981,8 @@ begin
     addr_i        => usb_addr_s,
     dat_i         => usb_wdat_s,
     dat_o         => usb_rdat_s,
-
+    int_o         => usb_int_s,
+    int_async_o   => usb_int_async_s,
     -- Interface to transceiver
     softcon_o     => USB_SOFTCON_o,
     noe_o         => USB_OE_o,
@@ -992,14 +997,8 @@ begin
     pwrflt_i      => USB_FLT_i
   );
 
-
-
-  mosi_s          <= SPI_D_io(0);
-  SPI_D_io(0)     <= 'Z';       -- MOSI - Change when Quadmode is enabled
-  SPI_D_io(1)     <= miso_s;
-  SPI_D_io(2)     <= 'Z';
-  SPI_D_io(3)     <= 'Z';
-
+  mosi_s          <= SPI_MOSI_i;
+  SPI_MISO_o      <= miso_s;
 
   FORCE_ROMCS_o <= spect_forceromcs_bussync_s;
   FORCE_RESET_o <= spect_reset_s;
@@ -1014,6 +1013,7 @@ begin
   spec_nreq_o <= spec_nreq_r;
 
   ahb_null_m2s <= C_AHB_NULL_M2S;
+  USB_INTN_o <= not usb_int_async_s;
 
 end beh;
 

@@ -74,7 +74,7 @@ architecture beh of tap_player is
 
   signal pulse_ready_s  : std_logic;
   signal pulse_rd_s     : std_logic;
-  signal pulse_idle_s   : std_logic;
+  --signal pulse_idle_s   : std_logic;
   signal pulse_data_r   : std_logic_vector(1 downto 0);
   signal pulse_data_s   : std_logic_vector(1 downto 0);
 
@@ -91,7 +91,7 @@ begin
     ready_i   => pulse_ready_s,
     data_i    => pulse_data_r,
     rd_o      => pulse_rd_s,
-    idle_o    => pulse_idle_s,
+--    idle_o    => pulse_idle_s,
     audio_o   => audio_o
   );
 
@@ -208,11 +208,6 @@ begin
       when others =>
       report "Uninmplemneted" severity failure;
 
-      --when CLOSE =>
-      --  pulse_ready_s <= '0';
-      --  if pulse_idle_s='1' then
-
-      --  end if;
     end case;
 
     if enable_i='0' then

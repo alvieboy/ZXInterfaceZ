@@ -85,7 +85,7 @@ architecture sim of tb_top is
   SIGNAL ESP_MOSI_s : STD_LOGIC;
   SIGNAL ESP_NCSO_s : STD_LOGIC;
   SIGNAL ESP_QHD_io : STD_LOGIC;
-  SIGNAL ESP_QWP_io : STD_LOGIC;
+  SIGNAL ESP_QWP_s  : STD_LOGIC;
   SIGNAL ESP_SCK_s : STD_LOGIC;
   SIGNAL FORCE_INT_s : STD_LOGIC;
   SIGNAL FORCE_RESET_s : STD_LOGIC;
@@ -133,7 +133,7 @@ architecture sim of tb_top is
   signal USB_VPO_s     : std_logic;
   signal USB_RCV_s     : std_logic := '0';
   -- USB power control
-  signal USB_FLT_s     : std_logic;
+  signal USB_FLT_s     : std_logic := '0';
   signal USB_PWREN_s   : std_logic;
   -- Extension connector
   signal EXT_s        : std_logic_vector(7 downto 0);
@@ -233,8 +233,9 @@ begin
       Cmd_i     => CtrlPins_Cmd_s,
       Data_o    => CtrlPins_Data_s,
 
-      IO26_i => ESP_IO26_s,
-      IO27_i => ESP_IO27_s,
+      USB_INTn_i    => ESP_QWP_s,
+      IO26_i        => ESP_IO26_s,
+      IO27_i        => ESP_IO27_s,
       FORCE_RESET_i => FORCE_RESET_s,
       FORCE_ROMCS_i => FORCE_ROMCS_s,
       FORCE_NMI_i   => FORCE_NMI_s,
@@ -305,7 +306,7 @@ begin
     ESP_MOSI_io => ESP_MOSI_s,
     ESP_NCSO_i => ESP_NCSO_s,
     ESP_QHD_io => ESP_QHD_io,
-    ESP_QWP_io => ESP_QWP_io,
+    ESP_QWP_io => ESP_QWP_s,
     ESP_SCK_i => ESP_SCK_s,
     FORCE_INT_o => FORCE_INT_s,
     FORCE_RESET_o => FORCE_RESET_s,

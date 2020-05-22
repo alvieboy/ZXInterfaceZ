@@ -29,9 +29,11 @@ ARCHITECTURE sim of corepll IS
 
   signal videoclk0_period : time := 0 ps;
   signal videoclk1_period : time := 0 ps;
+  signal usbclk_period    : time := 0 ps;
 
   signal videoclk0_s    : std_logic := '0';
   signal videoclk1_s    : std_logic := '0';
+  signal usbclk_s       : std_logic := '0';
 begin
 
   -- Measure input clock
@@ -56,10 +58,11 @@ begin
       activity <= activity + 1;
       delta := t2 - t1;
       if delta=meas_period then
-        meas_period     <= delta;
-        mainclk_period  <= delta / 3;
-        videoclk0_period<= delta * 4 / 5;
-        videoclk1_period<= delta * 17 / 15;
+        meas_period       <= delta;
+        mainclk_period    <= delta / 3;
+        videoclk0_period  <= delta * 4 / 5;
+        videoclk1_period  <= delta * 17 / 15;
+        usbclk_period     <= delta * 2 / 3;
         --report "Detected clock period " & time'image(delta);
         locked_in_s <= '1';
       else
@@ -114,6 +117,20 @@ begin
       end if;
   end process;
 
+  process
+  begin
+    if locked_in_s='0' then
+      usbclk_s <= '0';
+     -- report "Wait for clock";
+      wait on locked_in_s;
+    else
+      usbclk_s <= '0';
+      wait for usbclk_period/2;
+      usbclk_s <= '1';
+      wait for usbclk_period/2;
+      end if;
+  end process;
+
   process(clk_s, locked_in_s)
   begin
     if locked_in_s='0' then
@@ -124,7 +141,7 @@ begin
   end process;
   
   c0 <= clk_s;
-  c1 <= transport clk_s after 3 ns;
+  c1 <= usbclk_s;--transport clk_s after 3 ns;
   c3 <= videoclk0_s;
   c4 <= videoclk1_s;
 end sim;

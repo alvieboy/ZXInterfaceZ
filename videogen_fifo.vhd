@@ -164,7 +164,7 @@ begin
 
 
 
-  process(r, vbusy_i, fifo_full_s, vdata_i, clk_i, rst_i, vidmode_i)
+  process(r, vbusy_i, fifo_full_s, vdata_i, clk_i, rst_i, vidmode_i, sync_in_mainclk_s)
     variable w: regs_type;
   begin
     w := r;

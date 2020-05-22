@@ -252,6 +252,13 @@ set_global_assignment -name EDA_TEST_BENCH_FILE simulation/tests/t004.vhd -secti
 set_global_assignment -name EDA_TEST_BENCH_FILE simulation/tests/t005.vhd -section_id t006
 set_global_assignment -name EDA_TEST_BENCH_FILE simulation/tests/t001.vhd -section_id t006
 set_instance_assignment -name IO_MAXIMUM_TOGGLE_RATE "100 MHz" -to RAMCLK_o
+set_global_assignment -name VHDL_FILE async_dualpulse_data.vhd
+set_global_assignment -name VHDL_FILE async_pulse_data.vhd
+set_global_assignment -name VHDL_FILE generic_dp_ram2.vhd
+set_global_assignment -name VHDL_FILE usb/usb_epmem.vhd
+set_global_assignment -name VHDL_FILE usb/usb1_pd.vhd
+set_global_assignment -name VHDL_FILE usb/usbpkg.vhd
+set_global_assignment -name VHDL_FILE usb/usb_trans.vhd
 set_global_assignment -name VHDL_FILE ahbreq.vhd
 set_global_assignment -name VHDL_FILE ahbreq_sync.vhd
 set_global_assignment -name VHDL_FILE usb/usbhostctrl.vhd
@@ -298,8 +305,6 @@ set_global_assignment -name VHDL_FILE spi_interface.vhd
 set_global_assignment -name VHDL_FILE qspi_slave.vhd
 set_global_assignment -name SDC_FILE interfacez.out.sdc
 set_global_assignment -name VHDL_FILE wishbonepkg.vhd
-set_global_assignment -name VHDL_FILE sdram_hamster.vhd
-set_global_assignment -name VHDL_FILE .vhd
 set_global_assignment -name VHDL_FILE oddrff_altera.vhd
 set_global_assignment -name VHDL_FILE rstgen.vhd
 set_global_assignment -name VHDL_FILE interfacez_top.vhd
@@ -313,4 +318,5 @@ set_global_assignment -name SIGNALTAP_FILE signaltap1/synthesis/stp2.stp
 set_global_assignment -name QIP_FILE videopll.qip
 set_global_assignment -name QIP_FILE videopllreconfig.qip
 set_global_assignment -name QIP_FILE videoram.qip
+set_global_assignment -name QIP_FILE epram.qip
 set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top

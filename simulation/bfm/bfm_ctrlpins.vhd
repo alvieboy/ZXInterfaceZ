@@ -11,6 +11,7 @@ entity bfm_ctrlpins is
 
       IO26_i : in std_logic;
       IO27_i : in std_logic;
+      USB_INTn_i      : in std_logic;
       FORCE_RESET_i   : in std_logic;
       FORCE_ROMCS_i   : in std_logic;
       fORCE_NMI_i     : in std_logic;
@@ -24,6 +25,7 @@ begin
 
   Data_o.IO26     <= IO26_i;
   Data_o.IO27     <= IO27_i;
+  Data_o.USB_INTn <= USB_INTn_i;
   Data_o.RESET    <= FORCE_RESET_i;
   Data_o.ROMCS    <= FORCE_ROMCS_i;
   Data_o.NMI      <= FORCE_NMI_i;

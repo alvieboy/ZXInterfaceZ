@@ -48,7 +48,7 @@ ARCHITECTURE beh OF ahb_arb IS
    SIGNAL hready_r      : std_logic;	-- needed for two-cycle error response
    SIGNAL hlock_r       : std_logic;
    SIGNAL hmastlock_r   : std_logic;
-   SIGNAL htrans_r      : std_logic_vector(1 downto 0);    -- transfer type
+   --SIGNAL htrans_r      : std_logic_vector(1 downto 0);    -- transfer type
 
    TYPE HMAST_I_Typ is  ARRAY (0 to 3) OF AHB_M2S;
    SIGNAL HMAST_I:     HMAST_I_Typ;
@@ -97,10 +97,7 @@ BEGIN
       HMAST_O(N).HRESP      <= HSLAV_I.HRESP  WHEN hmaster_r=N ELSE '0';
    END GENERATE;
 
-   PROCESS(HMAST_I(0).HTRANS,
-           HMAST_I(1).HTRANS,
-           HMAST_I(2).HTRANS,
-           HMAST_I(3).HTRANS, hmaster_r)
+   PROCESS(HMAST_I, hmaster_r)
    BEGIN
       CASE hmaster_r IS
          WHEN 0 =>
@@ -153,7 +150,7 @@ BEGIN
    BEGIN
       IF RISING_EDGE(CLK) THEN
          IF RST='1' THEN
-            htrans_r    <= "00";
+            --htrans_r    <= "00";
             hmaster_r   <= 0;
             hmaster_d_r <= 0;
             hmastlock_r <= '0';
@@ -175,7 +172,7 @@ BEGIN
             IF HSLAV_I.HREADY = '1' THEN
                hmaster_r   <= next_master_v;
                hmaster_d_r <= hmaster_r;
-               htrans_r    <= HMAST_I(hmaster_r).HTRANS;
+               --htrans_r    <= HMAST_I(hmaster_r).HTRANS;
                hmastlock_r <= hlock_r;
             END IF;
 

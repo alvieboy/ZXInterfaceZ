@@ -70,7 +70,7 @@ begin
 
   idle_o <= '1' when r.state=IDLE else '0';
   
-  process(clk_i, arst_i, data_i, ready_i, r)
+  process(clk_i, arst_i, data_i, ready_i, r, tstate_i)
     variable w: regs_type;
   begin
     w := r;

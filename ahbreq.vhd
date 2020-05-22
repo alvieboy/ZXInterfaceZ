@@ -43,7 +43,7 @@ begin
 
   trans_s   <= trans_i xor r.trans;
 
-  process(clk_i,arst_i, addr_i, m_i, trans_s)
+  process(clk_i,arst_i, addr_i, m_i, trans_s, r, trans_i, we_i, data_i)
     variable w: regs_type;
   begin
     w         := r;

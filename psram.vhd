@@ -153,14 +153,13 @@ begin
     end case;
   end process;
 
+
   process(clk_i, arst_i)
   begin
     if arst_i='1' then
       state_r       <= STARTUP;
       bus_oe_s      <= (others => '0');
       csn_r         <= '1';
-      ahb_o.HRESP   <= '0';
-      --ahb_o.HRDATA  <= (others => 'X');
       addr_r        <= (others => 'X');
       wr_r          <= 'X';
     elsif rising_edge(clk_i) then
@@ -322,6 +321,8 @@ begin
   end process;
 
   ahb_o.HRDATA(7 downto 0)  <= data_capture_r;
+  ahb_o.HRDATA(31 downto 8)  <= (others => '0');
+  ahb_o.HRESP   <= '0';
 
 end beh;
 

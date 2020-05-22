@@ -8810,6 +8810,8 @@ EIA Code 3216, Size A, 3.2 mm x 1.6 mm, grid 0.0125 inch</description>
 <text x="190.5" y="139.7" size="1.778" layer="91">DMC3400SDW-7</text>
 <text x="243.84" y="-58.42" size="1.778" layer="97">NEEDS 15K PULLDOWNS!</text>
 <text x="71.12" y="307.34" size="1.778" layer="97">IO2 NEEDS PULLDOWN FOR SERIAL PROG!</text>
+<text x="83.82" y="208.28" size="1.778" layer="97">+3 NOE for second ROM</text>
+<text x="213.36" y="-78.74" size="1.778" layer="97">Consider USB1T11A</text>
 </plain>
 <instances>
 <instance part="GND1" gate="1" x="353.06" y="193.04"/>

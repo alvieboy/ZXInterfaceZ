@@ -229,7 +229,7 @@ begin
 
   dpll: block
 
-    signal dpll_state, dpll_next_state        : std_logic_vector(1 downto 0);
+    signal dpll_state, dpll_next_state        : std_logic_vector(1 downto 0) := "01";
     signal fs_ce_r1, fs_ce_r2                 : std_logic;
 
   begin

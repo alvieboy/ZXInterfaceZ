@@ -12,6 +12,7 @@ package bfm_spimaster_p is
     TRANSCEIVE
   );
 
+
   type Cmd_Spimaster_type is record
     Cmd       : SPICmd_Type;
     Period    : time;

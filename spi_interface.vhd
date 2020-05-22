@@ -91,9 +91,10 @@ entity spi_interface is
 
     usb_rd_o              : out std_logic;
     usb_wr_o              : out std_logic;
-    usb_addr_o            : out std_logic_vector(11 downto 0);
+    usb_addr_o            : out std_logic_vector(10 downto 0);
     usb_dat_o             : out std_logic_vector(7 downto 0);
-    usb_dat_i             : in std_logic_vector(7 downto 0)
+    usb_dat_i             : in std_logic_vector(7 downto 0);
+    usb_int_i             : in std_logic -- USB interrupt
   );
 
 end entity spi_interface;
@@ -177,10 +178,10 @@ architecture beh of spi_interface is
   signal extram_we_r    : std_logic := '0';
   signal extram_wdata_r : std_logic_vector(7 downto 0);
 
-  signal usb_addr_r     : std_logic_vector(15 downto 0);
+  --signal usb_addr_r     : std_logic_vector(15 downto 0);
   signal usb_addr_wr_r  : std_logic_vector(15 downto 0);
   signal usb_rd_r       : std_logic := '0'; -- FIxme: needs areset
-  signal usb_wr_r       : std_logic := '0'; -- FIxme: needs areset
+--  signal usb_wr_r       : std_logic := '0'; -- FIxme: needs areset
   signal usb_is_write_r : std_logic;
 
 begin
@@ -292,6 +293,12 @@ begin
   tapfifo_wr_o      <= '1' when state_r=WRTAPFIFO and dat_valid_s='1' else '0';
   tapfifo_write_o   <= dat_s;
 
+  usb_rd_o          <= usb_rd_r;--'1' when state_r=USBREADDATA and dat_valid_s='1' else '0';
+
+  usb_wr_o          <= '1' when state_r=USBWRITEDATA and dat_valid_s='1' else '0';
+
+
+  usb_dat_o         <= dat_s;
 
   process(SCK_i, CSN_i, arst_i)
     variable caplen_v:  std_logic_vector(31 downto 0);
@@ -307,7 +314,7 @@ begin
       capmem_adr_r  <= (others=>'0');
       wreg_en_r     <= '0';
       usb_rd_r      <= '0';
-      usb_wr_r      <= '0';
+      --usb_wr_r      <= '0';
 
     elsif rising_edge(SCK_i) then
 
@@ -315,7 +322,7 @@ begin
       cmdfifo_rd_o  <= '0';
       capmem_en_o   <= '0';
       usb_rd_r      <= '0';
-      usb_wr_r      <= '0';
+--      usb_wr_r      <= '0';
 
       case state_r is
         when IDLE =>
@@ -761,7 +768,8 @@ begin
           txload_s <= '1';
           txden_s <= '1';
           if dat_valid_s='1' then
-            usb_addr_r(15 downto 8) <= dat_s;
+            --usb_addr_r(15 downto 8) <= dat_s;
+            usb_addr_wr_r(15 downto 8) <= dat_s;--usb_addr_r(15 downto 8);
             state_r <= USBADDR2;
           end if;
 
@@ -769,16 +777,15 @@ begin
           txload_s <= '1';
           txden_s <= '1';
           if dat_valid_s='1' then
-            usb_addr_r(7 downto 0) <= dat_s;
-            usb_addr_wr_r(15 downto 8) <= usb_addr_r(15 downto 8);
+            --usb_addr_r(7 downto 0) <= dat_s;
+            --usb_addr_wr_r(8 downto 8) <= dat_s; --usb_addr_r(15 downto 8);
             usb_addr_wr_r(7 downto 0) <= dat_s;
             if usb_is_write_r='1' then
               state_r <= USBWRITEDATA;
             else
               state_r <= USBREADDATA;
+              usb_rd_r <= '1';
             end if;
-            -- TBD: this is read
-            usb_rd_r <= '1';
           end if;
 
         when USBREADDATA =>
@@ -788,6 +795,8 @@ begin
           if dat_valid_s='1' then
             usb_rd_r <= '1';
             state_r <= USBREADDATA;
+            --usb_addr_r <= usb_addr_wr_r;
+            usb_addr_wr_r <= std_logic_vector(unsigned(usb_addr_wr_r) +1);
           end if;
 
         when USBWRITEDATA =>
@@ -795,10 +804,9 @@ begin
           txden_s   <= '1';
           txdat_s   <= usb_dat_i;
           if dat_valid_s='1' then
-            usb_wr_r <= '1';
-            usb_addr_r <= usb_addr_wr_r;
+            --usb_wr_r <= '1';
+            --usb_addr_r <= usb_addr_wr_r;
             usb_addr_wr_r <= std_logic_vector(unsigned(usb_addr_wr_r) +1);
-            usb_dat_o <= dat_s;
           end if;
 
         when UNKNOWN =>
@@ -818,9 +826,7 @@ begin
   extram_dat_o(31 downto 8)          <= (others => '0');
   extram_we_o           <= extram_we_r;
 
-  usb_rd_o              <= usb_rd_r;
-  usb_wr_o              <= usb_wr_r;
-  usb_addr_o            <= usb_addr_r(11 downto 0);
+  usb_addr_o            <= usb_addr_wr_r(10 downto 0);
 
 
 end beh;

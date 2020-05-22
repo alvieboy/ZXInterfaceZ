@@ -53,7 +53,7 @@ ENTITY usbhostctrl IS
     arst_i      : in std_logic;
     rd_i        : in std_logic;
     wr_i        : in std_logic;
-    addr_i      : in std_logic_vector(11 downto 0);
+    addr_i      : in std_logic_vector(10 downto 0);
     dat_i       : in std_logic_vector(7 downto 0);
     dat_o       : out std_logic_vector(7 downto 0);
 
@@ -96,40 +96,25 @@ ARCHITECTURE rtl OF usbhostctrl is
   signal rst_event      : std_logic;
   signal noe_s          : std_logic;
 
-  constant C_SOF_TIMEOUT: natural := 4800; -- 1ms
 
-  constant C_ACK_TIMEOUT: natural := 125;-- 2600ns;
-
-  constant C_DEFAULT_ITG : natural := ((3+5)*4); -- 3 bit times, plus the time we need to flush.
-
-	signal	pid_OUT:    std_logic;
-  signal  pid_IN:     std_logic;
-  signal  pid_SOF:    std_logic;
-  signal  pid_SETUP:  std_logic;
-	signal	pid_DATA0:  std_logic;
-  signal  pid_DATA1:  std_logic;
-  signal  pid_DATA2:  std_logic;
-  signal  pid_MDATA:  std_logic;
-	signal	pid_ACK:    std_logic;
-  signal  pid_NACK:   std_logic;
-  signal  pid_STALL:  std_logic;
-  signal  pid_NYET:   std_logic;
-	signal	pid_PRE:    std_logic;
-  signal  pid_ERR:    std_logic;
-  signal  pid_SPLIT:  std_logic;
-  signal  pid_PING:   std_logic;
-	signal	pid_cks_err:std_logic;
+  constant C_SOF_TIMEOUT: natural   := altsim(48000, 2500); -- 1ms synth, 50us simulation
+  constant C_ATTACH_DELAY: natural  := altsim(480000, 4);-- 48000; -- 10 ms
+  constant C_NUM_CHANNELS: natural  := 8;
+  constant C_RESET_DELAY: natural   := altsim(48000*4,500); -- 4 ms
+  constant C_RESET_DELAY_AFTER: natural   := altsim(480, 48); -- 10 us
+  constant C_INTERRUPT_HOLDOFF : natural := 480; -- 10us
 
   type host_state_type is (
     DETACHED,
     ATTACHED,
     IDLE,
-    RESET,
-    SETTLE,
+    RESET1,
+    RESET2,
     SUSPEND,
     RESUME,
     WAIT_SOF,
     IN1,
+    OUT1,
     IN2,
     IN3,
     SOF1,
@@ -143,10 +128,6 @@ ARCHITECTURE rtl OF usbhostctrl is
     SETUP3,
     DATA1,
     DATA2,
-    WAIT_ACK_NACK,
-    GOT_ACK,
-    GOT_NACK,
-    ACK_TIMEOUT,
     INVALIDDATA,
     WAIT_DATA,
     CHECKCRC
@@ -158,14 +139,16 @@ ARCHITECTURE rtl OF usbhostctrl is
     reset           : std_logic;
     suspend         : std_logic;
     overcurrent     : std_logic;
-    connectdetect   : std_logic;
+    --connectdetect   : std_logic;
     connected       : std_logic;
   end record;
 
-
-  constant C_ATTACH_DELAY: natural := 4;--480; -- 10 ms
-  constant C_NUM_CHANNELS: natural := 8;
-  constant C_RESET_DELAY: natural := 500; -- TBD
+  type interrupt_reg_type is record
+    overcurrent     : std_logic; -- Interrupt on overcurrent
+    connectdetect   : std_logic; -- Interrupt on connect event
+    disconnectdetect: std_logic; -- Interrupt on disconnect event
+    ginten          : std_logic; -- Global USB interrupt enable
+  end record;
 
 
   type channel_conf_reg_type is record
@@ -187,9 +170,12 @@ ARCHITECTURE rtl OF usbhostctrl is
     dpid            : std_logic_vector(1 downto 0);  -- Data PID.;
                                                      -- 11: setup
                                                      -- 00: IN
-    cnt             : unsigned(1 downto 0); -- Limited to 1 packet.
-    size            : unsigned(5 downto 0);
-    epaddr          : unsigned(10 downto 0);
+                                                     -- 01: OUT
+    cnt             : std_logic; -- Limited to 1 packet.
+    seq             : std_logic;
+    size            : unsigned(6 downto 0);
+    epaddr          : unsigned(9 downto 0);
+    retries         : unsigned(1 downto 0);
   end record;                                           
 
   type channel_interrupt_conf_reg_type is record
@@ -218,65 +204,39 @@ ARCHITECTURE rtl OF usbhostctrl is
 
   type regs_type is record
     host_state      : host_state_type;
-    itg_next_state  : host_state_type;
     sr              : status_reg_type;
+    intconfr        : interrupt_reg_type;
+    intpendr        : interrupt_reg_type;
     speed           : std_logic;
     attach_count    : natural range 0 to C_ATTACH_DELAY - 1;
     sof_count       : natural range 0 to C_SOF_TIMEOUT - 1;
     frame           : unsigned(10 downto 0);
-    txcrc           : std_logic_vector(15 downto 0);
---    rxcrc           : std_logic_vector(15 downto 0);
-    frame_lsb       : std_logic_vector(7 downto 0); -- for SOF packets
-    itg             : natural;
     channel         : natural range 0 to C_NUM_CHANNELS -1;
     reset_delay     : natural range 0 to C_RESET_DELAY-1;
     ch              : channels_type;
-    size            : unsigned(5 downto 0);
-    epmem_addr      : unsigned(10 downto 0);
-    rx_timeout      : natural;
+    int_holdoff     : natural range 0 to C_INTERRUPT_HOLDOFF-1;
   end record;
 
-
   signal r                    : regs_type;
-  signal attach_event_s       : std_logic;
   signal frame_crc5_s         : std_logic_vector(4 downto 0);
-  signal frame_rev_s          : std_logic_vector(10 downto 0);
 
   signal crc16_in_s           : std_logic_vector(7 downto 0);
   signal crc16_out_s          : std_logic_vector(15 downto 0);
   --signal rxcrc16_out_s        : std_logic_vector(15 downto 0);
 
   signal statusreg_s          : std_logic_vector(7 downto 0);
-  signal statusreg_sync_s     : std_logic_vector(7 downto 0);
+  --signal intconfreg_s         : std_logic_vector(7 downto 0);
+  signal intpendreg_s         : std_logic_vector(7 downto 0);
+
   signal write_data_s         : std_logic_vector(7 downto 0);
-  signal write_address_s      : std_logic_vector(11 downto 0);
+  signal write_address_s      : std_logic_vector(10 downto 0);
 
-  function inv(value: in std_logic_vector(7 downto 0)) return std_logic_vector is
-    variable ret: std_logic_vector(7 downto 0);
-  begin
-    ret := value xor x"FF";
-    return ret;
-  end function;
-
-  function reverse(value: in std_logic_vector) return std_logic_vector is
-    variable ret: std_logic_vector(value'HIGH downto value'LOW);
-  begin
-    for i in value'LOW to value'HIGH loop
-      ret(i) := value(value'HIGH-i);
-    end loop;
-    return ret;
-  end function;
-
-  signal clr_connectevent_async_s: std_logic;
-  signal clr_connectevent_s: std_logic;
-
-  signal set_reset_async_s: std_logic;
-  signal set_reset_s: std_logic;
 
   signal vpo_s, vmo_s: std_logic;
 
 
   signal wr_sync_s:  std_logic;
+  signal rd_sync_s:  std_logic;
 
   signal address_ep_crc_in_s: std_logic_vector(10 downto 0);
   signal address_ep_crc_out_s: std_logic_vector(4 downto 0);
@@ -286,7 +246,7 @@ ARCHITECTURE rtl OF usbhostctrl is
   -- Epmem
   signal epmem_read_en_s    : std_logic;
   signal epmem_write_en_s   : std_logic;
-  signal epmem_addr_s       : std_logic_vector(10 downto 0);
+  signal epmem_addr_s       : std_logic_vector(9 downto 0);
   signal epmem_data_in_s    : std_logic_vector(7 downto 0);
   signal epmem_data_out_s   : std_logic_vector(7 downto 0);
   signal hep_dat_s          : std_logic_vector(7 downto 0);
@@ -294,22 +254,40 @@ ARCHITECTURE rtl OF usbhostctrl is
   signal hep_wr_s   : std_logic;
 
 
-	signal rx_data_st: std_logic_vector(7 downto 0);
-    signal rx_data_valid    : std_logic;
-    signal rx_data_done     : std_logic;
-    signal crc16_err        : std_logic;
-		signal seq_err          : std_logic;
-    signal rx_busy          : std_logic;
-    signal token_valid_s    : std_logic;
 
-  signal pd_resetn_s    :   std_logic;
-  signal int_s          : std_logic;
+  signal int_s                : std_logic;
   signal read_data_s          : std_logic_vector(7 downto 0);
-  signal read_data_sync_s          : std_logic_vector(7 downto 0);
+  signal read_data_sync_s     : std_logic_vector(7 downto 0);
+
+  signal trans_addr_s       : std_logic_vector(6 downto 0);
+  signal trans_dsize_s      : std_logic_vector(6 downto 0);
+  signal trans_dsize_read_s : std_logic_vector(6 downto 0);
+  signal trans_daddr_s      : std_logic_vector(9 downto 0);
+  signal trans_ep_s         : std_logic_vector(3 downto 0);
+  signal trans_status_s     : usb_transaction_status_type;
+  signal trans_pid_s        : std_logic_vector(3 downto 0);
+  signal trans_strobe_s     : std_logic;
+  signal trans_data_seq_s   : std_logic;
+
+  signal phy_txactive_s     : std_logic;
 
 BEGIN
 
   rstinv      <= not ausbrst_i;
+
+  statusreg_s <= '0' &
+    r.sr.fulllowspeed & 
+    r.sr.poweron      & 
+    r.sr.reset        &
+    '0' & --r.sr.suspend       &
+    r.sr.overcurrent   &
+    '0' &
+    r.sr.connected;
+
+  --intconfreg_s <= r.intconfr.ginten & "0000" & r.intconfr.overcurrent & r.intconfr.connectdetect & r.intconfr.disconnectdetect;
+  intpendreg_s <= "00000" & r.intpendr.overcurrent & r.intpendr.connectdetect & r.intconfr.disconnectdetect;
+
+
   
   usb_phy_inst : ENTITY work.usb_phy       --Open Cores USB Phy, designed by Rudolf Usselmanns
   GENERIC MAP (
@@ -337,8 +315,10 @@ BEGIN
     LineState_o      => Phy_LineState   -- o (1 downto 0). (0) is P, (1) is N
   );
 
+  phy_txactive_s <= not noe_s;
 
-  process(usbclk_i, ausbrst_i, r, Phy_Linestate)
+  process(usbclk_i, ausbrst_i, r, Phy_Linestate, wr_sync_s, write_address_s, write_data_s, statusreg_s, intpendreg_s,
+    usb_rst_phy, trans_status_s, trans_dsize_read_s, pwrflt_i)
     variable w  : regs_type;
     variable ch : channel_type;
     variable wch_u : unsigned(2 downto 0);
@@ -348,17 +328,18 @@ BEGIN
     variable interrupt_v: std_logic_vector(C_NUM_CHANNELS-1 downto 0);
   begin
     w := r;
-
-    attach_event_s  <= '0';
-    Phy_TxValid     <= '0';
-    Phy_DataOut     <= (others => 'X');
     tx_mode_s       <= '1';
-    address_ep_crc_in_s <= (others => 'X');
-    epmem_read_en_s <= '0';
-    epmem_write_en_s <= '0';
-    crc16_in_s      <= (others => 'X');
-    pd_resetn_s     <= '0';
     -- Optimizations
+    trans_pid_s     <= (others => 'X');
+    trans_strobe_s  <= '0';
+    trans_addr_s    <= (others => 'X');
+    trans_dsize_s   <= (others => 'X');
+    trans_daddr_s   <= (others => 'X');
+    trans_ep_s      <= (others => 'X');
+    trans_data_seq_s<='X';
+    --trans_addr_s    <= (others => 'X');
+    read_data_s     <= (others => '0');
+
     -- End optimizations
     if r.sof_count=0 then
       w.sof_count         := C_SOF_TIMEOUT - 1;
@@ -367,26 +348,51 @@ BEGIN
       w.sof_count         := r.sof_count - 1;
     end if;
 
-    if clr_connectevent_s='1' then
-      w.sr.connectdetect := '0';
-    end if;
-
-    if set_reset_s='1' then
-      w.sr.reset := '1';
-    end if;
-
     chint: for i in 0 to C_NUM_CHANNELS-1 loop
       interrupt_v(i) := '0';
-      if r.ch(i).intpend.ack='1' then
+      if  r.ch(i).intpend.datatogglerror = '1' or
+          r.ch(i).intpend.frameoverrun   = '1' or
+          r.ch(i).intpend.babble         = '1' or
+          r.ch(i).intpend.transerror     = '1' or
+          r.ch(i).intpend.ack            = '1' or
+          r.ch(i).intpend.nack           = '1' or
+          r.ch(i).intpend.stall          = '1' or
+          r.ch(i).intpend.cplt           = '1'
+         then
         interrupt_v(i) := '1';
       end if;
     end loop;
 
-    int_s <= or_reduce(interrupt_v);
+    if r.int_holdoff=0 then
+      int_s <= (or_reduce(interrupt_v) or r.intpendr.connectdetect or r.intpendr.overcurrent) and r.intconfr.ginten;
+    else
+      int_s <= '0';
+      w.int_holdoff := r.int_holdoff - 1;
+    end if;
 
     -- Process writes coming from SPI
     if wr_sync_s='1' then
-      if write_address_s(11 downto 6) = "000001" then
+      if write_address_s(10 downto 6) = "00000" then
+        case write_address_s(5 downto 0) is
+          when "000000" =>
+            w.sr.poweron               := write_data_s(5);
+            if write_data_s(4)='1' then w.sr.reset := '1'; end if;
+
+          when "000010" =>  -- Interrupt conf reg
+            w.intconfr.ginten         := write_data_s(7);
+            w.intconfr.disconnectdetect  := write_data_s(0);
+            w.intconfr.connectdetect  := write_data_s(1);
+            w.intconfr.overcurrent    := write_data_s(2);
+          when "000011" =>
+            -- Interrupt clear/ack
+            if write_data_s(0)='1' then w.intpendr.disconnectdetect := '0'; end if;
+            if write_data_s(1)='1' then w.intpendr.connectdetect := '0'; end if;
+            if write_data_s(2)='1' then w.intpendr.overcurrent   := '0'; end if;
+            if write_data_s(7)='1' then w.int_holdoff:=C_INTERRUPT_HOLDOFF-1; end if;
+    
+          when others =>
+        end case;
+      elsif write_address_s(10 downto 6) = "00001" then
           wch_u := unsigned(write_address_s(5 downto 3));
           wch := to_integer(wch_u);
           case write_address_s(2 downto 0) is
@@ -421,55 +427,98 @@ BEGIN
               if write_data_s(1)='1' then w.ch(wch).intpend.stall           := '0'; end if;
               if write_data_s(0)='1' then w.ch(wch).intpend.cplt            := '0'; end if;
             when "101" =>
-              w.ch(wch).trans.dpid := write_data_s(1 downto 0);
+              w.ch(wch).trans.dpid    := write_data_s(1 downto 0);
+              w.ch(wch).trans.seq     := write_data_s(2);
+              w.ch(wch).trans.epaddr(9 downto 8)  := unsigned(write_data_s(4 downto 3));
+              w.ch(wch).trans.retries := unsigned(write_data_s(6 downto 5));
+
             when "110" => -- Transaction
-              w.ch(wch).trans.size := unsigned(write_data_s(5 downto 0));
-              w.ch(wch).trans.cnt  := unsigned(write_data_s(7 downto 6));
+              w.ch(wch).trans.epaddr(7 downto 0)   := unsigned(write_data_s);
+
+            when "111" => -- Transaction
+              w.ch(wch).trans.size := unsigned(write_data_s(6 downto 0));
+              w.ch(wch).trans.cnt  := write_data_s(7);
             when others =>
           end case;
-       end if;
+      end if;
     end if;
 
     -- read data
-    if write_address_s(11 downto 6) = "000001" then
+    if not is_x(write_address_s) then
+
+    if write_address_s(10 downto 6) = "00000" then
+      case write_address_s(5 downto 0) is
+        when "000000" =>
+          read_data_s <= statusreg_s;
+        when "000001" =>
+          -- channel interrupt pending reg
+          read_data_s <= intpendreg_s;
+        when "000010" =>
+          --  interrupt status reg
+          read_data_s <= interrupt_v;
+        when others =>
+          case trans_status_s is
+            when IDLE       =>  read_data_s <= x"00";
+            when BUSY       =>  read_data_s <= x"01";
+            when TIMEOUT    =>  read_data_s <= x"02";
+            when BABBLE     =>  read_data_s <= x"03";
+            when ACK        =>  read_data_s <= x"04";
+            when NACK       =>  read_data_s <= x"05";
+            when STALL      =>  read_data_s <= x"06";
+            when CRCERROR   =>  read_data_s <= x"07";
+            when COMPLETED  =>  read_data_s <= x"08";
+            when others     =>  read_data_s <= x"FF";
+          end case;
+      end case;
+
+    elsif write_address_s(10 downto 6) = "00001" then
       wch_u := unsigned(write_address_s(5 downto 3));
       wch := to_integer(wch_u);
       case write_address_s(2 downto 0) is
-        --when "000" =>
-        --  w.ch(wch).conf.eptype    := write_data_s(7 downto 6);
-        --  w.ch(wch).conf.maxsize   := write_data_s(5 downto 0);
-        --when "001" =>
-        --  w.ch(wch).conf.oddframe  := write_data_s(7);      
-        --  w.ch(wch).conf.lowspeed  := write_data_s(6);
-        --  w.ch(wch).conf.direction := write_data_s(5);
-        --  w.ch(wch).conf.epnum     := write_data_s(3 downto 0);
+        when "000" =>
+          read_data_s(7 downto 6) <= r.ch(wch).conf.eptype;
+          read_data_s(5 downto 0) <= r.ch(wch).conf.maxsize;
+        when "001" =>
+          read_data_s(7)          <= r.ch(wch).conf.oddframe;
+          read_data_s(6)          <= r.ch(wch).conf.lowspeed;
+          read_data_s(5)          <= r.ch(wch).conf.direction;
+          read_data_s(3 downto 0) <= r.ch(wch).conf.epnum;
         --
-        --when "010" =>
-        --  w.ch(wch).conf.enabled   := write_data_s(7);
-        --  w.ch(wch).conf.address   := write_data_s(6 downto 0);
-        --when "011" => -- Interrupt configuration
-        --  w.ch(wch).intconf.datatogglerror  := write_data_s(7);
-        --  w.ch(wch).intconf.frameoverrun    := write_data_s(6);
-        --  w.ch(wch).intconf.babble          := write_data_s(5);
-        --  w.ch(wch).intconf.transerror      := write_data_s(4);
-        --  w.ch(wch).intconf.ack             := write_data_s(3);
-        --  w.ch(wch).intconf.nack            := write_data_s(2);
-        --  w.ch(wch).intconf.stall           := write_data_s(1);
-        --  w.ch(wch).intconf.cplt            := write_data_s(0);
+        when "010" =>
+          read_data_s(7)          <= r.ch(wch).conf.enabled;
+          read_data_s(6 downto 0) <= r.ch(wch).conf.address;
+        when "011" => -- Interrupt configuration
+          read_data_s(7)          <= r.ch(wch).intconf.datatogglerror;
+          read_data_s(6)          <= r.ch(wch).intconf.frameoverrun;
+          read_data_s(5)          <= r.ch(wch).intconf.babble;
+          read_data_s(4)          <= r.ch(wch).intconf.transerror;
+          read_data_s(3)          <= r.ch(wch).intconf.ack;
+          read_data_s(2)          <= r.ch(wch).intconf.nack;
+          read_data_s(1)          <= r.ch(wch).intconf.stall;
+          read_data_s(0)          <= r.ch(wch).intconf.cplt;
         when "100" => -- Interrupt read
-          read_data_s(7)  <= r.ch(wch).intpend.datatogglerror;
-          read_data_s(6)  <= r.ch(wch).intpend.frameoverrun;
-          read_data_s(5)  <= r.ch(wch).intpend.babble;
-          read_data_s(4)  <= r.ch(wch).intpend.transerror;
-          read_data_s(3)  <= r.ch(wch).intpend.ack;
-          read_data_s(2)  <= r.ch(wch).intpend.nack;
-          read_data_s(1)  <= r.ch(wch).intpend.stall;
-          read_data_s(0)  <= r.ch(wch).intpend.cplt;
+          read_data_s(7)          <= r.ch(wch).intpend.datatogglerror;
+          read_data_s(6)          <= r.ch(wch).intpend.frameoverrun;
+          read_data_s(5)          <= r.ch(wch).intpend.babble;
+          read_data_s(4)          <= r.ch(wch).intpend.transerror;
+          read_data_s(3)          <= r.ch(wch).intpend.ack;
+          read_data_s(2)          <= r.ch(wch).intpend.nack;
+          read_data_s(1)          <= r.ch(wch).intpend.stall;
+          read_data_s(0)          <= r.ch(wch).intpend.cplt;
+        when "101" =>
+          read_data_s(1 downto 0) <= r.ch(wch).trans.dpid;
+          read_data_s(2)          <= r.ch(wch).trans.seq;
+          read_data_s(4 downto 3) <= std_logic_vector(r.ch(wch).trans.epaddr(9 downto 8));
+          read_data_s(6 downto 5) <= std_logic_vector(r.ch(wch).trans.retries);
+        when "110" => -- Transaction
+          read_data_s             <= std_logic_vector(r.ch(wch).trans.epaddr(7 downto 0));
+        when "111" => -- Transaction
+          read_data_s(6 downto 0) <= std_logic_vector(r.ch(wch).trans.size);
+          read_data_s(7)          <= r.ch(wch).trans.cnt;
         when others =>
-         read_data_s <= statusreg_s;
-      end case;
-    else
-         read_data_s <= statusreg_s;
+          read_data_s <= (others => 'X');
+        end case;
+    end if;
     end if;
 
     ch := r.ch( r.channel );
@@ -480,24 +529,27 @@ BEGIN
         if Phy_Linestate="01" or Phy_Linestate="10" then
           if r.attach_count=0 then
             w.sr.fulllowspeed   := Phy_Linestate(0); -- Set speed according to USB+ pullup
+            w.speed := Phy_Linestate(0); -- Set speed according to USB+ pullup
             w.host_state        := ATTACHED;
-            attach_event_s      <= '1';
-            w.sr.connectdetect  :='1';
+            --w.sr.connectdetect  :='1';
             w.sr.connected      :='1';
+            if r.intconfr.connectdetect='1' then
+              w.intpendr.connectdetect:='1';
+            end if;
             w.sof_count         := C_SOF_TIMEOUT - 1;
           else
             w.attach_count      := r.attach_count - 1;
           end if;
         else
           w.attach_count        := C_ATTACH_DELAY - 1;
-          w.sr.connectdetect    :='0';
+          --w.sr.connectdetect    :='0';
           w.sr.connected        :='0';
         end if;
 
       when ATTACHED | IDLE =>
 
         channel_handled   := false;
-        can_issue_request := true;
+        can_issue_request := false;
         --
         -- sync   pid  +packet  crc
         --
@@ -512,26 +564,34 @@ BEGIN
           -- synopsys translate_off
           if rising_edge(usbclk_i) then
             report "Channel "&str(r.channel)&" enabled";
-            if ch.trans.cnt/="00" and can_issue_request then
-              if ch.trans.dpid="11" then
-                w.host_state := SETUP1;
-                channel_handled := true;
-              elsif ch.trans.dpid="00" then
-                w.host_state := IN1;
-                channel_handled := true;
-              end if;
-            end if;
           end if;
           -- synopsys translate_on
+          if ch.trans.cnt/='0' and can_issue_request then
+            if ch.trans.dpid="11" then
+              report "Got setup request";
+              w.host_state := SETUP1;
+              channel_handled := true;
+            elsif ch.trans.dpid="00" then
+              w.host_state := IN1;
+              channel_handled := true;
+            elsif ch.trans.dpid="01" then
+              w.host_state := OUT1;
+              channel_handled := true;
+            end if;
+          end if;
         end if;
 
         if r.sr.reset='1' then
-          w.host_state := RESET;
+          w.host_state := RESET1;
           w.reset_delay := C_RESET_DELAY -1;
         end if;
         if usb_rst_phy='1' then
           -- Disconnected???
-          w.sr.connectdetect := '1';
+          --w.sr.connectdetect := '1';
+          if r.intconfr.disconnectdetect='1' then
+            w.intpendr.disconnectdetect := '1';
+          end if;
+
           w.sr.connected := '0';
           w.host_state := DETACHED;
         end if;
@@ -550,272 +610,200 @@ BEGIN
           w.host_state := SOF1;
         end if;
         if r.sr.reset='1' then
-          w.host_state := RESET;
+          w.host_state := RESET1;
           w.reset_delay := C_RESET_DELAY -1;
         end if;
         if usb_rst_phy='1' then
           -- Disconnected???
-          w.sr.connectdetect := '1';
+          if r.intconfr.disconnectdetect='1' then
+            w.intpendr.disconnectdetect := '1';
+          end if;
           w.sr.connected := '0';
           w.host_state := DETACHED;
         end if;
 
 
       when SOF1 =>
-        Phy_TxValid   <= '1';
-        Phy_DataOut   <= "10100101";
+        trans_pid_s     <= USBF_T_PID_SOF;
+        trans_strobe_s  <= '1';
 
-        if Phy_TxReady='1' then
-          w.host_state := SOF2;
+        if trans_status_s=COMPLETED then
+          w.host_state := IDLE;
         end if;
 
-      when SOF2 =>
-        Phy_TxValid   <= '1';
-        Phy_DataOut   <= std_logic_vector(r.frame(7 downto 0));
+      when SETUP1 =>
+        trans_pid_s       <= USBF_T_PID_SETUP;
+        trans_strobe_s    <= '1';
 
-        if Phy_TxReady='1' then
-          w.host_state := SOF3;
-        end if;
+        trans_daddr_s     <= std_logic_vector(r.ch(r.channel).trans.epaddr);
+        trans_dsize_s     <= std_logic_vector(r.ch(r.channel).trans.size);
+        trans_ep_s        <= r.ch(r.channel).conf.epnum;
+        trans_addr_s      <= r.ch(r.channel).conf.address;
+        trans_data_seq_s  <= '0';
 
-      when SOF3 =>
-        Phy_TxValid   <= '1';
-        Phy_DataOut   <= r.frame_lsb;
+        case trans_status_s is
+          when ACK =>
+            -- synthesis translate_off
+            if rising_edge(usbclk_i) then report "Got ACK for SETUP"; end if;
+            -- synthesis translate_on
 
-        if Phy_TxReady='1' then
-          w.itg_next_state := IDLE;
-          w.host_state := ITG;
-        end if;
+            w.ch(r.channel).trans.cnt   := '0';
+            w.ch(r.channel).intpend.ack := '1';
+            w.ch(r.channel).intpend.cplt:= '1';
+            w.host_state := IDLE;
+          when NACK =>
+            -- Keep trying...
+            w.host_state := IDLE;
 
-      when RESET =>
+          when STALL =>
+            w.ch(r.channel).intpend.stall := '1';
+            w.ch(r.channel).trans.cnt   := '0';
+            w.host_state := IDLE;
+
+          when IDLE | BUSY =>
+            -- Stay here.
+          when others =>
+            w.ch(r.channel).trans.cnt   := '0';
+            w.ch(r.channel).intpend.transerror := '1';
+            w.host_state := IDLE;
+        end case;
+
+
+      when IN1 =>
+        trans_pid_s     <= USBF_T_PID_IN;
+        trans_strobe_s  <= '1';
+
+        trans_daddr_s   <= std_logic_vector(r.ch(r.channel).trans.epaddr);
+        trans_dsize_s   <= std_logic_vector(r.ch(r.channel).trans.size);
+        trans_ep_s      <= r.ch(r.channel).conf.epnum;
+        trans_addr_s    <= r.ch(r.channel).conf.address;
+
+        case trans_status_s is
+          when COMPLETED =>
+            w.ch(r.channel).trans.cnt    := '0';
+            w.ch(r.channel).intpend.cplt := '1';
+            --w.ch(r.channel).intpend.ack  := '1';
+
+            -- TODO: check data sequence!!!
+
+            -- synthesis translate_off
+            if rising_edge(usbclk_i) then report "IN completed, len " & hstr(trans_dsize_read_s); end if;
+            -- synthesis translate_on
+            w.host_state := IDLE;
+            w.ch(r.channel).trans.size := unsigned(trans_dsize_read_s);
+          when NACK =>
+            -- Keep trying...
+            -- synthesis translate_off
+            if rising_edge(usbclk_i) then report "IN NAK" & hstr(trans_dsize_read_s); end if;
+            -- synthesis translate_on
+            w.host_state := IDLE;
+
+          when IDLE | BUSY =>
+
+          when TIMEOUT =>
+            --w.ch(r.channel).intpend.stall := '1';
+            --w.ch(r.channel).trans.cnt   := '0';
+
+            -- Retry
+            if r.ch(r.channel).trans.retries="00" then
+              w.ch(r.channel).intpend.transerror := '1';
+              w.ch(r.channel).trans.cnt   := '0';
+            else
+              w.ch(r.channel).trans.retries := r.ch(r.channel).trans.retries - 1;
+            end if;
+            w.host_state := IDLE;
+
+          when BABBLE =>
+            w.ch(r.channel).intpend.stall := '1';
+            w.ch(r.channel).trans.cnt   := '0';
+            w.host_state := IDLE;
+
+          when STALL =>
+            w.ch(r.channel).intpend.stall := '1';
+            w.ch(r.channel).trans.cnt   := '0';
+            w.host_state := IDLE;
+
+          when CRCERROR =>
+            --w.ch(r.channel).intpend.stall := '1';
+            --w.ch(r.channel).trans.cnt   := '0';
+
+            -- Retry
+
+            w.host_state := IDLE;
+
+          when others =>
+                      -- synthesis translate_off
+            if rising_edge(usbclk_i) then report "Unknown state " & hstr(trans_dsize_read_s); end if;
+            -- synthesis translate_on
+
+            w.ch(r.channel).intpend.transerror := '1';
+            w.ch(r.channel).trans.cnt   := '0';
+            w.host_state := IDLE;
+        end case;
+
+      when OUT1 =>
+        trans_pid_s     <= USBF_T_PID_OUT;
+        trans_strobe_s  <= '1';
+
+        trans_daddr_s     <= std_logic_vector(r.ch(r.channel).trans.epaddr);
+        trans_dsize_s     <= std_logic_vector(r.ch(r.channel).trans.size);
+        trans_ep_s        <= r.ch(r.channel).conf.epnum;
+        trans_addr_s      <= r.ch(r.channel).conf.address;
+        trans_data_seq_s  <= r.ch(r.channel).trans.seq;
+
+        case trans_status_s is
+          when COMPLETED  | ACK=>
+            w.ch(r.channel).trans.cnt    := '0';
+            w.ch(r.channel).intpend.cplt := '1';
+            w.ch(r.channel).intpend.ack  := '1';
+
+            w.ch(r.channel).trans.seq    := not r.ch(r.channel).trans.seq;
+            -- synthesis translate_off
+            if rising_edge(usbclk_i) then report "OUT completed, len " & hstr(trans_dsize_read_s); end if;
+            -- synthesis translate_on
+            w.host_state := IDLE;
+            w.ch(r.channel).trans.size := unsigned(trans_dsize_read_s);
+          when NACK =>
+            -- Keep trying...
+            -- synthesis translate_off
+            if rising_edge(usbclk_i) then report "IN NAK" & hstr(trans_dsize_read_s); end if;
+            -- synthesis translate_on
+            w.host_state := IDLE;
+
+          when STALL =>
+            w.ch(r.channel).intpend.stall := '1';
+            w.ch(r.channel).trans.cnt   := '0';
+            w.host_state := IDLE;
+          when IDLE | BUSY =>
+
+          when others =>
+                      -- synthesis translate_off
+            if rising_edge(usbclk_i) then report "Unknown state " & hstr(trans_dsize_read_s); end if;
+            -- synthesis translate_on
+
+            w.ch(r.channel).trans.cnt   := '0';
+            w.ch(r.channel).intpend.transerror := '1';
+            w.host_state := IDLE;
+        end case;
+
+
+      when RESET1 =>
         tx_mode_s <= '0'; -- Single-ended
         --Phy_DataOut <= "10101010";
         --Phy_TxValid <= '1';
         if r.reset_delay = 0 then
-          w.sr.reset := '0';
-          w.itg := 3;
-          w.itg_next_state := IDLE;
-          w.host_state := ITG;
+          w.reset_delay := C_RESET_DELAY_AFTER;
+          w.host_state := RESET2;
         else
           w.reset_delay := r.reset_delay-1;
         end if;
 
-      when SETTLE =>
-        w.host_state := IDLE;
-
-      when CRC1 =>
-        Phy_DataOut <= reverse(inv(r.txcrc(15 downto 8)));
-        Phy_TxValid <='1';
-        if Phy_TxReady='1' then
-          w.host_state := CRC2;
-        end if;
-
-      when CRC2 =>
-        Phy_DataOut <= reverse(inv(r.txcrc(7 downto 0)));
-        Phy_TxValid <='1';
-        if Phy_TxReady='1' then
-          w.itg := 3;
-          --w.itg_next_state := IDLE;
-          w.rx_timeout := C_ACK_TIMEOUT;
-          w.host_state := WAIT_ACK_NACK;
-        end if;
-
-      when ITG  =>
-        if noe_s='0' then
-          w.itg := 3;
+      when RESET2 =>
+        if r.reset_delay = 0 then
+          w.sr.reset := '0';
+          w.host_state := IDLE;
         else
-          if r.itg=0 then
-            w.host_state := r.itg_next_state;
-          else
-            w.itg := w.itg - 1;
-          end if;
-        end if;
-
-      when SETUP1 =>
-       -- Send SETUP token.
-        Phy_TxValid   <= '1';
-        Phy_DataOut   <= genpid(USBF_T_PID_SETUP);
-        if Phy_TxReady='1' then
-          w.host_state := SETUP2;
-        end if;
-
-      when IN1 =>
-       -- Send SETUP token.
-        Phy_TxValid   <= '1';
-        Phy_DataOut   <= genpid(USBF_T_PID_IN);
-        if Phy_TxReady='1' then
-          w.host_state := IN2;
-        end if;
-
-      when IN2 =>
-        Phy_TxValid   <= '1';
-        Phy_DataOut   <= ch.conf.epnum(0) & ch.conf.address(6 downto 0);
-
-        if Phy_TxReady='1' then
-          w.host_state := IN3;
-        end if;
-
-      when IN3 =>
-        Phy_TxValid   <= '1';
-        address_ep_crc_in_s <= reverse(  ch.conf.address & ch.conf.epnum );
-
-        Phy_DataOut   <= address_ep_crc_out_s & ch.conf.epnum(3 downto 1) ;
-
-        if Phy_TxReady='1' then
-          w.host_state := ITG;
-          w.itg := 3;
-          w.size := ch.trans.size;
-          w.rx_timeout := C_ACK_TIMEOUT;
-          w.itg_next_state := WAIT_DATA; -- Wrong.
-          w.epmem_addr  := ch.trans.epaddr;
-        end if;
-
-      when SETUP2 =>
-        Phy_TxValid   <= '1';
-        Phy_DataOut   <= ch.conf.epnum(0) & ch.conf.address(6 downto 0);
-
-        if Phy_TxReady='1' then
-          w.host_state := SETUP3;
-        end if;
-
-      when SETUP3 =>
-        Phy_TxValid   <= '1';
-        address_ep_crc_in_s <= reverse(  ch.conf.address & ch.conf.epnum );
-
-        Phy_DataOut   <= address_ep_crc_out_s & ch.conf.epnum(3 downto 1) ;
-
-        if Phy_TxReady='1' then
-          w.host_state := ITG;
-          w.itg := 3;
-          w.size := ch.trans.size;
-          w.itg_next_state := DATA1;
-          w.epmem_addr  := ch.trans.epaddr;
-        end if;
-
-      when DATA1 =>
-        Phy_DataOut   <= genpid(USBF_T_PID_DATA0); -- TBD: Data0/1
-        Phy_TxValid   <= '1';
-        w.txcrc       := x"FFFF";
-
-        if Phy_TxReady='1' then
-          w.host_state := DATA2;
-          epmem_read_en_s <= '1';
-          w.epmem_addr := r.epmem_addr +1;
-        end if;
-
-      when DATA2 =>
-        Phy_DataOut   <= epmem_data_out_s;
-        crc16_in_s    <= reverse(epmem_data_out_s);
-
-        Phy_TxValid   <= '1';
-
-        if Phy_TxReady='1' then
-          w.txcrc       := crc16_out_s;
-          if r.size=0 then
-            w.host_state := CRC1;
-            --w.itg_next_state := WAIT_ACK;
-          else
-            w.size := r.size - 1;
-            w.host_state := DATA2;
-            epmem_read_en_s <= '1';
-            w.epmem_addr := r.epmem_addr +1;
-          end if;
-        end if;
-
-      when WAIT_ACK_NACK =>
-        pd_resetn_s     <= '1';
-        if Phy_RxActive='0' then
-          if r.rx_timeout=0 then
-            -- timeout
-            w.host_state := ACK_TIMEOUT;
-          else
-            w.rx_timeout := r.rx_timeout-1;
-          end if;
-        end if;
-
-        if token_valid_s='1' then
-          if pid_ACK='1' then
-            w.host_state := GOT_ACK;
-          elsif pid_NACK='1' then
-            w.host_state := GOT_NACK;
-          else
-            w.host_state := INVALIDDATA;
-          end if;
-        end if;
-        if Phy_RxError='1' then
-          w.host_state := INVALIDDATA;
-        end if;
-
-      when GOT_ACK =>
-        -- synthesis translate_off
-        if rising_edge(usbclk_i) then
-          report "got ACK";
-        end if;
-        -- synthesis translate_on
-        w.ch(r.channel).trans.cnt := "00";
-        w.itg         := C_DEFAULT_ITG;
-        w.host_state  := ITG;
-        w.itg_next_state := IDLE;
-        w.ch(r.channel).intpend.ack   := '1';
-        w.ch(r.channel).intpend.cplt  := '1';
-
-      when GOT_NACK =>
-        -- synthesis translate_off
-        if rising_edge(usbclk_i) then
-          report "got NACK";
-        end if;
-        -- synthesis translate_on
-        w.itg_next_state  := IDLE;
-        w.itg             := C_DEFAULT_ITG;
-        w.host_state      := ITG; -- Retry
-
-      when ACK_TIMEOUT =>
-        -- synthesis translate_off
-        if rising_edge(usbclk_i) then
-          report "Timeout waiting for data";
-        end if;
-        -- synthesis translate_on
-        w.ch(r.channel).trans.cnt := "00";
-        w.host_state := IDLE;
-        -- TBD: we need a counter!
-
-
-
-      when WAIT_DATA =>
-        pd_resetn_s     <= '1';
-
-        --w.size        := (others => '0'); --ch.trans.size;
-        w.ch(r.channel).trans.size := (others => '0');--w.ch(r.channel).trans.size +1;
-        w.epmem_addr  := ch.trans.epaddr;
-
-        if Phy_RxActive='0' then
-          if r.rx_timeout=0 then
-            -- timeout
-            w.host_state := ACK_TIMEOUT;
-          else
-            w.rx_timeout := r.rx_timeout-1;
-          end if;
-        end if;
-
-        if token_valid_s='1' then
-          if pid_NACK='1' then
-            w.host_state := GOT_NACK;
-          else
-            w.host_state := INVALIDDATA;
-          end if;
-        end if;
-
-        if rx_data_done='1' then
-          w.host_state := CHECKCRC;
-        else
-          if rx_data_valid='1' then
-            w.ch(r.channel).trans.size := w.ch(r.channel).trans.size +1;
-          end if;
-        end if;
-
-      when CHECKCRC =>
-        if crc16_err='1' then
-          report "CRC16 error!!!!";
-        else
+          w.reset_delay := r.reset_delay-1;
         end if;
 
       when others =>
@@ -823,21 +811,35 @@ BEGIN
 
     end case;
 
-    w.frame_lsb   := frame_crc5_s & r.frame(10) & r.frame(9) & r.frame(8)  ;
+    w.sr.overcurrent := not pwrflt_i;
+
+    if pwrflt_i='0' and r.intconfr.overcurrent='1' then
+      w.intpendr.overcurrent:='1';
+    end if;
 
 
 
     if ausbrst_i='1' then
-      --Phy_TxValid         <= '0';
       r.host_state        <= DETACHED;
       r.frame             <= (others => '0');
       r.sof_count         <= C_SOF_TIMEOUT - 1;
       r.attach_count      <= C_ATTACH_DELAY - 1;
       r.sr.poweron        <= '0';
       r.sr.overcurrent    <= '0';
-      r.sr.connectdetect  <= '0';
+      r.sr.fulllowspeed   <= '0';
+      --r.sr.connectdetect  <= '0';
       r.sr.connected      <= '0';
       r.sr.reset          <= '0';
+
+      r.intpendr.connectdetect <= '0';
+      r.intpendr.disconnectdetect <= '0';
+      r.intpendr.overcurrent   <= '0';
+      r.intconfr.ginten        <= '0';
+      r.intconfr.connectdetect <= '0';
+      r.intconfr.disconnectdetect <= '0';
+      r.intconfr.overcurrent   <= '0';
+      r.int_holdoff            <= C_INTERRUPT_HOLDOFF-1;
+
 
       chc: for i in 0 to C_NUM_CHANNELS-1 loop
         r.ch(i).conf.enabled <= '0';
@@ -849,102 +851,32 @@ BEGIN
     end if;
   end process;
 
-  frame_rev_s <=reverse( std_logic_vector(r.frame) );
-
-
-  frame_crc_inst: entity work.usb1_crc5
-  generic map (
-    invert_and_reverse_output => true
-  )
-  port map (
-	  crc_in => "11111",
-	  din => frame_rev_s,
-	  crc_out => frame_crc5_s
-  );
-
-  address_ep_inst: entity work.usb1_crc5
-  generic map (
-    invert_and_reverse => true
-  )
-  port map (
-	  crc_in => "11111",
-	  din => address_ep_crc_in_s,
-	  crc_out => address_ep_crc_out_s
-  );
-
-  data_crc_inst: entity work.usb1_crc16
-  port map (
-	  crc_in  => r.txcrc,
-	  din     => crc16_in_s,
-	  crc_out => crc16_out_s
-  );
-
-  --data_crc_inst: entity work.usb1_crc16
-  --port map (
-	--  crc_in  => r.rxcrc,
-	--  din     => Phy_DataIn,
-	--  crc_out => rxcrc16_out_s
-  --);
-
-  -- Status reg
-  statusreg_s <= '0' &
-    r.sr.fulllowspeed & 
-    r.sr.poweron      & 
-    r.sr.reset        &
-    '0' & --r.sr.suspend       &
-    r.sr.overcurrent   &
-    r.sr.connectdetect &
-    r.sr.connected;
-
-  --sr_sync: entity work.syncv
-  --  generic map ( WIDTH => 8, RESET => '0' )
-  --  port map (
-  --    clk_i   => clk_i,
-  --    arst_i  => arst_i,
-  --    din_i   => statusreg_s,
-  --    dout_o  => statusreg_sync_s
-  --  );
-
-  clr_connectevent_async_s  <= '1' when addr_i="0000000000" and wr_i='1' and dat_i(1)='1' else '0';
-  set_reset_async_s  <= '1' when addr_i="0000000000" and wr_i='1' and dat_i(4)='1' else '0';
-
   -- Pass on the write request
-  wr_rq_sync: entity work.async_pulse2
+  wrb: block
+    signal di_s,do_s: std_logic_vector(18 downto 0);
+  begin
+    di_s              <= dat_i & addr_i;
+    write_address_s   <= do_s(10 downto 0);
+    write_data_s      <= do_s(18 downto 11);
+
+  wr_rq_sync: entity work.async_dualpulse_data
     generic map (
+      DWIDTH => 8+11,
       WIDTH => 4
     )
     port map (
       clki_i  => clk_i,
       arst_i  => arst_i,
       clko_i  => usbclk_i,
-      pulse_i => wr_i,
-      pulse_o => wr_sync_s
-    );
-  -- Pass on write data
-  data_sync: entity work.syncv
-    generic map (
-      WIDTH => 12,
-      RESET => 'X'
-    )
-    port map (
-      arst_i  => arst_i,
-      clk_i   => usbclk_i,
-      din_i   => addr_i,
-      dout_o  => write_address_s
+      pulse_i(0) => wr_i,
+      pulse_i(1) => rd_i,
+      data_i  => di_s,
+      pulse_o(0) => wr_sync_s,
+      pulse_o(1) => rd_sync_s,
+      data_o  => do_s
     );
 
-  -- Pass on data write from SPI
-  addr_sync: entity work.syncv
-    generic map (
-      WIDTH => 8,
-      RESET => 'X'
-    )
-    port map (
-      arst_i  => arst_i,
-      clk_i   => usbclk_i,
-      din_i   => dat_i,
-      dout_o  => write_data_s
-    );
+  end block;
 
   -- Pass on data read (to SPI)
   dread_sync: entity work.syncv
@@ -971,26 +903,9 @@ BEGIN
       dout_o  => int_o
     );
 
-  clr_connectevent: entity work.async_pulse2
-    port map (
-      clki_i  => clk_i,
-      arst_i  => arst_i,
-      clko_i  => usbclk_i,
-      pulse_i => clr_connectevent_async_s,
-      pulse_o => clr_connectevent_s
-    );
 
-  set_reset_sync: entity work.async_pulse2
-    port map (
-      clki_i  => clk_i,
-      arst_i  => arst_i,
-      clko_i  => usbclk_i,
-      pulse_i => set_reset_async_s,
-      pulse_o => set_reset_s
-    );
-
-  hep_rd_s <= rd_i and addr_i(11);
-  hep_wr_s <= wr_i and addr_i(11);
+  hep_rd_s <= rd_i and addr_i(10);
+  hep_wr_s <= wr_i and addr_i(10);
 
   epmem_inst: entity work.usb_epmem
     port map (
@@ -1004,69 +919,63 @@ BEGIN
       hclk_i    => clk_i,
       hrd_i     => hep_rd_s,
       hwr_i     => hep_wr_s,
-      haddr_i   => addr_i(10 downto 0),
+      haddr_i   => addr_i(9 downto 0),
       hdata_o   => hep_dat_s,
       hdata_i   => dat_i
   );
 
-  pd: entity work.usb1_pd
+  usb_trans_inst: entity work.usb_trans
   port map (
-    clk       => usbclk_i,
-    rst       => pd_resetn_s,
-    rx_data   => Phy_DataIn,
-    rx_valid  => Phy_RxValid,
-    rx_active => Phy_RxActive,
-    rx_err    => Phy_RxError,
+    usbclk_i          => usbclk_i,
+    ausbrst_i         => ausbrst_i,
 
-  		-- PID Information
-		pid_OUT   => pid_OUT,
-    pid_IN    => pid_IN,
-    pid_SOF   => pid_SOF,
-    pid_SETUP => pid_SETUP,
-		pid_DATA0 => pid_DATA0,
-    pid_DATA1 => pid_DATA1,
-    pid_DATA2 => pid_DATA2,
-    pid_MDATA => pid_MDATA,
-		pid_ACK   => pid_ACK,
-    pid_NACK  => pid_NACK,
-    pid_STALL => pid_STALL,
-    pid_NYET  => pid_NYET,
-		pid_PRE   => pid_PRE,
-    pid_ERR   => pid_ERR,
-    pid_SPLIT => pid_SPLIT,
-    pid_PING  => pid_PING,
-		pid_cks_err => pid_cks_err,
+    -- Transmission
+    pid_i             => trans_pid_s,
 
-		-- Token Information
-		--token_fadr  => token_fadr,
-    --token_endp  => token_endp,
-    token_valid   => token_valid_s,
-    --crc5_err    => crc5_err,
-		--frame_no    => frame_no,
+    -- Address/EP for token packets
+    addr_i            => trans_addr_s,
+    ep_i              => trans_ep_s,
+    -- Frame number for SOF
+    frame_i           => std_logic_vector(r.frame),
+    --
+    dsize_i           => trans_dsize_s,
+    dsize_o           => trans_dsize_read_s,
+    daddr_i           => trans_daddr_s,
 
-		-- Receive Data Output
-		rx_data_st    => rx_data_st,
-    rx_data_valid => rx_data_valid,
-    rx_data_done  => rx_data_done,
-    crc16_err     => crc16_err,
+    strobe_i          => trans_strobe_s,
+    data_seq_i        => trans_data_seq_s,
 
-		-- Misc.
-		seq_err       => seq_err,
-    rx_busy       => rx_busy
+    phy_txready_i     => Phy_TxReady,
+    phy_txactive_i    => phy_txactive_s, -- from OE
+    phy_txdata_o      => Phy_DataOut,
+    phy_data_valid_o  => Phy_TxValid,
+    phy_rxactive_i    => Phy_RxActive,
+    phy_rxvalid_i     => Phy_RxValid,
+    phy_rxdata_i      => Phy_DataIn,
+    phy_rxerror_i     => Phy_RxError,
+
+    -- Connection to EPMEM
+
+    urd_o             => epmem_read_en_s,
+    uwr_o             => epmem_write_en_s,
+    uaddr_o           => epmem_addr_s,
+    udata_i           => epmem_data_out_s,
+    udata_o           => epmem_data_in_s,
+
+    status_o          => trans_status_s
   );
 
 
-
-  epmem_addr_s <= std_logic_vector(r.epmem_addr);
+  --epmem_addr_s <= std_logic_vector(r.epmem_addr);
 
   speed_o     <= r.speed;
   softcon_o   <= '0';
-  noe_o       <= '0' when r.host_state=RESET else noe_s;
-  vpo_o       <= '0' when r.host_state=RESET else vpo_s;
-  vmo_o       <= '0' when r.host_state=RESET else vmo_s;
+  noe_o       <= '0' when r.host_state=RESET1 else noe_s;
+  vpo_o       <= '0' when r.host_state=RESET1 else vpo_s;
+  vmo_o       <= '0' when r.host_state=RESET1 else vmo_s;
   int_async_o <= int_s;
-
-  dat_o <= hep_dat_s when addr_i(11)='1' else read_data_s;
+  pwren_o     <= not r.sr.poweron;
+  dat_o <= hep_dat_s when addr_i(10)='1' else read_data_sync_s;
 
 END rtl;
 

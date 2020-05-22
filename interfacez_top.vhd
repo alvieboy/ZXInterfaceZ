@@ -161,10 +161,10 @@ begin
       XRFSH_i       => XRFSH_i,
       SPI_SCK_i     => ESP_SCK_i,
       SPI_NCS_i     => ESP_NCSO_i,
-      SPI_D_io(0)   => ESP_MOSI_io,
-      SPI_D_io(1)   => ESP_MISO_io,
-      SPI_D_io(2)   => ESP_QWP_io, -- Write-Protect
-      SPI_D_io(3)   => ESP_QHD_io, -- Hold
+      SPI_MOSI_i    => ESP_MOSI_io,
+      SPI_MISO_o    => ESP_MISO_io,
+      --SPI_D_io(2)   => ESP_QWP_io, -- Write-Protect
+      --SPI_D_io(3)   => ESP_QHD_io, -- Hold
       -- RAM interface
       RAMD_o        => RAMD_o_s,
       RAMD_i        => RAMD_i_s,
@@ -185,7 +185,7 @@ begin
       -- USB power control
       USB_FLT_i     => USB_FLT_i,
       USB_PWREN_o   => USB_PWREN_o,
-
+      USB_INTN_o    => ESP_QWP_io, -- TODO: Rename
       -- Debug
       TP5           => TP5_o,
       -- Interrupts
@@ -219,7 +219,7 @@ begin
 
   ESP_IO27_o     <= spec_nreq_s;
 
-  FLED_o(0)     <= '1';
+  FLED_o(0)     <= USB_FLT_i;
   FLED_o(1)     <= '1';
   FLED_o(2)     <= not FORCE_ROMCS_s;
   LED2_o        <= '1';
