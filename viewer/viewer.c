@@ -8,7 +8,7 @@
 #include <errno.h>
 #include <assert.h>
 
-#ifdef __arm__
+#if 1 //def __arm__
 #define FULLSCREEN
 #endif
 #define MAX_FRAME_PAYLOAD 2048
@@ -455,7 +455,7 @@ void update()
 
     int i;
 //    drawPixel32_4(0,0,0xffffffff);
-    drawPixel32_4(1,0,0xffff);
+    //drawPixel32_4(1,0,0xffff);
     SDL_UpdateTexture(sdlTexture, NULL, image_pixels, tex_w * sizeof (Uint32));
     SDL_RenderClear(sdlRenderer);
     SDL_RenderCopy(sdlRenderer, sdlTexture, NULL, NULL);
@@ -608,7 +608,7 @@ void run(int w, int h, int zoom)
 {
     open_window(w,h, zoom);
 
-    load("MANIC.SCR");
+    //load("MANIC.SCR");
     update();
 
     udp_socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
