@@ -21,8 +21,9 @@
 #include "sdcard.h"
 #include "tapplayer.h"
 #include "rom.h"
+#include "usbh.h"
 #include "usb_ll.h"
-
+#include <esp32/rom/uart.h>
 static int8_t videomode = 0;
 
 volatile int restart_requested = 0;
@@ -90,10 +91,12 @@ void app_main()
     if (fpga__init()<0) {
         ESP_LOGE(TAG, "Cannot proceed without FPGA!");
         while (1) {
+            uint8_t c;
             led__set(LED1, 1);
             vTaskDelay(100 / portTICK_RATE_MS);
             led__set(LED1, 0);
             vTaskDelay(100 / portTICK_RATE_MS);
+
         }
     }
 
@@ -123,11 +126,12 @@ void app_main()
     videostreamer__init();
     netcmd__init();
     tapplayer__init();
-    usb_ll__init();
+    usbh__init();
     // Start capture
     //start_capture();
     unsigned iter = 0;
     while(1) {
+        uint8_t c;
         led__set(LED1, !!(lstatus&0x4));
         lstatus++;
         /*int sw = gpio_get_level(PIN_NUM_SWITCH);
@@ -152,5 +156,16 @@ void app_main()
             //ESP_LOGI(TAG,"Interrupts: %d", videostreamer__getinterrupts());
             iter=0;
         }
+        STATUS s = uart_rx_one_char(&c);
+        if (s==OK) {
+            if (c=='p') {
+                ESP_LOGI(TAG, "Powering ON USB");
+                usb_ll__set_power(1);
+            } else if (c=='o') {
+                ESP_LOGI(TAG, "Powering OFF USB");
+                usb_ll__set_power(0);
+            }
+        }
+
     }
 }

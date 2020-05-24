@@ -225,9 +225,9 @@ static void videostreamer__server_task(void *pvParameters)
                 // Switch request
                 ESP_LOGI(TAG, "Switch pressed");
                 gpio__press_event(PIN_NUM_SWITCH);
-            } else if (io_num==PIN_NUM_USB_INTERRUPT) {
+            } /*else if (io_num==PIN_NUM_USB_INTERRUPT) {
                 usb_ll__interrupt();
-            }
+            }   */
         }
     } while (1);
 }

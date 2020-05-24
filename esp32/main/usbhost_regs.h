@@ -2,6 +2,7 @@
 #define USB_REG_STATUS (0x0000)
 # define USB_STATUS_RESET (1<<4)
 # define USB_STATUS_PWRON (1<<5)
+# define USB_STATUS_CONN (1<<0)
 
 #define USB_REG_INTPEND1 (0x0001)
 # define USB_INTPEND_DISC (1<<0)

@@ -6,6 +6,7 @@
 #include "defs.h"
 
 static xQueueHandle gpio_evt_queue = NULL;
+
 static volatile uint32_t interrupt_count = 0;
 
 static void IRAM_ATTR spectint__isr_handler(void* arg)
@@ -15,9 +16,11 @@ static void IRAM_ATTR spectint__isr_handler(void* arg)
     interrupt_count++;
 }
 
+extern void usb__isr_handler(void*);
+
 void spectint__init()
 {
-    gpio_evt_queue = xQueueCreate(8, sizeof(uint32_t));
+    gpio_evt_queue = xQueueCreate(4, sizeof(uint32_t));
 
     gpio_set_intr_type(PIN_NUM_SPECT_INTERRUPT, GPIO_INTR_NEGEDGE);
     gpio_set_intr_type(PIN_NUM_CMD_INTERRUPT, GPIO_INTR_NEGEDGE);
@@ -33,7 +36,7 @@ void spectint__init()
     ESP_ERROR_CHECK(gpio_isr_handler_add(PIN_NUM_CMD_INTERRUPT, spectint__isr_handler, (void*) PIN_NUM_CMD_INTERRUPT));
     ESP_ERROR_CHECK(gpio_isr_handler_add(PIN_NUM_SWITCH, spectint__isr_handler, (void*) PIN_NUM_SWITCH));
     ESP_ERROR_CHECK(gpio_isr_handler_add(PIN_NUM_IO0, spectint__isr_handler, (void*) PIN_NUM_IO0));
-    ESP_ERROR_CHECK(gpio_isr_handler_add(PIN_NUM_USB_INTERRUPT, spectint__isr_handler, (void*) PIN_NUM_USB_INTERRUPT));
+    ESP_ERROR_CHECK(gpio_isr_handler_add(PIN_NUM_USB_INTERRUPT, usb__isr_handler, (void*) PIN_NUM_USB_INTERRUPT));
 }
 
 int spectint__getinterrupt()

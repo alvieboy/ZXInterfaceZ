@@ -12,9 +12,6 @@
 #include "byteorder.h"
 #include <string.h>
 
-
-static TimerHandle_t enum_timer;
-
 struct chconf
 {
     int (*completion)(uint8_t channel, uint8_t status, void *userdata);
@@ -26,27 +23,6 @@ struct chconf
 
 static struct chconf channel_conf[MAX_USB_CHANNELS] = {0};
 static uint8_t channel_alloc_bitmap = 0; // Channel 0 reserved
-
-
-enum usb_state {
-    WAIT_RESETCOMPLETE,
-    WAIT_SETUP_DEVICEDESCRIPTOR,
-    WAIT_IN_DEVICE_DESCRIPTOR1,
-    WAIT_SETUP_ADDRESS,
-    WAIT_IN_ADDRESS,
-    ADDRESSED,
-    WAIT_SETUP_USER,
-    WAIT_IN_USER
-};
-
-static enum usb_state usb_state;
-
-static uint8_t usb_address = 0;
-
-static struct usb_device_info new_device;
-
-
-static int usb_ll__setup_completed(uint8_t channel, uint8_t intstatus, void*userdata);
 
 
 int usb_ll__alloc_channel(uint8_t devaddr,
@@ -82,6 +58,8 @@ int usb_ll__alloc_channel(uint8_t devaddr,
     dump__buffer(buf, 5);
     fpga__write_usb_block(USB_REG_CHAN_CONF1(chnum), buf, 5);
 
+    channel_conf[chnum].memaddr = 0x40 * chnum;
+
     return chnum;
 }
 
@@ -106,6 +84,7 @@ static void usb_ll__channel_interrupt(uint8_t channel)
 
     if (intpend<0)
         return;
+#ifdef USB_LL_DEBUG
     {
         char t[64];
         t[0] = '\0';
@@ -136,6 +115,7 @@ static void usb_ll__channel_interrupt(uint8_t channel)
 
         ESP_LOGI(TAG, "Channel %d intpend %02x [%s]", channel, intpend, t);
     }
+#endif
     uint8_t clr = intpend;
 
     struct chconf *c = &channel_conf[channel];
@@ -148,29 +128,35 @@ static void usb_ll__channel_interrupt(uint8_t channel)
 void usb_ll__interrupt()
 {
     uint8_t regs[4];
+#ifdef USB_LL_DEBUG
     ESP_LOGI(TAG, "USB interrupt");
+#endif
     if (usb_ll__read_status(regs)==0) {
+#ifdef USB_LL_DEBUG
         ESP_LOGI(TAG," Status regs %02x %02x %02x %02x",
                  regs[0],
                  regs[1],
                  regs[2],
                  regs[3]);
+#endif
     }
 
     if (regs[1] & USB_INTPEND_CONN) {
-        ESP_LOGI(TAG,"USB connection event");
-        // Send reset.
-        fpga__write_usb(USB_REG_STATUS, (USB_STATUS_PWRON |USB_STATUS_RESET));
-        // Wait for 10ms, then start enumeration.
-        xTimerStart(enum_timer, 0);
+        usb_ll__connected_callback();
     }
 
     if (regs[1] & USB_INTPEND_DISC) {
-        //ESP_LOGI(TAG,"USB disconnection event");
+#ifdef USB_LL_DEBUG
+        ESP_LOGI(TAG,"USB disconnection event");
+#endif
+        usb_ll__disconnected_callback();
     }
 
     if (regs[1] & USB_INTPEND_OVERCURRENT) {
+#ifdef USB_LL_DEBUG
         ESP_LOGI(TAG,"USB overcurrent event");
+#endif
+        usb_ll__overcurrent_callback();
     }
 
     uint8_t chanint = regs[2];
@@ -187,63 +173,31 @@ void usb_ll__interrupt()
 }
 
 
-uint16_t usb_ll__base_address_for_channel(uint8_t chan)
-{
-    return 0;
-}
-
-
-int usb_ll__submit_request(uint8_t channel, usb_dpid_t pid, uint8_t seq, uint8_t *data, uint8_t datalen,
+int usb_ll__submit_request(uint8_t channel, uint16_t epmemaddr,
+                           usb_dpid_t pid, uint8_t seq, uint8_t *data, uint8_t datalen,
                           int (*reap)(uint8_t channel, uint8_t status, void*), void*userdata)
 {
     uint8_t regconf[3];
-    uint16_t epmemaddress = usb_ll__base_address_for_channel(channel);
 
     // Write epmem data
     if (data!=NULL) {
-        fpga__write_usb_block(USB_REG_DATA(epmemaddress), data, datalen);
+        fpga__write_usb_block(USB_REG_DATA(epmemaddr), data, datalen);
     }
+    uint8_t retries = 3;
 
-    regconf[0] = (uint8_t)pid | ((seq&1)<<2) | ((epmemaddress>>8)<<3);
-    regconf[1] = epmemaddress & 0xFF;
+    regconf[0] = (uint8_t)pid | ((seq&1)<<2) | ((epmemaddr>>8)<<3) | (retries << 5);
+    regconf[1] = epmemaddr & 0xFF;
     regconf[2] = 0x80 | (datalen & 0x7F);
 
     dump__buffer(regconf, 3);
 
     channel_conf[channel].completion = reap;
     channel_conf[channel].userdata = userdata;
+    channel_conf[channel].memaddr = epmemaddr;
 
     fpga__write_usb_block(USB_REG_CHAN_TRANS1(channel), regconf, 3);
 
     return 0;
-}
-
-static uint8_t usb_ll__allocate_address()
-{
-    usb_address++;
-    if (usb_address>127) {
-        usb_address = 1;
-    }
-    return usb_address;
-}
-
-static void usb_ll__device_descriptor1_received()
-{
-    // Assign address.
-    uint8_t address = usb_ll__allocate_address();
-
-    usb_setup_t setup;
-    setup.bmRequestType  = USB_REQ_TYPE_STANDARD | USB_HOST_TO_DEVICE;
-    setup.bRequest = USB_REQ_SET_ADDRESS;
-    setup.wValue = __le16(address);
-    setup.wIndex = __le16(0);
-    setup.wLength = __le16(0);
-
-    new_device.address = address;
-
-    usb_ll__submit_request(0, PID_SETUP, 0, setup.data, sizeof(setup), &usb_ll__setup_completed, NULL);
-
-    usb_state = WAIT_SETUP_ADDRESS;
 }
 
 int usb_ll__read_in_block(uint8_t channel, uint8_t *target, uint8_t *rxlen)
@@ -260,6 +214,7 @@ int usb_ll__read_in_block(uint8_t channel, uint8_t *target, uint8_t *rxlen)
             trans_size=64;
         }
         inlen = trans_size;
+        ESP_LOGI(TAG, "Reading IN block from %04x", channel_conf[channel].memaddr);
         fpga__read_usb_block(USB_REG_DATA( channel_conf[channel].memaddr ), target, inlen);
         ESP_LOGI(TAG,"Response from device:");
         dump__buffer(target,inlen);
@@ -268,118 +223,21 @@ int usb_ll__read_in_block(uint8_t channel, uint8_t *target, uint8_t *rxlen)
     return 0;
 }
 
-static int usb_ll__in_completed(uint8_t channel, uint8_t intstatus, void*userdata)
+void usb_ll__set_power(int on)
 {
-    uint8_t indata[64];
-    uint8_t inlen;
-    uint8_t trans_size = 0;
-
-    if (intstatus & 1) {
-        usb_ll__read_in_block(channel, indata, &trans_size);
-    }
-
-    switch (usb_state) {
-    case WAIT_IN_DEVICE_DESCRIPTOR1:
-        if (intstatus & 1) {
-            // Good.
-            memcpy(new_device.device_descriptor, indata, USB_LEN_DEV_DESC);
-
-            usb_ll__device_descriptor1_received();
-        } else {
-            ESP_LOGE(TAG,"Error requesting device descriptor");
-        }
-        break;
-    case WAIT_IN_ADDRESS:
-        if (intstatus &1) {
-            if (trans_size!=0) {
-                ESP_LOGE(TAG,"Device address: non NULL IN reply!");
-            } else {
-                usb_state = ADDRESSED;
-                usb_ll__device_addressed(&new_device);
-            }
-        } else {
-            ESP_LOGE(TAG,"Error setting device address");
-        }
-        break;
-    case ADDRESSED:
-        /* fall-through */
-    case WAIT_IN_USER:
-
-        // Send to upper layer
-        //usb_ll__in_completed_callback(channel, intstatus);
-
-        //channel_conf[ channel ].in_complete(channel, intstatus, userdata);
-
-        break;
-    default:
-        ESP_LOGE(TAG,"Invalid state when receiving IN data!!");
-        break;
-    }
-    return 0;
-}
-
-static int usb_ll__setup_completed(uint8_t channel, uint8_t intstatus, void*userdata)
-{
-    if (intstatus&0x01) {
-
-        // Completed.
-        // Send IN request
-        switch (usb_state) {
-        case WAIT_SETUP_DEVICEDESCRIPTOR:
-            ESP_LOGI(TAG, "Send IN request");
-            usb_ll__submit_request(0, PID_IN, 0, NULL, USB_DEVICE_DESC_SIZE, &usb_ll__in_completed, NULL);
-            usb_state = WAIT_IN_DEVICE_DESCRIPTOR1;
-            break;
-
-        case WAIT_SETUP_ADDRESS:
-            usb_ll__submit_request(0, PID_IN, 0, NULL, 0, &usb_ll__in_completed, NULL);
-            usb_state = WAIT_IN_ADDRESS;
-            break;
-        case WAIT_SETUP_USER:
-            //usb_ll__setup_completed_callback(channel, intstatus);
-            break;
-        default:
-            break;
-
-        }
+    if (on) {
+        fpga__write_usb(USB_REG_STATUS, USB_STATUS_PWRON);
     } else {
-        ESP_LOGE(TAG,"Invalid SETUP completed state");
+        fpga__write_usb(USB_REG_STATUS, 0);
     }
-    return 0;
 }
 
-static void usb_ll__start_enum( TimerHandle_t xTimer )
-{
-    usb_setup_t setup;
-
-    setup.bmRequestType = USB_REQ_TYPE_STANDARD | USB_REQ_RECIPIENT_DEVICE | USB_DEVICE_TO_HOST;
-    setup.bRequest = USB_REQ_GET_DESCRIPTOR;
-    setup.wValue = __le16(USB_DESC_DEVICE);
-    setup.wIndex = __le16(0);
-    setup.wLength = __le16(USB_LEN_DEV_DESC);
-/*    uint8_t req[] = {
-        0x80,
-        0x06,
-        0x00,
-        0x01,
-        0x00,
-        0x00,
-        0x00,
-        0x12
-    };*/
-    ESP_LOGI(TAG, "Send SETUP GET_DESCRIPTOR request");
-
-    usb_state = WAIT_SETUP_DEVICEDESCRIPTOR;
-
-    usb_ll__submit_request(0, PID_SETUP, 0, setup.data, sizeof(setup), &usb_ll__setup_completed, NULL);
-}
-
-static void usb_ll__task(void *pvParameters)
+int usb_ll__init()
 {
     ESP_LOGI(TAG, "USB: Low level init");
-    // Power on, enable interrupts
+    // Power off, enable interrupts
     uint8_t regval[4] = {
-        (USB_STATUS_PWRON),
+        0x00,//(USB_STATUS_PWRON),
         0x00, // Unused,
         (USB_INTCONF_GINTEN | USB_INTCONF_DISC | USB_INTCONF_CONN | USB_INTCONF_OVERCURRENT),
         0xff // Clear pending
@@ -387,55 +245,18 @@ static void usb_ll__task(void *pvParameters)
 
     fpga__write_usb_block(USB_REG_STATUS, regval, 4);
 
-    /* Configure EP0 setup channel */
-    /*
-    regval[0] = 0;
-    regval[1] = 0;
-    regval[2] = 0;
-    fpga__write_usb_block(USB_REG_CHAN_TRANS1(0),regval,3);
-
-    uint8_t epconf[] = {
-        0x3F, // EPtype 0, max size 64         // CONF1
-        0x20, // -- Ep 0, OUT - FIXME          // CONF2
-        0x80, // Address 0. EP enabled.       // CONF3
-        0xFF, // All interrupts enabled.       // INTCONF
-        0xFF, // All interrupt clear           // INTCLR
-    };
-
-    fpga__write_usb_block(USB_REG_CHAN_CONF1(0), epconf, 5);
-
-    */
-
     usb_ll__alloc_channel(0x00,
                           EP_TYPE_CONTROL,
                           64,
                           0);
     // Set up chan0
-    channel_conf[0].memaddr = 0x0000;
+    //channel_conf[0].memaddr = 0x0000;
 
-
-    enum_timer =  xTimerCreate("enum",
-                               10/portTICK_RATE_MS,
-                               pdFALSE,
-                               NULL,
-                               usb_ll__start_enum
-                              );
-
-    while (1) {
-        vTaskDelay(5000 / portTICK_RATE_MS);
-        uint8_t epconf[8];
-        fpga__read_usb_block(USB_REG_CHAN_CONF1(0), epconf, 8);
-        dump__buffer(epconf, 8);
-
-    }
-}
-
-int usb_ll__init()
-{
-    xTaskCreate(usb_ll__task, "usb_task", 4096, NULL, 10, NULL);
     return 0;
 }
 
-
-
-
+void usb_ll__reset()
+{
+    // Send reset.
+    fpga__write_usb(USB_REG_STATUS, (USB_STATUS_PWRON |USB_STATUS_RESET));
+}

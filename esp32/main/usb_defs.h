@@ -1,3 +1,6 @@
+#ifndef __USB_DEFS_H__
+#define __USB_DEFS_H__
+
 #include "byteorder.h"
 
 #define  USB_LEN_DESC_HDR                               0x02
@@ -139,7 +142,7 @@ typedef struct
   usb_interface_descriptor_t        interfaces[0];
 } usb_config_descriptor_t;
 
-
+/*
 struct usb_device_info {
     union {
         uint8_t device_descriptor[USB_LEN_DEV_DESC];
@@ -147,4 +150,5 @@ struct usb_device_info {
     };
     uint8_t address;
 };
-
+*/
+#endif
