@@ -97,10 +97,10 @@ ARCHITECTURE rtl OF usbhostctrl is
   signal noe_s          : std_logic;
 
 
-  constant C_SOF_TIMEOUT: natural   := altsim(48000, 2500); -- 1ms synth, 50us simulation
+  constant C_SOF_TIMEOUT: natural   := altsim(48000, 4800); -- 1ms synth, 100us simulation
   constant C_ATTACH_DELAY: natural  := altsim(480000, 4);-- 48000; -- 10 ms
   constant C_NUM_CHANNELS: natural  := 8;
-  constant C_RESET_DELAY: natural   := altsim(48000*4,500); -- 4 ms
+  constant C_RESET_DELAY: natural   := altsim(48000*50,500); -- 50 ms
   constant C_RESET_DELAY_AFTER: natural   := altsim(480, 48); -- 10 us
   constant C_INTERRUPT_HOLDOFF : natural := 480; -- 10us
 
@@ -270,6 +270,7 @@ ARCHITECTURE rtl OF usbhostctrl is
   signal trans_data_seq_s   : std_logic;
 
   signal phy_txactive_s     : std_logic;
+  signal fs_ce_s            : std_logic;
 
 BEGIN
 
@@ -285,7 +286,7 @@ BEGIN
     r.sr.connected;
 
   --intconfreg_s <= r.intconfr.ginten & "0000" & r.intconfr.overcurrent & r.intconfr.connectdetect & r.intconfr.disconnectdetect;
-  intpendreg_s <= "00000" & r.intpendr.overcurrent & r.intpendr.connectdetect & r.intconfr.disconnectdetect;
+  intpendreg_s <= "00000" & r.intpendr.overcurrent & r.intpendr.connectdetect & r.intpendr.disconnectdetect;
 
 
   
@@ -299,6 +300,8 @@ BEGIN
     rst              => rstinv,         -- i
     phy_tx_mode      => tx_mode_s,      -- i
     usb_rst          => usb_rst_phy,    -- o
+    XcvrSelect_i     => r.speed,        -- i
+    fs_ce_o          => fs_ce_s,
     txdp             => vpo_s,          -- o
     txdn             => vmo_s,          -- o
     txoe             => noe_s,          -- o
@@ -556,10 +559,15 @@ BEGIN
         -- 8    + 8    598[s]  + 2    (616)
 
         --34 bits time for ack/nack . 38 bits for token.
-        if r.sof_count > ((616+34+38)*4) then
-          can_issue_request := true;
+        if r.speed='1' then
+          if r.sof_count > ((616+34+38)*4) then
+            can_issue_request := true;
+          end if;
+        else
+          if r.sof_count > ((616+34+38)*4*8) then
+            can_issue_request := true;
+          end if;
         end if;
-
         if ch.conf.enabled='1' then
           -- synopsys translate_off
           if rising_edge(usbclk_i) then
@@ -601,7 +609,9 @@ BEGIN
             w.channel := r.channel + 1;
           else
             w.channel := 0;
-            w.host_state := WAIT_SOF;
+            if not can_issue_request then
+              w.host_state := WAIT_SOF;
+            end if;
           end if;
         end if;
 
@@ -639,7 +649,7 @@ BEGIN
         trans_dsize_s     <= std_logic_vector(r.ch(r.channel).trans.size);
         trans_ep_s        <= r.ch(r.channel).conf.epnum;
         trans_addr_s      <= r.ch(r.channel).conf.address;
-        trans_data_seq_s  <= '0';
+        trans_data_seq_s  <= r.ch(r.channel).trans.seq;
 
         case trans_status_s is
           when ACK =>
@@ -677,6 +687,7 @@ BEGIN
         trans_dsize_s   <= std_logic_vector(r.ch(r.channel).trans.size);
         trans_ep_s      <= r.ch(r.channel).conf.epnum;
         trans_addr_s    <= r.ch(r.channel).conf.address;
+        trans_data_seq_s  <= r.ch(r.channel).trans.seq;
 
         case trans_status_s is
           when COMPLETED =>
@@ -928,7 +939,8 @@ BEGIN
   port map (
     usbclk_i          => usbclk_i,
     ausbrst_i         => ausbrst_i,
-
+    speed_i           => r.speed,
+    fs_ce_i           => fs_ce_s,
     -- Transmission
     pid_i             => trans_pid_s,
 

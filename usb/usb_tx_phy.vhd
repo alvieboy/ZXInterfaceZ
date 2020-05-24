@@ -65,6 +65,7 @@ entity usb_tx_phy is
     -- Transciever Interface
     txdp, txdn, txoe : out std_logic;
     -- UTMI Interface
+    XcvrSelect_i     : in  std_logic; -- '0'
     DataOut_i        : in  std_logic_vector(7 downto 0);
     TxValid_i        : in  std_logic;
     TxReady_o        : out std_logic
@@ -99,6 +100,7 @@ architecture RTL of usb_tx_phy is
   signal tx_ip_sync         : std_logic;
   signal txoe_r1, txoe_r2   : std_logic;
   signal fs_ce_q            : std_logic;
+  signal ls_eop             : std_logic;
 
   type state_type is (
     IDLE_STATE,
@@ -112,6 +114,8 @@ architecture RTL of usb_tx_phy is
 
 begin
 
+  ls_eop <= '1' when XcvrSelect_i='0' and DataOut_i=x"A5" else '0';
+
 --======================================================================================--
   -- Misc Logic                                                                         --
 --======================================================================================--
@@ -121,7 +125,11 @@ begin
     if rst ='0' then
       TxReady_o <= '0';
     elsif rising_edge(clk) then
-      TxReady_o <= ld_data_d and TxValid_i;
+      if ls_eop='0' then
+        TxReady_o <= ld_data_d and TxValid_i;
+      else
+        TxReady_o <= '1';
+      end if;
     end if;
   end process;
 
@@ -141,7 +149,7 @@ begin
     if rst ='0' then
       tx_ip <= '0';
     elsif rising_edge(clk) then
-      if ld_sop_d  ='1' then
+      if ld_sop_d  ='1' or ls_eop='1' then
         tx_ip <= '1';
       elsif eop_done ='1' then
         tx_ip <= '0';
@@ -370,13 +378,15 @@ begin
   p_txdpn: process (clk, rst)
   begin
     if rst ='0' then
-      txdp <= '1';
-      txdn <= '0';
+      --txdp <= XcvrSelect_i;
+      --txdn <= not XcvrSelect_i;
+      txdp <= 'X';--XcvrSelect_i;
+      txdn <= 'X';--not XcvrSelect_i;
     elsif rising_edge(clk) then
       if fs_ce ='1' then
         if phy_mode ='1' then
-          txdp <= not append_eop_sync3 and     sd_nrzi_o;
-          txdn <= not append_eop_sync3 and not sd_nrzi_o;
+          txdp <= (not append_eop_sync3 and (sd_nrzi_o xor not XcvrSelect_i));
+          txdn <= (not append_eop_sync3 and (sd_nrzi_o xor XcvrSelect_i));
         else
           txdp <= sd_nrzi_o;
           txdn <= append_eop_sync3;
@@ -398,18 +408,20 @@ begin
     end if;
   end process;
 
-  p_next_state: process (rst, state, TxValid_i, data_done, sft_done_e, eop_done, fs_ce)
+  p_next_state: process (rst, state, TxValid_i, data_done, sft_done_e, eop_done, fs_ce, DataOut_i, XcvrSelect_i)
   begin
     if rst='0' then
       next_state <= IDLE_STATE;
     else
       case (state) is
         when IDLE_STATE =>
-          if TxValid_i ='1' then
-                             next_state <= SOP_STATE;
-                           ELSE
-                             next_state <= IDLE_STATE;
-                           end if;
+          if TxValid_i ='1' and (XcvrSelect_i='1' or DataOut_i/=x"A5") then
+            next_state <= SOP_STATE;
+          elsif TxValid_i='1' and (XcvrSelect_i='0' and DataOut_i=x"A5") then
+            next_state <= EOP1_STATE;
+          else
+            next_state <= IDLE_STATE;
+          end if;
         when SOP_STATE  => if sft_done_e ='1' then
                              next_state <= DATA_STATE;
                            ELSE
@@ -419,7 +431,7 @@ begin
                              next_state <= EOP1_STATE;
                            ELSE
                              next_state <= DATA_STATE;
-                           end if;
+                          end if;
         when EOP1_STATE => if eop_done ='1' then
                              next_state <= EOP2_STATE;
                            ELSE
@@ -442,7 +454,9 @@ begin
 
   ld_sop_d  <= TxValid_i  when state = IDLE_STATE else '0';
   ld_data_d <= sft_done_e when state = SOP_STATE or (state = DATA_STATE and data_done ='1') else '0';
-  ld_eop_d  <= sft_done_e when state = Data_STATE and data_done ='0' else '0';
+  ld_eop_d  <= sft_done_e when state = Data_STATE and data_done ='0' else
+             '1' when state = IDLE_STATE and ls_eop='1' else
+  '0';
 
 end RTL;
 

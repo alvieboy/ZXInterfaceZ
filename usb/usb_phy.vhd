@@ -55,10 +55,14 @@ entity usb_phy is
     rst              : in  std_logic;
     phy_tx_mode      : in  std_logic;  -- HIGH level for differential io mode (else single-ended)
     usb_rst          : out std_logic;
+    eop_o            : out std_logic;
+    fs_ce_o          : out std_logic;
     -- Transciever Interface
     rxd, rxdp, rxdn  : in  std_logic;
     txdp, txdn, txoe : out std_logic;
+
     -- UTMI Interface
+    XcvrSelect_i     : in std_logic;
     DataOut_i        : in  std_logic_vector(7 downto 0);
     TxValid_i        : in  std_logic;
     TxReady_o        : out std_logic;
@@ -74,11 +78,30 @@ architecture RTL of usb_phy is
 
   signal LineState      : std_logic_vector(1 downto 0);
   signal fs_ce          : std_logic;
-  signal rst_cnt        : std_logic_vector(4 downto 0);
   signal txoe_out       : std_logic;
   signal usb_rst_out    : std_logic := '0';
+  signal clk_en         : std_logic := '1';  -- For Low Speed
+  signal div8q          : std_logic_vector(2 downto 0);
+
+  constant C_RESET_CNT  : natural := 120;
+  signal rst_cnt        : natural range 0 to C_RESET_CNT-1;
 
 begin
+
+  clk_en <= '1' when div8q="000" or XcvrSelect_i='1' else '0';
+
+  process(clk,rst)
+  begin
+    if rst='0' then
+      div8q<="111";
+    elsif rising_edge(clk) then
+      if div8q="000" then
+        div8q <= "111";
+      else
+        div8q <= div8q - 1;
+      end if;
+    end if;
+  end process;
 
 --======================================================================================--
   -- Misc Logic                                                                         --
@@ -103,6 +126,7 @@ begin
     txdn       => txdn,
     txoe       => txoe_out,
     -- UTMI Interface
+    XcvrSelect_i => XcvrSelect_i,
     DataOut_i  => DataOut_i,
     TxValid_i  => TxValid_i,
     TxReady_o  => TxReady_o
@@ -119,12 +143,15 @@ begin
   port map (
     clk        => clk,
     rst        => rst,
+    clk_en     => clk_en,
     fs_ce_o    => fs_ce,
+    eop_o     => eop_o,
     -- Transciever Interface
     rxd        => rxd,
     rxdp       => rxdp,
     rxdn       => rxdn,
     -- UTMI Interface
+    XcvrSelect_i => XcvrSelect_i,
     DataIn_o   => DataIn_o,
     RxValid_o  => RxValid_o,
     RxActive_o => RxActive_o,
@@ -141,12 +168,12 @@ begin
     p_rst_cnt: process (clk, rst)
     begin
       if rst ='0' then
-        rst_cnt <= (others => '0');
+        rst_cnt <= C_RESET_CNT-1;
       elsif rising_edge(clk) then
         if LineState /= "00" then
-          rst_cnt <= (others => '0');
-        elsif usb_rst_out ='0' and fs_ce ='1' then
-          rst_cnt <= rst_cnt + 1;
+          rst_cnt <= C_RESET_CNT-1;
+        elsif rst_cnt/=0 then
+          rst_cnt <= rst_cnt - 1;
         end if;
       end if;
     end process;
@@ -154,7 +181,7 @@ begin
     p_usb_rst_out: process (clk)
     begin
       if rising_edge(clk) then
-        if rst_cnt = "11111" then
+        if rst_cnt = 0 then
           usb_rst_out  <= '1';
         else
           usb_rst_out  <= '0';
@@ -162,5 +189,7 @@ begin
       end if;
     end process;
   end generate;
+
+  fs_ce_o <= fs_ce;
 
 end RTL;

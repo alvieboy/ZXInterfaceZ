@@ -62,11 +62,14 @@ entity usb_rx_phy is
   );
   port (
     clk             : in  std_logic;
+    clk_en          : in  std_logic;
     rst             : in  std_logic;
     -- Transciever Interface
     fs_ce_o         : out std_logic;
+    eop_o           : out std_logic;
     rxd, rxdp, rxdn : in  std_logic;
     -- UTMI Interface
+    XcvrSelect_i    : in std_logic;
     DataIn_o        : out std_logic_vector(7 downto 0);
     RxValid_o       : out std_logic;
     RxActive_o      : out std_logic;
@@ -104,6 +107,10 @@ architecture RTL of usb_rx_phy is
   signal bit_stuff_err                      : std_logic;
   signal se0_r, byte_err                    : std_logic;
   signal se0_s                              : std_logic;
+  signal se0q_s                             : std_logic;
+  signal se0q1_s                            : std_logic;
+  signal se0q2_s                            : std_logic;
+  signal eop                                : std_logic;
 
   constant FS_IDLE  : std_logic_vector(2 downto 0) := "000";
   constant K1       : std_logic_vector(2 downto 0) := "001";
@@ -185,17 +192,24 @@ begin
     end if;
   end process;
 
-  j   <=     rxdp_s and not rxdn_s;
-  k   <= not rxdp_s and     rxdn_s;
+  j   <= (not rxdp_s and rxdn_s) xor XcvrSelect_i;
+  k   <= (rxdp_s and not rxdn_s ) xor XcvrSelect_i;
+
   se0 <= not rxdp_s and not rxdn_s;
 
   p_se0_s: process (clk, rst)
   begin
     if rst ='0' then
       se0_s <= '0';
+      se0q_s <= '0';
+      se0q1_s <= '0';
+      se0q2_s <= '0';
     elsif rising_edge(clk) then
       if fs_ce ='1' then
         se0_s   <= se0;
+        se0q_s   <= se0_s;
+        se0q1_s   <= se0q_s;
+        se0q2_s   <= se0q1_s;
       end if;
     end if;
   end process;
@@ -248,7 +262,7 @@ begin
   begin
     if rst ='0' then
       dpll_state <= "01";
-    elsif rising_edge(clk) then
+    elsif rising_edge(clk) and clk_en='1' then
       dpll_state <= dpll_next_state;
     end if;
   end process;
@@ -279,7 +293,7 @@ begin
     end case;
   end process;
 
-  fs_ce_d <= '1' when dpll_state = "01" else '0';
+  fs_ce_d <= '1' when dpll_state = "01" and clk_en='1' else '0';
 
   -- Compensate for sync registers at the input - allign full speed ...
   -- ... clock enable to be in the middle between two bit changes :
@@ -658,5 +672,8 @@ begin
       byte_err <= se0 and not se0_r and (bit_cnt(1) or bit_cnt(2)) and rx_active;
     end if;
   end process;
+
+  eop<='1' when rx_active='0' and se0_s='0' and se0q_s='1' and se0q1_s='1' and se0q2_s='0' else '0';
+  eop_o <= eop;
 
 end RTL;

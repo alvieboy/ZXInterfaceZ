@@ -15,6 +15,8 @@ ENTITY usb_trans IS
 
     -- Transmission
     pid_i       : in std_logic_vector(3 downto 0);
+    speed_i     : in std_logic;
+    fs_ce_i     : in std_logic;
 
     -- Address/EP for token packets
     addr_i      : in std_logic_vector(6 downto 0);
@@ -77,8 +79,8 @@ architecture beh of usb_trans is
     COMPLETE
   );
 
-  constant C_DEFAULT_ITG : natural := ((3)*4); -- 3 bit times
-  constant C_RX_TIMEOUT  : natural := ((7+8)*4); -- 7+8 bit times
+  constant C_DEFAULT_ITG : natural := 3; --((3)*4); -- 3 bit times
+  constant C_RX_TIMEOUT  : natural := 7+8+8; --((7+8)*4); -- 7+8 bit times
 
   type regs_type is record
     token_data  : std_logic_vector(10 downto 0); -- Frame or Addr/EP pair
@@ -259,6 +261,12 @@ begin
           else
             w.state       := ERRORPID;
           end if;
+
+          -- Special case EOP generation
+          if r.pid=USBF_T_PID_SOF and speed_i='0' then
+            w.state := FLUSH;
+          end if;
+
         end if;
 
         --if phy_rxactive_i='1' then
@@ -321,7 +329,9 @@ begin
             w.itg       := r.itg - 1;
           end if;
         else
-          w.itg := C_DEFAULT_ITG - 1;
+          if fs_ce_i='1' then
+            w.itg := C_DEFAULT_ITG - 1;
+          end if;
         end if;
 
       when DATA1 =>
@@ -386,7 +396,9 @@ begin
             -- synthesis translate_on
             w.state := TIMEOUT;
           else
-            w.rxtimeout := r.rxtimeout - 1;
+            if fs_ce_i='1' then
+              w.rxtimeout := r.rxtimeout - 1;
+            end if;
           end if;
         else
           if needdata(r.pid) then
