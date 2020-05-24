@@ -222,6 +222,10 @@ Returns:
 
  * Error info in flag C and register A(similar as before)
 
+### Close all user defined file desciptors(#2F)
+
+Close all opened by user files(can be used as )
+
 ## Network ABI
 
 ### Open TCP connection(#30) 
@@ -320,7 +324,7 @@ Arguments:
 
  * HL - pointer to buffer
 
- * DE - pointer to hostname stringZ+port(1 word) struct
+ * DE - pointer to ipv4(2 words)+port(1 word) struct
 
 Returns:
 
@@ -343,3 +347,23 @@ Returns:
  * Error info in flag C and register A
 
  * A - value if no error
+
+### Get Host By Name(#38)
+
+Arguments:
+ 
+ * HL - pointer to host name stringZ
+
+ * DE - pointer to ipaddrv4 buffer(2 words)
+
+Returns:
+
+ * Error info in flag C and register A
+
+### Reset networking(#4F)
+
+Close all active user defined connections(can be used as initialization routine).
+
+Returns:
+ 
+ * Flag C setted if WiFi not connected to access point
