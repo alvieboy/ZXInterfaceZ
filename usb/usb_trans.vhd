@@ -17,6 +17,7 @@ ENTITY usb_trans IS
     pid_i       : in std_logic_vector(3 downto 0);
     speed_i     : in std_logic;
     fs_ce_i     : in std_logic;
+    usb_rst_i   : in std_logic;
 
     -- Address/EP for token packets
     addr_i      : in std_logic_vector(6 downto 0);
@@ -80,7 +81,7 @@ architecture beh of usb_trans is
   );
 
   constant C_DEFAULT_ITG : natural := 3; --((3)*4); -- 3 bit times
-  constant C_RX_TIMEOUT  : natural := 7+8+8; --((7+8)*4); -- 7+8 bit times
+  constant C_RX_TIMEOUT  : natural := 7+8+8+8; --((7+8)*4); -- 7+8 bit times
 
   type regs_type is record
     token_data  : std_logic_vector(10 downto 0); -- Frame or Addr/EP pair
@@ -89,7 +90,6 @@ architecture beh of usb_trans is
     addr        : unsigned(9 downto 0);
     state       : state_type;
     txcrc16     : std_logic_vector(15 downto 0);
-    itg         : natural range 0 to C_DEFAULT_ITG-1;
     rxtimeout   : natural range 0 to C_RX_TIMEOUT-1;
     seq         : std_logic;
   end record;
@@ -115,6 +115,7 @@ architecture beh of usb_trans is
   signal  pid_PING:   std_logic;
 	signal	pid_cks_err:std_logic;
 
+  signal itg_r            : natural range 0 to C_DEFAULT_ITG-1;
 
 	signal rx_data_st       : std_logic_vector(7 downto 0);
   signal rx_data_valid    : std_logic;
@@ -201,7 +202,7 @@ begin
 
   process(usbclk_i, r, pid_i, daddr_i, dsize_i,data_seq_i,strobe_i,frame_i, addr_i, ep_i,
     phy_txactive_i, phy_txready_i, phy_rxactive_i, crc5_out_s, udata_i, crc16_out_s, rx_data_valid,
-    rx_data_done,pid_ACK,pid_NACK, ausbrst_i)
+    rx_data_done,pid_ACK,pid_NACK, ausbrst_i, speed_i, fs_ce_i,crc16_err,seq_err,pid_STALL)
     variable w: regs_type;
   begin
     w := r;
@@ -214,27 +215,19 @@ begin
     status_o          <= BUSY;
     crc16_in_s        <= (others => 'X');
 
-    w.itg             := C_DEFAULT_ITG-1;
-
     case r.state is
       when IDLE =>
         status_o          <= IDLE;
         w.pid         := pid_i;
-        w.token_data  := (others => 'X');
+        w.token_data  := ep_i & addr_i;
         w.addr        := unsigned(daddr_i);
         w.txsize      := dsize_i;
         w.txcrc16     := (others => 'X');
         w.seq         := data_seq_i;
 
         if strobe_i='1' then
-          if is_token_pid(pid_i) then
-            if pid_i=USBF_T_PID_SOF then
-              w.token_data  := frame_i;
-            else
-              w.token_data  := ep_i & addr_i;
-            end if;
-          else
-            w.token_data  := (others => 'X');
+          if pid_i=USBF_T_PID_SOF then
+            w.token_data  := frame_i;
           end if;
           w.state := SENDPID;
         end if;
@@ -294,7 +287,8 @@ begin
       when FLUSH =>
         status_o          <= BUSY;
         if phy_txactive_i='0' then
-          if r.itg=0 then
+
+          if itg_zero_s then
             -- Do we need ack ?
             -- synthesis translate_off
             if rising_edge(usbclk_i) then report "Flushed transmission"; end if;
@@ -325,12 +319,6 @@ begin
               status_o <= COMPLETED;
               w.state := IDLE;
             end if;
-          else
-            w.itg       := r.itg - 1;
-          end if;
-        else
-          if fs_ce_i='1' then
-            w.itg := C_DEFAULT_ITG - 1;
           end if;
         end if;
 
@@ -372,12 +360,6 @@ begin
         if phy_txready_i='1' then
           w.state := FLUSH;
         end if;
-
-      when ERRORPID =>
-
-      when BABBLE =>
-        status_o          <= BABBLE;
-        w.state := IDLE;
 
       when TIMEOUT =>
         -- synthesis translate_off
@@ -448,6 +430,10 @@ begin
           w.state := STALL;
         end if;
 
+        if pid_NACK='1' then
+          w.state := NACK;
+        end if;
+
         if rx_data_done='0' and phy_rxactive_i='0' then
           w.state := TIMEOUT;
         end if;
@@ -456,17 +442,14 @@ begin
         status_o          <= BUSY;
         w.pid       := USBF_T_PID_ACK;
 
-        if r.itg=0 then
+        if itg_zero_s then
           w.state   := SENDPID;
-        else
-          w.itg := r.itg - 1;
         end if;
 
 
 
       when WAIT_ACK_NACK =>
         status_o          <= BUSY;
-        w.itg := C_DEFAULT_ITG - 1;
 
         if pid_ACK='1' then
           -- synthesis translate_off
@@ -494,59 +477,56 @@ begin
       when ACK =>
         status_o          <= BUSY;
 
-        if r.itg=0 then
+        if itg_zero_s then
           status_o          <= ACK;
           w.state   := IDLE;
-        else
-          w.itg := r.itg - 1;
         end if;
 
       when STALL =>
         status_o          <= BUSY;
 
-        if r.itg=0 then
+        if itg_zero_s then
           status_o          <= STALL;
           w.state   := IDLE;
-        else
-          w.itg := r.itg - 1;
         end if;
 
       when NACK =>
         status_o          <= BUSY;
 
-        if r.itg=0 then
-          status_o          <= ACK;
+        if itg_zero_s then
+          status_o          <= NACK;
           w.state   := IDLE;
-        else
-          w.itg := r.itg - 1;
         end if;
 
       when CRCERROR =>
         status_o          <= BUSY;
 
-        if r.itg=0 then
+        if itg_zero_s then
           status_o          <= ACK;
           w.state   := IDLE;
-        else
-          w.itg := r.itg - 1;
         end if;
 
       when COMPLETE =>
         status_o          <= BUSY;
 
-        if r.itg=0 then
+        if itg_zero_s then
           status_o          <= COMPLETED;
           w.state   := IDLE;
-        else
-          w.itg := r.itg - 1;
         end if;
 
       when SEND_NACK=>
+      when ERRORPID =>
+
+      when BABBLE =>
+        if itg_zero_s then
+          status_o          <= BABBLE;
+          w.state := IDLE;
+        end if;
 
     end case;
     
 
-    if ausbrst_i='1' then
+    if ausbrst_i='1' then --or usb_rst_i='1' then
       r.state       <= IDLE;
       r.token_data  <= (others => 'X');
       pd_resetn_s   <= '0';
@@ -556,6 +536,32 @@ begin
 
   end process;
 
+  itg_zero_s <= true when itg_r=0 else false;
+
+  process(usbclk_i, ausbrst_i)
+  begin
+    if ausbrst_i='1' then
+      itg_r   <= C_DEFAULT_ITG-1;
+    elsif rising_edge(ausbrst_i) then
+      case r.state is
+
+        when COMPLETE | CRCERROR | NACK | STALL | ACK | SEND_ACK | BABBLE =>
+          if fs_ce_i='1' then
+            itg_r   <= itg_r - 1;
+          end if;
+
+        when FLUSH =>
+          if phy_txactive_i='0' then
+            if fs_ce_i='1' then
+              itg_r   <= itg_r - 1;
+            end if;
+          end if;
+
+        when others =>
+          itg_r   <= C_DEFAULT_ITG-1;
+      end case;
+    end if;
+  end process;
 
 
 end beh;

@@ -70,3 +70,11 @@ configuration t009 of tb_top is
         end for;
     end for;
 end t009;
+
+configuration t010 of tb_top is
+    for sim
+        for tbc: tbc_device
+            use entity work.tbc_device(t010);
+        end for;
+    end for;
+end t010;

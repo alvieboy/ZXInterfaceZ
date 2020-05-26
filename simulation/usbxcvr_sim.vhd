@@ -46,7 +46,7 @@ begin
         idle_p <= 'Z';
         idle_m <= 'H';
         report "Using LS pullups";
-        end if;
+      end if;
     end if;
   end process;
 

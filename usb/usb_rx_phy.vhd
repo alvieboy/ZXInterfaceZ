@@ -262,8 +262,10 @@ begin
   begin
     if rst ='0' then
       dpll_state <= "01";
-    elsif rising_edge(clk) and clk_en='1' then
-      dpll_state <= dpll_next_state;
+    elsif rising_edge(clk) then
+      if clk_en='1' then
+        dpll_state <= dpll_next_state;
+      end if;
     end if;
   end process;
 

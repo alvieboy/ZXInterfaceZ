@@ -5,13 +5,14 @@ architecture t009 of tbc_device is
   signal spiPayload_in_s  : spiPayload_type;
   signal spiPayload_out_s : spiPayload_type;
 
-  
-
 begin
 
   process
     variable data: std_logic_vector(7 downto 0);
     variable stamp: time;
+
+    
+
   begin
     report "T008: USB";
 
