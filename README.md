@@ -14,7 +14,7 @@ _Project status: Currently this is in early development and only suitable for pe
 Block diagram of Interface Z [diagram](https://raw.githubusercontent.com/alvieboy/ZXInterfaceZ/master/docs/overview.png)
 
 ## Hardware
-This section refers to the schematics and printed circuit board design of the Interface Z. The digital design on the FPGA is described in the [FPGA design](#fpga) section.
+This section refers to the schematics and printed circuit board design of the Interface Z. The digital design on the FPGA is described in the [FPGA design] section.
 ### Licensing
 Schematics and PCB are released under [CC-BY-SA 2.0](https://creativecommons.org/licenses/by-sa/2.0/). This applies to all versions of the schematics and PCBs.
 ### Version
