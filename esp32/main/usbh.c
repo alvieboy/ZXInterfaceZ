@@ -6,7 +6,9 @@
 #include "freertos/event_groups.h"
 #include "freertos/queue.h"
 #include "usbh.h"
-#include "usbdriver.h"
+#include "usb_driver.h"
+#include "usb_descriptor.h"
+#include <string.h>
 
 static xQueueHandle usb_cmd_queue = NULL;
 static xQueueHandle usb_cplt_queue = NULL;
@@ -79,6 +81,53 @@ void usbh__ll_task(void *pvParam)
     }
 }
 
+int usbh__parse_interfaces(struct usb_device *dev)
+{
+    int index = 0;
+    int intflen;
+
+    if (dev->config_descriptor->bNumInterfaces>2) {
+        // TOOO many for us.
+        return -1;
+    }
+
+    usb_interface_descriptor_t *intf = usb__get_interface_descriptor(dev->config_descriptor, index++);
+    usb_interface_descriptor_t *next_intf = NULL;
+
+    if (intf==NULL) {
+        ESP_LOGE(TAG,"Cannot locate interface descriptor");
+        return -1;
+    }
+
+    do {
+        next_intf = usb__get_interface_descriptor(dev->config_descriptor, index++);
+        if (next_intf) {
+            intflen = (uint8_t*)next_intf - (uint8_t*)intf;
+        } else {
+
+            // Ugly...
+            intflen =  __le16(dev->config_descriptor->wTotalLength) - ((uint8_t*)intf - (uint8_t*)dev->config_descriptor);
+        }
+
+        if ((dev->interfaces[ intf->bInterfaceNumber ].numsettings>1) || (intf->bAlternateSetting>1)) {
+            // TOOO many!
+            ESP_LOGE(TAG,"Too many alternate settings");
+            return -1;
+        }
+
+        dev->interfaces[ intf->bInterfaceNumber ].descriptors[ intf->bAlternateSetting ] = intf;
+        dev->interfaces[ intf->bInterfaceNumber ].descriptorlen[ intf->bAlternateSetting ] = intflen;
+        dev->interfaces[ intf->bInterfaceNumber ].numsettings++;
+        dev->interfaces[ intf->bInterfaceNumber ].drv = NULL;
+        dev->interfaces[ intf->bInterfaceNumber ].drvdata = NULL;
+
+        intf = next_intf;
+    } while (next_intf);
+
+    return -1;
+}
+
+
 void IRAM_ATTR usb__isr_handler(void* arg)
 {
     struct usbcmd cmd;
@@ -91,7 +140,7 @@ void usbh__reset()
 {
     usb_ll__reset();
 
-    vTaskDelay(10 / portTICK_RATE_MS);
+    vTaskDelay(100 / portTICK_RATE_MS);
 }
 
 int usbh__detect_and_assign_address()
@@ -103,6 +152,7 @@ int usbh__detect_and_assign_address()
     dev.ep0_chan = 0;
     dev.ep0_size = 64; // Default
     dev.address = 0;
+    dev.claimed = 0;
 
     usbh__reset();
 
@@ -180,12 +230,34 @@ int usbh__detect_and_assign_address()
         return -1;
     }
 
-    if (usbdriver__probe(&dev)) {
+    // Allocate a proper device/interfaces.
+    struct usb_device *newdev = (struct usb_device*) malloc (
+                                                             sizeof(struct usb_device) +
+                                                             sizeof(struct usb_interface) * (dev.config_descriptor->bNumInterfaces)
+                                                            );
+    memcpy(newdev, &dev, sizeof(dev));
 
-    }  else {
+    int i;
+    for (i=0;i< (dev.config_descriptor->bNumInterfaces);i++) {
+        newdev->interfaces[i].numsettings = -1;
+        newdev->interfaces[i].claimed = 0;
+    }
+
+    // Create the interface structures
+    usbh__parse_interfaces(newdev);
+    ESP_LOGI(TAG,"Finding USB driver");
+    for (i=0;i< (dev.config_descriptor->bNumInterfaces);i++) {
+
+        usb_driver__probe(newdev, &newdev->interfaces[i]);
+        
+    }
+
+    if (newdev->claimed==0) {
         // No driver.
         free(dev.config_descriptor);
+        free(newdev);
     }
+
     return 0;
 }
 
@@ -214,6 +286,16 @@ int usbh__wait_completion(struct usb_request *req)
         }
     }
     return -1;
+}
+
+int usbh__claim_interface(struct usb_device *dev, struct usb_interface *intf)
+{
+    if (intf->claimed>0) {
+        return -1; // already claimed.
+    }
+    intf->claimed++;
+    dev->claimed++;
+    return 0;
 }
 
 void usbh__main_task(void *pvParam)
@@ -430,7 +512,7 @@ static int usbh__control_request_completed_reply(uint8_t chan, uint8_t stat, str
 
 
     } else {
-        ESP_LOGE(TAG, "Request failed");
+        ESP_LOGE(TAG, "Request failed %02x",stat);
         usbh__request_failed(req);
         return -1;
     }
@@ -463,7 +545,7 @@ static void usbh__submit_request_to_ll(struct usb_request *req)
     if (req->control) {
         usb_ll__submit_request(req->channel,
                                req->epmemaddr,
-                               PID_SETUP, 1,
+                               PID_SETUP, 0,
                                req->setup.data,
                                sizeof(req->setup),
                                usbh__request_completed_reply,
@@ -588,6 +670,39 @@ static void usbh__request_completed(struct usb_request *req)
     resp.data = req;
     xQueueSend(usb_cplt_queue, &resp, portMAX_DELAY);
     taskYIELD();
+}
+
+int usbh__set_configuration(struct usb_device *dev, uint8_t configidx)
+{
+    struct usb_request req = {0};
+
+    req.device = dev;
+    req.target = NULL;
+    req.length = 0;
+    req.rptr = NULL;
+    req.size_transferred = 0;
+    req.direction = REQ_HOST_TO_DEVICE;
+    req.control = 1;
+
+    req.setup.bmRequestType = USB_REQ_RECIPIENT_DEVICE | USB_REQ_TYPE_STANDARD | USB_HOST_TO_DEVICE;
+    req.setup.bRequest = USB_REQ_SET_CONFIGURATION;
+    req.setup.wValue = __le16(configidx);
+    req.setup.wIndex = __le16(0);
+    req.setup.wLength = __le16(0);
+
+    req.channel =  dev->ep0_chan;
+    ESP_LOGI(TAG,"Submitting address request");
+    usbh__submit_request(&req);
+
+    // Wait.
+    if (usbh__wait_completion(&req)<0) {
+        ESP_LOGE(TAG,"Device not accepting address!");
+        return -1;
+    }
+    ESP_LOGI(TAG, "Submitted config request");
+
+    return 0;
+
 }
 
 int usbh__init()

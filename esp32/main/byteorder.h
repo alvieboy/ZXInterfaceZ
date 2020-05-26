@@ -1,5 +1,7 @@
 #include <inttypes.h>
 
+
+
 #if defined(__XTENSA__)
 
 #ifndef bswap_16
@@ -30,5 +32,15 @@ typedef uint32_t be_uint32_t;
 
 typedef uint16_t le_uint16_t;
 typedef uint32_t le_uint32_t;
+
+#elif defined(__linux__)
+#include <asm/byteorder.h>
+
+typedef uint16_t be_uint16_t;
+typedef uint32_t be_uint32_t;
+typedef uint16_t le_uint16_t;
+typedef uint32_t le_uint32_t;
+#define __le16(x) (x)
+#define __le32(x) (x)
 
 #endif

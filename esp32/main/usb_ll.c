@@ -24,6 +24,10 @@ struct chconf
 static struct chconf channel_conf[MAX_USB_CHANNELS] = {0};
 static uint8_t channel_alloc_bitmap = 0; // Channel 0 reserved
 
+void usb_ll__channel_set_interval(uint8_t chan, uint8_t interval)
+{
+    fpga__write_usb(USB_REG_CHAN_CONF4(chan), interval);
+}
 
 int usb_ll__alloc_channel(uint8_t devaddr,
                           eptype_t eptype,
@@ -65,13 +69,13 @@ int usb_ll__alloc_channel(uint8_t devaddr,
 
 int usb_ll__release_channel(uint8_t channel)
 {
-    uint8_t epconf[1];
-    epconf[0] = 0;
     // Stop EP
-    fpga__write_usb_block(USB_REG_CHAN_CONF3(channel), epconf, 1);
+    fpga__write_usb(USB_REG_CHAN_CONF3(channel), 0);
+
     channel_alloc_bitmap &= ~(1<<channel);
     return 0;
 }
+
 int usb_ll__read_status(uint8_t regs[4])
 {
     int r = fpga__read_usb_block(USB_REG_STATUS, regs, 4);

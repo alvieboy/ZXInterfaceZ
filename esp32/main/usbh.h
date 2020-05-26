@@ -10,15 +10,29 @@ typedef enum {
     GET_CONFIG2
 } host_state_t;
 
+struct usb_driver;
+
+struct usb_interface
+{
+    int8_t numsettings;
+    uint8_t claimed;
+    uint8_t descriptorlen[2]; // Max 2 alt settings.
+    const struct usb_driver *drv;
+    void *drvdata; // Driver-specific data
+    usb_interface_descriptor_t *descriptors[2]; // Max 2 alt settings.
+};
+
 struct usb_device
 {
     uint8_t ep0_chan;
     uint8_t ep0_size;
     uint8_t address;
+    uint8_t claimed;
     usb_device_descriptor_t device_descriptor;
     usb_config_descriptor_t config_descriptor_short;
     usb_config_descriptor_t *config_descriptor;
-    host_state_t state;
+    //host_state_t state;
+    struct usb_interface interfaces[0];
 };
 
 #define REQ_DEVICE_TO_HOST 0
@@ -52,4 +66,8 @@ int usbh__get_descriptor(struct usb_device *dev,
                          uint16_t value,
                          uint8_t* target,
                          uint16_t length);
+
+int usbh__claim_interface(struct usb_device *dev, struct usb_interface *intf);
+int usbh__set_configuration(struct usb_device *dev, uint8_t configidx);
+
 #endif

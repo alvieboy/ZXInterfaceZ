@@ -86,32 +86,36 @@ typedef union
     };
 } usb_setup_t;
 
+typedef struct {
+    uint8_t bLength;
+    uint8_t bDescriptorType;
+} usb_descriptor_header_t;
 
 typedef struct {
-  uint8_t   bLength;
-  uint8_t   bDescriptorType;
-  le_uint16_t  bcdUSB;        /* USB Specification Number which device complies too */
-  uint8_t   bDeviceClass;
-  uint8_t   bDeviceSubClass; 
-  uint8_t   bDeviceProtocol;
-  uint8_t   bMaxPacketSize;
-  le_uint16_t  idVendor;      /* Vendor ID (Assigned by USB Org) */
-  le_uint16_t  idProduct;     /* Product ID (Assigned by Manufacturer) */
-  le_uint16_t  bcdDevice;     /* Device Release Number */
-  uint8_t   iManufacturer;  /* Index of Manufacturer String Descriptor */
-  uint8_t   iProduct;       /* Index of Product String Descriptor */
-  uint8_t   iSerialNumber;  /* Index of Serial Number String Descriptor */
-  uint8_t   bNumConfigurations; /* Number of Possible Configurations */
+  uint8_t bLength;
+  uint8_t bDescriptorType;
+  le_uint16_t bcdUSB;
+  uint8_t bDeviceClass;
+  uint8_t bDeviceSubClass;
+  uint8_t bDeviceProtocol;
+  uint8_t bMaxPacketSize;
+  le_uint16_t idVendor;
+  le_uint16_t idProduct;
+  le_uint16_t bcdDevice;
+  uint8_t iManufacturer;
+  uint8_t iProduct;
+  uint8_t iSerialNumber;
+  uint8_t bNumConfigurations;
 } usb_device_descriptor_t;
 
 typedef struct
 {
-  uint8_t   bLength;
-  uint8_t   bDescriptorType;
-  uint8_t   bEndpointAddress;   /* indicates what endpoint this descriptor is describing */
-  uint8_t   bmAttributes;       /* specifies the transfer type. */
-  le_uint16_t  wMaxPacketSize;    /* Maximum Packet Size this endpoint is capable of sending or receiving */
-  uint8_t   bInterval;          /* is used to specify the polling interval of certain transfers. */
+  uint8_t bLength;
+  uint8_t bDescriptorType;
+  uint8_t bEndpointAddress;
+  uint8_t bmAttributes;
+  le_uint16_t wMaxPacketSize;
+  uint8_t bInterval;
 } usb_endpoint_descriptor_t;
 
 typedef struct
@@ -119,28 +123,27 @@ typedef struct
   uint8_t bLength;
   uint8_t bDescriptorType;
   uint8_t bInterfaceNumber;
-  uint8_t bAlternateSetting;    /* Value used to select alternative setting */
-  uint8_t bNumEndpoints;        /* Number of Endpoints used for this interface */
-  uint8_t bInterfaceClass;      /* Class Code (Assigned by USB Org) */
-  uint8_t bInterfaceSubClass;   /* Subclass Code (Assigned by USB Org) */
-  uint8_t bInterfaceProtocol;   /* Protocol Code */
-  uint8_t iInterface;           /* Index of String Descriptor Describing this interface */
-  usb_endpoint_descriptor_t ep[0];
+  uint8_t bAlternateSetting;
+  uint8_t bNumEndpoints;
+  uint8_t bInterfaceClass;
+  uint8_t bInterfaceSubClass;
+  uint8_t bInterfaceProtocol;
+  uint8_t iInterface;
 } usb_interface_descriptor_t;
 
 
 typedef struct
 {
-  uint8_t   bLength;
-  uint8_t   bDescriptorType;
-  uint16_t  wTotalLength;        /* Total Length of Data Returned */
-  uint8_t   bNumInterfaces;       /* Number of Interfaces */
-  uint8_t   bConfigurationValue;  /* Value to use as an argument to select this configuration*/
-  uint8_t   iConfiguration;       /*Index of String Descriptor Describing this configuration */
-  uint8_t   bmAttributes;         /* D7 Bus Powered , D6 Self Powered, D5 Remote Wakeup , D4..0 Reserved (0)*/
-  uint8_t   bMaxPower;            /*Maximum Power Consumption */
-  usb_interface_descriptor_t        interfaces[0];
+  uint8_t bLength;
+  uint8_t bDescriptorType;
+  le_uint16_t wTotalLength;
+  uint8_t bNumInterfaces;
+  uint8_t bConfigurationValue;
+  uint8_t iConfiguration;
+  uint8_t bmAttributes;
+  uint8_t bMaxPower;
 } usb_config_descriptor_t;
+
 
 /*
 struct usb_device_info {
