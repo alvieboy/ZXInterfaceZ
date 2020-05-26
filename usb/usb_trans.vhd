@@ -80,7 +80,7 @@ architecture beh of usb_trans is
     COMPLETE
   );
 
-  constant C_DEFAULT_ITG : natural := 3; --((3)*4); -- 3 bit times
+  constant C_DEFAULT_ITG : natural := 4; --((3)*4); -- 3 bit times
   constant C_RX_TIMEOUT  : natural := 7+8+8+8; --((7+8)*4); -- 7+8 bit times
 
   type regs_type is record
@@ -116,6 +116,7 @@ architecture beh of usb_trans is
 	signal	pid_cks_err:std_logic;
 
   signal itg_r            : natural range 0 to C_DEFAULT_ITG-1;
+  signal itg_zero_s       : boolean;
 
 	signal rx_data_st       : std_logic_vector(7 downto 0);
   signal rx_data_valid    : std_logic;
@@ -402,7 +403,6 @@ begin
 
       when WAIT_DATA =>
         status_o      <= BUSY;
-        w.itg         := C_DEFAULT_ITG - 1;
 
         if rx_data_valid='1' then
           uwr_o <= '1';
@@ -542,18 +542,22 @@ begin
   begin
     if ausbrst_i='1' then
       itg_r   <= C_DEFAULT_ITG-1;
-    elsif rising_edge(ausbrst_i) then
+    elsif rising_edge(usbclk_i) then
       case r.state is
 
         when COMPLETE | CRCERROR | NACK | STALL | ACK | SEND_ACK | BABBLE =>
           if fs_ce_i='1' then
-            itg_r   <= itg_r - 1;
+            if not itg_zero_s then
+              itg_r   <= itg_r - 1;
+            end if;
           end if;
 
         when FLUSH =>
           if phy_txactive_i='0' then
             if fs_ce_i='1' then
-              itg_r   <= itg_r - 1;
+              if not itg_zero_s then
+                itg_r   <= itg_r - 1;
+              end if;
             end if;
           end if;
 
