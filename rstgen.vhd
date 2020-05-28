@@ -16,6 +16,7 @@ architecture beh of rstgen is
 
   signal rstq1_r  : std_logic := '1';
   signal rstq2_r  : std_logic := '1';
+  signal rstq3_r  : std_logic := '1';
 
 begin
 
@@ -24,12 +25,14 @@ begin
     if arst_i=POLARITY then
       rstq1_r <= '1';
       rstq2_r <= '1';
+      rstq3_r <= '1';
     elsif rising_edge(clk_i) then
       rstq1_r <= '0';
       rstq2_r <= rstq1_r;
+      rstq3_r <= rstq2_r;
     end if;
   end process;
 
-  rst_o <= rstq2_r;
+  rst_o <= rstq3_r;
 
 end beh;
