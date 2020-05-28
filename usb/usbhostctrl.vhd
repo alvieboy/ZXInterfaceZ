@@ -728,8 +728,8 @@ BEGIN
             w.ch(r.channel).trans.size := unsigned(trans_dsize_read_s);
           when NACK =>
             -- Keep trying...
-            -- synthesis translate_off
             w.ch(r.channel).trans.issued := '1';
+            -- synthesis translate_off
             if rising_edge(usbclk_i) then report "IN NAK" & hstr(trans_dsize_read_s); end if;
             -- synthesis translate_on
             w.host_state := IDLE;
