@@ -3,9 +3,11 @@ USE ieee.std_logic_1164.all;
 USE ieee.numeric_std.all;
 LIBRARY work;
 use work.ahbpkg.all;
+-- synthesis translate_off
+use work.txt_util.all;
+-- synthesis translate_on
 LIBRARY altera_mf;
 USE altera_mf.altera_mf_components.all;
-
 entity psram is
   port (
     clk_i   : in std_logic;
@@ -53,6 +55,7 @@ architecture beh of psram is
   );
 
   signal clock_enable_s : std_logic;
+  signal clock_enable_r : std_logic;
   signal bus_oe_s       : std_logic_vector(3 downto 0);
   signal data_out_r     : std_logic_vector(3 downto 0);
   signal d_neg_r        : std_logic_vector(3 downto 0);
@@ -87,7 +90,7 @@ begin
 
   clk_o       <= clkgen_s(0);
   test_ready  <= true after 2 us;
-  clock_disable_s <= not clock_enable_s;
+  clock_disable_s <= not clock_enable_r;
 
   clk_inst : ALTDDIO_OUT
   GENERIC MAP (
@@ -101,14 +104,12 @@ begin
     width => 1
   )
   PORT MAP (
-    aclr => clock_disable_s,
-    datain_h => "1",
-    datain_l => "0",
-    --oe => clock_enable_s,
-    --outclocken => clock_enable_s,
-    outclock => clk_i,
-    dataout => clkgen_s,
-    oe_out => open
+    aclr      => clock_disable_s,
+    datain_h  => "1",
+    datain_l  => "0",
+    outclock  => clk_i,
+    dataout   => clkgen_s,
+    oe_out    => open
   );
 
   process(state_r)
@@ -120,26 +121,14 @@ begin
         clock_enable_s <= '0';
       when INIT1   =>
       when INIT2   =>
-  --      clock_enable_s <= '0';
       when INIT3 | INIT4 | INIT5  =>
         clock_enable_s <= '0';
       when IDLE    =>
         clock_enable_s <= '0';
         ahb_o.HREADY  <= '1';
-      --when ADDRESS1 =>
-        --ahb_o.HREADY <= wr_r; -- Ack writes in advance
       when WRDATA3 =>
---        clock_enable_s <= '0';
---        ahb_o.HREADY  <= '1';
-
-      when DESELECT_WAIT1 =>
-        --ahb_o.HREADY  <= '1';
+      when DESELECT_WAIT1 | DESELECT_WAIT2 =>
         clock_enable_s <= '0';
-
-      when DESELECT_WAIT2 =>
-        --ahb_o.HREADY  <= '1';
-        clock_enable_s <= '1';
-
       when RDDATA2 =>
         clock_enable_s <= '0';
       when RDDATA3 =>
@@ -147,7 +136,6 @@ begin
       when DESELECT =>
         clock_enable_s <= '0';
         ahb_o.HREADY  <= '1';
-
       when others   =>
 
     end case;
@@ -162,12 +150,14 @@ begin
       csn_r         <= '1';
       addr_r        <= (others => 'X');
       wr_r          <= 'X';
+      clock_enable_r<='0';
     elsif rising_edge(clk_i) then
       case state_r is
         when STARTUP =>
           if test_ready then
-          state_r     <= INIT1;
-          init_cnt_r  <= "111";
+            state_r     <= INIT1;
+            init_cnt_r  <= "111";
+            clock_enable_r <= '1';
           end if;
         when INIT1 =>
           data_out_r(0)  <= CMD_ENTERQUADMODE( to_integer(init_cnt_r) );
@@ -182,12 +172,13 @@ begin
             init_cnt_r  <= init_cnt_r - 1;
           end if;
         when INIT2 =>
-          state_r <= INIT3;
+          state_r         <= INIT3;
+          clock_enable_r  <='0';
         when INIT3  =>
-          state_r <= INIT4;
+          state_r         <= INIT4;
         when INIT4  =>
-          csn_r   <= '1';
-          state_r <= INIT5;
+          csn_r           <= '1';
+          state_r         <= INIT5;
 
         when INIT5 =>
           state_r <= IDLE;
@@ -195,14 +186,14 @@ begin
         when IDLE =>
           if ahb_i.HTRANS/=C_AHB_TRANS_IDLE then
             if ahb_i.HTRANS=C_AHB_TRANS_SEQ then
-              wr_r    <= ahb_i.HWRITE;
-              addr_r  <= ahb_i.HADDR(23 downto 0);
-              wrdata_r<= ahb_i.HWDATA(7 downto 0);
+              wr_r        <= ahb_i.HWRITE;
+              addr_r      <= ahb_i.HADDR(23 downto 0);
+              wrdata_r    <= ahb_i.HWDATA(7 downto 0);
   
-              state_r <= CHIPSELECT;
+              state_r     <= CHIPSELECT;
               bus_oe_s    <= "1111";
-              csn_r <= '0';
-
+              csn_r       <= '0';
+              clock_enable_r <= '1';
             end if;
             -- Todo raise HRESP error
           end if;
@@ -274,6 +265,7 @@ begin
         when RDDATA1 =>
           bus_oe_s    <= "0000";
           state_r <= RDDATA2;
+          clock_enable_r<='0';
         when RDDATA2 =>
           bus_oe_s    <= "0000";
           data_capture_r(3 downto 0) <= d_neg_r;
@@ -282,6 +274,7 @@ begin
           bus_oe_s    <= "0000";
           csn_r <= '1'; -- Looks like early deselect - is not.
           data_capture_r(7 downto 4) <= d_neg_r;
+          clock_enable_r <= '0';
           state_r <= DESELECT_WAIT1;
 
         when WRDATA1 =>
@@ -297,6 +290,7 @@ begin
           bus_oe_s    <= "1111";
           data_out_r(3 downto 0) <= (others => 'X');--wrdata_r(7 downto 4);
           state_r <= DESELECT_WAIT1;
+          clock_enable_r <= '0';
 
         when DESELECT_WAIT1 =>
           state_r <= DESELECT_WAIT2;
@@ -323,6 +317,18 @@ begin
   ahb_o.HRDATA(7 downto 0)  <= data_capture_r;
   ahb_o.HRDATA(31 downto 8)  <= (others => '0');
   ahb_o.HRESP   <= '0';
+
+-- synthesis translate_off
+  process(clk_i)
+  begin
+    if rising_edge(clk_i) then
+      if clock_enable_r/=clock_enable_s then
+        report "ERROR clock enable " & str(clock_enable_r) & " expected " & str(clock_enable_s);-- severity failure;
+      end if;
+    end if;
+  end process;
+-- synthesis translate_on
+
 
 end beh;
 
