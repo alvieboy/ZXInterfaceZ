@@ -51,6 +51,7 @@ struct usb_request
     uint16_t size_transferred;
     uint16_t epmemaddr;
     uint8_t epsize;
+    uint8_t retries;
     usb_setup_t setup; // For setup requests
     uint8_t control:1;
     uint8_t direction:1;

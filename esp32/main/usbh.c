@@ -325,13 +325,31 @@ void usbh__main_task(void *pvParam)
 
 
 static void usbh__request_completed(struct usb_request *req);
+static int usbh__send_ack(struct usb_request *req);
 
 
 static void usbh__request_failed(struct usb_request *req)
 {
-    //switch (req->device->state) {
-    //}
-    //    free(req);
+    // TODO: resubmit request
+
+    switch (req->control_state) {
+    case CONTROL_STATE_SETUP:
+    case CONTROL_STATE_DATA:
+        req->control_state = CONTROL_STATE_SETUP;
+        if (req->retries--) {
+            usbh__submit_request_to_ll(req);
+            return;
+        }
+        break;
+    case CONTROL_STATE_STATUS:
+        if (req->retries--) {
+            if (req->direction==REQ_DEVICE_TO_HOST) {
+                usbh__send_ack(req);
+                return;
+            }
+        }
+        break;
+    }
     struct usbresponse resp;
     resp.status = USB_REQUEST_COMPLETED_FAIL;
     resp.data = req;
@@ -454,6 +472,7 @@ static int usbh__control_request_completed_reply(uint8_t chan, uint8_t stat, str
             ESP_LOGI(TAG,"Requested size: %d\n", req->length);
             if (req->length) {
                 req->control_state = CONTROL_STATE_DATA;
+                req->retries = 3;
                 usbh__issue_setup_data_request(req);
 
 
@@ -497,6 +516,7 @@ static int usbh__control_request_completed_reply(uint8_t chan, uint8_t stat, str
                     ESP_LOGI(TAG, "Wait ACK");
                     return usbh__wait_ack(req);
                 } else {
+                    req->retries = 3;
                     ESP_LOGI(TAG, "Send ACK");
                     return usbh__send_ack(req);
                 }
@@ -512,7 +532,7 @@ static int usbh__control_request_completed_reply(uint8_t chan, uint8_t stat, str
 
 
     } else {
-        ESP_LOGE(TAG, "Request failed %02x",stat);
+        ESP_LOGE(TAG, "Request failed 0x%02x",stat);
         usbh__request_failed(req);
         return -1;
     }
@@ -543,6 +563,7 @@ void usbh__submit_request(struct usb_request *req)
 static void usbh__submit_request_to_ll(struct usb_request *req)
 {
     if (req->control) {
+        ESP_LOGI(TAG, "Submitting %p", req);
         usb_ll__submit_request(req->channel,
                                req->epmemaddr,
                                PID_SETUP, 0,
@@ -589,6 +610,7 @@ int usbh__get_descriptor(struct usb_device *dev,
     req.size_transferred = 0;
     req.direction = REQ_DEVICE_TO_HOST;
     req.control = 1;
+    req.retries = 3;
     req.channel = dev->ep0_chan;
     req.epsize = dev->ep0_size;
 

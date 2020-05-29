@@ -185,6 +185,8 @@ int usb_ll__submit_request(uint8_t channel, uint16_t epmemaddr,
 
     // Write epmem data
     if (data!=NULL) {
+        ESP_LOGI(TAG, "Copying data -> %04x", epmemaddr);
+        dump__buffer(data,datalen);
         fpga__write_usb_block(USB_REG_DATA(epmemaddr), data, datalen);
     }
     uint8_t retries = 3;
@@ -234,6 +236,7 @@ void usb_ll__set_power(int on)
     } else {
         fpga__write_usb(USB_REG_STATUS, 0);
     }
+    ESP_LOGI(TAG, "SET power: register contents %02x", fpga__read_usb(USB_REG_STATUS));
 }
 
 int usb_ll__init()
