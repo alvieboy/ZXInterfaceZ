@@ -48,6 +48,7 @@ ENTITY usb_trans IS
     udata_i     : in  std_logic_vector(7 downto 0);
     udata_o     : out std_logic_vector(7 downto 0);
 
+    dbg_rx_data_done_o: out std_logic;
 
     status_o    : out usb_transaction_status_type
   );
@@ -92,12 +93,12 @@ architecture beh of usb_trans is
     txcrc16     : std_logic_vector(15 downto 0);
     rxtimeout   : natural range 0 to C_RX_TIMEOUT-1;
     seq         : std_logic;
+    pd_resetn   : std_logic;
   end record;
 
-  signal r            : regs_type;
-  signal crc5_out_s   : std_logic_vector(4 downto 0);
-  signal pd_resetn_s  : std_logic;
-	signal	pid_OUT:    std_logic;
+  signal  r             : regs_type;
+  signal  crc5_out_s    : std_logic_vector(4 downto 0);
+	signal	pid_OUT       : std_logic;
   signal  pid_IN:     std_logic;
   signal  pid_SOF:    std_logic;
   signal  pid_SETUP:  std_logic;
@@ -145,7 +146,7 @@ begin
   pd: entity work.usb1_pd
   port map (
     clk       => usbclk_i,
-    rst       => pd_resetn_s,
+    rst       => r.pd_resetn,
     rx_data   => phy_rxdata_i,
     rx_valid  => Phy_RxValid_i,
     rx_active => Phy_RxActive_i,
@@ -203,7 +204,8 @@ begin
 
   process(usbclk_i, r, pid_i, daddr_i, dsize_i,data_seq_i,strobe_i,frame_i, addr_i, ep_i,
     phy_txactive_i, phy_txready_i, phy_rxactive_i, crc5_out_s, udata_i, crc16_out_s, rx_data_valid,
-    rx_data_done,pid_ACK,pid_NACK, ausbrst_i, speed_i, fs_ce_i,crc16_err,seq_err,pid_STALL)
+    rx_data_done,pid_ACK,pid_NACK, ausbrst_i, speed_i, fs_ce_i,crc16_err,seq_err,pid_STALL,
+    itg_zero_s)
     variable w: regs_type;
   begin
     w := r;
@@ -212,9 +214,10 @@ begin
     phy_data_valid_o  <= '0';
     urd_o             <= '0';
     uwr_o             <= '0';
-    pd_resetn_s       <= '1';
     status_o          <= BUSY;
     crc16_in_s        <= (others => 'X');
+
+    w.pd_resetn       := '1'; -- Default out of reset
 
     case r.state is
       when IDLE =>
@@ -267,7 +270,7 @@ begin
         --  w.state := BABBLE;
         --end if;
 
-        pd_resetn_s       <= '0'; -- Reset packet decoder
+        w.pd_resetn       := '0'; -- Reset packet decoder
 
       when TOKEN1 =>
         status_o          <= BUSY;
@@ -502,7 +505,7 @@ begin
         status_o          <= BUSY;
 
         if itg_zero_s then
-          status_o          <= ACK;
+          status_o          <= CRCERROR;
           w.state   := IDLE;
         end if;
 
@@ -529,7 +532,7 @@ begin
     if ausbrst_i='1' then --or usb_rst_i='1' then
       r.state       <= IDLE;
       r.token_data  <= (others => 'X');
-      pd_resetn_s   <= '0';
+      r.pd_resetn   <= '0';
     elsif rising_edge(usbclk_i) then
       r <= w;
     end if;
@@ -567,6 +570,7 @@ begin
     end if;
   end process;
 
+  dbg_rx_data_done_o <= rx_data_done;
 
 end beh;
 

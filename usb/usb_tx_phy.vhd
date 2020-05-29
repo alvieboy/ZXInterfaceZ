@@ -410,9 +410,9 @@ begin
 
   p_next_state: process (rst, state, TxValid_i, data_done, sft_done_e, eop_done, fs_ce, DataOut_i, XcvrSelect_i)
   begin
-    if rst='0' then
-      next_state <= IDLE_STATE;
-    else
+    --if rst='0' then
+    --  next_state <= IDLE_STATE;
+    --else
       case (state) is
         when IDLE_STATE =>
           if TxValid_i ='1' and (XcvrSelect_i='1' or DataOut_i/=x"A5") then
@@ -449,7 +449,7 @@ begin
                            end if;
         when others     => next_state <= IDLE_STATE;
       end case;
-    end if;
+    --end if;
   end process;
 
   ld_sop_d  <= TxValid_i  when state = IDLE_STATE else '0';

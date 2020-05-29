@@ -162,6 +162,7 @@ begin
   p_rxd_s: process (clk) -- Avoid detecting Line Glitches and noise
   begin
     if rising_edge(clk) then
+      if clk_en='1' then
         rxd_s0 <= rxd;
         rxd_s1 <= rxd_s0;
         if rxd_s0 ='1' and rxd_s1 ='1' then
@@ -169,26 +170,31 @@ begin
         elsif not rxd_s0 ='1' and not rxd_s1 ='1' then
           rxd_s <= '0';
         end if;
+      end if;
     end if;
   end process;
 
   p_rxdp_s: process (clk)
   begin
     if rising_edge(clk) then
+      if clk_en='1' then
       rxdp_s0  <= rxdp;
       rxdp_s1  <= rxdp_s0;
       rxdp_s_r <= rxdp_s0 and rxdp_s1;
       rxdp_s   <= (rxdp_s0 and rxdp_s1) or rxdp_s_r;
+      end if;
     end if;
   end process;
 
   p_rxdn_s: process (clk)
   begin
     if rising_edge(clk) then
+      if clk_en='1' then
       rxdn_s0  <= rxdn;
       rxdn_s1  <= rxdn_s0;
       rxdn_s_r <= rxdn_s0 and rxdn_s1;
       rxdn_s   <= (rxdn_s0 and rxdn_s1) or rxdn_s_r;
+      end if;
     end if;
   end process;
 

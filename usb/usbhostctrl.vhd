@@ -70,7 +70,8 @@ ENTITY usbhostctrl IS
     vp_i        : in  std_logic;
     vm_i        : in  std_logic;
     pwren_o     : out std_logic;
-    pwrflt_i    : in std_logic
+    pwrflt_i    : in std_logic;
+    dbg_o       : out std_logic_vector(7 downto 0)
   );
 END entity usbhostctrl;
 
@@ -96,6 +97,7 @@ ARCHITECTURE rtl OF usbhostctrl is
   signal rst_event      : std_logic;
   signal noe_s          : std_logic;
 
+  signal dbg_rx_data_done_s : std_logic;
 
   constant C_SOF_TIMEOUT: natural   := altsim(48000, 4800); -- 1ms synth, 100us simulation
   constant C_ATTACH_DELAY: natural  := altsim(480000, 4);-- 48000; -- 10 ms
@@ -110,27 +112,13 @@ ARCHITECTURE rtl OF usbhostctrl is
     IDLE,
     RESET1,
     RESET2,
-    SUSPEND,
-    RESUME,
+    --SUSPEND,
+    --RESUME,
     WAIT_SOF,
     IN1,
     OUT1,
-    IN2,
-    IN3,
     SOF1,
-    SOF2,
-    SOF3,
-    CRC1,
-    CRC2,
-    ITG,
-    SETUP1,
-    SETUP2,
-    SETUP3,
-    DATA1,
-    DATA2,
-    INVALIDDATA,
-    WAIT_DATA,
-    CHECKCRC
+    SETUP1
   );
 
   type status_reg_type is record
@@ -184,10 +172,9 @@ ARCHITECTURE rtl OF usbhostctrl is
 
   type channel_interrupt_conf_reg_type is record
     datatogglerror  : std_logic;
-    frameoverrun    : std_logic;
+    crcerror    : std_logic;
     babble          : std_logic;
-    transerror      : std_logic; -- CRC check failure
-                                 -- Timeout
+    transerror      : std_logic; -- Timeout
                                  -- Bit stuff error
                                  -- False EOP
     ack             : std_logic;
@@ -222,11 +209,7 @@ ARCHITECTURE rtl OF usbhostctrl is
   end record;
 
   signal r                    : regs_type;
-  signal frame_crc5_s         : std_logic_vector(4 downto 0);
-
-  signal crc16_in_s           : std_logic_vector(7 downto 0);
-  signal crc16_out_s          : std_logic_vector(15 downto 0);
-  --signal rxcrc16_out_s        : std_logic_vector(15 downto 0);
+  --signal frame_crc5_s         : std_logic_vector(4 downto 0);
 
   signal statusreg_s          : std_logic_vector(7 downto 0);
   --signal intconfreg_s         : std_logic_vector(7 downto 0);
@@ -275,7 +258,7 @@ ARCHITECTURE rtl OF usbhostctrl is
 
   signal phy_txactive_s     : std_logic;
   signal fs_ce_s            : std_logic;
-
+	signal dbg_fs_ce_r		: std_logic;
 BEGIN
 
   rstinv      <= not ausbrst_i;
@@ -358,7 +341,7 @@ BEGIN
     chint: for i in 0 to C_NUM_CHANNELS-1 loop
       interrupt_v(i) := '0';
       if  r.ch(i).intpend.datatogglerror = '1' or
-          r.ch(i).intpend.frameoverrun   = '1' or
+          r.ch(i).intpend.crcerror   = '1' or
           r.ch(i).intpend.babble         = '1' or
           r.ch(i).intpend.transerror     = '1' or
           r.ch(i).intpend.ack            = '1' or
@@ -417,7 +400,7 @@ BEGIN
               w.ch(wch).conf.address   := write_data_s(6 downto 0);
             when "0011" => -- Interrupt configuration
               w.ch(wch).intconf.datatogglerror  := write_data_s(7);
-              w.ch(wch).intconf.frameoverrun    := write_data_s(6);
+              w.ch(wch).intconf.crcerror    := write_data_s(6);
               w.ch(wch).intconf.babble          := write_data_s(5);
               w.ch(wch).intconf.transerror      := write_data_s(4);
               w.ch(wch).intconf.ack             := write_data_s(3);
@@ -426,7 +409,7 @@ BEGIN
               w.ch(wch).intconf.cplt            := write_data_s(0);
             when "0100" => -- Interrupt clear
               if write_data_s(7)='1' then w.ch(wch).intpend.datatogglerror  := '0'; end if;
-              if write_data_s(6)='1' then w.ch(wch).intpend.frameoverrun    := '0'; end if;
+              if write_data_s(6)='1' then w.ch(wch).intpend.crcerror    := '0'; end if;
               if write_data_s(5)='1' then w.ch(wch).intpend.babble          := '0'; end if;
               if write_data_s(4)='1' then w.ch(wch).intpend.transerror      := '0'; end if;
               if write_data_s(3)='1' then w.ch(wch).intpend.ack             := '0'; end if;
@@ -500,7 +483,7 @@ BEGIN
           read_data_s(6 downto 0) <= r.ch(wch).conf.address;
         when "0011" => -- Interrupt configuration
           read_data_s(7)          <= r.ch(wch).intconf.datatogglerror;
-          read_data_s(6)          <= r.ch(wch).intconf.frameoverrun;
+          read_data_s(6)          <= r.ch(wch).intconf.crcerror;
           read_data_s(5)          <= r.ch(wch).intconf.babble;
           read_data_s(4)          <= r.ch(wch).intconf.transerror;
           read_data_s(3)          <= r.ch(wch).intconf.ack;
@@ -509,7 +492,7 @@ BEGIN
           read_data_s(0)          <= r.ch(wch).intconf.cplt;
         when "0100" => -- Interrupt read
           read_data_s(7)          <= r.ch(wch).intpend.datatogglerror;
-          read_data_s(6)          <= r.ch(wch).intpend.frameoverrun;
+          read_data_s(6)          <= r.ch(wch).intpend.crcerror;
           read_data_s(5)          <= r.ch(wch).intpend.babble;
           read_data_s(4)          <= r.ch(wch).intpend.transerror;
           read_data_s(3)          <= r.ch(wch).intpend.ack;
@@ -540,6 +523,7 @@ BEGIN
     case r.host_state is
       when DETACHED =>
         if Phy_Linestate="01" or Phy_Linestate="10" then
+          if r.sr.poweron='1' then
           if r.attach_count=0 then
             w.sr.fulllowspeed   := Phy_Linestate(0); -- Set speed according to USB+ pullup
             w.speed := Phy_Linestate(0); -- Set speed according to USB+ pullup
@@ -552,6 +536,7 @@ BEGIN
             w.sof_count         := C_SOF_TIMEOUT - 1;
           else
             w.attach_count      := r.attach_count - 1;
+          end if;
           end if;
         else
           w.attach_count        := C_ATTACH_DELAY - 1;
@@ -626,6 +611,10 @@ BEGIN
           end if;
         end if;
 
+        if r.sr.poweron='0' then
+          w.host_state := DETACHED;
+        end if;
+
       when WAIT_SOF =>
         if r.sof_count=0 then
           w.host_state := SOF1;
@@ -633,6 +622,10 @@ BEGIN
         if r.sr.reset='1' then
           w.host_state := RESET1;
           w.reset_delay := C_RESET_DELAY -1;
+        end if;
+
+        if r.sr.poweron='0' then
+          w.host_state := DETACHED;
         end if;
         --if usb_rst_phy='1' then
           -- Disconnected???
@@ -737,12 +730,13 @@ BEGIN
           when IDLE | BUSY =>
 
           when TIMEOUT | CRCERROR =>
-            --w.ch(r.channel).intpend.stall := '1';
-            --w.ch(r.channel).trans.cnt   := '0';
-
             -- Retry
             if r.ch(r.channel).trans.retries="00" then
-              w.ch(r.channel).intpend.transerror := '1';
+              if trans_status_s=TIMEOUT then
+                w.ch(r.channel).intpend.transerror  := '1';
+              else
+                w.ch(r.channel).intpend.crcerror    := '1';
+              end if;
               w.ch(r.channel).trans.cnt   := '0';
             else
               w.ch(r.channel).trans.retries := r.ch(r.channel).trans.retries - 1;
@@ -803,6 +797,16 @@ BEGIN
             w.ch(r.channel).trans.cnt   := '0';
             w.host_state := IDLE;
           when IDLE | BUSY =>
+
+          when TIMEOUT =>
+            w.ch(r.channel).trans.cnt   := '0';
+            w.ch(r.channel).intpend.transerror := '1';
+            w.host_state := IDLE;
+
+          when CRCERROR =>
+            w.ch(r.channel).trans.cnt   := '0';
+            w.ch(r.channel).intpend.crcerror := '1';
+            w.host_state := IDLE;
 
           when others =>
                       -- synthesis translate_off
@@ -1009,6 +1013,7 @@ BEGIN
     udata_i           => epmem_data_out_s,
     udata_o           => epmem_data_in_s,
 
+    dbg_rx_data_done_o => dbg_rx_data_done_s,
     status_o          => trans_status_s
   );
 
@@ -1023,6 +1028,31 @@ BEGIN
   int_async_o <= int_s;
   pwren_o     <= not r.sr.poweron;
   dat_o <= hep_dat_s when addr_i(10)='1' else read_data_sync_s;
+
+  process(usbclk_i,ausbrst_i)
+  begin
+    if ausbrst_i='1' then
+      dbg_o <= (others => '0');
+    elsif rising_edge(usbclk_i) then
+        dbg_o(0) <= Phy_RxActive;
+        dbg_o(1) <= Phy_TxActive_s;
+        dbg_o(2) <= Phy_RxError;
+        dbg_o(3) <= dbg_rx_data_done_s;--Phy_Linestate(0);
+        dbg_o(4) <= Phy_Linestate(1);
+
+        case r.host_state is
+            when DETACHED | ATTACHED  => dbg_o(7 downto 5) <= "000";
+            when IDLE                 => dbg_o(7 downto 5) <= "001";
+            when RESET1 | RESET2      => dbg_o(7 downto 5) <= "010";
+            when WAIT_SOF             => dbg_o(7 downto 5) <= "011";
+            when IN1                  => dbg_o(7 downto 5) <= "100";
+            when OUT1                 => dbg_o(7 downto 5) <= "101";
+            when SOF1                 => dbg_o(7 downto 5) <= "110";
+            when SETUP1               => dbg_o(7 downto 5) <= "111";
+        end case; 
+
+    end if;
+  end process;
 
 END rtl;
 

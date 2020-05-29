@@ -86,6 +86,10 @@ architecture RTL of usb_phy is
   constant C_RESET_CNT  : natural := 120;
   signal rst_cnt        : natural range 0 to C_RESET_CNT-1;
 
+  signal rxdp_filtered_s: std_logic;
+  signal rxdn_filtered_s: std_logic;
+  signal rxd_filtered_s : std_logic;
+
 begin
 
   clk_en <= '1' when div8q="000" or XcvrSelect_i='1' else '0';
@@ -132,6 +136,22 @@ begin
     TxReady_o  => TxReady_o
   );
 
+  filt: entity work.usb_filter
+    generic map (
+      WIDTH => 8
+    )
+    port map (
+      clk_i   => clk,
+      speed_i => XcvrSelect_i,
+      dp_i    => rxdp,
+      dm_i    => rxdn,
+      d_i     => rxd,
+  
+      dp_o    => rxdp_filtered_s,
+      dm_o    => rxdn_filtered_s,
+      d_o     => rxd_filtered_s
+    );
+
 --======================================================================================--
   -- RX Phy and DPLL                                                                    --
 --======================================================================================--
@@ -147,9 +167,9 @@ begin
     fs_ce_o    => fs_ce,
     eop_o     => eop_o,
     -- Transciever Interface
-    rxd        => rxd,
-    rxdp       => rxdp,
-    rxdn       => rxdn,
+    rxd        => rxd_filtered_s,
+    rxdp       => rxdp_filtered_s,
+    rxdn       => rxdn_filtered_s,
     -- UTMI Interface
     XcvrSelect_i => XcvrSelect_i,
     DataIn_o   => DataIn_o,

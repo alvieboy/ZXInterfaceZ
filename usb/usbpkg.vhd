@@ -15,6 +15,7 @@ package usbpkg is
     COMPLETED
   );
 
+
   function reverse(value: in std_logic_vector) return std_logic_vector;
 
   -- PID Encodings
