@@ -1,0 +1,18 @@
+--- pasmo-0.6.0.20070113.0/module.cpp	2006-10-10 23:35:22.000000000 +0200
++++ pasmo-0.6.0.20070113.0-fix/module.cpp	2020-05-27 22:01:41.567789662 +0200
+@@ -7,6 +7,7 @@
+ #include "trace.h"
+ 
+ 
++#include <algorithm>
+ #include <fstream>
+ #include <stdexcept>
+ 
+@@ -16,6 +17,7 @@
+ using std::logic_error;
+ using std::pair;
+ using std::make_pair;
++using std::for_each;
+ 
+ 
+ namespace pasmo {
