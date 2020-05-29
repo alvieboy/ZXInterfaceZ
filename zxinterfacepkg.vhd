@@ -21,6 +21,8 @@ package zxinterfacepkg is
   constant FPGAID2: std_logic_vector(7 downto 0) := x"03";
   --constant FPGAID3: std_logic_vector(7 downto 0) := x"00";
 
+  constant C_ENABLE_VGA: boolean := true;
+
 end package;
 
 --package body zxinterfacepkg is

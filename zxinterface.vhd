@@ -49,7 +49,8 @@ entity zxinterface is
     SPI_MOSI_i    : in std_logic;
     -- Debug
     TP5           : out std_logic;
-    --TP6           : out std_logic;
+    TP4           : out std_logic;
+    dbg_o         : out std_logic_vector(7 downto 0);
     --
 
     -- USB PHY
@@ -994,7 +995,8 @@ begin
     vp_i          => USB_VP_i,
     vm_i          => USB_VM_i,
     pwren_o       => USB_PWREN_o,
-    pwrflt_i      => USB_FLT_i
+    pwrflt_i      => USB_FLT_i,
+    dbg_o         => dbg_o
   );
 
   mosi_s          <= SPI_MOSI_i;

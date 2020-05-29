@@ -1,5 +1,7 @@
 library IEEE;
 use IEEE.STD_LOGIC_1164.all;
+library work;
+use work.zxinterfacepkg.all;
 
 entity interfacez_top is
   port (
@@ -111,6 +113,7 @@ architecture str of interfacez_top is
   signal RAMD_oe_s    : std_logic_vector(7 downto 0);
   signal RAMCLK_s   : std_logic;
   signal RAMNCS_s   : std_logic;
+  signal dbg_s      : std_logic_vector(7 downto 0);
 begin
 
   rstgen_inst: entity work.rstgen
@@ -188,6 +191,8 @@ begin
       USB_INTN_o    => ESP_QWP_io, -- TODO: Rename
       -- Debug
       TP5           => TP5_o,
+      TP4           => TP4_o,
+      dbg_o         => dbg_s,
       -- Interrupts
 
       spec_int_o    => ESP_IO26_o,
@@ -201,17 +206,24 @@ begin
 
   FORCE_ROMCS_o <= FORCE_ROMCS_s;
 
-  EXT_o(0) <= hsync_s;
-  EXT_o(1) <= vsync_s;
-  EXT_o(2) <= grb_s(1); -- Red 1
-  EXT_o(3) <= bright_s and grb_s(1); -- Red 0
+  extconn_vga: if C_ENABLE_VGA generate
 
-  EXT_o(4) <= grb_s(2); -- Green 1
-  EXT_o(5) <= bright_s and grb_s(2); -- Green 0
+    EXT_o(0) <= hsync_s;
+    EXT_o(1) <= vsync_s;
+    EXT_o(2) <= grb_s(1); -- Red 1
+    EXT_o(3) <= bright_s and grb_s(1); -- Red 0
+  
+    EXT_o(4) <= grb_s(2); -- Green 1
+    EXT_o(5) <= bright_s and grb_s(2); -- Green 0
+  
+    EXT_o(6) <= grb_s(0); -- Blue 1
+    EXT_o(7) <= bright_s and grb_s(0); -- Blue 0
 
-  EXT_o(6) <= grb_s(0); -- Blue 1
-  EXT_o(7) <= bright_s and grb_s(0); -- Blue 0
+  end generate;
 
+  extconn_dbg: if not C_ENABLE_VGA generate
+    EXT_o     <= dbg_s;
+  end generate;
 
   FORCE_ROMCS_o   <= FORCE_ROMCS_s;
   FORCE_NMI_o     <= FORCE_NMI_s;
