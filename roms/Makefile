@@ -1,8 +1,5 @@
 all: snaloader.rom INTZ.ROM loadscr.rom
 
-48.ROM: zx-spectrum-rom.asm
-	pasmo -d $+ $@ > $@.out
-	
 snaloader.rom: snaloader-rom.asm
 	pasmo -d $+ $@ > $@.out
 	xxd -i $@ > snaloader_rom.c
