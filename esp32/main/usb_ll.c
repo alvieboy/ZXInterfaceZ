@@ -12,6 +12,14 @@
 #include "byteorder.h"
 #include <string.h>
 
+#undef ENABLE_DEBUG_USBLL
+
+#ifdef ENABLE_DEBUG_USBLL
+# define USBLL_LOGI(x...) ESP_LOGI("usb_ll",x)
+#else
+# define USBLL_LOGI(x...)
+#endif
+
 struct chconf
 {
     int (*completion)(uint8_t channel, uint8_t status, void *userdata);
@@ -58,7 +66,7 @@ int usb_ll__alloc_channel(uint8_t devaddr,
     buf[2] = 0x80 | (devaddr & 0x7F);
     buf[3] = 0xFF;
     buf[4] = 0xFF;
-    ESP_LOGI(TAG, "Alloc channel (%d): ", chnum);
+    USBLL_LOGI(TAG, "Alloc channel (%d): ", chnum);
     dump__buffer(buf, 5);
     fpga__write_usb_block(USB_REG_CHAN_CONF1(chnum), buf, 5);
 
@@ -88,7 +96,7 @@ static void usb_ll__channel_interrupt(uint8_t channel)
 
     if (intpend<0)
         return;
-#ifdef USB_LL_DEBUG
+#ifdef ENABLE_DEBUG_USBLL
     {
         char t[64];
         t[0] = '\0';
@@ -117,7 +125,7 @@ static void usb_ll__channel_interrupt(uint8_t channel)
             strcat(t," CPL");
         }
 
-        ESP_LOGI(TAG, "Channel %d intpend %02x [%s]", channel, intpend, t);
+        USBLL_LOGI(TAG, "Channel %d intpend %02x [%s]", channel, intpend, t);
     }
 #endif
     uint8_t clr = intpend;
@@ -132,17 +140,13 @@ static void usb_ll__channel_interrupt(uint8_t channel)
 void usb_ll__interrupt()
 {
     uint8_t regs[4];
-#ifdef USB_LL_DEBUG
-    ESP_LOGI(TAG, "USB interrupt");
-#endif
+    USBLL_LOGI(TAG, "USB interrupt");
     if (usb_ll__read_status(regs)==0) {
-#ifdef USB_LL_DEBUG
-        ESP_LOGI(TAG," Status regs %02x %02x %02x %02x",
+        USBLL_LOGI(TAG," Status regs %02x %02x %02x %02x",
                  regs[0],
                  regs[1],
                  regs[2],
                  regs[3]);
-#endif
     }
 
     if (regs[1] & USB_INTPEND_CONN) {
@@ -150,16 +154,12 @@ void usb_ll__interrupt()
     }
 
     if (regs[1] & USB_INTPEND_DISC) {
-#ifdef USB_LL_DEBUG
-        ESP_LOGI(TAG,"USB disconnection event");
-#endif
+        USBLL_LOGI(TAG,"USB disconnection event");
         usb_ll__disconnected_callback();
     }
 
     if (regs[1] & USB_INTPEND_OVERCURRENT) {
-#ifdef USB_LL_DEBUG
-        ESP_LOGI(TAG,"USB overcurrent event");
-#endif
+        USBLL_LOGI(TAG,"USB overcurrent event");
         usb_ll__overcurrent_callback();
     }
 
@@ -184,8 +184,8 @@ int usb_ll__submit_request(uint8_t channel, uint16_t epmemaddr,
     uint8_t regconf[3];
 
     // Write epmem data
-    if (data!=NULL) {
-        ESP_LOGI(TAG, "Copying data -> %04x", epmemaddr);
+    if ((pid != PID_IN) && (data!=NULL)) {
+        USBLL_LOGI(TAG, "Copying data -> %04x", epmemaddr);
         dump__buffer(data,datalen);
         fpga__write_usb_block(USB_REG_DATA(epmemaddr), data, datalen);
     }
@@ -220,9 +220,9 @@ int usb_ll__read_in_block(uint8_t channel, uint8_t *target, uint8_t *rxlen)
             trans_size=64;
         }
         inlen = trans_size;
-        ESP_LOGI(TAG, "Reading IN block from %04x", channel_conf[channel].memaddr);
+        USBLL_LOGI(TAG, "Reading IN block from %04x", channel_conf[channel].memaddr);
         fpga__read_usb_block(USB_REG_DATA( channel_conf[channel].memaddr ), target, inlen);
-        ESP_LOGI(TAG,"Response from device:");
+        USBLL_LOGI(TAG,"Response from device:");
         dump__buffer(target,inlen);
     }
     *rxlen = inlen;
@@ -236,12 +236,12 @@ void usb_ll__set_power(int on)
     } else {
         fpga__write_usb(USB_REG_STATUS, 0);
     }
-    ESP_LOGI(TAG, "SET power: register contents %02x", fpga__read_usb(USB_REG_STATUS));
+    USBLL_LOGI(TAG, "SET power: register contents %02x", fpga__read_usb(USB_REG_STATUS));
 }
 
 int usb_ll__init()
 {
-    ESP_LOGI(TAG, "USB: Low level init");
+    USBLL_LOGI(TAG, "USB: Low level init");
     // Power off, enable interrupts
     uint8_t regval[4] = {
         0x00,//(USB_STATUS_PWRON),

@@ -53,6 +53,7 @@ struct usb_request
     uint8_t epsize;
     uint8_t retries;
     usb_setup_t setup; // For setup requests
+    uint8_t seq:1;
     uint8_t control:1;
     uint8_t direction:1;
     uint8_t control_state:2;

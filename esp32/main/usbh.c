@@ -379,7 +379,7 @@ static int usbh__send_ack(struct usb_request *req)
     return usb_ll__submit_request(req->channel,
                                   req->epmemaddr,
                                   PID_OUT,
-                                  1,      // TODO: Check seq.
+                                  req->seq,      // TODO: Check seq.
                                   NULL,
                                   0,
                                   usbh__request_completed_reply,
@@ -391,7 +391,7 @@ static int usbh__wait_ack(struct usb_request *req)
     return usb_ll__submit_request(req->channel,
                                   req->epmemaddr,
                                   PID_IN,
-                                  1,      // TODO: Check seq.
+                                  req->seq,      // TODO: Check seq.
                                   NULL,
                                   0,
                                   usbh__request_completed_reply,
@@ -408,7 +408,7 @@ static int usbh__issue_setup_data_request(struct usb_request *req)
         return usb_ll__submit_request(req->channel,
                                       req->epmemaddr,
                                       PID_IN,
-                                      1, // TODO
+                                      req->seq,
                                       req->rptr,
                                       remain,
                                       usbh__request_completed_reply,
@@ -418,7 +418,7 @@ static int usbh__issue_setup_data_request(struct usb_request *req)
         return usb_ll__submit_request(req->channel,
                                       req->epmemaddr,
                                       PID_OUT,
-                                      1, // TODO
+                                      req->seq,
                                       req->rptr,
                                       remain,
                                       usbh__request_completed_reply,
@@ -566,7 +566,8 @@ static void usbh__submit_request_to_ll(struct usb_request *req)
         ESP_LOGI(TAG, "Submitting %p", req);
         usb_ll__submit_request(req->channel,
                                req->epmemaddr,
-                               PID_SETUP, 0,
+                               PID_SETUP,
+                               0,
                                req->setup.data,
                                sizeof(req->setup),
                                usbh__request_completed_reply,
@@ -575,7 +576,8 @@ static void usbh__submit_request_to_ll(struct usb_request *req)
         if (req->direction==REQ_DEVICE_TO_HOST) {
             usb_ll__submit_request(req->channel,
                                    req->epmemaddr,
-                                   PID_IN, 0,
+                                   PID_IN,
+                                   req->seq,
                                    req->target,
                                    req->length > 64 ? 64: req->length,
                                    usbh__request_completed_reply,
@@ -584,7 +586,8 @@ static void usbh__submit_request_to_ll(struct usb_request *req)
             if (req->length) {
                 usb_ll__submit_request(req->channel,
                                        req->epmemaddr,
-                                       PID_OUT, 0,
+                                       PID_OUT,
+                                       req->seq,
                                        req->target,
                                        req->length > 64 ? 64: req->length,
                                        usbh__request_completed_reply,
