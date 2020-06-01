@@ -255,7 +255,7 @@ ARCHITECTURE rtl OF usbhostctrl is
   signal trans_pid_s        : std_logic_vector(3 downto 0);
   signal trans_strobe_s     : std_logic;
   signal trans_data_seq_s   : std_logic;
-
+  signal trans_seq_valid_s  : std_logic;
   signal phy_txactive_s     : std_logic;
   signal fs_ce_s            : std_logic;
 	signal dbg_fs_ce_r		: std_logic;
@@ -710,6 +710,9 @@ BEGIN
           when COMPLETED =>
             w.ch(r.channel).trans.cnt    := '0';
             w.ch(r.channel).intpend.cplt := '1';
+            if trans_seq_valid_s='0' then
+              w.ch(r.channel).intpend.datatogglerror := '1';
+            end if;
             --w.ch(r.channel).intpend.ack  := '1';
 
             -- TODO: check data sequence!!!
@@ -995,6 +998,7 @@ BEGIN
 
     strobe_i          => trans_strobe_s,
     data_seq_i        => trans_data_seq_s,
+    data_seq_valid_o  => trans_seq_valid_s,
 
     phy_txready_i     => Phy_TxReady,
     phy_txactive_i    => phy_txactive_s, -- from OE

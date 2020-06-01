@@ -30,6 +30,7 @@ ENTITY usb_trans IS
     daddr_i     : in std_logic_vector(9 downto 0); -- EPmem address
     strobe_i    : in std_logic;
     data_seq_i  : in std_logic;
+    data_seq_valid_o : out std_logic;
 
     phy_txready_i     : in std_logic;
     phy_txactive_i    : in std_logic;
@@ -93,6 +94,7 @@ architecture beh of usb_trans is
     txcrc16     : std_logic_vector(15 downto 0);
     rxtimeout   : natural range 0 to C_RX_TIMEOUT-1;
     seq         : std_logic;
+    seq_valid    : std_logic;
     pd_resetn   : std_logic;
   end record;
 
@@ -425,6 +427,15 @@ begin
             -- synthesis translate_on
             w.state := CRCERROR;
           else
+            -- Check data sequence validity
+            if pid_DATA0='1' and data_seq_i='0' then
+              w.seq_valid := '1';
+            elsif pid_DATA1='1' and data_seq_i='1' then
+              w.seq_valid := '1';
+            else
+              w.seq_valid := '0';
+            end if;
+
             w.state := SEND_ACK;
           end if;
         end if;
@@ -533,6 +544,7 @@ begin
       r.state       <= IDLE;
       r.token_data  <= (others => 'X');
       r.pd_resetn   <= '0';
+      r.seq_valid   <= '0';
     elsif rising_edge(usbclk_i) then
       r <= w;
     end if;
@@ -571,6 +583,7 @@ begin
   end process;
 
   dbg_rx_data_done_o <= rx_data_done;
+  data_seq_valid_o <= r.seq_valid;
 
 end beh;
 
