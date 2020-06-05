@@ -20,7 +20,8 @@
 #define INTERFACE_PROTOCOL_MOUSE 0x02
 
 struct usb_mouse {
-    uint8_t epchan;
+    uint8_t epchan:7;
+    uint8_t seq:1;
     struct usb_device *dev;
     struct usb_interface *intf;
     uint8_t payload[0];
@@ -31,7 +32,7 @@ static int usb_mouse__submit_in(struct usb_mouse *m);
 static int usb_mouse__transfer_completed(uint8_t channel, uint8_t status, void*userdata)
 {
     struct usb_mouse *m = (struct usb_mouse*)userdata;
-    uint8_t rxlen;
+    uint8_t rxlen = 8;
 
     if (status&0x01) {
         ESP_LOGI(TAG, "usb_mouse: got data stat %d", status);
@@ -50,6 +51,7 @@ static int usb_mouse__transfer_completed(uint8_t channel, uint8_t status, void*u
 	input_report_rel(dev, REL_Y,     data[2]);
         input_report_rel(dev, REL_WHEEL, data[3]);
 #endif
+        m->seq = !m->seq;
     } else {
         ESP_LOGI(TAG, "usb_mouse: error %d, resubmitting", status);
     }
@@ -64,7 +66,7 @@ static int usb_mouse__submit_in(struct usb_mouse *m)
     return usb_ll__submit_request(m->epchan,
                                   0x0080, // TBD
                                   PID_IN,
-                                  1,      // TODO: Check seq.
+                                  m->seq,      // TODO: Check seq.
                                   &m->payload[0],
                                   8, // Report descriptor size!!!
                                   usb_mouse__transfer_completed,
@@ -107,6 +109,7 @@ static int usb_mouse__probe(struct usb_device *dev, struct usb_interface *i)
 
     m->dev = dev;
     m->intf = i;
+    m->seq = 0;
 
     do {
         ep = (usb_endpoint_descriptor_t*)usb__find_descriptor( intf, intf_len, USB_DESC_TYPE_ENDPOINT, index);

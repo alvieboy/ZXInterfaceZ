@@ -210,3 +210,38 @@ int spi__transceive_cmd8_addr32(spi_device_handle_t spi,
     xSemaphoreGive(spi_sem);
     return ret;
 }
+
+int spi__transmit_cmd8_addr16(spi_device_handle_t spi,
+                              uint8_t cmd,
+                              uint16_t addr,
+                              const uint8_t *buffer,
+                              unsigned len)
+{
+    spi_transaction_ext_t ext;
+
+    if (len==0)
+        return 0;             //no need to send anything
+
+    memset(&ext, 0, sizeof(ext));       //Zero out the transaction
+
+    ext.base.length   = len*8;                 //Len is in bytes, transaction length is in bits.
+    ext.base.rxlength = 0;
+    ext.base.tx_buffer = buffer;               //Data
+    ext.base.rx_buffer = NULL;
+    ext.base.flags = SPI_TRANS_VARIABLE_CMD | SPI_TRANS_VARIABLE_ADDR;
+    ext.command_bits = 8;
+    ext.address_bits = 16;
+    ext.base.cmd = (uint16_t)cmd;
+    ext.base.addr = addr;
+
+
+    if (xSemaphoreTake( spi_sem,  portMAX_DELAY )!= pdTRUE) {
+        ESP_LOGE(TAG, "Cannot take semaphore");
+        return -1;
+    }
+    int ret = spi_device_polling_transmit(spi, &ext.base);  //Transmit!
+
+
+    xSemaphoreGive(spi_sem);
+    return ret;
+}

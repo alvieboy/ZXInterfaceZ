@@ -10,6 +10,7 @@
 #include "gpio.h"
 #include "esp_partition.h"
 #include "esp_spi_flash.h"
+#include <alloca.h>
 
 static spi_device_handle_t spi0_fpga;
 static fpga_flags_t latched_flags = 0;
@@ -583,13 +584,13 @@ int fpga__write_usb(uint16_t address, uint8_t val)
     return fpga__write_usb_block(address, &v, 1);
 }
 
-int fpga__write_usb_block(uint16_t address, uint8_t *buffer, int size)
+int fpga__write_usb_block(uint16_t address, const uint8_t *buffer, int size)
 {
-    int r = spi__transceive_cmd8_addr16(spi0_fpga,
-                                        0x61,
-                                        address,
-                                        buffer,
-                                        size);
+    int r = spi__transmit_cmd8_addr16(spi0_fpga,
+                                      0x61,
+                                      address,
+                                      buffer,
+                                      size);
     return r;
 }
 

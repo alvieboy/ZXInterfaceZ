@@ -35,10 +35,13 @@ static uint8_t usb_address = 0;
 #define USB_REQUEST_COMPLETED_FAIL 3
 
 
+
+
 static void usbh__submit_request_to_ll(struct usb_request *req);
 static int usbh__assign_address(struct usb_device *dev);
 static int usbh__control_request_completed_reply(uint8_t chan, uint8_t stat, struct usb_request *req);
 static int usbh__request_completed_reply(uint8_t chan, uint8_t stat, void *req);
+static int usbh__issue_setup_data_request(struct usb_request *req);
 
 static uint8_t usbh__allocate_address()
 {
@@ -334,10 +337,17 @@ static void usbh__request_failed(struct usb_request *req)
 
     switch (req->control_state) {
     case CONTROL_STATE_SETUP:
-    case CONTROL_STATE_DATA:
-        req->control_state = CONTROL_STATE_SETUP;
         if (req->retries--) {
+            req->size_transferred = 0;
             usbh__submit_request_to_ll(req);
+            return;
+        }
+        break;
+    case CONTROL_STATE_DATA:
+        // Re-issue IN
+        if (req->retries--) {
+            usbh__issue_setup_data_request(req);
+            //usbh__submit_request_to_ll(req);
             return;
         }
         break;
@@ -379,7 +389,7 @@ static int usbh__send_ack(struct usb_request *req)
     return usb_ll__submit_request(req->channel,
                                   req->epmemaddr,
                                   PID_OUT,
-                                  req->seq,      // TODO: Check seq.
+                                  req->control ? '1': req->seq,      // TODO: Check seq.
                                   NULL,
                                   0,
                                   usbh__request_completed_reply,
@@ -469,6 +479,8 @@ static int usbh__control_request_completed_reply(uint8_t chan, uint8_t stat, str
         case CONTROL_STATE_SETUP:
             /* Setup completed. If we have a data phase, send data */
             req->size_transferred = 0;
+            req->seq = 1;
+
             ESP_LOGI(TAG,"Requested size: %d\n", req->length);
             if (req->length) {
                 req->control_state = CONTROL_STATE_DATA;
@@ -496,12 +508,14 @@ static int usbh__control_request_completed_reply(uint8_t chan, uint8_t stat, str
 
             // IN request
             if (req->direction==REQ_DEVICE_TO_HOST) {
+                rxlen = usbh__request_data_remain(req);
                 usb_ll__read_in_block(chan, req->rptr, &rxlen);
             } else {
 
             }
             req->rptr += rxlen;
             req->size_transferred += rxlen;
+            req->seq = !req->seq;
 
             if (usbh__request_data_remain(req)>0) {
                 ESP_LOGI(TAG, "Still data to go");
@@ -567,7 +581,7 @@ static void usbh__submit_request_to_ll(struct usb_request *req)
         usb_ll__submit_request(req->channel,
                                req->epmemaddr,
                                PID_SETUP,
-                               0,
+                               0, // Always use DATA0
                                req->setup.data,
                                sizeof(req->setup),
                                usbh__request_completed_reply,
@@ -730,6 +744,18 @@ int usbh__set_configuration(struct usb_device *dev, uint8_t configidx)
 
 }
 
+void usbh__dump_info()
+{
+    usb_ll__dump_info();
+}
+
+uint32_t usbh__get_device_id(const struct usb_device*dev)
+{
+    uint32_t id = dev->device_descriptor.idVendor;
+    id<<=16;
+    id += dev->device_descriptor.idProduct;
+    return id;
+}
 int usbh__init()
 {
     usb_cmd_queue  = xQueueCreate(4, sizeof(struct usbcmd));

@@ -49,5 +49,6 @@ int usb_ll__alloc_channel(uint8_t devaddr,
 int usb_ll__release_channel(uint8_t channel);
 int usb_ll__read_in_block(uint8_t channel, uint8_t *target, uint8_t *rxlen);
 void usb_ll__reset();
+void usb_ll__dump_info();
 
 #endif

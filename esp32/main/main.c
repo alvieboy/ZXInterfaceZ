@@ -164,6 +164,9 @@ void app_main()
             } else if (c=='o') {
                 ESP_LOGI(TAG, "Powering OFF USB");
                 usb_ll__set_power(0);
+            } else if (c=='d') {
+                ESP_LOGI(TAG, "Dumping information");
+                usbh__dump_info(0);
             }
         }
 
