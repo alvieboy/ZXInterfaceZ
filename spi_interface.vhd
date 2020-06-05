@@ -94,7 +94,19 @@ entity spi_interface is
     usb_addr_o            : out std_logic_vector(10 downto 0);
     usb_dat_o             : out std_logic_vector(7 downto 0);
     usb_dat_i             : in std_logic_vector(7 downto 0);
-    usb_int_i             : in std_logic -- USB interrupt
+    usb_int_i             : in std_logic; -- USB interrupt
+
+    -- Keyboard manipulation
+    kbd_en_o              : out std_logic;
+    kbd_force_press_o     : out std_logic_vector(39 downto 0); -- 40 keys.
+    -- Joystick data
+    joy_en_o              : out std_logic;
+    joy_data_o            : out std_logic_vector(4 downto 0);
+    -- Mouse
+    mouse_en_o            : out std_logic;
+    mouse_x_o             : out std_logic_vector(7 downto 0);
+    mouse_y_o             : out std_logic_vector(7 downto 0);
+    mouse_buttons_o       : out std_logic_vector(1 downto 0)
   );
 
 end entity spi_interface;
@@ -115,7 +127,7 @@ architecture beh of spi_interface is
   signal flags_r      : std_logic_vector(15 downto 0);
   signal capmem_adr_r : unsigned(CAPTURE_MEMWIDTH_BITS-1 downto 0);
 
-  constant NUMREGS32  : natural := 4;
+  constant NUMREGS32  : natural := 7;
 
   subtype reg32_type is std_logic_vector(31 downto 0);
   type regs32_type is array(0 to NUMREGS32-1) of reg32_type;
@@ -828,5 +840,19 @@ begin
 
   usb_addr_o            <= usb_addr_wr_r(10 downto 0);
 
+
+  kbd_en_o              <= regs32_r(2)(0);
+  joy_en_o              <= regs32_r(2)(1);
+  mouse_en_o            <= regs32_r(2)(2);
+
+  kbd_force_press_o     <= regs32_r(4)(7 downto 0) & regs32_r(3);
+
+  -- Joystick data
+  joy_data_o            <= regs32_r(5)(4 downto 0);
+
+  -- Mouse
+  mouse_x_o             <= regs32_r(6)(7 downto 0);
+  mouse_y_o             <= regs32_r(6)(15 downto 8);
+  mouse_buttons_o       <= regs32_r(6)(17 downto 16);
 
 end beh;

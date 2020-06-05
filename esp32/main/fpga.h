@@ -66,8 +66,16 @@ typedef struct
 
 /* Registers */
 
-#define REG_CAPTURE_MASK 0x0
-#define REG_CAPTURE_VAL 0x1
+#define REG_CAPTURE_MASK 0x00
+#define REG_CAPTURE_VAL 0x01
+#define REG_CONFIG1      0x02
+# define CONFIG1_KBD_ENABLE (1<<0)
+# define CONFIG1_JOY_ENABLE (1<<1)
+# define CONFIG1_MOUSE_ENABLE (1<<2)
+#define REG_KEYB1_DATA      0x03
+#define REG_KEYB2_DATA      0x04
+#define REG_JOY_DATA        0x05
+#define REG_MOUSE_DATA      0x06
 
 #define FPGA_RESOURCE_FIFO_SIZE 1024 /* Should be 1024 */
 #define FPGA_TAP_FIFO_SIZE 1023 /* Should be 1024 */
@@ -131,5 +139,7 @@ int fpga__read_usb_block(uint16_t address, uint8_t *dest, int size);
 int fpga__write_usb(uint16_t address, uint8_t val);
 int fpga__write_usb_block(uint16_t address, const uint8_t *buffer, int size);
 
+void fpga__set_config1_bits(uint32_t bits);
+void fpga__clear_config1_bits(uint32_t bits);
 
 #endif

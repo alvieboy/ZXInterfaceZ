@@ -50,7 +50,19 @@ entity interfacez_io is
     ram_dat_i              : in std_logic_vector(7 downto 0);
     ram_wr_o               : out std_logic;
     ram_rd_o               : out std_logic;
-    ram_ack_i              : in std_logic
+    ram_ack_i              : in std_logic;
+
+    -- Keyboard manipulation
+    kbd_en_i              : in std_logic;
+    kbd_force_press_i     : in std_logic_vector(39 downto 0); -- 40 keys.
+    -- Joystick data
+    joy_en_i              : in std_logic;
+    joy_data_i            : in std_logic_vector(4 downto 0);
+    -- Mouse
+    mouse_en_i            : in std_logic;
+    mouse_x_i             : in std_logic_vector(7 downto 0);
+    mouse_y_i             : in std_logic_vector(7 downto 0);
+    mouse_buttons_i       : in std_logic_vector(1 downto 0)
   );
 
 end entity interfacez_io;
@@ -72,6 +84,8 @@ architecture beh of interfacez_io is
 
   signal scratch0_r       : std_logic_vector(7 downto 0);
   signal scratch1_r       : std_logic_vector(7 downto 0);
+
+  signal keyb_data_s      : std_logic_vector(4 downto 0);
 
 begin
 
@@ -171,8 +185,11 @@ begin
             ram_rd_r <= '1';
 
           when x"1F" => -- Joy
-            dataread_r <= x"00";
-
+            if joy_en_i='1' then
+              dataread_r <= "000" & joy_data_i;
+            else
+              dataread_r <= x"00";
+            end if;
           when others =>
             --dataread_r <= (others => '1');
         end case;
@@ -192,6 +209,33 @@ begin
     end if;
   end process;
 
+  -- Keyboard manipulation
+
+  process(adr_i)
+    variable rowk_v   : std_logic_vector(4 downto 0);
+    variable kdata_v  : std_logic_vector(4 downto 0);
+  begin
+    if adr_i(7 downto 0)=x"FE" then
+      -- Decode lines as a normal spectrum would
+      kdata_v := dat_i(4 downto 0);
+
+      l: for i in 0 to 7 loop
+        if adr_i(8+i)='0' then
+          -- Line selected.
+          rowk_v  := kbd_force_press_i(((i+1)*5)-1 downto (i*5));
+          kdata_v := kdata_v AND NOT rowk_v;
+
+        end if;
+      end loop;
+
+      keyb_data_s <= kdata_v;
+
+    else
+      keyb_data_s <= dat_i(4 downto 0);
+    end if;
+  end process;
+
+
   process(clk_i, rst_i)
   begin
     if rst_i='1' then
@@ -203,7 +247,7 @@ begin
       keyb_trigger_o <= '0';
       if rdp_dly_i='1' and ulahack_i='1' and adr_i(7 downto 0)=x"FE" then
         -- ULA read. Capture ULA data
-        uladata_r <= dat_i(7) & audio_i & dat_i(5 downto 0);
+        uladata_r <= dat_i(7) & audio_i & dat_i(5) & keyb_data_s;
         -- Start delay. Force IRQULA immediatly
         forceiorqula_o <= '1';
         forceoutput_s <= '1';

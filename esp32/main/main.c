@@ -24,6 +24,8 @@
 #include "usbh.h"
 #include "usb_ll.h"
 #include <esp32/rom/uart.h>
+#include "keyboard.h"
+
 static int8_t videomode = 0;
 
 volatile int restart_requested = 0;
@@ -127,6 +129,7 @@ void app_main()
     netcmd__init();
     tapplayer__init();
     usbh__init();
+    keyboard__init();
     // Start capture
     //start_capture();
     unsigned iter = 0;

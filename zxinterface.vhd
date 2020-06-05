@@ -312,6 +312,24 @@ architecture beh of zxinterface is
 
   signal keyb_trigger_s         : std_logic;
 
+  signal kbd_en_spisck_s              : std_logic;
+  signal kbd_force_press_spisck_s     : std_logic_vector(39 downto 0); -- 40 keys.
+  signal joy_en_spisck_s              : std_logic;
+  signal joy_data_spisck_s            : std_logic_vector(4 downto 0);
+  signal mouse_en_spisck_s            : std_logic;
+  signal mouse_x_spisck_s             : std_logic_vector(7 downto 0);
+  signal mouse_y_spisck_s             : std_logic_vector(7 downto 0);
+  signal mouse_buttons_spisck_s       : std_logic_vector(1 downto 0);
+
+  signal kbd_en_sync_s              : std_logic;
+  signal kbd_force_press_sync_s     : std_logic_vector(39 downto 0); -- 40 keys.
+  signal joy_en_sync_s              : std_logic;
+  signal joy_data_sync_s            : std_logic_vector(4 downto 0);
+  signal mouse_en_sync_s            : std_logic;
+  signal mouse_x_sync_s             : std_logic_vector(7 downto 0);
+  signal mouse_y_sync_s             : std_logic_vector(7 downto 0);
+  signal mouse_buttons_sync_s       : std_logic_vector(1 downto 0);
+
 begin
 
   rst48_inst: entity work.rstgen
@@ -429,6 +447,32 @@ begin
 
   rom_enable_s  <= mem_active_s and not (a_s(15) or a_s(14));
 
+
+  k1s: entity work.sync generic map (RESET => '0')
+      port map ( clk_i => clk_i, arst_i => arst_i, din_i => kbd_en_spisck_s, dout_o => kbd_en_sync_s );
+
+  k2s: entity work.syncv generic map (WIDTH => 40, RESET => '0')
+      port map ( clk_i => clk_i, arst_i => arst_i, din_i => kbd_force_press_spisck_s, dout_o => kbd_force_press_sync_s );
+
+  j1s: entity work.sync generic map (RESET => '0')
+      port map ( clk_i => clk_i, arst_i => arst_i, din_i => joy_en_spisck_s, dout_o => joy_en_sync_s );
+
+  j2s: entity work.syncv generic map (WIDTH => 5, RESET => '0')
+      port map ( clk_i => clk_i, arst_i => arst_i, din_i => joy_data_spisck_s, dout_o => joy_data_sync_s );
+
+  m1s: entity work.sync generic map (RESET => '0')
+      port map ( clk_i => clk_i, arst_i => arst_i, din_i => mouse_en_spisck_s, dout_o => mouse_en_sync_s );
+
+  m2s: entity work.syncv generic map (WIDTH => 8, RESET => '0')
+      port map ( clk_i => clk_i, arst_i => arst_i, din_i => mouse_x_spisck_s, dout_o => mouse_x_sync_s );
+
+  m3s: entity work.syncv generic map (WIDTH => 8, RESET => '0')
+      port map ( clk_i => clk_i, arst_i => arst_i, din_i => mouse_y_spisck_s, dout_o => mouse_y_sync_s );
+
+  m4s: entity work.syncv generic map (WIDTH => 2, RESET => '0')
+      port map ( clk_i => clk_i, arst_i => arst_i, din_i => mouse_buttons_spisck_s, dout_o => mouse_buttons_sync_s );
+
+
   io_inst: entity work.interfacez_io
     port map (
       clk_i           => clk_i,
@@ -462,7 +506,17 @@ begin
       ram_dat_i       => ram_dat_rd_s,
       ram_wr_o        => ram_wr_s,
       ram_rd_o        => ram_rd_s,
-      ram_ack_i       => ram_ack_s
+      ram_ack_i       => ram_ack_s,
+
+      kbd_en_i        => kbd_en_sync_s,
+      kbd_force_press_i => kbd_force_press_sync_s,
+      joy_en_i        => joy_en_sync_s,
+      joy_data_i      => joy_data_sync_s,
+      mouse_en_i      => mouse_en_sync_s,
+      mouse_x_i       => mouse_x_sync_s,
+      mouse_y_i       => mouse_y_sync_s,
+      mouse_buttons_i => mouse_buttons_sync_s
+    
   );
 
 
@@ -661,7 +715,16 @@ begin
     usb_addr_o            => usb_addr_s,
     usb_dat_i             => usb_rdat_s,
     usb_dat_o             => usb_wdat_s,
-    usb_int_i             => usb_int_s
+    usb_int_i             => usb_int_s,
+
+    kbd_en_o              => kbd_en_spisck_s,
+    kbd_force_press_o     => kbd_force_press_spisck_s,
+    joy_en_o              => joy_en_spisck_s,
+    joy_data_o            => joy_data_spisck_s,
+    mouse_en_o            => mouse_en_spisck_s,
+    mouse_x_o             => mouse_x_spisck_s,
+    mouse_y_o             => mouse_y_spisck_s,
+    mouse_buttons_o       => mouse_buttons_spisck_s
   );
 
   fmretn: entity work.async_pulse port map (

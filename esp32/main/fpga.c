@@ -14,6 +14,7 @@
 
 static spi_device_handle_t spi0_fpga;
 static fpga_flags_t latched_flags = 0;
+static uint32_t config1_latch = 0;
 
 static const uint8_t bitRevTable[256] =
 {
@@ -594,4 +595,15 @@ int fpga__write_usb_block(uint16_t address, const uint8_t *buffer, int size)
     return r;
 }
 
+void fpga__set_config1_bits(uint32_t bits)
+{
+    config1_latch |= bits;
+    fpga__set_register(REG_CONFIG1, config1_latch);
+}
+
+void fpga__clear_config1_bits(uint32_t bits)
+{
+    config1_latch &= ~bits;
+    fpga__set_register(REG_CONFIG1, config1_latch);
+}
 
