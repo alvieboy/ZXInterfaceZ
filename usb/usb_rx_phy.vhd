@@ -62,7 +62,7 @@ entity usb_rx_phy is
   );
   port (
     clk             : in  std_logic;
-    clk_en          : in  std_logic;
+    --clk_en          : in  std_logic;
     rst             : in  std_logic;
     -- Transciever Interface
     fs_ce_o         : out std_logic;
@@ -162,7 +162,7 @@ begin
   p_rxd_s: process (clk) -- Avoid detecting Line Glitches and noise
   begin
     if rising_edge(clk) then
-      if clk_en='1' then
+      --if clk_en='1' then
         rxd_s0 <= rxd;
         rxd_s1 <= rxd_s0;
         if rxd_s0 ='1' and rxd_s1 ='1' then
@@ -170,31 +170,31 @@ begin
         elsif not rxd_s0 ='1' and not rxd_s1 ='1' then
           rxd_s <= '0';
         end if;
-      end if;
+      --end if;
     end if;
   end process;
 
   p_rxdp_s: process (clk)
   begin
     if rising_edge(clk) then
-      if clk_en='1' then
+     -- if clk_en='1' then
       rxdp_s0  <= rxdp;
       rxdp_s1  <= rxdp_s0;
       rxdp_s_r <= rxdp_s0 and rxdp_s1;
       rxdp_s   <= (rxdp_s0 and rxdp_s1) or rxdp_s_r;
-      end if;
+     -- end if;
     end if;
   end process;
 
   p_rxdn_s: process (clk)
   begin
     if rising_edge(clk) then
-      if clk_en='1' then
+      --if clk_en='1' then
       rxdn_s0  <= rxdn;
       rxdn_s1  <= rxdn_s0;
       rxdn_s_r <= rxdn_s0 and rxdn_s1;
       rxdn_s   <= (rxdn_s0 and rxdn_s1) or rxdn_s_r;
-      end if;
+      --end if;
     end if;
   end process;
 
@@ -224,204 +224,17 @@ begin
   -- DPLL                                                                               --
   --====================================================================================--
 
-  -- This design uses a clock enable to do 12Mhz timing and not a
-  -- real 12Mhz clock. Everything always runs at 48Mhz. We want to
-  -- make sure however, that the clock enable is always exactly in
-  -- the middle between two virtual 12Mhz rising edges.
-  -- We monitor rxdp and rxdn for any changes and do the appropiate
-  -- adjustments.
-  -- In addition to the locking done in the dpll FSM, we adjust the
-  -- final latch enable to compensate for various sync registers ...
-
   lock_en <= rx_en; -- Allow clock adjustments only when we are receiving
-  -- synopsys translate_off
-  process
-  begin
-    if CLOCK/="48" and CLOCK/="96" then
-        report "Unsupported clock speed of " & CLOCK & "Mhz" severity failure;
-    end if;
-    wait;
-  end process;
-  -- synopsys translate_on
 
-
-  pll48: if CLOCK="48" generate
-
-  dpll: block
-
-    signal dpll_state, dpll_next_state        : std_logic_vector(1 downto 0) := "01";
-    signal fs_ce_r1, fs_ce_r2                 : std_logic;
-
-  begin
-
-  p_rxd_r: process (clk)
-  begin
-    if rising_edge(clk) then
-      rxd_r   <= rxd_s;
-    end if;
-  end process;
-
-  change  <= rxd_r xor rxd_s; -- Edge detector
-
-  -- DPLL FSM
-  p_dpll_state: process (clk, rst)
-  begin
-    if rst ='0' then
-      dpll_state <= "01";
-    elsif rising_edge(clk) then
-      if clk_en='1' then
-        dpll_state <= dpll_next_state;
-      end if;
-    end if;
-  end process;
-
-  p_dpll_next_state: process (dpll_state, lock_en, change)
-  begin
-    case (dpll_state) is
-      when "00" =>
-        if ((lock_en = '1') and (change = '1')) then
-          dpll_next_state <= "00";
-        else
-          dpll_next_state <= "01";
-        end if;
-      when "01" =>
-        if ((lock_en = '1') and (change = '1')) then
-          dpll_next_state <= "11";
-        else
-          dpll_next_state <= "10";
-        end if;
-      when "10" =>
-        if ((lock_en = '1') and (change = '1')) then
-          dpll_next_state <= "00";
-        else
-          dpll_next_state <= "11";
-        end if;
-      when OTHERS =>
-          dpll_next_state <= "00";
-    end case;
-  end process;
-
-  fs_ce_d <= '1' when dpll_state = "01" and clk_en='1' else '0';
-
-  -- Compensate for sync registers at the input - allign full speed ...
-  -- ... clock enable to be in the middle between two bit changes :
-
-  p_fs_ce: process (clk)
-  begin
-    if rising_edge(clk) then
-      fs_ce_r1  <= fs_ce_d;
-      fs_ce_r2  <= fs_ce_r1;
-      fs_ce <= fs_ce_r2;
-    end if;
-  end process;
-
-  end block;
-
-  end generate;
-
-
-  pll96: if CLOCK="96" generate
-
-  dpll: block
-
-    signal dpll_state, dpll_next_state        : std_logic_vector(2 downto 0);
-    signal fs_ce_r1, fs_ce_r2                 : std_logic;
-    signal fs_ce_r3, fs_ce_r4                 : std_logic;
-
-  begin
-
-  p_rxd_r: process (clk)
-  begin
-    if rising_edge(clk) then
-      rxd_r   <= rxd_s;
-    end if;
-  end process;
-
-  change  <= rxd_r xor rxd_s; -- Edge detector
-
-  -- DPLL FSM
-  p_dpll_state: process (clk, rst)
-  begin
-    if rst ='0' then
-      dpll_state <= "001";
-    elsif rising_edge(clk) then
-      dpll_state <= dpll_next_state;
-    end if;
-  end process;
-
-  p_dpll_next_state: process (dpll_state, lock_en, change)
-  begin
-    case (dpll_state) is
-      when "000" =>
-        if ((lock_en = '1') and (change = '1')) then
-          dpll_next_state <= "000";
-        else
-          dpll_next_state <= "001";
-        end if;
-      when "001" =>
-        if ((lock_en = '1') and (change = '1')) then
-          dpll_next_state <= "111";
-        else
-          dpll_next_state <= "010";
-        end if;
-      when "010" =>
-        if ((lock_en = '1') and (change = '1')) then
-          dpll_next_state <= "000";
-        else
-          dpll_next_state <= "011";
-        end if;
-      when "011" =>
-        if ((lock_en = '1') and (change = '1')) then
-          dpll_next_state <= "000";
-        else
-          dpll_next_state <= "100";
-        end if;
-      when "100" =>
-        if ((lock_en = '1') and (change = '1')) then
-          dpll_next_state <= "000";
-        else
-          dpll_next_state <= "101";
-        end if;
-      when "101" =>
-        if ((lock_en = '1') and (change = '1')) then
-          dpll_next_state <= "000";
-        else
-          dpll_next_state <= "110";
-        end if;
-      when "110" =>
-        if ((lock_en = '1') and (change = '1')) then
-          dpll_next_state <= "000";
-        else
-          dpll_next_state <= "111";
-        end if;
-      when OTHERS =>
-          dpll_next_state <= "000";
-    end case;
-  end process;
-
-  fs_ce_d <= '1' when dpll_state = "001" else '0';
-
-  -- Compensate for sync registers at the input - allign full speed ...
-  -- ... clock enable to be in the middle between two bit changes :
-
-  p_fs_ce: process (clk)
-  begin
-    if rising_edge(clk) then
-      fs_ce_r1  <= fs_ce_d;
-      fs_ce_r2  <= fs_ce_r1;
-      fs_ce_r3  <= fs_ce_r2;
-      fs_ce_r4  <= fs_ce_r3;
-      fs_ce <= fs_ce_d;
-    end if;
-  end process;
-
-  end block;
-
-  end generate;
-
-
-
-
+  dpll: entity work.usb_dpll
+    port map (
+      clk_i     => clk,
+      arstn_i   => rst,
+      en_i      => lock_en,
+      data_i    => rxd_s,
+      speed_i   => XcvrSelect_i,
+      tick_o    => fs_ce
+    );
 
 
 
@@ -523,7 +336,7 @@ begin
     elsif rising_edge(clk) then
       if synced_d ='1' and rx_en ='1' then
         rx_active <= '1';
-      elsif se0 ='1' and rx_valid_r ='1' then
+      elsif se0_s ='1' and rx_valid_r ='1' then
         rx_active <= '0';
       end if;
     end if;
@@ -677,7 +490,7 @@ begin
     if rst ='0' then
       byte_err <= '0';
     elsif rising_edge(clk) then
-      byte_err <= se0 and not se0_r and (bit_cnt(1) or bit_cnt(2)) and rx_active;
+      byte_err <= se0_s and not se0_r and (bit_cnt(1) or bit_cnt(2)) and rx_active;
     end if;
   end process;
 

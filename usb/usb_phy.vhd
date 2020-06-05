@@ -77,10 +77,11 @@ end usb_phy;
 architecture RTL of usb_phy is
 
   signal LineState      : std_logic_vector(1 downto 0);
-  signal fs_ce          : std_logic;
+  signal rx_ce          : std_logic;
+  signal tx_ce          : std_logic;
   signal txoe_out       : std_logic;
   signal usb_rst_out    : std_logic := '0';
-  signal clk_en         : std_logic := '1';  -- For Low Speed
+--  signal clk_en         : std_logic := '1';  -- For Low Speed
   signal div8q          : std_logic_vector(2 downto 0);
 
   constant C_RESET_CNT  : natural := 120;
@@ -92,21 +93,6 @@ architecture RTL of usb_phy is
 
 begin
 
-  clk_en <= '1' when div8q="000" or XcvrSelect_i='1' else '0';
-
-  process(clk,rst)
-  begin
-    if rst='0' then
-      div8q<="111";
-    elsif rising_edge(clk) then
-      if div8q="000" then
-        div8q <= "111";
-      else
-        div8q <= div8q - 1;
-      end if;
-    end if;
-  end process;
-
 --======================================================================================--
   -- Misc Logic                                                                         --
 --======================================================================================--
@@ -116,6 +102,18 @@ begin
   txoe         <= txoe_out;
 
 --======================================================================================--
+  -- TX clock                                                                           --
+--======================================================================================--
+
+  txclkgen: entity work.usb_txclkgen
+  port map (
+    clk_i     => clk,
+    arstn_i   => rst,
+    speed_i   => XcvrSelect_i,
+    tick_o    => tx_ce
+  );
+
+--======================================================================================--
   -- TX Phy                                                                             --
 --======================================================================================--
 
@@ -123,7 +121,7 @@ begin
   port map (
     clk        => clk,
     rst        => rst,
-    fs_ce      => fs_ce,
+    fs_ce      => tx_ce,
     phy_mode   => phy_tx_mode,
     -- Transciever Interface
     txdp       => txdp,
@@ -163,8 +161,8 @@ begin
   port map (
     clk        => clk,
     rst        => rst,
-    clk_en     => clk_en,
-    fs_ce_o    => fs_ce,
+    --clk_en     => clk_en,
+    fs_ce_o    => rx_ce,
     eop_o     => eop_o,
     -- Transciever Interface
     rxd        => rxd_filtered_s,
@@ -210,6 +208,6 @@ begin
     end process;
   end generate;
 
-  fs_ce_o <= fs_ce;
+  fs_ce_o <= rx_ce;
 
 end RTL;

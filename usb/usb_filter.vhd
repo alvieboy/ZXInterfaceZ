@@ -60,6 +60,22 @@ architecture beh of usb_filter is
   signal d_q    : d_array_type;
 
   signal dout_q : d_type;
+  signal d_filt : std_logic;
+  signal d_filt_in : std_logic_vector(WIDTH-1 downto 0);
+
+  function count_ones(s: in std_logic_vector) return natural is
+    variable r: natural := 0;
+  begin
+    l: for i in s'LOW to s'HIGH loop
+      if s(i)='1' then
+        r := r + 1;
+      end if;
+    end loop;
+    return r;
+  end function;
+
+  signal maj_dp: std_logic;
+  signal maj_dm: std_logic;
 
 begin
 
@@ -93,26 +109,46 @@ begin
     end if;
   end process;
 
+  mfilt1: entity work.maj_filter
+    port map (
+      clk_i => clk_i,
+      d_i => dp_i,
+      d_o => maj_dp
+    );
+
+  mfilt2: entity work.maj_filter
+    port map (
+      clk_i => clk_i,
+      d_i => dm_i,
+      d_o => maj_dm
+    );
+
   -- And this is for single-ended
 
-  process(clk_i)
-    variable same: boolean;
-  begin
-    if rising_edge(clk_i) then
-      same := true;
-      g: for i in 1 to WIDTH-1 loop
-        if d_q(i)(2) /= d_q(i-1)(2) then
-          same := false;
-        end if;
-      end loop;
-      if same then
-        dout_q(2) <= d_q(WIDTH-1)(2);
-      end if;
-    end if;
-  end process;
+  --process(clk_i)
+  --  variable same: boolean;
+  --begin
+  --  if rising_edge(clk_i) then
+  --    same := true;
+  --    g: for i in 1 to WIDTH-1 loop
+  --      if d_q(i)(2) /= d_q(i-1)(2) then
+  --        same := false;
+  --      end if;
+  --    end loop;
+  --    if same then
+  --      dout_q(2) <= d_q(WIDTH-1)(2);
+  --    end if;
+  --  end if;
+  --end process;
 
-  dp_o  <= dout_q(1) when speed_i='0' else dp_i;
-  dm_o  <= dout_q(0) when speed_i='0' else dm_i;
-  d_o   <= dout_q(2) when speed_i='0' else d_i;
+  k: for i in 0 to WIDTH-1 generate
+    d_filt_in(i) <= d_q(i)(2);
+  end generate;
 
+  d_filt <= '1' when count_ones(d_filt_in)>=4 else '0';
+
+  dp_o  <= maj_dp when speed_i='0' else dp_i;
+  dm_o  <= maj_dm when speed_i='0' else dm_i;
+  --d_o   <= dout_q(2) when speed_i='0' else d_i;
+  d_o   <= d_filt when speed_i='0' else d_i;
 end beh;

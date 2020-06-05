@@ -104,7 +104,7 @@ ARCHITECTURE rtl OF usbhostctrl is
   constant C_NUM_CHANNELS: natural  := 8;
   constant C_RESET_DELAY: natural   := altsim(48000*50,500); -- 50 ms
   constant C_RESET_DELAY_AFTER: natural   := altsim(480, 48); -- 10 us
-  constant C_INTERRUPT_HOLDOFF : natural := 480; -- 10us
+  constant C_INTERRUPT_HOLDOFF : natural := altsim(4800*5, 480); -- 500us / 10us
 
   type host_state_type is (
     DETACHED,
@@ -1033,14 +1033,18 @@ BEGIN
   pwren_o     <= not r.sr.poweron;
   dat_o <= hep_dat_s when addr_i(10)='1' else read_data_sync_s;
 
+  deb: block
+    signal fs: std_logic;
+  begin
   process(usbclk_i,ausbrst_i)
   begin
     if ausbrst_i='1' then
       dbg_o <= (others => '0');
+      fs <= '0';
     elsif rising_edge(usbclk_i) then
         dbg_o(0) <= Phy_RxActive;
         dbg_o(1) <= Phy_TxActive_s;
-        dbg_o(2) <= Phy_RxError;
+        dbg_o(2) <= fs;--Phy_RxError;
         dbg_o(3) <= dbg_rx_data_done_s;--Phy_Linestate(0);
         dbg_o(4) <= Phy_Linestate(1);
 
@@ -1055,8 +1059,11 @@ BEGIN
             when SETUP1               => dbg_o(7 downto 5) <= "111";
         end case; 
 
+        if fs_ce_s='1' then
+          fs <= not fs;
+        end if;
     end if;
   end process;
-
+  end block;
 END rtl;
 
