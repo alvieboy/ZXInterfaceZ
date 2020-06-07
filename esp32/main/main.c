@@ -60,7 +60,7 @@ void request_restart()
 void gpio__press_event(gpio_num_t gpio)
 {
     if (gpio==PIN_NUM_SWITCH) {
-        fpga__clear_flags(FPGA_FLAG_ULAHACK);
+        //fpga__clear_flags(FPGA_FLAG_ULAHACK);
 
         ESP_LOGI(TAG, "Requesting NMI!");
         fpga__set_trigger(FPGA_FLAG_TRIG_FORCENMI_ON);
@@ -74,6 +74,7 @@ void gpio__press_event(gpio_num_t gpio)
     }
 }
 
+uint32_t loglevel;
 
 void app_main()
 {
@@ -93,7 +94,6 @@ void app_main()
     if (fpga__init()<0) {
         ESP_LOGE(TAG, "Cannot proceed without FPGA!");
         while (1) {
-            uint8_t c;
             led__set(LED1, 1);
             vTaskDelay(100 / portTICK_RATE_MS);
             led__set(LED1, 0);
@@ -167,9 +167,17 @@ void app_main()
             } else if (c=='o') {
                 ESP_LOGI(TAG, "Powering OFF USB");
                 usb_ll__set_power(0);
-            } else if (c=='d') {
+            } else if (c=='f') {
                 ESP_LOGI(TAG, "Dumping information");
                 usbh__dump_info(0);
+            } else if (c=='d') {
+                loglevel = 0xffffffff;
+            } else if (c=='h') {
+                ESP_LOGI(TAG, "Disable ULAHACK");
+                fpga__clear_flags(FPGA_FLAG_ULAHACK);
+            } else if (c=='H') {
+                ESP_LOGI(TAG, "Enable ULAHACK");
+                fpga__set_flags(FPGA_FLAG_ULAHACK);
             }
         }
 

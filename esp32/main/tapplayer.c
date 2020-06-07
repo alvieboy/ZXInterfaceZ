@@ -102,7 +102,7 @@ static void tapplayer__do_stop()
         close(tapfh);
         tapfh = -1;
     }
-    fpga__clear_flags(FPGA_FLAG_TAP_ENABLED | FPGA_FLAG_ULAHACK);
+    fpga__clear_flags(FPGA_FLAG_TAP_ENABLED);// | FPGA_FLAG_ULAHACK);
     fpga__set_flags(FPGA_FLAG_TAPFIFO_RESET);
     state = TAP_IDLE;
 }
@@ -179,7 +179,7 @@ static void tapplayer__task(void*data)
             case TAP_WAITDRAIN:
                 if (fpga__tap_fifo_empty()) {
                     ESP_LOGI(TAG, "Finished TAP play");
-                    fpga__clear_flags(FPGA_FLAG_TAP_ENABLED | FPGA_FLAG_ULAHACK);
+                    fpga__clear_flags(FPGA_FLAG_TAP_ENABLED);// | FPGA_FLAG_ULAHACK);
                     fpga__set_flags(FPGA_FLAG_TAPFIFO_RESET);
                     state = TAP_IDLE;
                 }
@@ -193,7 +193,7 @@ static void tapplayer__task(void*data)
 #if 0
     ESP_LOGI(TAG, "Starting TAP file play len %d", tapfile_len);
 
-    fpga__set_flags(FPGA_FLAG_TAPFIFO_RESET| FPGA_FLAG_TAP_ENABLED | FPGA_FLAG_ULAHACK);
+    fpga__set_flags(FPGA_FLAG_TAPFIFO_RESET| FPGA_FLAG_TAP_ENABLED);// | FPGA_FLAG_ULAHACK);
     fpga__clear_flags(FPGA_FLAG_TAPFIFO_RESET);
 
     int len = tapfile_len;

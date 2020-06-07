@@ -4,14 +4,15 @@
 #include <stdlib.h>
 #include "usb_descriptor.h"
 #include "usb_hid.h"
-#include "esp_log.h"
 #include <stdbool.h>
 #include "dump.h"
 #include "hid.h"
 #include <string.h>
+#include "log.h"
 
 #define HIDTAG "HID"
-#define DEBUG(x...) ESP_LOGI(HIDTAG,x)
+#define HIDDEBUG(x...) LOG_DEBUG(DEBUG_ZONE_HID, HIDTAG, x)
+#define HIDLOG(x...) ESP_LOGI(HIDTAG, x)
 
 static int usb_hid__set_idle(struct usb_device *dev, usb_interface_descriptor_t *intf);
 
@@ -25,7 +26,7 @@ struct usb_hid
     uint8_t *report_desc;
     uint8_t payload[64];
     uint8_t prev_payload[64];
-    uint8_t prev_valid;
+    uint8_t prev_size;
 };
 
 static int usb_hid__submit_in(struct usb_hid *h);
@@ -45,32 +46,49 @@ static void usb_hid__parse_report(struct usb_hid *hid)
     if (h->reports == NULL) {
         return;
     } else {
+        // Fast compare.
+        if (hid->prev_size) {
+            if (memcmp(hid->payload, hid->prev_payload, hid->prev_size)==0)
+                return;
+        }
+
         hid_report_t *rep = h->reports;
         hid_field_t *field = rep->fields;
 
-        ESP_LOGI(HIDTAG," Field ");
+        HIDDEBUG("Field ");
         while (field) {
             int i;
-            ESP_LOGI(HIDTAG," > start %d len %d", field->report_offset, field->report_size);
+            HIDDEBUG(" > start %d len %d", field->report_offset, field->report_size);
             for (i=0;i<field->report_count;i++) {
 
-                ESP_LOGI(HIDTAG," >> index %d", i);
+                propagate = false;
+
+                HIDDEBUG(" >> index %d", i);
 
                 if (hid_extract_field_aligned(field, i, hid->payload, &new_value)<0)
                     return;
-                if (hid->prev_valid) {
+
+                if (hid->prev_size) {
                     if (hid_extract_field_aligned(field, i, hid->prev_payload, &old_value)<0)
                         return;
                 }
                 // Compare
-                if (hid->prev_valid) {
+                if (hid->prev_size) {
                     if (new_value!=old_value)
                         propagate = true;
                 } else {
                     propagate = true;
                 }
                 if (propagate) {
-                    ESP_LOGI(HIDTAG,"Field changed");
+
+                    HIDLOG("Field changed start %d len %d (entry index %d) prev %d now %d",
+                           field->report_offset + (i*field->report_size),
+                           field->report_size,
+                           entry_index,
+                           old_value,
+                           new_value
+                          );
+
                     hid__field_entry_changed_callback(usbh__get_device_id(hid->dev), field, entry_index, new_value);
                 }
                 entry_index++;
@@ -90,18 +108,18 @@ static int usb_hid__transfer_completed(uint8_t channel, uint8_t status, void*use
     }
     if (status&0x01) {
 
-        ESP_LOGI(HIDTAG, "got data stat %d", status);
+        HIDDEBUG("got data stat %d", status);
         // Fetch data from ....
         usb_ll__read_in_block(h->epchan, h->payload, &rxlen);
-        ESP_LOGI(HIDTAG, "Parsing report");
+        HIDDEBUG("Parsing report");
         usb_hid__parse_report(h);
 
-        ESP_LOGI(HIDTAG, "Copying data");
+        HIDDEBUG("Copying data");
         h->seq = !h->seq;
         memcpy(h->prev_payload, h->payload, rxlen);
-        h->prev_valid = 1;
+        h->prev_size = rxlen;
     } else {
-        ESP_LOGI(HIDTAG, "error %d, resubmitting", status);
+        ESP_LOGE(HIDTAG,"error %d, resubmitting", status);
     }
 
     usb_hid__submit_in(h);
@@ -164,7 +182,7 @@ static int usb_hid__probe(struct usb_device *dev, struct usb_interface *i)
     int intf_len = i->descriptorlen[0];
     bool valid = false;
 
-    DEBUG("     ***** PROBING INTERFACE %d altSetting %d **** class=%02x\n",
+    HIDDEBUG("     ***** PROBING INTERFACE %d altSetting %d **** class=%02x\n",
           intf->bInterfaceNumber,
           intf->bAlternateSetting,
           intf->bInterfaceClass);
@@ -186,8 +204,6 @@ static int usb_hid__probe(struct usb_device *dev, struct usb_interface *i)
         ESP_LOGE(HIDTAG, "Cannot find HID descriptor");
         return -1;
     }
-
-    DEBUG("HID %p\n", hidd);
 
     int index = 0;
     usb_endpoint_descriptor_t *ep = NULL;
@@ -237,8 +253,10 @@ static int usb_hid__probe(struct usb_device *dev, struct usb_interface *i)
         return -1;
     }
 
-    ESP_LOGE(HIDTAG, "HID report descriptor len %d", report_desc_len);
-    dump__buffer(report_desc, report_desc_len);
+    ESP_LOGI(HIDTAG, "HID report descriptor len %d", report_desc_len);
+    if (DEBUG_ENABLED(DEBUG_ZONE_USBLL)) {
+        dump__buffer(report_desc, report_desc_len);
+    }
 
     struct hid *hid = hid_parse(report_desc, report_desc_len);
 
@@ -250,7 +268,7 @@ static int usb_hid__probe(struct usb_device *dev, struct usb_interface *i)
     h->dev = dev;
     h->intf = i;
     h->seq = 0;
-    h->prev_valid = 0;
+    h->prev_size= 0;
     h->hid = hid;
 
     if (ep->bEndpointAddress & 0x80) {
@@ -267,7 +285,7 @@ static int usb_hid__probe(struct usb_device *dev, struct usb_interface *i)
 
 
             // Start IN requests
-            ESP_LOGI(HIDTAG, "hid: Submitting IN requests");
+            HIDDEBUG("Submitting IN requests");
 
             usb_hid__submit_in(h);
 
@@ -318,7 +336,7 @@ static int usb_hid__set_idle(struct usb_device *dev, usb_interface_descriptor_t 
 }
 
 
-static void usb_hid__disconnect(struct usb_interface *intf)
+static void usb_hid__disconnect(struct usb_device *dev, struct usb_interface *intf)
 {
     struct usb_hid *h = intf->drvdata;
     // Cancel any pending requests

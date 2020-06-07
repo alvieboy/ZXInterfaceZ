@@ -2,6 +2,7 @@
 #include <string.h>
 #include "hid_usage.h"
 #include "hid.h"
+#include "log.h"
 
 #ifdef __linux__
 #include <stdio.h>
@@ -10,7 +11,7 @@
 #define HIDERROR(x...) do {printf(x);puts(""); } while(0)
 #else
 #include <esp_log.h>
-#define HIDDEBUG(x...) ESP_LOGI("HID", x)
+#define HIDDEBUG(x...) LOG_DEBUG(DEBUG_ZONE_HID, "HID", x)
 #define HIDERROR(x...) ESP_LOGE("HID", x)
 #endif
 

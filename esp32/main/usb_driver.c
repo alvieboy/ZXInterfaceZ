@@ -19,3 +19,13 @@ int usb_driver__probe(struct usb_device *dev, struct usb_interface *intf)
     }
     return -1;
 }
+
+int usb_driver__disconnect(struct usb_device *dev, struct usb_interface *intf)
+{
+    if (intf->drv) {
+        if (intf->drv->disconnect) {
+            intf->drv->disconnect(dev, intf);
+        }
+    }
+    return 0;
+}

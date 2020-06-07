@@ -6,9 +6,10 @@ struct usb_interface;
 
 struct usb_driver {
     int (*probe)(struct usb_device *dev, struct usb_interface *intf);
-    void (*disconnect)(struct usb_interface*dev);
+    void (*disconnect)(struct usb_device*dev, struct usb_interface *intf);
 };
 
 int usb_driver__probe(struct usb_device *dev, struct usb_interface *intf);
+int usb_driver__disconnect(struct usb_device *dev, struct usb_interface *intf);
 
 #endif

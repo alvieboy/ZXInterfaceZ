@@ -12,7 +12,7 @@ void keyboard__init(void)
 
     fpga__set_config1_bits(CONFIG1_KBD_ENABLE);
 
-    fpga__set_flags(FPGA_FLAG_ULAHACK);
+    //fpga__set_flags(FPGA_FLAG_ULAHACK);
 }
 
 static void keyboard__update(void)

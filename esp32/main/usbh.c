@@ -9,6 +9,10 @@
 #include "usb_driver.h"
 #include "usb_descriptor.h"
 #include <string.h>
+#include "log.h"
+
+#define USBHTAG "USBH"
+#define USBHDEBUG(x...) LOG_DEBUG(DEBUG_ZONE_USBH, USBHTAG ,x)
 
 static xQueueHandle usb_cmd_queue = NULL;
 static xQueueHandle usb_cplt_queue = NULL;
@@ -57,11 +61,11 @@ void usb_ll__connected_callback()
     struct usbresponse resp;
 
     // Connected device.
-    ESP_LOGI(TAG,"USB connection event");
+    ESP_LOGI(USBHTAG,"USB connection event");
     resp.status = USB_STAT_ATTACHED;
 
     if (xQueueSend(usb_cplt_queue, &resp, 0)!=pdTRUE) {
-        ESP_LOGE(TAG, "Cannot queue!!!");
+        ESP_LOGE(USBHTAG, "Cannot queue!!!");
     }
 }
 
@@ -98,7 +102,7 @@ int usbh__parse_interfaces(struct usb_device *dev)
     usb_interface_descriptor_t *next_intf = NULL;
 
     if (intf==NULL) {
-        ESP_LOGE(TAG,"Cannot locate interface descriptor");
+        ESP_LOGE(USBHTAG,"Cannot locate interface descriptor");
         return -1;
     }
 
@@ -114,7 +118,7 @@ int usbh__parse_interfaces(struct usb_device *dev)
 
         if ((dev->interfaces[ intf->bInterfaceNumber ].numsettings>1) || (intf->bAlternateSetting>1)) {
             // TOOO many!
-            ESP_LOGE(TAG,"Too many alternate settings");
+            ESP_LOGE(USBHTAG,"Too many alternate settings");
             return -1;
         }
 
@@ -148,7 +152,6 @@ void usbh__reset()
 
 int usbh__detect_and_assign_address()
 {
-    ESP_LOGI(TAG, "Resetting BUS");
     struct usb_device dev;
     usb_config_descriptor_t cd;
 
@@ -157,21 +160,22 @@ int usbh__detect_and_assign_address()
     dev.address = 0;
     dev.claimed = 0;
 
+    ESP_LOGI(USBHTAG, "Resetting BUS");
     usbh__reset();
 
-    ESP_LOGI(TAG, "Requesting device descriptor");
+    USBHDEBUG("Requesting device descriptor");
 
     if (usbh__get_descriptor(&dev,
                              USB_REQ_TYPE_STANDARD | USB_REQ_RECIPIENT_DEVICE,
                              USB_DESC_DEVICE,
                              (uint8_t*)&dev.device_descriptor,
                              USB_LEN_DEV_DESC)<0) {
-        ESP_LOGE(TAG, "Cannot fetch device descriptor");
+        ESP_LOGE(USBHTAG, "Cannot fetch device descriptor");
         return -1;
     }
 
 
-    ESP_LOGI(TAG," new USB device, vid=0x%04x pid=0x%04x",
+    ESP_LOGI(USBHTAG," new USB device, vid=0x%04x pid=0x%04x",
              __le16(dev.device_descriptor.idVendor),
              __le16(dev.device_descriptor.idProduct)
             );
@@ -182,7 +186,7 @@ int usbh__detect_and_assign_address()
     if (usbh__assign_address(&dev)<0)
         return -1;
 
-    ESP_LOGI(TAG," assigned address %d", dev.address);
+    USBHDEBUG(" assigned address %d", dev.address);
 
     // Allocate channel for EP0
 
@@ -193,7 +197,7 @@ int usbh__detect_and_assign_address()
                                         );
     dev.config_descriptor = NULL;
 
-    ESP_LOGI(TAG, "Allocated channel %d for EP0 of %d\n", dev.ep0_chan, dev.address);
+    USBHDEBUG("Allocated channel %d for EP0 of %d\n", dev.ep0_chan, dev.address);
     // Get configuration header. (9 bytes)
 
 
@@ -202,12 +206,12 @@ int usbh__detect_and_assign_address()
                              USB_DESC_CONFIGURATION,
                              (uint8_t*)&cd,
                              USB_LEN_CFG_DESC) <0) {
-        ESP_LOGE(TAG, "Cannot fetch configuration descriptor");
+        ESP_LOGE(USBHTAG, "Cannot fetch configuration descriptor");
         return -1;
     }
 
     if (cd.bDescriptorType!=USB_DESC_TYPE_CONFIGURATION) {
-        ESP_LOGE(TAG,"Invalid config descriptor");
+        ESP_LOGE(USBHTAG,"Invalid config descriptor");
         return -1;
     }
 
@@ -218,7 +222,7 @@ int usbh__detect_and_assign_address()
     if (dev.config_descriptor==NULL) {
         // TBD
         //free(req);
-        ESP_LOGE(TAG,"Cannot allocate memory");
+        ESP_LOGE(USBHTAG,"Cannot allocate memory");
         return -1;
     }
 
@@ -228,7 +232,7 @@ int usbh__detect_and_assign_address()
                              (uint8_t*)dev.config_descriptor,
                              configlen
                             )<0) {
-        ESP_LOGE(TAG, "Cannot read full config descriptor!");
+        ESP_LOGE(USBHTAG, "Cannot read full config descriptor!");
         free(dev.config_descriptor);
         return -1;
     }
@@ -248,11 +252,13 @@ int usbh__detect_and_assign_address()
 
     // Create the interface structures
     usbh__parse_interfaces(newdev);
-    ESP_LOGI(TAG,"Finding USB driver");
+
+    USBHDEBUG("Finding USB driver");
+
     for (i=0;i< (dev.config_descriptor->bNumInterfaces);i++) {
 
         usb_driver__probe(newdev, &newdev->interfaces[i]);
-        
+
     }
 
     if (newdev->claimed==0) {
@@ -269,21 +275,21 @@ int usbh__wait_completion(struct usb_request *req)
     struct usbresponse resp;
     if (xQueueReceive(usb_cplt_queue, &resp, portMAX_DELAY)==pdTRUE)
     {
-        ESP_LOGI(TAG,"USB completed status %d", resp.status);
+        USBHDEBUG("USB completed status %d", resp.status);
         if (resp.status == USB_REQUEST_COMPLETED_OK) {
             if (resp.data == req) {
                 return 0;
             } else {
-                ESP_LOGE(TAG, "NOT FOR US!");
+                ESP_LOGE(USBHTAG, "NOT FOR US!");
                 return -1;
             }
         } else {
             // Error response
             if (resp.data == req) {
-                ESP_LOGE(TAG, "Status error!");
+                ESP_LOGE(USBHTAG, "Status error!");
                 return -1;
             } else {
-                ESP_LOGE(TAG, "NOT FOR US!");
+                ESP_LOGE(USBHTAG, "NOT FOR US!");
                 return -1;
             }
         }
@@ -306,16 +312,16 @@ void usbh__main_task(void *pvParam)
     struct usbresponse resp;
 
     while (1) {
-        ESP_LOGI(TAG, "Wait for completion responses");
+        USBHDEBUG("Wait for completion responses");
         if (xQueueReceive(usb_cplt_queue, &resp, portMAX_DELAY)==pdTRUE)
         {
-            ESP_LOGI(TAG, " >>> got status %d", resp.status);
+            USBHDEBUG(" >>> got status %d", resp.status);
             if (resp.status == USB_STAT_ATTACHED) {
                 // Attached.
                 usbh__detect_and_assign_address();
             }
         } else {
-            ESP_LOGE(TAG, "Queue error!!!");
+            ESP_LOGE(USBHTAG, "Queue error!!!");
         }
     }
 }
@@ -375,10 +381,10 @@ static inline int usbh__request_data_remain(const struct usb_request*req)
     if (remain > req->epsize) {
         remain = req->epsize;
     }
-    ESP_LOGI(TAG, "Chan %d: remain %d length req %d transferred %d", req->channel,
-             remain,
-             req->length,
-             req->size_transferred);
+    USBHDEBUG("Chan %d: remain %d length req %d transferred %d", req->channel,
+              remain,
+              req->length,
+              req->size_transferred);
 
     return remain;
 }
@@ -481,7 +487,7 @@ static int usbh__control_request_completed_reply(uint8_t chan, uint8_t stat, str
             req->size_transferred = 0;
             req->seq = 1;
 
-            ESP_LOGI(TAG,"Requested size: %d\n", req->length);
+            USBHDEBUG("Requested size: %d\n", req->length);
             if (req->length) {
                 req->control_state = CONTROL_STATE_DATA;
                 req->retries = 3;
@@ -518,20 +524,20 @@ static int usbh__control_request_completed_reply(uint8_t chan, uint8_t stat, str
             req->seq = !req->seq;
 
             if (usbh__request_data_remain(req)>0) {
-                ESP_LOGI(TAG, "Still data to go");
+                USBHDEBUG("Still data to go");
                 return usbh__issue_setup_data_request(req);
             } else {
-                ESP_LOGI(TAG, "Entering status phase");
+                USBHDEBUG("Entering status phase");
 
                 req->control_state = CONTROL_STATE_STATUS;
 
                 if (req->direction==REQ_HOST_TO_DEVICE) {
                     // Wait ack
-                    ESP_LOGI(TAG, "Wait ACK");
+                    USBHDEBUG("Wait ACK");
                     return usbh__wait_ack(req);
                 } else {
                     req->retries = 3;
-                    ESP_LOGI(TAG, "Send ACK");
+                    USBHDEBUG("Send ACK");
                     return usbh__send_ack(req);
                 }
 
@@ -546,7 +552,7 @@ static int usbh__control_request_completed_reply(uint8_t chan, uint8_t stat, str
 
 
     } else {
-        ESP_LOGE(TAG, "Request failed 0x%02x",stat);
+        ESP_LOGE(USBHTAG, "Request failed 0x%02x",stat);
         usbh__request_failed(req);
         return -1;
     }
@@ -577,7 +583,7 @@ void usbh__submit_request(struct usb_request *req)
 static void usbh__submit_request_to_ll(struct usb_request *req)
 {
     if (req->control) {
-        ESP_LOGI(TAG, "Submitting %p", req);
+        USBHDEBUG("Submitting %p", req);
         usb_ll__submit_request(req->channel,
                                req->epmemaddr,
                                PID_SETUP,
@@ -678,15 +684,15 @@ static int usbh__assign_address(struct usb_device *dev)
     req.setup.wLength = __le16(0);
 
     req.channel =  dev->ep0_chan;
-    ESP_LOGI(TAG,"Submitting address request");
+    USBHDEBUG("Submitting address request");
     usbh__submit_request(&req);
 
     // Wait.
     if (usbh__wait_completion(&req)<0) {
-        ESP_LOGE(TAG,"Device not accepting address!");
+        ESP_LOGE(USBHTAG, "Device not accepting address!");
         return -1;
     }
-    ESP_LOGI(TAG, "Submitted address request");
+    USBHDEBUG("Submitted address request");
     dev->address = newaddress;
 
     return 0;
@@ -694,12 +700,12 @@ static int usbh__assign_address(struct usb_device *dev)
 
 void usb_ll__disconnected_callback()
 {
-    ESP_LOGE(TAG, "Disconnected callback");
+    ESP_LOGE(USBHTAG, "Disconnected callback");
 }
 
 void usb_ll__overcurrent_callback()
 {
-    ESP_LOGE(TAG, "Overcurrent");
+    ESP_LOGE(USBHTAG, "Overcurrent");
 }
 
 static void usbh__request_completed(struct usb_request *req)
@@ -730,15 +736,15 @@ int usbh__set_configuration(struct usb_device *dev, uint8_t configidx)
     req.setup.wLength = __le16(0);
 
     req.channel =  dev->ep0_chan;
-    ESP_LOGI(TAG,"Submitting address request");
+    USBHDEBUG("Submitting address request");
     usbh__submit_request(&req);
 
     // Wait.
     if (usbh__wait_completion(&req)<0) {
-        ESP_LOGE(TAG,"Device not accepting address!");
+        ESP_LOGE(USBHTAG,"Device not accepting address!");
         return -1;
     }
-    ESP_LOGI(TAG, "Submitted config request");
+    USBHDEBUG("Submitted config request");
 
     return 0;
 
