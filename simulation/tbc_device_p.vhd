@@ -30,8 +30,8 @@ package tbc_device_p is
 
   procedure Check(
     what: in string;
-    actual: in std_logic_vector(7 downto 0);
-    expected: in std_logic_vector(7 downto 0));
+    actual: in std_logic_vector;
+    expected: in std_logic_vector);
 
   procedure Check(
     what: in string;
@@ -102,8 +102,8 @@ package body tbc_device_p is
 
   procedure Check(
     what: in string;
-    actual: in std_logic_vector(7 downto 0);
-    expected: in std_logic_vector(7 downto 0)) is
+    actual: in std_logic_vector;
+    expected: in std_logic_vector) is
   begin
     if (actual /= expected) then
       report "CHECK FAILED: "&what&": expected " & hstr(expected)& ", got " &hstr(actual);

@@ -1,5 +1,6 @@
 library IEEE;
 use IEEE.STD_LOGIC_1164.all;
+use IEEE.STD_LOGIC_misc.all;
 use IEEE.numeric_std.all;
 library work;
 use work.zxinterfacepkg.all;
@@ -62,7 +63,8 @@ entity interfacez_io is
     mouse_en_i            : in std_logic;
     mouse_x_i             : in std_logic_vector(7 downto 0);
     mouse_y_i             : in std_logic_vector(7 downto 0);
-    mouse_buttons_i       : in std_logic_vector(1 downto 0)
+    mouse_buttons_i       : in std_logic_vector(1 downto 0);
+    dbg_o                 : out std_logic_vector(7 downto 0)
   );
 
 end entity interfacez_io;
@@ -86,6 +88,12 @@ architecture beh of interfacez_io is
   signal scratch1_r       : std_logic_vector(7 downto 0);
 
   signal keyb_data_s      : std_logic_vector(4 downto 0);
+
+  constant ULA_HACK_DLY   : natural := 4;
+
+  signal uladly_r         : std_logic_vector(ULA_HACK_DLY-1 downto 0);
+
+  signal has_key_inject_s : std_logic;
 
 begin
 
@@ -211,11 +219,14 @@ begin
 
   -- Keyboard manipulation
 
-  process(adr_i)
+  process(adr_i, dat_i, kbd_force_press_i)
     variable rowk_v   : std_logic_vector(4 downto 0);
     variable kdata_v  : std_logic_vector(4 downto 0);
   begin
-    if adr_i(7 downto 0)=x"FE" then
+
+    has_key_inject_s <= '0';
+
+    if adr_i(0)='0' then
       -- Decode lines as a normal spectrum would
       kdata_v := dat_i(4 downto 0);
 
@@ -223,7 +234,9 @@ begin
         if adr_i(8+i)='0' then
           -- Line selected.
           rowk_v  := kbd_force_press_i(((i+1)*5)-1 downto (i*5));
-          kdata_v := kdata_v AND NOT rowk_v;
+          has_key_inject_s <= or_reduce(rowk_v);
+
+          kdata_v := NOT rowk_v;
 
         end if;
       end loop;
@@ -235,6 +248,9 @@ begin
     end if;
   end process;
 
+  --has_key_inject_s <= or_reduce(kbd_force_press_i);
+
+  dbg_o(0) <= has_key_inject_s;
 
   process(clk_i, rst_i)
   begin
@@ -245,14 +261,26 @@ begin
     --
     elsif rising_edge(clk_i) then
       keyb_trigger_o <= '0';
-      if rdp_dly_i='1' and ulahack_i='1' and adr_i(7 downto 0)=x"FE" then
+
+      uladly_r <= uladly_r(ULA_HACK_DLY-2 downto 0) & rdp_dly_i;
+
+      if rdp_dly_i='1' and ulahack_i='1' and adr_i(0)='0' then
         -- ULA read. Capture ULA data
-        uladata_r <= dat_i(7) & audio_i & dat_i(5) & keyb_data_s;
+        uladata_r <= dat_i(7) & audio_i & dat_i(5) & dat_i(4 downto 0);--keyb_data_s;
         -- Start delay. Force IRQULA immediatly
         forceiorqula_o <= '1';
         forceoutput_s <= '1';
+
+      elsif rdp_dly_i='1' and has_key_inject_s='1' and kbd_en_i='1' and adr_i(0)='0' then
+
+        uladata_r <= '1' & audio_i & '1' & keyb_data_s;
+
+        forceiorqula_o <= '1';
+        forceoutput_s <= '1';
+
       end if;
-      if active_i='0' or ulahack_i='0' then
+
+      if active_i='0' then
         forceiorqula_o <= '0';
         forceoutput_s <='0';
       end if;

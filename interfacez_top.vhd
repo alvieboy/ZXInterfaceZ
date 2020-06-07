@@ -113,7 +113,7 @@ architecture str of interfacez_top is
   signal RAMD_oe_s    : std_logic_vector(7 downto 0);
   signal RAMCLK_s   : std_logic;
   signal RAMNCS_s   : std_logic;
-  signal dbg_s      : std_logic_vector(7 downto 0);
+  signal dbg_s      : std_logic_vector(15 downto 0);
 begin
 
   rstgen_inst: entity work.rstgen
@@ -222,7 +222,7 @@ begin
   end generate;
 
   extconn_dbg: if not C_ENABLE_VGA generate
-    EXT_o     <= dbg_s;
+    EXT_o     <= dbg_s(7 downto 0);
   end generate;
 
   FORCE_ROMCS_o   <= FORCE_ROMCS_s;
@@ -231,7 +231,7 @@ begin
 
   ESP_IO27_o     <= spec_nreq_s;
 
-  FLED_o(0)     <= USB_FLT_i;
+  FLED_o(0)     <= dbg_s(8);
   FLED_o(1)     <= '1';
   FLED_o(2)     <= not FORCE_ROMCS_s;
   LED2_o        <= '1';

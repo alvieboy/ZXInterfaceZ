@@ -49,6 +49,8 @@ begin
 
     SpectrumReadIO(Spectrum_Cmd, Spectrum_Data, x"fefe", data);
 
+    Check("Data with keyboard", data(4 downto 0), "11110");
+
     wait for 2 us;
 
     FinishTest(

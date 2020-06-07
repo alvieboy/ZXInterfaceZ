@@ -341,7 +341,7 @@ BEGIN
     chint: for i in 0 to C_NUM_CHANNELS-1 loop
       interrupt_v(i) := '0';
       if  r.ch(i).intpend.datatogglerror = '1' or
-          r.ch(i).intpend.crcerror   = '1' or
+          r.ch(i).intpend.crcerror       = '1' or
           r.ch(i).intpend.babble         = '1' or
           r.ch(i).intpend.transerror     = '1' or
           r.ch(i).intpend.ack            = '1' or
@@ -409,7 +409,7 @@ BEGIN
               w.ch(wch).intconf.cplt            := write_data_s(0);
             when "0100" => -- Interrupt clear
               if write_data_s(7)='1' then w.ch(wch).intpend.datatogglerror  := '0'; end if;
-              if write_data_s(6)='1' then w.ch(wch).intpend.crcerror    := '0'; end if;
+              if write_data_s(6)='1' then w.ch(wch).intpend.crcerror        := '0'; end if;
               if write_data_s(5)='1' then w.ch(wch).intpend.babble          := '0'; end if;
               if write_data_s(4)='1' then w.ch(wch).intpend.transerror      := '0'; end if;
               if write_data_s(3)='1' then w.ch(wch).intpend.ack             := '0'; end if;

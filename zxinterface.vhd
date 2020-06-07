@@ -50,7 +50,7 @@ entity zxinterface is
     -- Debug
     TP5           : out std_logic;
     TP4           : out std_logic;
-    dbg_o         : out std_logic_vector(7 downto 0);
+    dbg_o         : out std_logic_vector(15 downto 0);
     --
 
     -- USB PHY
@@ -515,8 +515,8 @@ begin
       mouse_en_i      => mouse_en_sync_s,
       mouse_x_i       => mouse_x_sync_s,
       mouse_y_i       => mouse_y_sync_s,
-      mouse_buttons_i => mouse_buttons_sync_s
-    
+      mouse_buttons_i => mouse_buttons_sync_s,
+      dbg_o           => dbg_o(15 downto 8)
   );
 
 
@@ -1059,7 +1059,7 @@ begin
     vm_i          => USB_VM_i,
     pwren_o       => USB_PWREN_o,
     pwrflt_i      => USB_FLT_i,
-    dbg_o         => dbg_o
+    dbg_o         => dbg_o(7 downto 0)
   );
 
   mosi_s          <= SPI_MOSI_i;
