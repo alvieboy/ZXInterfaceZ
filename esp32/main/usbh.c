@@ -762,6 +762,7 @@ uint32_t usbh__get_device_id(const struct usb_device*dev)
     id += dev->device_descriptor.idProduct;
     return id;
 }
+
 int usbh__init()
 {
     usb_cmd_queue  = xQueueCreate(4, sizeof(struct usbcmd));

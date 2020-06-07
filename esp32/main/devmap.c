@@ -32,43 +32,34 @@ typedef struct {
  7: rotR horiz
  6: rotR vert
  2: roTl horiz
- 3: roTl horiz
+ 3: roTl vert
+ 10: Left 2
+ 11: Right 2
+ 12: Left 1
+ 13: Right 1
+ 14: select
+ 15: Start
+
 
  */
-
-/*I (22571) HID: Report 0 size 56
-I (22571) HID:  > Field offset 0 size 8 count 5
-I (22581) HID:   [0] usage 0x0132 (Z axis)
-I (22581) HID:   [1] usage 0x0135 (Z rotation)
-I (22591) HID:   [2] usage 0x0130 (X axis)
-I (22591) HID:   [3] usage 0x0131 (Y axis)
-I (22601) HID:   [4] usage 0x0100 (Undefined)
-I (22601) HID:  > Field offset 40 size 4 count 1
-I (22611) HID:   [0] usage 0x0139 (Hat switch)
-I (22611) HID:  > Field offset 44 size 1 count 12
-I (22621) HID:   [0] usage 0x0901 (Button 1)
-I (22621) HID:   [1] usage 0x0902 (Button 2)
-I (22631) HID:   [2] usage 0x0903 (Button 3)
-I (22631) HID:   [3] usage 0x0904 (Button 4)
-I (22641) HID:   [4] usage 0x0905 (Button 5)
-I (22641) HID:   [5] usage 0x0906 (Button 6)
-I (22651) HID:   [6] usage 0x0907 (Button 7)
-I (22651) HID:   [7] usage 0x0908 (Button 8)
-I (22661) HID:   [8] usage 0x0909 (Button 9)
-I (22661) HID:   [9] usage 0x090a (Button 10)
-I (22671) HID:   [10] usage 0x090b (Button 11)
-I (22671) HID:   [11] usage 0x090c (Button 12)
-          */
 static const devmap_e_t gamepad_devmap[] = {
+    { MAP_NMI,     14, 0, 0 }, // Select button
+    { MAP_KEYBOARD,15, 0, SPECT_KEYIDX_ENTER }, // Start button
+
     { MAP_KEYBOARD, 6, 0, SPECT_KEYIDX_Q },
     { MAP_KEYBOARD, 7, 0, SPECT_KEYIDX_A },
+
     { MAP_KEYBOARD, 4, 0, SPECT_KEYIDX_O },
+    { MAP_KEYBOARD,12, 0, SPECT_KEYIDX_O }, // Left button 1
     { MAP_KEYBOARD, 5, 0, SPECT_KEYIDX_P },
+    { MAP_KEYBOARD,13, 0, SPECT_KEYIDX_P }, // Right button 1
+
     { MAP_KEYBOARD, 8, 0,  SPECT_KEYIDX_M },
+
     { MAP_KEYBOARD, 2, +64,  SPECT_KEYIDX_P }, // Analog right
     { MAP_KEYBOARD, 2, -64,  SPECT_KEYIDX_O }, // Analog left
-    { MAP_KEYBOARD, 3, +64,  SPECT_KEYIDX_Q }, // Analog up
-    { MAP_KEYBOARD, 3, -64,  SPECT_KEYIDX_A }, // Analog down
+    { MAP_KEYBOARD, 3, +64,  SPECT_KEYIDX_A }, // Analog down
+    { MAP_KEYBOARD, 3, -64,  SPECT_KEYIDX_Q }, // Analog up
 };
 
 static const devmap_d_t devmap[] = {
