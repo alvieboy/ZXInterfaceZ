@@ -68,8 +68,16 @@ begin
     end if;
   end process;
 
-  pulse_o(0) <= oq0_r(oq0_r'HIGH-1)  xor oq0_r(oq0_r'HIGH);
-  pulse_o(1) <= oq1_r(oq1_r'HIGH-1)  xor oq1_r(oq1_r'HIGH);
+  process(clko_i, arst_i)
+  begin
+    if arst_i='1' then
+      pulse_o(0) <= '0';
+      pulse_o(1) <= '0';
+    elsif rising_edge(clko_i) then
+      pulse_o(0) <= oq0_r(oq0_r'HIGH-1)  xor oq0_r(oq0_r'HIGH);
+      pulse_o(1) <= oq1_r(oq1_r'HIGH-1)  xor oq1_r(oq1_r'HIGH);
+    end if;
+  end process;
 
   data_o <= dq_r(WIDTH-1);
 
