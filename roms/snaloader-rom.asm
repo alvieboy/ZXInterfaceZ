@@ -1,3 +1,4 @@
+include "port_defs.asm"
 		
 ;                OUTPUT	"INTZ.ROM"
 
@@ -55,10 +56,10 @@ RAM_DONE:
         LD	DE, $BFFF
         LD	B, %00000001
 LOADER:
-	IN	A, ($0B)
+	IN	A, (PORT_RESOURCE_FIFO_STATUS)
         OR	A
         JR 	NZ, LOADER
-        IN	A, ($0D)
+        IN	A, (PORT_RESOURCE_FIFO_DATA)
         LD	(HL), A
 	INC	HL
 	DEC	DE

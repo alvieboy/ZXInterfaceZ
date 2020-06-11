@@ -1,11 +1,11 @@
 include "resource_defs.asm"
 
 READRESFIFO:
-	IN	A, ($0B)
+	IN	A, (PORT_RESOURCE_FIFO_STATUS)
         OR	A
         JR	NZ, READRESFIFO
         ; Grab resoruce data
-        IN	A, ($0D)
+        IN	A, (PORT_RESOURCE_FIFO_DATA)
         RET
 
 
@@ -14,12 +14,12 @@ READRESFIFO:
 WRITECMDFIFO:
 	LD	C, A
 WAITFIFO1:
-        IN 	A, ($07)
+        IN 	A, (PORT_CMD_FIFO_STATUS)
         OR	A
         JR	NZ, WAITFIFO1
         ; Send resource ID
         LD	A, C
-        OUT	($09), A
+        OUT	(PORT_CMD_FIFO_DATA), A
 	RET
 
 ;

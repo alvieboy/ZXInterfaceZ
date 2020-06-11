@@ -95,19 +95,34 @@ architecture beh of interfacez_io is
 
   signal has_key_inject_s : std_logic;
 
+  signal kempston_joy_sel_s     : std_logic;
+  signal kempston_mousex_sel_s  : std_logic;
+  signal kempston_mousey_sel_s  : std_logic;
+  signal kempston_mouseb_sel_s  : std_logic;
+  signal kempston_mouse_sel_s  : std_logic;
+
 begin
 
+  kempston_joy_sel_s <= '1' when ((adr_i AND SPECT_PORT_KEMPSTON_JOYSTICK_MASK) = SPECT_PORT_KEMPSTON_JOYSTICK) else '0';
+  kempston_mousex_sel_s <= '1' when ((adr_i AND SPECT_PORT_KEMPSTON_MOUSEX_MASK) = SPECT_PORT_KEMPSTON_MOUSEX) else '0';
+  kempston_mousey_sel_s <= '1' when ((adr_i AND SPECT_PORT_KEMPSTON_MOUSEY_MASK) = SPECT_PORT_KEMPSTON_MOUSEY) else '0';
+  kempston_mouseb_sel_s <= '1' when ((adr_i AND SPECT_PORT_KEMPSTON_MOUSEB_MASK) = SPECT_PORT_KEMPSTON_MOUSEB) else '0';
+  kempston_mouse_sel_s <= kempston_mousex_sel_s or kempston_mousey_sel_s or kempston_mouseb_sel_s;
+
   -- Address match for reads
-  process (adr_i)
+  process (adr_i, joy_en_i, mouse_en_i)
   begin
     addr_match_s<='0';
-    if adr_i(0)='1' then
-      case adr_i(7 downto 0) is
-        when x"03" | x"05" | x"07" | x"0B" | x"0D" | x"17" | x"1F"=>
-          addr_match_s<='1';
-        when others =>
-		end case;
-     end if;
+    if adr_i(0)='1' and adr_i(1)='1' and adr_i(5)='1' and adr_i(7)='0' then
+      addr_match_s<='1'; -- Internal 4-bit registers (16)
+    else
+      if kempston_joy_sel_s='1' then -- We always reply even if disabled.
+        addr_match_s <= '1';
+      end if;
+      if kempston_mouse_sel_s='1' then -- We always reply even if disabled.
+        addr_match_s <= '1';
+      end if;
+		end if;
   end process;
 
 	enable_s  <=  active_i and addr_match_s; -- Report all IOs
@@ -129,7 +144,7 @@ begin
       resfifo_rd_o <= '0';
       cmdfifo_wr_r <= '0';
 
-      if wrp_i='1' and adr_i(7 downto 0)=x"FE" then -- ULA write
+      if wrp_i='1' and adr_i(0)='0' then -- ULA write
         port_fe_r <= dat_i(5 downto 0);
         -- synthesis translate_off
         report "SET BORDER: "&hstr(dat_i);
@@ -140,25 +155,24 @@ begin
 
       if wrp_i='1' then
         case adr_i(7 downto 0) is
-          when x"03" =>
+          when SPECT_PORT_SCRATCH0 =>
             scratch0_r <= dat_i;
-          when x"05" =>
+          when SPECT_PORT_SCRATCH1 =>
             scratch1_r <= dat_i;
-          when x"0B" => -- FIFO status/control
-          when x"09" => -- Command FIFO write.
+          when SPECT_PORT_CMD_FIFO_DATA => -- Command FIFO write.
             d_write_r <= dat_i;
             if cmdfifo_full_i='0' then
               cmdfifo_wr_r    <= '1';
             end if;
-          when x"11" =>
+          when SPECT_PORT_RAM_ADDR_LOW =>
             ram_addr_r(7 downto 0) <= unsigned(dat_i);
-          when x"13" =>
+          when SPECT_PORT_RAM_ADDR_MIDDLE =>
             ram_addr_r(15 downto 8) <= unsigned(dat_i);
 
-          when x"15" =>
+          when SPECT_PORT_RAM_ADDR_HIGH =>
             ram_addr_r(23 downto 16) <= unsigned(dat_i);
 
-          when x"17" => -- RAM write.
+          when SPECT_PORT_RAM_DATA  => -- RAM write.
             d_write_r     <= dat_i;
             ram_wr_r      <= '1';
 
@@ -171,36 +185,63 @@ begin
       if rdp_i='1' then
         case adr_i(7 downto 0) is
 
-          when x"03" =>
+          when SPECT_PORT_SCRATCH0 =>
             dataread_r <= scratch0_r;
 
-          when x"05" =>
+          when SPECT_PORT_SCRATCH1 =>
             dataread_r <= scratch1_r;
 
-          when x"07" => -- Command FIFO status read
+          when SPECT_PORT_CMD_FIFO_STATUS => -- Command FIFO status read
             dataread_r <= "0000000" & cmdfifo_full_i;
 
-          when x"0B" => -- Resource FIFO status read
+          when SPECT_PORT_RESOURCE_FIFO_STATUS => -- Resource FIFO status read
             dataread_r <= "0000000" & resfifo_empty_i;
 
-          when x"0D" => -- FIFO read
+          when SPECT_PORT_RESOURCE_FIFO_DATA => -- FIFO read
             dataread_r <= resfifo_read_i;
             -- Pop data on next clock cycle
             resfifo_rd_o <= '1';
-            testdata_r <= testdata_r + 1;
+            --testdata_r <= testdata_r + 1;
 
-          when x"17" => -- RAM read
+          when SPECT_PORT_RAM_DATA => -- RAM read
             ram_rd_r <= '1';
+            --dataread_r <= (others => 'X');
 
-          when x"1F" => -- Joy
-            if joy_en_i='1' then
-              dataread_r <= "000" & joy_data_i;
-            else
-              dataread_r <= x"00";
-            end if;
           when others =>
-            --dataread_r <= (others => '1');
+            dataread_r <= (others => '1');
         end case;
+
+        if kempston_joy_sel_s='1' then
+          if joy_en_i='1' then
+            dataread_r <= "000" & joy_data_i;
+          else
+            dataread_r <= x"00";
+          end if;
+        end if;
+
+        if kempston_mousex_sel_s='1' then
+          if mouse_en_i='1' then
+            dataread_r <= mouse_x_i;
+          else
+            dataread_r <= x"00";
+          end if;
+        end if;
+
+        if kempston_mousey_sel_s='1' then
+          if mouse_en_i='1' then
+            dataread_r <= mouse_y_i;
+          else
+            dataread_r <= x"00";
+          end if;
+        end if;
+
+        if kempston_mouseb_sel_s='1' then
+          if mouse_en_i='1' then
+            dataread_r <= "111111" & not mouse_buttons_i(1) & not mouse_buttons_i(0);
+          else
+            dataread_r <= x"FF";
+          end if;
+        end if;
 
       end if;
 

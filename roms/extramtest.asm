@@ -2,15 +2,15 @@
 TESTADDRESS:
 	LD	C, PORT_RAM_DATA
         LD	A, L
-        OUT	($11), A
+        OUT	(PORT_RAM_ADDR_0), A
         LD	A, H
-        OUT	($13), A
+        OUT	(PORT_RAM_ADDR_1), A
 p1:
         OUT	(C), B
         LD	A, L
-        OUT	($11), A
+        OUT	(PORT_RAM_ADDR_0), A
         LD	A, H
-        OUT	($13), A
+        OUT	(PORT_RAM_ADDR_1), A
         IN	A, (C)
         CP	B
         RET 	
