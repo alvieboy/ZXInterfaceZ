@@ -1,0 +1,1 @@
+typedef uint32_t dhcps_lease_t;

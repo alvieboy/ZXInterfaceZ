@@ -1,0 +1,1 @@
+#define GPIO_PIN_INTR_DISABLE 1
