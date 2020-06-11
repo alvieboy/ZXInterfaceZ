@@ -11,10 +11,11 @@ fpga.bin: ../output_files/interfacez.rbf
 	@echo GEN fpga.bin
 	./filesize ../output_files/interfacez.rbf fpga.bin
 
-resource.bin: resourcelist.txt $(shell cat resourcelist.txt|cut -f2 -d' ')
-	@echo GEN resource.bin
-	./genresources -i resourcelist.txt -o resource.bin
+SPIFFS_IMAGE_FLASH_IN_PROJECT := 1
+SPIFFS_IMAGE_DEPENDS := 
 
-ESPTOOL_ALL_FLASH_ARGS+=0x36E000 resource.bin 0x310000 fpga.bin 0x36A000 intz.rom
+$(eval $(call spiffs_create_partition_image,resources,spiffs))
+
+ESPTOOL_ALL_FLASH_ARGS+=0x310000 fpga.bin 0x36A000 intz.rom
 
 .PHONY: build/main/version.o
