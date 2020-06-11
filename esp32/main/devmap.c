@@ -3,24 +3,29 @@
 #include "keyboard.h"
 #include "esp_log.h"
 #include "fpga.h"
+#include <malloc.h>
 
-typedef struct {
-    enum {
+enum map_type {
         MAP_KEYBOARD,
         MAP_JOYSTICK,
         MAP_NMI,
         MAP_MOUSE
-    } map_type:8;
+};
+
+typedef struct devmap_e {
+    struct devmap_e *next;
+    enum map_type map:8;
     unsigned index:8;
     uint16_t analog_threshold;
     unsigned action_value:16;
 } devmap_e_t;
 
-typedef struct {
+typedef struct devmap_d {
+    struct devmap_d *next;
     device_id id;
-    uint8_t num_entries;
-    const devmap_e_t *entries;
+    devmap_e_t *entries;
 } devmap_d_t;
+
 
 /* For testing purposes */
 /*
@@ -42,7 +47,7 @@ typedef struct {
 
 
  */
-static const devmap_e_t gamepad_devmap[] = {
+/*static const devmap_e_t gamepad_devmap[] = {
     { MAP_NMI,     14, 0, 0 }, // Select button
     { MAP_KEYBOARD,15, 0, SPECT_KEYIDX_ENTER }, // Start button
 
@@ -65,15 +70,89 @@ static const devmap_e_t gamepad_devmap[] = {
 static const devmap_d_t devmap[] = {
     { 0x0e8f0003 , sizeof(gamepad_devmap)/sizeof(gamepad_devmap[0]), gamepad_devmap }
 };
+*/
+
+devmap_d_t *devmap__load_from_file()
+{
+    return NULL;
+}
+
+#include <cJSON.h>
+            
+const char *devmap__map_name_from_type(enum map_type type)
+{
+    switch (type) {
+    case MAP_KEYBOARD: return "keyboard";
+    case MAP_JOYSTICK: return "joystick";
+    case MAP_NMI:      return "nmi";
+    case MAP_MOUSE:    return "mouse";
+    default:           return "unknown";
+    }
+}
+
+int devmap__save_to_file(const char *filename, const devmap_d_t *devmap)
+{
+    char did[10];
+
+    cJSON *root = cJSON_CreateObject();
+
+    while (devmap!=NULL) {
+
+        cJSON *entry = cJSON_CreateObject(); // device entry
+        cJSON *mapping = cJSON_CreateArray(); // device map entries
+
+        cJSON_AddItemToObject(entry, "__main", mapping);
+
+        // Populate entries
+        devmap_e_t *e;
+
+        for (e=devmap->entries; e!=NULL; e=e->next) {
+            cJSON *item = cJSON_CreateObject();
+
+            cJSON_AddNumberToObject(item, "index", e->index);
+            cJSON_AddStringToObject(item, "map", devmap__map_name_from_type(e->map));
+            if (e->analog_threshold!=0)
+                cJSON_AddNumberToObject(item, "threshold", e->analog_threshold);
+            switch (e->map) {
+            case MAP_KEYBOARD:
+                cJSON_AddStringToObject(item, "key", keyboard__get_name_by_key(e->action_value));
+                break;
+            default:
+                break;
+            }
+            cJSON_AddItemToArray(mapping, item);
+        }
+
+        sprintf(did,"%04x:%04x",
+                (devmap->id >> 16),
+                (devmap->id & 0xffff));
 
 
+        cJSON_AddItemToObject(root, did, entry);
+
+        devmap = devmap->next;
+    }
+
+
+    char *data = cJSON_Print(root);
+
+
+    free(data);
+    cJSON_Delete(root);
+
+    return 0;
+}
+
+static devmap_d_t *root_devmap;
 
 static const devmap_d_t *devmap__find_by_id(const device_id dev_id)
 {
-    unsigned i;
-    for (i=0;i<sizeof(devmap)/sizeof(devmap[0]);i++) {
-        if (devmap[i].id == dev_id) {
-            return &devmap[i];
+//    unsigned i;
+    devmap_d_t *devmap = root_devmap;
+
+    while (devmap!=NULL) {
+        if (devmap->id == dev_id) {
+            return devmap;
         }
     }
     return NULL;
@@ -109,7 +188,7 @@ static void devmap__trigger_entry(const devmap_e_t *entry, const struct hid_fiel
 
     on = devmap__get_digital(field, value, entry->analog_threshold);
 
-    switch (entry->map_type) {
+    switch (entry->map) {
     case MAP_KEYBOARD:
         ESP_LOGI("devmap", "Performing action %s on key %d", on?"ON":"OFF", entry->action_value);
         if (on) {
@@ -131,16 +210,16 @@ static void devmap__trigger_entry(const devmap_e_t *entry, const struct hid_fiel
 void hid__field_entry_changed_callback(const device_id dev_id, const struct hid_field* field, uint8_t entry_index, uint8_t new_value)
 {
     const devmap_d_t *d = devmap__find_by_id(dev_id);
+    const devmap_e_t *map;
 
     if (d==NULL)
         return;
 
    // (void)devmap__get_digital(field, new_value, entry->analog_threshold);
 
-    unsigned i;
-    for (i=0;i<d->num_entries;i++) {
+//    unsigned i;
 
-        const devmap_e_t *map = &d->entries[i];
+    for (map = d->entries; map!=NULL; map=map->next) {
 
         if (map->index  == entry_index) {
             devmap__trigger_entry(map, field, new_value);
