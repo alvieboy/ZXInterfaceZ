@@ -10,6 +10,7 @@
 #include "usb_descriptor.h"
 #include <string.h>
 #include "log.h"
+#include "esp_system.h"
 
 #define USBHTAG "USBH"
 #define USBHDEBUG(x...) LOG_DEBUG(DEBUG_ZONE_USBH, USBHTAG ,x)

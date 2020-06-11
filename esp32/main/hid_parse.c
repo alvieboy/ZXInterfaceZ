@@ -491,7 +491,7 @@ void hid_free(struct hid *h)
     free(h);
 }
 
-#ifdef __linux__
+#ifdef TESTHIDPARSER
 
 int main()
 {

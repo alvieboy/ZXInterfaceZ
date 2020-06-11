@@ -5,6 +5,8 @@
 #include "rom.h"
 #include "fpga.h"
 
+#ifndef __linux__
+
 static const esp_partition_t *rom_partition = NULL;
 static const uint8_t *rom_ptr = NULL;
 static spi_flash_mmap_handle_t mmap_handle;
@@ -35,3 +37,10 @@ int rom__load_from_flash(void)
     spi_flash_munmap(mmap_handle);
     return r;
 }
+#else
+int rom__load_from_flash(void)
+{
+    return 0;
+}
+
+#endif

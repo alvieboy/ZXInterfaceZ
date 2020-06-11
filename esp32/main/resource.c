@@ -30,11 +30,11 @@ struct resource *resource__find(uint8_t id)
     }
     // See if resource is in flash.
 
-    struct flash_resource *r = flash_resource__find(id);
+   /* struct flash_resource *r = flash_resource__find(id);
     if (r!=NULL) {
         return &r->r;
     }
-
+    */
 
     return NULL;
 }

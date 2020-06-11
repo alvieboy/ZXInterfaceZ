@@ -4,58 +4,34 @@
 #include "defs.h"
 #include "resource.h"
 #include "flash_resource.h"
+#include "esp_spiffs.h"
 #include "fpga.h"
-
-static const esp_partition_t *resource_partition = NULL;
-static const uint8_t *resource_ptr = NULL;
-static spi_flash_mmap_handle_t mmap_handle;
 
 void flash_resource__init(void)
 {
-    esp_partition_iterator_t i =
-        esp_partition_find(0x41, 0x00, NULL);
-    if (i!=NULL) {
-        resource_partition = esp_partition_get(i);
+#ifndef __linux__
+    esp_vfs_spiffs_conf_t conf = {
+      .base_path = "/spiffs",
+      .partition_label = "resources",
+      .max_files = 128,
+      .format_if_mount_failed = false
+    };
+    
+    esp_err_t ret = esp_vfs_spiffs_register(&conf);
 
-        esp_err_t err =esp_partition_mmap(resource_partition,
-                                          0, /* Offset */
-                                          resource_partition->size,
-                                          SPI_FLASH_MMAP_DATA,
-                                          (const void**)&resource_ptr,
-                                          &mmap_handle);
-        ESP_ERROR_CHECK(err);
-        ESP_LOGI(TAG,"Mapped resource partition at %p", resource_ptr);
-    } else {
-        ESP_LOGW(TAG,"Cannot find resource partition!!!");
-
-    }
-    esp_partition_iterator_release(i);
-}
-
-static const struct flashresourcedata *flashresourcedata__finddata(uint8_t id)
-{
-    if (resource_ptr==NULL)
-        return NULL;
-
-    uint16_t num_resources = *(uint16_t*)resource_ptr;
-    const uint8_t *rptr = &resource_ptr[2];
-
-    ESP_LOGI(TAG,"Requested resource ID %d, total resources %d", id, (int)num_resources);
-    for (uint16_t r = 0; r<num_resources; r++) {
-        uint8_t resid = *rptr++;
-        const struct flashresourcedata *res = (const struct flashresourcedata*) rptr;
-
-        if (resid==id) {
-            return res;
+    if (ret != ESP_OK) {
+        if (ret == ESP_FAIL) {
+            ESP_LOGE(TAG, "Failed to mount or format filesystem");
+        } else if (ret == ESP_ERR_NOT_FOUND) {
+            ESP_LOGE(TAG, "Failed to find SPIFFS partition");
         } else {
-            rptr += 2; // Move past type and resource size.
-            rptr += res->len;
+            ESP_LOGE(TAG, "Failed to initialize SPIFFS (%s)", esp_err_to_name(ret));
         }
+        return;
     }
-    return NULL;
+#endif
 }
-
-
+#if 0
 uint8_t flash_resource__type(struct resource *r)
 {
     struct flash_resource *fr = (struct flash_resource*)r;
@@ -94,3 +70,4 @@ struct flash_resource *flash_resource__find(uint8_t id)
     flashresource.data = data;
     return &flashresource;
 }
+#endif

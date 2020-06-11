@@ -6,6 +6,8 @@
 #include <sys/types.h>
 #include <dirent.h>
 
+#ifndef __linux__
+
 void sdcard__init()
 {
     ESP_LOGI(TAG, "Using SDMMC peripheral");
@@ -68,3 +70,14 @@ bool sdcard__isconnected(void)
 {
     return false;
 }
+#else
+bool sdcard__isconnected(void)
+{
+    return false;
+}
+
+void sdcard__init()
+{
+}
+
+#endif

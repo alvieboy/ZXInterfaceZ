@@ -3,6 +3,7 @@
 #include "defs.h"
 #include <dirent.h>
 #include "fileaccess.h"
+#include <string.h>
 
 #define CWD_MAX 255
 static char cwd[CWD_MAX];
@@ -127,4 +128,25 @@ const struct mountpoints *__get_mountpoints()
     return &mpoints.m;
 }
 
+int file_size(const char *path, const char *filename)
+{
+    char p[FILE_PATH_MAX];
+    struct stat st;
 
+    size_t plen = strlen(path);
+    if (plen>0) {
+        memcpy(p, path, plen+1);
+
+        if (p[plen-1]!='/') {
+            p[plen++]='/';
+            p[plen]='\0';
+        }
+        strcpy(&p[plen], filename);
+    } else {
+        strcpy(p, filename);
+    }
+    if (stat(p,&st)<0)
+        return -1;
+
+    return st.st_size;
+}

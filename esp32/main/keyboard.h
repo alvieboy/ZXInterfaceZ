@@ -6,6 +6,8 @@
 void keyboard__init(void);
 void keyboard__press(uint8_t key);
 void keyboard__release(uint8_t key);
+uint8_t keyboard__get_key_by_name(const char *name);
+const char *keyboard__get_name_by_key(const uint8_t key);
 
 #define SKEY(x,y) ((x*5)+y)
 
@@ -56,5 +58,7 @@ void keyboard__release(uint8_t key);
 #define SPECT_KEYIDX_M     SKEY(7,2)
 #define SPECT_KEYIDX_N     SKEY(7,3)
 #define SPECT_KEYIDX_B     SKEY(7,4)
+
+#define SPECT_KEYIDX_UNKNOWN (63)
 
 #endif

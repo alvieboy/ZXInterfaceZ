@@ -25,6 +25,10 @@
 #include "usb_ll.h"
 #include <esp32/rom/uart.h>
 #include "keyboard.h"
+#include "webserver.h"
+#include "config.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 
 static int8_t videomode = 0;
 
@@ -121,15 +125,15 @@ void app_main()
         ESP_LOGW(TAG,"Cannot load ROM from flash, continuing with no ROM");
     }
 
+    config__init();
     spectcmd__init();
-#if 0
-    flash_pgm__init();
-#endif
     videostreamer__init();
     netcmd__init();
     tapplayer__init();
     usbh__init();
     keyboard__init();
+    webserver__init();
+
     // Start capture
     //start_capture();
     unsigned iter = 0;

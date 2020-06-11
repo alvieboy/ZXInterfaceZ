@@ -1,3 +1,5 @@
+#ifndef __linux__
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/event_groups.h"
@@ -13,6 +15,7 @@
 #include "led.h"
 #include <string.h>
 #include "interfacez_resources.h"
+#include "nvs.h"
 
 #define EXAMPLE_ESP_WIFI_SSID      CONFIG_ESP_WIFI_SSID
 #define EXAMPLE_ESP_WIFI_PASS      CONFIG_ESP_WIFI_PASSWORD
@@ -23,6 +26,13 @@ static EventGroupHandle_t s_wifi_event_group;
 
 #define WIFI_CONNECTED_BIT BIT0
 #define WIFI_SCANNING_BIT BIT1
+
+#define U32_IP_ADDR(a,b,c,d) \
+    ((uint32_t)((d) & 0xff) << 24) | \
+    ((uint32_t)((c) & 0xff) << 16) | \
+    ((uint32_t)((b) & 0xff) << 8)  | \
+    (uint32_t)((a) & 0xff)
+
 
 static bool issta = false;
 char wifi_ssid[33];
@@ -52,11 +62,7 @@ static void ip_event_handler(void* arg, esp_event_base_t event_base,
     switch (event_id) {
     case IP_EVENT_STA_GOT_IP:
         event = (ip_event_got_ip_t*) event_data;
-/*        ESP_LOGI(TAG, "got ip: %s",
- ip4addr_ntoa(&event->ip_info.ip));*/
-        ESP_LOGI(TAG, "got ip: " IPSTR,
-                 IP2STR(&event->ip_info.ip));
-
+        ESP_LOGI(TAG, "got ip: " IPSTR, IP2STR(&event->ip_info.ip));
         xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
         led__set(LED2, 1);
         break;
@@ -103,6 +109,9 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,
         wifi__parse_scan();
         xEventGroupClearBits(s_wifi_event_group, WIFI_SCANNING_BIT);
         //case WIFI_EVENT_STA_CONNECTED:
+        break;
+    case WIFI_EVENT_AP_START:
+        ESP_LOGI(TAG,"WiFi AP started");
         break;
     default:
         ESP_LOGW(TAG,"Unhandled WIFI event %d", event_id);
@@ -192,10 +201,13 @@ void wifi_init_softap()
     ESP_ERROR_CHECK(tcpip_adapter_dhcps_stop(TCPIP_ADAPTER_IF_AP));
     tcpip_adapter_ip_info_t info;
     memset(&info, 0, sizeof(info));
-    IP4_ADDR(&info.ip, 192, 168, 120, 1);
-    IP4_ADDR(&info.gw, 0, 0, 0, 0);//192, 168, 120, 1);
-    //IP4_ADDR(&info.gw, 192, 168, 120, 1);
-    IP4_ADDR(&info.netmask, 255, 255, 255, 0);
+
+    issta = false;
+
+    info.ip.addr = nvs__u32("ip", U32_IP_ADDR(192, 168, 120, 1));
+    info.gw.addr = nvs__u32("gw", U32_IP_ADDR(0, 0, 0, 0));
+    info.netmask.addr = nvs__u32("mask", U32_IP_ADDR(255, 255, 255, 0));
+
     ESP_ERROR_CHECK(tcpip_adapter_set_ip_info(TCPIP_ADAPTER_IF_AP, &info));
     ESP_ERROR_CHECK(tcpip_adapter_dhcps_start(TCPIP_ADAPTER_IF_AP));
 
@@ -205,7 +217,8 @@ void wifi_init_softap()
 
     ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL));
 
-    wifi_config_t wifi_config = {
+    wifi_config_t wifi_config;
+    /*= {
         .ap = {
             .channel = 3,
             .ssid = EXAMPLE_ESP_WIFI_SSID,
@@ -214,9 +227,27 @@ void wifi_init_softap()
             .max_connection = EXAMPLE_MAX_STA_CONN,
             .authmode = WIFI_AUTH_WPA_WPA2_PSK
         },
-    };
+        };*/
+    memset(&wifi_config,0,sizeof(wifi_config));
+
+    wifi_config.ap.channel = nvs__u8("ap_chan", 3);
+    wifi_config.ap.ssid_len = nvs__str("ap_ssid",
+                                       (char*)&wifi_config.ap.ssid[0],
+                                       sizeof(wifi_config.ap.ssid),
+                                       EXAMPLE_ESP_WIFI_SSID);
+
+    wifi_config.ap.max_connection = EXAMPLE_MAX_STA_CONN,
+
+    nvs__str("ap_pwd",
+             (char*)&wifi_config.ap.password[0],
+             sizeof(wifi_config.ap.password),
+             EXAMPLE_ESP_WIFI_PASS);
+
+
     if (strlen(EXAMPLE_ESP_WIFI_PASS) == 0) {
         wifi_config.ap.authmode = WIFI_AUTH_OPEN;
+    } else {
+        wifi_config.ap.authmode = WIFI_AUTH_WPA_WPA2_PSK;
     }
 
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
@@ -241,12 +272,11 @@ void wifi_init_wpa2()
     ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, ESP_EVENT_ANY_ID, &ip_event_handler, NULL));
 
 
-    wifi_config_t wifi_config = {
-        .sta = {
-            .ssid = "SotaoDosHorrores",
-            .password = "linuxrulez"
-        },
-    };
+    wifi_config_t wifi_config;
+    memset(&wifi_config, 0, sizeof(wifi_config));
+
+    nvs__fetch_str("sta_ssid", (char*)&wifi_config.sta.ssid[0], sizeof(wifi_config.sta.ssid), "");
+    nvs__fetch_str("sta_pwd", (char*)&wifi_config.sta.password[0], sizeof(wifi_config.sta.password), "");
 
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA) );
     ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_config) );
@@ -258,12 +288,11 @@ void wifi_init_wpa2()
     strcpy(wifi_ssid, (char*)wifi_config.sta.ssid );
 
     //esp_wifi_set_ps (WIFI_PS_NONE);
-    ESP_ERROR_CHECK( esp_wifi_set_bandwidth(ESP_IF_WIFI_STA, WIFI_BW_HT20) );
+//    ESP_ERROR_CHECK( esp_wifi_set_bandwidth(ESP_IF_WIFI_STA, WIFI_BW_HT20) );
 
 
 
     ESP_ERROR_CHECK(esp_wifi_start());
-
 }
 
 void wifi__init()
@@ -273,6 +302,33 @@ void wifi__init()
     tcpip_adapter_init();
     ESP_ERROR_CHECK(esp_event_loop_create_default());
 
-    //wifi_init_wpa2();
-    wifi_init_softap();
+    if (nvs__u8("wifi", WIFI_MODE_STA)==WIFI_MODE_STA) {
+        wifi_init_softap();
+    } else {
+        wifi_init_wpa2();
+    }
 }
+#else
+#include <stdbool.h>
+
+void wifi__init()
+{
+}
+bool wifi__isconnected()
+{
+    return false;
+}
+
+bool wifi__scanning()
+{
+    return false;
+}
+
+bool wifi__issta()
+{
+    return false;
+}
+
+char wifi_ssid[33] = {0} ;
+
+#endif

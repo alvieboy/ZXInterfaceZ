@@ -17,6 +17,8 @@
 #include "strtoint.h"
 #include "netcomms.h"
 
+#ifndef __linux__
+
 //#define BUFFSIZE 1024
 #define HASH_LEN 32 /* SHA-256 digest length */
 
@@ -202,3 +204,9 @@ static int ota__chunk(command_t *cmdt)
 }
 
 
+#else
+int ota__performota(command_t *cmdt, int argc, char **argv)
+{
+    return -1;
+}
+#endif

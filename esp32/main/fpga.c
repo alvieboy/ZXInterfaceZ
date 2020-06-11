@@ -83,6 +83,7 @@ unsigned fpga__read_id()
 
 static int fpga__configurefromflash()
 {
+#ifndef __linux__
     const esp_partition_t *fpga_partition = NULL;
     const uint8_t *fpga_ptr = NULL;
     spi_flash_mmap_handle_t mmap_handle;
@@ -121,6 +122,7 @@ static int fpga__configurefromflash()
     spi_flash_munmap(mmap_handle);
 
     return r;
+#endif
 }
 
 int fpga__init()
