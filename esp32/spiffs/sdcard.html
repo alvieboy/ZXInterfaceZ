@@ -1,13 +1,14 @@
 <html>
 <h1 class="mt-5">SD card</h1>
 
+<!--
 <div id="up" onDrop="upload()">Drag here to upload</div>
 
  <form name="uploader" id="uploader" action="/req/upload" method="POST" enctype="multipart/form-data" >
   <input id="infile" name="infile[]" type="file" onBlur="submit();" multiple="true" ></input> 
  </form>
 
-<div>
+<div>-->
 <ul id="list">
 <li>jkjk</li>
 </ul>
@@ -17,10 +18,16 @@
 
 <script>
 	function status( data ) {
+        	console.log(data);
         	var items = [];
-           $.each( data, function( key, val ) {
-           	items.push("<li>" + val + "</li>");
-           });
+                
+           	$.each( data.entries, function( key, val ) {
+                	if (val.type=="file") {
+           			items.push("<li> [File] "+val.name + "</li>");
+                        } else {
+           			items.push("<li> [DIR] "+val.name + "</li>");
+                        }
+           	});
            
            $("#list").html(items.join(""));
      
@@ -40,7 +47,7 @@
 </script>
 
 <script>
-	request( "sdlist?p=/", status );
+	request_data( "list", { "path": "/"}, status );
 </script>
 
 </html>

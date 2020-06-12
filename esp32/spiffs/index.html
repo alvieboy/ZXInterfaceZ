@@ -101,6 +101,10 @@ Hello!
      {
      	$.getJSON( "req/"+name , success );
      }
+     function request_data(name, param, success)
+     {
+     	$.getJSON( "req/"+name , param, success );
+     }
   </script>
   <script>
      $(document).ready(function() {
