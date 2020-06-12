@@ -1,0 +1,46 @@
+<html>
+<h1 class="mt-5">SD card</h1>
+
+<div id="up" onDrop="upload()">Drag here to upload</div>
+
+ <form name="uploader" id="uploader" action="/req/upload" method="POST" enctype="multipart/form-data" >
+  <input id="infile" name="infile[]" type="file" onBlur="submit();" multiple="true" ></input> 
+ </form>
+
+<div>
+<ul id="list">
+<li>jkjk</li>
+</ul>
+
+</div>
+
+
+<script>
+	function status( data ) {
+        	var items = [];
+           $.each( data, function( key, val ) {
+           	items.push("<li>" + val + "</li>");
+           });
+           
+           $("#list").html(items.join(""));
+     
+	}
+        
+        function upload(ev) {
+  		ev.stopPropagation();
+  		ev.preventDefault();
+
+  		var files = ev.originalEvent.dataTransfer.files, filePairs = [];
+  		for (var i = 0; i < files.length; i++) {
+      			filePairs.push(files[i].name);
+    		}
+	}
+        
+        
+</script>
+
+<script>
+	request( "sdlist?p=/", status );
+</script>
+
+</html>

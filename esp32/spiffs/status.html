@@ -1,0 +1,30 @@
+
+<h1 class="mt-5">Status</h1>
+<h2 class="mr-1">microSD card</h2>
+<div>
+<div id="sdstatus">ss</div>
+</div>
+
+
+<script>
+	function status( data ) {
+           $.each( data, function( key, val ) {
+           	if (key=="sdcard") {
+                 	if (null==val) {
+                          //alert("ok");
+                         	$( "#sdstatus" ).html("Not connected");
+                        } else {
+                                $( "#sdstatus" ).html("ok");
+                        }
+                }          
+           });
+           
+     
+	}
+</script>
+
+<script>
+	request( "status", status );
+
+</script>
+
