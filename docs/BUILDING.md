@@ -1,6 +1,6 @@
 # Building Interface Z
 Here are the basic instructions to fully build the InterfaceZ. It is split into four parts:
-- Building the FPGA binary file
+- [Building the FPGA binary file](#building-the-fpga-binary)
 - Building ESP32 firmware
 - Manually uploading the design
 - Building host-mode firmware
@@ -23,12 +23,12 @@ Launch Quartus and open the project file *interfacez.qpf* . Perform a full "Comp
 
 - Install ESP IDF somewhere on your PC,  but outside the InterfaceZ project.
 ```bash
-	git clone git@github.com:espressif/esp-idf.git
-	cd esp-idf
-	bash install.sh
-	source export.sh
-	# Patch the httpd server code
-	cat /path/to/interfacez/esp-idf-patch-webserver-select.diff | patch -p1
+git clone git@github.com:espressif/esp-idf.git
+cd esp-idf
+bash install.sh
+source export.sh
+# Patch the httpd server code
+cat /path/to/interfacez/esp-idf-patch-webserver-select.diff | patch -p1
 ```
 
 Note that anytime you need to use the IDF you need to source the "export.sh" file as above.
@@ -38,8 +38,8 @@ Note that anytime you need to use the IDF you need to source the "export.sh" fil
 Build the esp32 code by typing "make" on the esp32 directory
 
 ```bash
-	cd /path/to/interfacez/esp32
-	make
+cd /path/to/interfacez/esp32
+make
 ```
 It should generate all required files for programming.
 
@@ -56,8 +56,8 @@ Once you connect the device, enter programming mode using the following steps:
 At this point, the green LED on the top left should have stopped flashing.
 Proceed to flash the InterfaceZ by issuing the following commands:
 ```bash
-	cd /path/to/interfacez/esp32
-	make flash
+cd /path/to/interfacez/esp32
+make flash
 ```
 It should program the board, but it will be held in programming mode. To exit programming mode back to run time mode, do
 - Press RESET button
@@ -74,14 +74,14 @@ Install these dependencies (example for debian/ubuntu):
 If you already tested building the ESP32 firmware, some simple steps are required to build the host firmware:
 
 ```bash
-	cd /path/to/interfacez/esp32
-	make -C host
+cd /path/to/interfacez/esp32
+make -C host
 ```
 ### Starting host-mode
 You can then start the application in host mode:
 ```bash
-	cd /path/to/interfacez/esp32
-	host/interfacez
+cd /path/to/interfacez/esp32
+host/interfacez
 ```
 To open the web interface on host mode, point your browser to [http://localhost:8000/index,html]([http://localhost:8000/index,html)
 
