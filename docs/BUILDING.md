@@ -27,8 +27,8 @@ git clone git@github.com:espressif/esp-idf.git
 cd esp-idf
 bash install.sh
 source export.sh
-# Patch the httpd server code
-cat /path/to/interfacez/esp-idf-patch-webserver-select.diff | patch -p1
+# Patch the httpd server code - only needed for host-mode
+cat /path/to/interfacez/patches/esp-idf-patch-webserver-select.diff | patch -p1
 ```
 
 Note that anytime you need to use the IDF you need to source the "export.sh" file as above.
