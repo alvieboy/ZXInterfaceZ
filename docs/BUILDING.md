@@ -1,9 +1,9 @@
 # Building Interface Z
 Here are the basic instructions to fully build the InterfaceZ. It is split into four parts:
-- [Building the FPGA binary file](#building-the-fpga-binary)
-- Building ESP32 firmware
-- Manually uploading the design
-- Building host-mode firmware
+- [Building the FPGA binary file](#building-the-fpga-binary-file)
+- [Building ESP32 firmware](#building-esp32-firmware)
+- [Manually uploading the design](#manually-uploading-the-design)
+- [Building host-mode firmware](#building-host-mode-firmware)
 
 ## Getting the source.
 Make sure you have an updated repository. place it in directory /path/to/interfacez (example used throughout,use your own path)
@@ -16,7 +16,7 @@ You can download the Lite edition for free from [the Intel website](https://fpga
 
 ### Building the binary bitfile
 Launch Quartus and open the project file *interfacez.qpf* . Perform a full "Compile design" step. That should generate the output file (which is
-*output_files/interfacez.rbf*. No need to perform any programming of the FPGA at this point - uploading will be handled in [Manually uploading the design] .
+*output_files/interfacez.rbf*. No need to perform any programming of the FPGA at this point - uploading will be handled in [Manually uploading the design](#manually-uploading-the-design) .
 
 ## Building ESP32 firmware
 ### Pre-requesites
