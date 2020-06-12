@@ -94,7 +94,6 @@ spi.c                 \
 status_resource.c      \
 strcmpi.c              \
 string_resource.c     \
-tapfile.c             \
 tapplayer.c           \
 usb_descriptor.c      \
 usb_driver.c          \
