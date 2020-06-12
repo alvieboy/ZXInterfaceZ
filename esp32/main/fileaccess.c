@@ -150,3 +150,15 @@ int file_size(const char *path, const char *filename)
 
     return st.st_size;
 }
+
+filetype_t file_type(const char *filename)
+{
+    struct stat st;
+    if (stat(filename,&st)<0)
+        return TYPE_INVALID;
+
+    if ((st.st_mode&S_IFMT)== S_IFDIR) {
+        return TYPE_DIRECTORY;
+    }
+    return TYPE_FILE;
+}

@@ -24,7 +24,7 @@ static void webserver_req__send_and_free_json(httpd_req_t *req, cJSON *response)
     cJSON_Delete(response);
 }
 
-static esp_err_t webserver_req__version(httpd_req_t *req, cJSON *params)
+static esp_err_t webserver_req__version(httpd_req_t *req, const char *querystring)
 {
     cJSON *root = cJSON_CreateObject();
 
@@ -59,24 +59,30 @@ static esp_err_t webserver_req__send_error(httpd_req_t *req, int error, const ch
     return ESP_FAIL;
 }
 
-static esp_err_t webserver_req__list(httpd_req_t *req, cJSON *params)
+static inline void webserver_req__get_sdcard_path(const char *relative, char *absolute, size_t len)
 {
-    char fullpath[FILE_PATH_MAX];
-    char query[FILE_PATH_MAX];
+#ifdef __linux
+    snprintf(absolute, len, "%s/sdcard/%s", startupdir, relative);
+#else
+#if 0
+    snprintf(absolute, len, "/sdcard/%s", relative);
+#else
+    strcpy(absolute,"/sdcard/");
+    strncat(absolute, relative, len-8);
+#endif
+#endif
+}
+
+
+static esp_err_t webserver_req__list(httpd_req_t *req, const char *querystr)
+{
+    char fullpath[FILE_PATH_MAX+ESP_VFS_PATH_MAX];
     char path[FILE_PATH_MAX];
     char *pathptr = path;
 
-    ESP_LOGI(TAG, "Genrating list");
+    ESP_LOGI(TAG, "Generating file list");
 
-    if (httpd_req_get_url_query_str(req, query, sizeof(query))!=ESP_OK) {
-        ESP_LOGI(TAG,"Missing parameters");
-        return webserver_req__send_error(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Invalid path");
-        return ESP_FAIL;
-    }
-
-    webserver__decodeurl(query);
-
-    if (httpd_query_key_value(query, "path", path, sizeof(path))!=ESP_OK) {
+    if (httpd_query_key_value(querystr, "path", path, sizeof(path))!=ESP_OK) {
         ESP_LOGI(TAG,"Missing parameters");
         return webserver_req__send_error(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Invalid path");
         return ESP_FAIL;
@@ -96,11 +102,8 @@ static esp_err_t webserver_req__list(httpd_req_t *req, cJSON *params)
 
         return webserver_req__send_error(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Path too long");
     }
-#ifdef __linux
-    sprintf(fullpath,"%s/sdcard/%s", startupdir, pathptr);
-#else
-    sprintf(fullpath,"/sdcard/%s", pathptr);
-#endif
+
+    webserver_req__get_sdcard_path(pathptr, fullpath, sizeof(fullpath));
 
     DIR *dir = opendir(fullpath);
     struct dirent *ent;
@@ -136,17 +139,138 @@ static esp_err_t webserver_req__list(httpd_req_t *req, cJSON *params)
     return ESP_OK;
 }
 
-static esp_err_t webserver_req__upload(httpd_req_t *req, cJSON *params)
+static esp_err_t webserver_req__upload(httpd_req_t *req, const char *querystr)
 {
     return ESP_FAIL;
+}
+
+static esp_err_t webserver_req__delete(httpd_req_t *req, const char *querystr)
+{
+    char fullpath[FILE_PATH_MAX];
+    char path[FILE_PATH_MAX];
+
+    if (httpd_query_key_value(querystr, "path", path, sizeof(path))!=ESP_OK) {
+        ESP_LOGI(TAG,"Missing parameters");
+        return webserver_req__send_error(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Invalid path");
+        return ESP_FAIL;
+    }
+
+    webserver_req__get_sdcard_path(path, fullpath, sizeof(fullpath));
+
+    filetype_t type = file_type(fullpath);
+
+    if (type!=TYPE_FILE) {
+        ESP_LOGI(TAG,"Not a file");
+        return webserver_req__send_error(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Invalid path");
+        return ESP_FAIL;
+    }
+    // Unlink.
+    int r = unlink(fullpath);
+
+    cJSON *root = cJSON_CreateObject();
+    cJSON_AddStringToObject(root, "success", r==0? "true":"false");
+    cJSON_AddStringToObject(root, "path", path);
+
+    webserver_req__send_and_free_json(req, root);
+    return ESP_OK;
+}
+
+static esp_err_t webserver_req__rename(httpd_req_t *req, const char *querystr)
+{
+    char fullpath[FILE_PATH_MAX];
+    char fullnewpath[FILE_PATH_MAX];
+    char path[FILE_PATH_MAX];
+
+    if (httpd_query_key_value(querystr, "path", path, sizeof(path))!=ESP_OK) {
+        ESP_LOGI(TAG,"Missing parameters");
+        return webserver_req__send_error(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Invalid path");
+        return ESP_FAIL;
+    }
+
+    webserver_req__get_sdcard_path(path, fullpath, sizeof(fullpath));
+
+    if (httpd_query_key_value(querystr, "newpath", path, sizeof(path))!=ESP_OK) {
+        ESP_LOGI(TAG,"Missing parameters");
+        return webserver_req__send_error(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Invalid path");
+        return ESP_FAIL;
+    }
+
+    webserver_req__get_sdcard_path(path, fullnewpath, sizeof(fullnewpath));
+
+
+    filetype_t type = file_type(fullpath);
+
+    if (type!=TYPE_FILE) {
+        ESP_LOGI(TAG,"Not a file");
+        return webserver_req__send_error(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Invalid path");
+        return ESP_FAIL;
+    }
+    // Rename.
+    int r = rename(fullpath, fullnewpath);
+
+    cJSON *root = cJSON_CreateObject();
+    cJSON_AddStringToObject(root, "success", r==0? "true":"false");
+    cJSON_AddStringToObject(root, "path", path);
+    webserver_req__send_and_free_json(req, root);
+    return ESP_OK;
+}
+
+static esp_err_t webserver_req__mkdir(httpd_req_t *req, const char *querystr)
+{
+    char fullpath[FILE_PATH_MAX];
+    char path[FILE_PATH_MAX];
+
+    if (httpd_query_key_value(querystr, "path", path, sizeof(path))!=ESP_OK) {
+        ESP_LOGI(TAG,"Missing parameters");
+        return webserver_req__send_error(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Invalid path");
+        return ESP_FAIL;
+    }
+
+    webserver_req__get_sdcard_path(path, fullpath, sizeof(fullpath));
+
+    int r = mkdir(fullpath, 0666);
+
+    cJSON *root = cJSON_CreateObject();
+    cJSON_AddStringToObject(root, "success", r==0? "true":"false");
+    cJSON_AddStringToObject(root, "path", path);
+    webserver_req__send_and_free_json(req, root);
+    return ESP_OK;
+}
+
+static esp_err_t webserver_req__rmdir(httpd_req_t *req, const char *querystr)
+{
+    char fullpath[FILE_PATH_MAX];
+    char path[FILE_PATH_MAX];
+
+    if (httpd_query_key_value(querystr, "path", path, sizeof(path))!=ESP_OK) {
+        ESP_LOGI(TAG,"Missing parameters");
+        return webserver_req__send_error(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Invalid path");
+        return ESP_FAIL;
+    }
+
+    webserver_req__get_sdcard_path(path, fullpath, sizeof(fullpath));
+
+    int r = rmdir(fullpath);
+
+    cJSON *root = cJSON_CreateObject();
+    cJSON_AddStringToObject(root, "success", r==0? "true":"false");
+    cJSON_AddStringToObject(root, "path", path);
+    webserver_req__send_and_free_json(req, root);
+    return ESP_OK;
 }
 
 
 static const struct webserver_req_entry req_handlers[] = {
     { "version", &webserver_req__version },
     { "list",    &webserver_req__list },
-    { "upload",  &webserver_req__upload }
+    { "upload",  &webserver_req__upload },
+    { "delete",  &webserver_req__delete },
+    { "rename",  &webserver_req__rename },
+    { "mkdir",   &webserver_req__mkdir },
+    { "rmdir",   &webserver_req__rmdir },
 };
+
+
 
 
 webserver_req_handler_t webserver_req__find_handler(const char *path)
@@ -176,10 +300,19 @@ webserver_req_handler_t webserver_req__find_handler(const char *path)
 
     ESP_LOGI(TAG,"Parsed as '%s'", delim);
 
+
+
+
     for (i=0; i<sizeof(req_handlers)/sizeof(req_handlers[0]); i++) {
         if (strcmp(req_handlers[i].path, delim)==0) {
             return req_handlers[i].req;
         }
     }
+    return NULL;
+}
+
+
+webserver_req_post_handler_t webserver_req__find_post_handler(const char *path)
+{
     return NULL;
 }

@@ -194,6 +194,8 @@ static esp_err_t webserver__get_handler(httpd_req_t *req)
 
 static esp_err_t webserver__req_get_handler(httpd_req_t *req)
 {
+    char query[FILE_PATH_MAX];
+    char *qptr = query;
     webserver_req_handler_t handler = webserver_req__find_handler(req->uri);
 
     if (handler==NULL) {
@@ -202,14 +204,31 @@ static esp_err_t webserver__req_get_handler(httpd_req_t *req)
         return ESP_FAIL;
     }
 
+    int r = httpd_req_get_url_query_str(req, query, sizeof(query));
+    switch (r) {
+    case ESP_OK:
+        break;
+    case ESP_ERR_NOT_FOUND:
+        qptr = NULL;
+        break;
+    default:
+        ESP_LOGE(TAG,"Cannot get query or invalid query string");
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Invalid query string");
+        return ESP_FAIL;
+    }
+
+    if (qptr) {
+        webserver__decodeurl(qptr);
+    }
+
     httpd_resp_set_type(req, "application/json");
 
-    return handler(req, NULL);
+    return handler(req, qptr);
 }
 
 static esp_err_t webserver__req_post_handler(httpd_req_t *req)
 {
-    webserver_req_handler_t handler = webserver_req__find_handler(req->uri);
+    webserver_req_post_handler_t handler = webserver_req__find_post_handler(req->uri);
 
     if (handler==NULL) {
         /* Respond with 404 Not Found */
@@ -248,7 +267,7 @@ static esp_err_t webserver__req_post_handler(httpd_req_t *req)
         return ESP_FAIL;
     }
 
-    esp_err_t result = handler(req, root);
+    esp_err_t result = handler(req);
 
     cJSON_Delete(root);
 

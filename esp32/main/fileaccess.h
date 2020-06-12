@@ -11,7 +11,7 @@
 #define FILE_FILTER_SNAPSHOTS (0x01)
 #define FILE_FILTER_TAPES (0x02)
 
-#define FILE_PATH_MAX (ESP_VFS_PATH_MAX + CONFIG_SPIFFS_OBJ_NAME_LEN)
+#define FILE_PATH_MAX (128 + CONFIG_SPIFFS_OBJ_NAME_LEN)
 
 #ifdef __linux__
 extern char startupdir[];
@@ -48,5 +48,12 @@ int file_size(const char *path, const char *filename);
 
 const struct mountpoints *__get_mountpoints();
 
+typedef enum {
+    TYPE_INVALID,
+    TYPE_FILE,
+    TYPE_DIRECTORY
+} filetype_t;
+
+filetype_t file_type(const char *filename);
 
 #endif
