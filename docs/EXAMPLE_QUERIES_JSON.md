@@ -2,7 +2,8 @@
 ## Get Version
 ### Request
 ```http
-GET /req/version```
+GET /req/version
+```
 
 ### Response
 
