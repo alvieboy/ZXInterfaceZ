@@ -9,6 +9,7 @@
 #include "fileaccess.h"
 #include <unistd.h>
 #include <dirent.h>
+#include "webserver.h"
 
 struct webserver_req_entry {
     const char *path;
@@ -61,32 +62,51 @@ static esp_err_t webserver_req__send_error(httpd_req_t *req, int error, const ch
 static esp_err_t webserver_req__list(httpd_req_t *req, cJSON *params)
 {
     char fullpath[FILE_PATH_MAX];
+    char query[FILE_PATH_MAX];
+    char path[FILE_PATH_MAX];
+    char *pathptr = path;
 
-    const char *path = cJSON_GetObjectItem(params, "path")->valuestring;
+    ESP_LOGI(TAG, "Genrating list");
 
-    // Validate path.
-    if (!path) {
+    if (httpd_req_get_url_query_str(req, query, sizeof(query))!=ESP_OK) {
+        ESP_LOGI(TAG,"Missing parameters");
         return webserver_req__send_error(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Invalid path");
+        return ESP_FAIL;
     }
+
+    webserver__decodeurl(query);
+
+    if (httpd_query_key_value(query, "path", path, sizeof(path))!=ESP_OK) {
+        ESP_LOGI(TAG,"Missing parameters");
+        return webserver_req__send_error(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Invalid path");
+        return ESP_FAIL;
+    }
+    // Validate path.
 
     if (strchr(path,'.')!=NULL) {
+        ESP_LOGI(TAG,"Path invalid chars");
         return webserver_req__send_error(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Invalid path");
     }
 
-    if (*path=='/') {
-        path++;
+    if (*pathptr=='/') {
+        pathptr++;
     }
-    if ((strlen(path) + 8)>=sizeof(fullpath)) {
+    if ((strlen(pathptr) + 8)>=sizeof(fullpath)) {
+        ESP_LOGI(TAG,"Path too long");
+
         return webserver_req__send_error(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Path too long");
     }
-
-    sprintf(fullpath,"/sdcard/%s", path);
-
+#ifdef __linux
+    sprintf(fullpath,"%s/sdcard/%s", startupdir, pathptr);
+#else
+    sprintf(fullpath,"/sdcard/%s", pathptr);
+#endif
 
     DIR *dir = opendir(fullpath);
     struct dirent *ent;
 
     if (NULL==dir) {
+        ESP_LOGI(TAG, "Could not open path %s", fullpath);
         return webserver_req__send_error(req, HTTPD_500_INTERNAL_SERVER_ERROR, "No such path");;
     }
 
@@ -94,6 +114,7 @@ static esp_err_t webserver_req__list(httpd_req_t *req, cJSON *params)
     cJSON *earray = cJSON_CreateArray();
 
     while ((ent=readdir(dir))) {
+
         cJSON *entry = cJSON_CreateObject();
 
         if (ent->d_type == DT_DIR) {
@@ -105,7 +126,6 @@ static esp_err_t webserver_req__list(httpd_req_t *req, cJSON *params)
 
         cJSON_AddNumberToObject(entry, "size", file_size(fullpath, ent->d_name) );
 
-
         cJSON_AddItemToArray(earray, entry);
     }
 
@@ -116,11 +136,16 @@ static esp_err_t webserver_req__list(httpd_req_t *req, cJSON *params)
     return ESP_OK;
 }
 
+static esp_err_t webserver_req__upload(httpd_req_t *req, cJSON *params)
+{
+    return ESP_FAIL;
+}
 
 
 static const struct webserver_req_entry req_handlers[] = {
     { "version", &webserver_req__version },
-    { "list",    &webserver_req__list }
+    { "list",    &webserver_req__list },
+    { "upload",  &webserver_req__upload }
 };
 
 

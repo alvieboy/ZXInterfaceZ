@@ -13,6 +13,10 @@
 
 #define FILE_PATH_MAX (ESP_VFS_PATH_MAX + CONFIG_SPIFFS_OBJ_NAME_LEN)
 
+#ifdef __linux__
+extern char startupdir[];
+#endif
+
 int __chdir(const char *dir);
 const char *__getcwd_const();
 char *__getcwd(char *dest, int maxlen);
@@ -43,5 +47,6 @@ char *fullpath(const char *name, char *dest, int maxlen);
 int file_size(const char *path, const char *filename);
 
 const struct mountpoints *__get_mountpoints();
+
 
 #endif

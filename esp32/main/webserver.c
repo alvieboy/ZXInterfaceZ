@@ -6,6 +6,8 @@
 #include <dirent.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include <stdlib.h>
+#include <ctype.h>
 
 #include "esp_err.h"
 #include "esp_log.h"
@@ -77,8 +79,6 @@ static const char* webserver__get_path_from_uri(char *dest, const char *base_pat
 }
 
 #ifdef __linux__
-
-extern char startupdir[];
 
 static char path[512];
 
@@ -316,4 +316,36 @@ int webserver__init(void)
 
     ESP_LOGI(TAG,"Registered all handlers");
     return ESP_OK;
+}
+
+void webserver__decodeurl(char *src)
+{
+    char a, b;
+    char *dst = src;
+    while (*src) {
+        if ((*src == '%') &&
+            ((a = src[1]) && (b = src[2])) &&
+            (isxdigit(a) && isxdigit(b))) {
+            if (a >= 'a')
+                a -= 'a'-'A';
+            if (a >= 'A')
+                a -= ('A' - 10);
+            else
+                a -= '0';
+            if (b >= 'a')
+                b -= 'a'-'A';
+            if (b >= 'A')
+                b -= ('A' - 10);
+            else
+                b -= '0';
+            *dst++ = 16*a+b;
+            src+=3;
+        } else if (*src == '+') {
+            *dst++ = ' ';
+            src++;
+        } else {
+            *dst++ = *src++;
+        }
+    }
+    *dst++ = '\0';
 }
