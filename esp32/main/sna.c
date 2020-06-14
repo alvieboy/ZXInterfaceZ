@@ -221,7 +221,7 @@ int sna__save_from_extram(const char *file)
     char fpath[128];
     int ret = 0;
     sprintf(fpath,"/sdcard/%s", file);
-    int fh = open(fpath, O_WRONLY|O_CREAT|O_TRUNC, 0666);
+    int fh = __open(fpath, O_WRONLY|O_CREAT|O_TRUNC, 0666);
     ESP_LOGI(TAG, "Opened file %s", fpath);
     if (fh<0) {
         ESP_LOGE(TAG,"Cannot open file %s: %s", fpath, strerror(errno));
@@ -326,7 +326,7 @@ int sna__load_sna_extram(const char *file)
 
     fullpath(file, fullfile, sizeof(fullfile)-1);
 
-    int fd = open(fullfile, O_RDONLY);
+    int fd = __open(fullfile, O_RDONLY);
     if (fd<0) {
         ESP_LOGE(TAG,"Cannot open '%s': %s", fullfile, strerror(errno));
         return -1;

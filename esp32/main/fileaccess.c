@@ -4,6 +4,8 @@
 #include <dirent.h>
 #include "fileaccess.h"
 #include <string.h>
+#include <fcntl.h>
+#include <stdarg.h>
 
 #define CWD_MAX 255
 static char cwd[CWD_MAX];
@@ -93,6 +95,27 @@ DIR *__opendir(const char *path)
     d = opendir(path);
 #endif
     return d;
+}
+
+int __open(const char *path, int flags, ...)
+{
+    int fd;
+    mode_t mode = 0;
+    va_list ap;
+    va_start(ap, flags);
+    if (flags & O_CREAT) {
+        mode = va_arg(ap, mode_t);
+    }
+#ifdef __linux__
+    do {
+        char fpath[512];
+        sprintf(fpath,"%s/%s", startupdir, path);
+        fd = open(fpath, flags, mode);
+    } while (0);
+#else
+    fd = open(path, flags, mode);
+#endif
+    return fd;
 }
 
 const char *__getcwd_const()

@@ -122,7 +122,7 @@ static void tapplayer__do_start_play(const char *filename)
         return; // Don't
     }
     // Attempt to open file
-    tapfh = open(filename, O_RDONLY);
+    tapfh = __open(filename, O_RDONLY);
     is_tzx = false;
 
 

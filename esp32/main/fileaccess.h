@@ -50,6 +50,7 @@ struct mountpoints {
 
 char *fullpath(const char *name, char *dest, int maxlen);
 int file_size(const char *path, const char *filename);
+int __open(const char *path, int flags, ...);
 
 const struct mountpoints *__get_mountpoints();
 

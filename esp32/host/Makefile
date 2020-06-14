@@ -107,7 +107,8 @@ version_resource.c    \
 videostreamer.c       \
 webserver.c           \
 webserver_req.c       \
-wifi.c                
+wifi.c                \
+tzx.c 
 
 
 _OBJ:=$(SRC:.c=.o)
