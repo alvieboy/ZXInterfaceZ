@@ -115,6 +115,7 @@ int __open(const char *path, int flags, ...)
 #else
     fd = open(path, flags, mode);
 #endif
+    va_end(ap);
     return fd;
 }
 
