@@ -60,11 +60,11 @@ GET /req/delete?path=pathrelativetosdroot/filename.ext
 ## Rename/move file
 ### Request (rename)
 ```http
-GET /req/move?path=pathrelativetosdroot/filename.ext&newpath=newfilename.ext
+GET /req/rename?path=pathrelativetosdroot/filename.ext&newpath=newfilename.ext
 ```
 ### Request (move)
 ```http
-GET /req/move?path=pathrelativetosdroot/filename.ext&newpath=pathrelativetosdroot/newfilename.ext
+GET /req/rename?path=pathrelativetosdroot/filename.ext&newpath=pathrelativetosdroot/newfilename.ext
 ````
 ### Response
 ```json
