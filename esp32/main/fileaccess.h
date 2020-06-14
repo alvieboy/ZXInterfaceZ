@@ -6,6 +6,8 @@
 #include <esp_vfs.h>
 #include <esp_spiffs.h>
 #include "sdkconfig.h"
+#include <dirent.h>
+#include <sys/types.h>
 
 #define FILE_FILTER_NONE (0x00)
 #define FILE_FILTER_SNAPSHOTS (0x01)
@@ -18,6 +20,9 @@ extern char startupdir[];
 #endif
 
 int __chdir(const char *dir);
+DIR *__opendir(const char *path);
+struct dirent *__readdir(DIR*dir);
+
 const char *__getcwd_const();
 char *__getcwd(char *dest, int maxlen);
 int __in_rootdir();

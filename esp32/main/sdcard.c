@@ -50,6 +50,7 @@ void sdcard__init()
         return;
     }
     ESP_LOGI(TAG, "SDMMC card mounted");
+#if 0
     {
         DIR *d;
         d = opendir("/sdcard");
@@ -64,6 +65,7 @@ void sdcard__init()
             closedir(d);
         }
     }
+#endif
 }
 
 bool sdcard__isconnected(void)

@@ -38,9 +38,23 @@ int rom__load_from_flash(void)
     return r;
 }
 #else
+#include <string.h>
+#include <unistd.h>
+
 int rom__load_from_flash(void)
 {
-    return 0;
+    uint8_t rom[16384];
+    int fd;
+    fd = open("intz.rom", O_RDONLY);
+    if (!fd) {
+        printf("Cannot open rom intz.rom: %s\n", strerror(errno));
+        return -1;
+    }
+    read(fd, rom, sizeof(rom));
+    close(fd);
+
+    int r = fpga__upload_rom(rom, sizeof(rom));
+    return r;
 }
 
 #endif

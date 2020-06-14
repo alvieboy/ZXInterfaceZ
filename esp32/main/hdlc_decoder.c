@@ -73,7 +73,7 @@ void hdlc_decoder__append(hdlc_decoder_t *decoder, uint8_t data)
     }
 }
 
-void hdlc_decoder__append_buf(hdlc_decoder_t *decoder, const uint8_t *data, unsigned datalen)
+void hdlc_decoder__append_buffer(hdlc_decoder_t *decoder, const uint8_t *data, unsigned datalen)
 {
     while (datalen--) {
         hdlc_decoder__append(decoder, *data++);

@@ -230,7 +230,7 @@ static int spectcmd__check()
     int ret = 0;
     uint8_t error_resp = 0xff;
 
- //   ESP_LOGI(TAG,"Command in: %02x", command_buffer[0]);
+    ESP_LOGI(TAG,"Command in: %02x", command_buffer[0]);
     switch (command_buffer[0]) {
     case SPECTCMD_CMD_GETRESOURCE:
         ret = spectcmd__load_resource();

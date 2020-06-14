@@ -21,7 +21,7 @@ typedef struct {
 void hdlc_decoder__init(hdlc_decoder_t *decoder, uint8_t *buffer, unsigned maxlen,
                         hdlc_handler_t handler, void *handlerdata);
 void hdlc_decoder__append(hdlc_decoder_t *decoder, uint8_t data);
-void hdlc_decoder__append_buf(hdlc_decoder_t *decoder, const uint8_t *data, unsigned datalen);
+void hdlc_decoder__append_buffer(hdlc_decoder_t *decoder, const uint8_t *data, unsigned datalen);
 void hdlc_decoder__reset(hdlc_decoder_t *decoder);
 
 #endif

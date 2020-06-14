@@ -134,18 +134,18 @@ void directory_resource__update(struct resource *res)
     space_needed += cdir_len + 1;
 
     // 1st pass: get name lengths
-    dir = opendir(cwd);
+    dir = __opendir(cwd);
     if (NULL==dir) {
         cwd[0] = '/';
         cwd[1] = '\0';
         cdir = cwd;
-        dir = opendir(cwd);
+        dir = __opendir(cwd);
         if (!dir) {
             ESP_LOGI(TAG,"Cannot open dir: '%s'", strerror(errno));
             return;
         }
     }
-    while ((ent=readdir(dir))) {
+    while ((ent=__readdir(dir))) {
         if (filter_match(dr, ent)) {
             space_needed += 2; // One byte flags, one byte len
             space_needed += strlen(ent->d_name); // One byte flags, one byte len
@@ -192,7 +192,7 @@ void directory_resource__update(struct resource *res)
 
     dlist_t *list = NULL;
 
-    while ((ent=readdir(dir))) {
+    while ((ent=__readdir(dir))) {
         if (filter_match(dr, ent)) {
             uint8_t type;
             int dlen;
@@ -229,7 +229,7 @@ void directory_resource__update(struct resource *res)
     dlist__remove_all(list, NULL, NULL);
 
 #if 0
-    while ((ent=readdir(dir))) {
+    while ((ent=__readdir(dir))) {
         if (filter_match(dr, ent)) {
             uint8_t type;
             int dlen;

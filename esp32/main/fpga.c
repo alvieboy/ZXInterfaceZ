@@ -450,6 +450,8 @@ int fpga__read_command_fifo()
     if (buf[1]==0xff) {
         return -1;
     }
+    ESP_LOGI(TAG, "Command ");
+    dump__buffer(buf,3);
     return buf[2];
 }
 

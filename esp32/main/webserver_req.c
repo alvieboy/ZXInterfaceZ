@@ -61,15 +61,11 @@ static esp_err_t webserver_req__send_error(httpd_req_t *req, int error, const ch
 
 static inline void webserver_req__get_sdcard_path(const char *relative, char *absolute, size_t len)
 {
-#ifdef __linux
+#if 0 //def __linux
     snprintf(absolute, len, "%s/sdcard/%s", startupdir, relative);
-#else
-#if 0
-    snprintf(absolute, len, "/sdcard/%s", relative);
 #else
     strcpy(absolute,"/sdcard/");
     strncat(absolute, relative, len-8);
-#endif
 #endif
 }
 
@@ -105,7 +101,7 @@ static esp_err_t webserver_req__list(httpd_req_t *req, const char *querystr)
 
     webserver_req__get_sdcard_path(pathptr, fullpath, sizeof(fullpath));
 
-    DIR *dir = opendir(fullpath);
+    DIR *dir = __opendir(fullpath);
     struct dirent *ent;
 
     if (NULL==dir) {
@@ -116,7 +112,7 @@ static esp_err_t webserver_req__list(httpd_req_t *req, const char *querystr)
     cJSON *root = cJSON_CreateObject();
     cJSON *earray = cJSON_CreateArray();
 
-    while ((ent=readdir(dir))) {
+    while ((ent=__readdir(dir))) {
 
         cJSON *entry = cJSON_CreateObject();
 

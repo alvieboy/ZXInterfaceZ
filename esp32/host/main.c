@@ -53,9 +53,10 @@ void esp_chip_info(esp_chip_info_t* out_info)
 }
 
 extern void app_main(void);
-
+extern void fpga_init();
 void wrap_app_main(void *data)
 {
+    fpga_init();
     app_main();
 }
 

@@ -59,7 +59,17 @@ int __chdir(const char *dir)
     }
     strcpy(&newwd[len], dir);
 
-    DIR *d = opendir(newwd);
+    DIR *d;
+#ifdef __linux__
+    do {
+        char fpath[512];
+        sprintf(fpath,"%s/%s", startupdir, newwd);
+        ESP_LOGI(TAG, "Chdir to '%s'", fpath);
+        d = opendir(fpath);
+    } while (0);
+#else
+    d = opendir(newwd);
+#endif
     if (!d) {
         ESP_LOGI(TAG, "Cannot chdir to '%s'", newwd);
         return -1;
@@ -67,6 +77,22 @@ int __chdir(const char *dir)
     closedir(d);
     strcpy(cwd, newwd);
     return 0;
+}
+
+DIR *__opendir(const char *path)
+{
+    DIR *d;
+#ifdef __linux__
+    do {
+        char fpath[512];
+        sprintf(fpath,"%s/%s", startupdir, path);
+        ESP_LOGI(TAG, "Chdir to '%s'", fpath);
+        d = opendir(fpath);
+    } while (0);
+#else
+    d = opendir(path);
+#endif
+    return d;
 }
 
 const char *__getcwd_const()
@@ -162,3 +188,17 @@ filetype_t file_type(const char *filename)
     }
     return TYPE_FILE;
 }
+
+struct dirent *__readdir(DIR*dir)
+{
+    struct dirent *d;
+    do {
+        d = readdir(dir);
+        if (!d)
+            return d;
+    } while ( (d->d_type==DT_DIR) && (d->d_name[0]=='.'));
+    return d;
+}
+
+
+
