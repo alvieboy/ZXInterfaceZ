@@ -252,6 +252,7 @@ set_global_assignment -name EDA_TEST_BENCH_FILE simulation/tests/t004.vhd -secti
 set_global_assignment -name EDA_TEST_BENCH_FILE simulation/tests/t005.vhd -section_id t006
 set_global_assignment -name EDA_TEST_BENCH_FILE simulation/tests/t001.vhd -section_id t006
 set_instance_assignment -name SLEW_RATE 2 -to RAMCLK_o
+set_global_assignment -name VHDL_FILE tappkg.vhd
 set_global_assignment -name VHDL_FILE usb/usb_txclkgen.vhd
 set_global_assignment -name VHDL_FILE usb/usb_dpll.vhd
 set_global_assignment -name VHDL_FILE usb/maj_filter.vhd

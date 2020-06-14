@@ -66,7 +66,7 @@ entity spi_interface is
     -- TAP player FIFO
     tapfifo_reset_o       : out std_logic;
     tapfifo_wr_o          : out std_logic;
-    tapfifo_write_o       : out std_logic_vector(7 downto 0);
+    tapfifo_write_o       : out std_logic_vector(8 downto 0);
     tapfifo_full_i        : in std_logic;
     tapfifo_used_i        : in std_logic_vector(9 downto 0);
     tap_enable_o          : out std_logic;
@@ -195,6 +195,7 @@ architecture beh of spi_interface is
   signal usb_rd_r       : std_logic := '0'; -- FIxme: needs areset
 --  signal usb_wr_r       : std_logic := '0'; -- FIxme: needs areset
   signal usb_is_write_r : std_logic;
+  signal tapcmd_r       : std_logic;
 
 begin
 
@@ -303,7 +304,8 @@ begin
   resfifo_write_o   <= dat_s;
 
   tapfifo_wr_o      <= '1' when state_r=WRTAPFIFO and dat_valid_s='1' else '0';
-  tapfifo_write_o   <= dat_s;
+  tapfifo_write_o(7 downto 0)   <= dat_s;
+  tapfifo_write_o(8) <= tapcmd_r;
 
   usb_rd_o          <= usb_rd_r;--'1' when state_r=USBREADDATA and dat_valid_s='1' else '0';
 
@@ -426,6 +428,14 @@ begin
                 txload_s <= '1';
                 txdat_s <= "00000000";
                 state_r <= WRTAPFIFO;
+                tapcmd_r <= '0';
+
+              when x"E6" => -- Write TAP FIFO contents
+                txden_s <= '1';
+                txload_s <= '1';
+                txdat_s <= "00000000";
+                state_r <= WRTAPFIFO;
+                tapcmd_r <= '1';
 
               when x"E5" => -- Get TAP FIFO usage
                 txden_s <= '1';

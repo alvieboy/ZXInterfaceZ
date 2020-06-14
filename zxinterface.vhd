@@ -220,7 +220,7 @@ architecture beh of zxinterface is
   signal tapfifo_reset_s        : std_logic;
   signal tapfifo_reset_spisck_s : std_logic;
   signal tapfifo_wr_s           : std_logic;
-  signal tapfifo_write_s        : std_logic_vector(7 downto 0);
+  signal tapfifo_write_s        : std_logic_vector(8 downto 0);
   signal tapfifo_full_s         : std_logic;
   signal tapfifo_used_s         : std_logic_vector(9 downto 0);
   signal tap_enable_spisck_s    : std_logic;

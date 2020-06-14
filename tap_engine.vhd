@@ -11,7 +11,7 @@ entity tap_engine is
     restart_i : in std_logic;
 
     fclk_i    : in std_logic;
-    fdata_i   : in std_logic_vector(7 downto 0);
+    fdata_i   : in std_logic_vector(8 downto 0);
     fwr_i     : in std_logic;
     ffull_o   : out std_logic;
     fused_o   : out std_logic_vector(9 downto 0);
@@ -27,7 +27,7 @@ architecture beh of tap_engine is
   constant TSTATECNT  : natural := 27;
   signal count_r      : natural range 0 to TSTATECNT-1 := TSTATECNT-1;
   signal freset_s     : std_logic;
-  signal data_s       : std_logic_vector(7 downto 0);
+  signal data_s       : std_logic_vector(8 downto 0);
   signal rd_s         : std_logic;
   signal empty_s      : std_logic;
   signal ready_s      : std_logic;

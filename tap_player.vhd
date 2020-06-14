@@ -1,6 +1,8 @@
 library IEEE;
 use IEEE.STD_LOGIC_1164.all;
 use IEEE.numeric_std.all;
+library work;
+use work.tappkg.all;
 
 entity tap_player is
   port (
@@ -11,7 +13,7 @@ entity tap_player is
     restart_i : in std_logic;
 
     ready_i   : in std_logic;
-    data_i    : in std_logic_vector(7 downto 0);
+    data_i    : in std_logic_vector(8 downto 0);
     rd_o      : out std_logic;
 
     audio_o   : out std_logic
@@ -75,9 +77,9 @@ architecture beh of tap_player is
   signal pulse_ready_s  : std_logic;
   signal pulse_rd_s     : std_logic;
   --signal pulse_idle_s   : std_logic;
-  signal pulse_data_r   : std_logic_vector(1 downto 0);
-  signal pulse_data_s   : std_logic_vector(1 downto 0);
-
+  signal pulse_data_r   : std_logic_vector(3 downto 0);
+  signal pulse_data_s   : std_logic_vector(3 downto 0);
+  signal pulse_custom_s : std_logic_vector(11 downto 0);
   signal r: regs_type;
 
 begin
@@ -91,6 +93,7 @@ begin
     ready_i   => pulse_ready_s,
     data_i    => pulse_data_r,
     rd_o      => pulse_rd_s,
+    len_i     => pulse_custom_s,
 --    idle_o    => pulse_idle_s,
     audio_o   => audio_o
   );
@@ -110,7 +113,7 @@ begin
     w     := r;
     rd_o   <= '0';
     pulse_ready_s <= '0';
-    pulse_data_s <= "XX";
+    pulse_data_s <= (others => 'X');
 
     case r.state is
       when IDLE =>
@@ -122,7 +125,7 @@ begin
         rd_o <= ready_i AND enable_i;
         if ready_i='1' and enable_i='1' then
           w.state := LOAD_SIZE_MSB;
-          w.chunk_size(7 downto 0) := unsigned(data_i);
+          w.chunk_size(7 downto 0) := unsigned(data_i(7 downto 0));
         end if;
         if restart_i='1' then
           w.state := IDLE;
@@ -132,7 +135,7 @@ begin
         rd_o <= ready_i AND enable_i;
         if ready_i='1' and enable_i='1' then
           w.state := LOAD_TYPE;
-          w.chunk_size(15 downto 8) := unsigned(data_i);
+          w.chunk_size(15 downto 8) := unsigned(data_i(7 downto 0));
         end if;
         if restart_i='1' then
           w.state := IDLE;
@@ -142,7 +145,7 @@ begin
         rd_o <= '0';
         if ready_i='1' and enable_i='1' and tstate_i='1' then
           w.state := SEND_PILOT;
-          w.chunk_type(7 downto 0) := data_i;
+          w.chunk_type(7 downto 0) := data_i(7 downto 0);
           if data_i=x"00" then
             w.pilot_dly := PILOT_HEADER;
           else
@@ -155,9 +158,9 @@ begin
 
       when SEND_PILOT =>
         if r.pilot_dly=0 then
-          pulse_data_s    <= "01"; -- Sync
+          pulse_data_s    <= PULSE_SYNC; -- Sync
         else
-          pulse_data_s    <= "00"; -- Pilot
+          pulse_data_s    <= PULSE_PILOT; -- Pilot
         end if;
         pulse_ready_s   <= '1';
         if pulse_rd_s='1' then
@@ -170,7 +173,11 @@ begin
         end if;
 
       when PLAY_DATA  =>
-        pulse_data_s <= "1" & data_i(r.bitindex);
+        if data_i(r.bitindex)='1' then
+          pulse_data_s <= PULSE_LOGIC1;
+        else
+          pulse_data_s <= PULSE_LOGIC0;
+        end if;
         pulse_ready_s <= '1';
         rd_o <= '0';
         if pulse_rd_s='1' then

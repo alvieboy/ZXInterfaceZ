@@ -8,7 +8,7 @@ entity tap_fifo is
   port (
     -- Write port
     wclk_i    : in std_logic;
-    wdata_i   : in std_logic_vector(7 downto 0);
+    wdata_i   : in std_logic_vector(8 downto 0);
     wen_i     : in std_logic;
     wusedw_o  : out std_logic_vector(9 downto 0);
     wfull_o   : out std_logic;
@@ -20,7 +20,7 @@ entity tap_fifo is
 
     -- Read port
     rclk_i    : in std_logic;
-    rdata_o   : out std_logic_vector(7 downto 0);
+    rdata_o   : out std_logic_vector(8 downto 0);
     ren_i     : in std_logic;
     rempty_o  : out std_logic;
     rfull_o   : out std_logic;
@@ -51,12 +51,12 @@ architecture beh of tap_fifo is
 	);
 	PORT (
 			aclr	: IN STD_LOGIC ;
-			data	: IN STD_LOGIC_VECTOR (7 DOWNTO 0);
+			data	: IN STD_LOGIC_VECTOR (8 DOWNTO 0);
 			rdclk	: IN STD_LOGIC ;
 			rdreq	: IN STD_LOGIC ;
 			wrclk	: IN STD_LOGIC ;
 			wrreq	: IN STD_LOGIC ;
-			q	: OUT STD_LOGIC_VECTOR (7 DOWNTO 0);
+			q	: OUT STD_LOGIC_VECTOR (8 DOWNTO 0);
 			rdempty	: OUT STD_LOGIC ;
 			rdfull	: OUT STD_LOGIC ;
 			rdusedw	: OUT STD_LOGIC_VECTOR (9 DOWNTO 0);
@@ -77,7 +77,7 @@ begin
 		lpm_numwords => 1024,
 		lpm_showahead => "OFF",
 		lpm_type => "dcfifo",
-		lpm_width => 8,
+		lpm_width => 9,
 		lpm_widthu => 10,
 		overflow_checking => "ON",
 		rdsync_delaypipe => 5,
