@@ -83,7 +83,14 @@ begin
       when IDLE =>
         rd_o <= ready_i;
         if ready_i='1' then
-          case data_i is
+          w.state := LOADDATA;
+        end if;
+
+      when LOADDATA =>
+        rd_o    <= '0';
+
+        w.state := IDLE;
+        case data_i is
             when SET_PULSE_PILOT  => w.pulse_pilot  := unsigned(len_i);
             when SET_PULSE_SYNC0  => w.pulse_sync0  := unsigned(len_i);
             when SET_PULSE_SYNC1  => w.pulse_sync1  := unsigned(len_i);
@@ -97,15 +104,10 @@ begin
               w.pulse_logic1 := to_unsigned(1710,12);
 
             when others =>
-              w.state := LOADDATA;
-          end case;
-        end if;
-
-      when LOADDATA =>
-        rd_o    <= '0';
-        w.state := PULSEHIGH;
-        w.audio := not r.audio;
-        w.dly   := pulse_high(r,data_i);
+              w.state := PULSEHIGH;
+              w.audio := not r.audio;
+              w.dly   := pulse_high(r,data_i);
+        end case;
       when PULSEHIGH =>
         rd_o    <= '0';
         if tstate_i='1' then

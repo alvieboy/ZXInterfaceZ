@@ -509,6 +509,37 @@ int fpga__load_tap_fifo(const uint8_t *data, unsigned len, int timeout)
     return maxsize;
 }
 
+int fpga__load_tap_fifo_command(const uint8_t *data, unsigned len, int timeout)
+{
+#define TAP_LOCAL_CHUNK_SIZE 256
+    uint8_t txbuf[TAP_LOCAL_CHUNK_SIZE+1];
+
+    uint16_t stat = fpga__get_tap_fifo_usage();
+//    ESP_LOGI(TAG, "TAP stat %04x\n", stat);
+
+    if (stat& 0x8000)
+        return 0; // FIFO full
+
+    uint16_t maxsize = FPGA_TAP_FIFO_SIZE - stat; // Get available size.
+
+
+    if (maxsize > TAP_LOCAL_CHUNK_SIZE)
+        maxsize = TAP_LOCAL_CHUNK_SIZE;
+
+    if (maxsize>len)
+        maxsize = len;
+
+    // Upload chunk
+    if (maxsize>0) {
+        txbuf[0] = 0xE6;
+        memcpy(&txbuf[1], data, maxsize);
+        spi__transceive(spi0_fpga, txbuf, maxsize+1);
+    }
+
+    return maxsize;
+}
+
+
 int fpga__read_extram(uint32_t address)
 {
     uint8_t buf[6];

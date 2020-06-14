@@ -13,12 +13,15 @@
 #include <unistd.h>
 #include <errno.h>
 #include "fileaccess.h"
+#include "tzx.h"
 
 #define TAP_CMD_STOP 0
 #define TAP_CMD_PLAY 1
 #define TAP_CMD_RECORD 2
 
 static xQueueHandle tap_evt_queue = NULL;
+
+static struct tzx tzx;
 
 struct tapcmd
 {
@@ -37,6 +40,51 @@ static enum tapstate state = TAP_IDLE;
 static int tapfh = -1;
 static int playsize;
 static int currplay;
+static bool is_tzx = false;
+
+
+void tzx__standard_block_callback(uint16_t length, uint16_t pause_after)
+{
+    uint8_t txbuf[6];
+    int i = 0;
+    txbuf[i++] = 0x06;
+    txbuf[i++] = 0;
+    txbuf[i++] = 0;
+    txbuf[i++] = 0x09;
+    txbuf[i++] = pause_after & 0xff;
+    txbuf[i++] = pause_after >> 8;
+
+    fpga__load_tap_fifo_command(txbuf, i, 1000);
+}
+
+void tzx__turbo_block_callback(uint16_t pilot, uint16_t sync0, uint16_t sync1, uint16_t pulse0, uint16_t pulse1, uint16_t data_len)
+{
+    uint8_t txbuf[15];
+    int i = 0;
+    txbuf[i++] = 0x01;
+    txbuf[i++] = pilot & 0xff;
+    txbuf[i++] = pilot>>8;
+    txbuf[i++] = 0x02;
+    txbuf[i++] = sync0 & 0xff;
+    txbuf[i++] = sync0>>8;
+    txbuf[i++] = 0x03;
+    txbuf[i++] = sync1 & 0xff;
+    txbuf[i++] = sync1>>8;
+    txbuf[i++] = 0x04;
+    txbuf[i++] = pulse0 & 0xff;
+    txbuf[i++] = pulse0>>8;
+    txbuf[i++] = 0x05;
+    txbuf[i++] = pulse1 & 0xff;
+    txbuf[i++] = pulse1>>8;
+
+    fpga__load_tap_fifo_command(txbuf, i, 1000);
+}
+
+void tzx__data_callback(const uint8_t *data, int len)
+{
+    fpga__load_tap_fifo(data, len, 1000);
+}
+
 
 void tapplayer__stop()
 {
@@ -75,6 +123,8 @@ static void tapplayer__do_start_play(const char *filename)
     }
     // Attempt to open file
     tapfh = open(filename, O_RDONLY);
+    is_tzx = false;
+
 
     if (tapfh<0) {
         ESP_LOGE(TAG,"Cannot open '%s': %s", filename, strerror(errno));
@@ -85,6 +135,15 @@ static void tapplayer__do_start_play(const char *filename)
         ESP_LOGE(TAG,"Cannot stat '%s': %s", filename, strerror(errno));
         return;
     }
+
+    const char *ext = get_file_extension(filename);
+    if (ext) {
+        if (ext_match(ext,"tzx")) {
+            is_tzx = true;
+            tzx__init(&tzx);
+        }
+    }
+
     playsize = st.st_size;
     currplay = 0;
 
@@ -111,11 +170,76 @@ static void tapplayer__do_record()
 {
 }
 
+static void do_play_tap()
+{
+    uint8_t chunk[256];
+    int r;
+
+    if (currplay < playsize) {
+        unsigned av = fpga__get_tap_fifo_free();
+        if (av==0) {
+            ESP_LOGW(TAG,"No room");
+            return;
+        }
+        if (av>sizeof(chunk)) {
+            av = sizeof(chunk);
+        }
+        if (av>(playsize-currplay)) {
+            av = playsize-currplay;
+        }
+        r = read(tapfh, chunk, av);
+        if (r<0) {
+            // Error reading
+            ESP_LOGE(TAG,"Read error");
+            state = TAP_IDLE;
+            close(tapfh);
+            tapfh = -1;
+            return;
+        }
+        ESP_LOGI(TAG, "Write TAP chunk %d (%d, %d)",r, playsize, currplay);
+        fpga__load_tap_fifo(chunk,r,4000);
+        currplay+=r;
+        if (playsize==currplay) {
+            ESP_LOGI(TAG, "Finished TAP fill");
+            close(tapfh);
+            tapfh = -1;
+            state = TAP_WAITDRAIN;
+        }
+    }
+}
+
+static void do_play_tzx()
+{
+    uint8_t chunk[32];
+    int r;
+
+    if (currplay < playsize) {
+        unsigned av = fpga__get_tap_fifo_free();
+
+        if (av>sizeof(chunk)) {
+            av = sizeof(chunk);
+        }
+        if (av>(playsize-currplay)) {
+            av = playsize-currplay;
+        }
+        if (av>0) {
+            r = read( tapfh, chunk, av);
+            if (r<0) {
+                // Error reading
+                ESP_LOGE(TAG,"Read error");
+                state = TAP_IDLE;
+                close(tapfh);
+                tapfh = -1;
+                return;
+            }
+            tzx__chunk(&tzx, chunk, r);
+        }
+    }
+}
 
 static void tapplayer__task(void*data)
 {
     struct tapcmd cmd;
-    uint8_t chunk[256];
     int r;
 
     while (1) {
@@ -141,36 +265,10 @@ static void tapplayer__task(void*data)
                     ESP_LOGW(TAG,"Negative FD! Cannot play!");
                     state = TAP_IDLE;
                 } else {
-                    if (currplay < playsize) {
-                        unsigned av = fpga__get_tap_fifo_free();
-                        if (av==0) {
-                            ESP_LOGW(TAG,"No room");
-                            break;
-                        }
-                        if (av>sizeof(chunk)) {
-                            av = sizeof(chunk);
-                        }
-                        if (av>(playsize-currplay)) {
-                            av = playsize-currplay;
-                        }
-                        r = read(tapfh, chunk, av);
-                        if (r<0) {
-                            // Error reading
-                            ESP_LOGE(TAG,"Read error");
-                            state = TAP_IDLE;
-                            close(tapfh);
-                            tapfh = -1;
-                            break;
-                        }
-                        ESP_LOGI(TAG, "Write TAP chunk %d (%d, %d)",r, playsize, currplay);
-                        fpga__load_tap_fifo(chunk,r,4000);
-                        currplay+=r;
-                        if (playsize==currplay) {
-                            ESP_LOGI(TAG, "Finished TAP fill");
-                            close(tapfh);
-                            tapfh = -1;
-                            state = TAP_WAITDRAIN;
-                        }
+                    if (is_tzx) {
+                        do_play_tzx();
+                    } else {
+                        do_play_tap();
                     }
                 }
                 break;
@@ -188,35 +286,6 @@ static void tapplayer__task(void*data)
             }
         }
     }
-
-
-#if 0
-    ESP_LOGI(TAG, "Starting TAP file play len %d", tapfile_len);
-
-    fpga__set_flags(FPGA_FLAG_TAPFIFO_RESET| FPGA_FLAG_TAP_ENABLED);// | FPGA_FLAG_ULAHACK);
-    fpga__clear_flags(FPGA_FLAG_TAPFIFO_RESET);
-
-    int len = tapfile_len;
-    const uint8_t *tap = &tapfile[0];
-    int chunk;
-
-    do {
-        if (len>0) {
-            chunk = fpga__load_tap_fifo(tap, len, 1000);
-            //ESP_LOGI(TAG, "TAP: Loaded %d bytes", chunk);
-            if (chunk<0){
-                ESP_LOGW(TAG, "Cannot write to TAP fifo");
-            } else {
-                len-=chunk;
-                tap+=chunk;
-                if (len==0) {
-                    ESP_LOGI(TAG,"TAP play finished");
-                }
-            }
-        } 
-        vTaskDelay(100 / portTICK_RATE_MS);
-    } while (1);
-#endif
 }
 
 
