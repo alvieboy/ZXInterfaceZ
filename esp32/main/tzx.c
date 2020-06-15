@@ -64,6 +64,7 @@ void tzx__chunk(struct tzx *t, const uint8_t *data, int len)
                    t->tzxbuf[9]);
             t->state = BLOCK;
             break;
+
         case BLOCK:
             NEED(1);
             //ESP_LOGE(TAG,("%02x\n",t->tzxbuf[0]);
@@ -90,7 +91,7 @@ void tzx__chunk(struct tzx *t, const uint8_t *data, int len)
         case DESCRIPTION:
             NEED(1);
             t->datachunk  = t->tzxbuf[0];
-            t->state = RAWDATA;
+            t->state = IGNOREDATA;
             //t->dataptr = NULL;
             break;
 
@@ -104,6 +105,17 @@ void tzx__chunk(struct tzx *t, const uint8_t *data, int len)
             len-=alen;
             data+=alen;
 
+            if (t->datachunk==0)
+                t->state = BLOCK;
+
+            break;
+
+        case IGNOREDATA:
+
+            alen = MIN(len, t->datachunk);
+            t->datachunk-=alen;
+            len-=alen;
+            data+=alen;
             if (t->datachunk==0)
                 t->state = BLOCK;
 
@@ -142,7 +154,7 @@ void tzx__chunk(struct tzx *t, const uint8_t *data, int len)
             //ESP_LOGE(TAG,("Data len: %d (last byte %d bits)\n", data_len, t->lastbytesize);
             t->datachunk = data_len;
             t->state = RAWDATA;
-            tzx__turbo_block_callback(pilot, sync0, sync1, pulse0, pulse1, data_len);
+            tzx__turbo_block_callback(pilot, sync0, sync1, pulse0, pulse1, data_len, t->lastbytesize);
 
             break;
 

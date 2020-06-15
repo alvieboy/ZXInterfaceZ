@@ -42,40 +42,108 @@ static int playsize;
 static int currplay;
 static bool is_tzx = false;
 
+#define TAP_INTERNALCMD_RESET 0x80
+#define TAP_INTERNALCMD_DATALEN_EXTERNAL 0x82
+#define TAP_INTERNALCMD_DATALEN_INTERNAL 0x83
+
+#define TAP_INTERNALCMD_SET_PILOT 0x00
+#define TAP_INTERNALCMD_SET_SYNC0 0x01
+#define TAP_INTERNALCMD_SET_SYNC1 0x02
+#define TAP_INTERNALCMD_SET_PULSE0 0x03
+#define TAP_INTERNALCMD_SET_PULSE1 0x04
+#define TAP_INTERNALCMD_SET_PILOT_HEADER_LEN_PAIRS 0x08
+#define TAP_INTERNALCMD_SET_PILOT_DATA_LEN_PAIRS 0x09
+#define TAP_INTERNALCMD_SET_GAP 0x0A
+#define TAP_INTERNALCMD_SET_DATALEN1 0x0B
+#define TAP_INTERNALCMD_SET_DATALEN2 0x0C
+
 
 void tzx__standard_block_callback(uint16_t length, uint16_t pause_after)
 {
-    uint8_t txbuf[6];
+    uint8_t txbuf[4];
     int i = 0;
-    txbuf[i++] = 0x06;
-    txbuf[i++] = 0;
-    txbuf[i++] = 0;
-    txbuf[i++] = 0x09;
+    txbuf[i++] = TAP_INTERNALCMD_RESET;
+    txbuf[i++] = TAP_INTERNALCMD_SET_GAP;
     txbuf[i++] = pause_after & 0xff;
     txbuf[i++] = pause_after >> 8;
 
     fpga__load_tap_fifo_command(txbuf, i, 1000);
 }
 
-void tzx__turbo_block_callback(uint16_t pilot, uint16_t sync0, uint16_t sync1, uint16_t pulse0, uint16_t pulse1, uint16_t data_len)
+static inline uint16_t tapplayer__compute_tstate_delay(uint16_t cycles)
 {
-    uint8_t txbuf[15];
+    /* NOTES ABOUT T-CYCLE COMPENSATION
+
+    The FPGA system runs at 96MHz. With this speed it is not possible to generate a perfect 3.5MHz toggle. The ratio
+    is ~27.428571, and internal FPGA uses 27.0 as the clock divider.
+
+    In order to compensate for this small difference, adjust your T-state timings by:
+
+    * Multiplying for 960 and then dividing for 945.
+
+    Example: you want a 2174-cycle delay. 2174*960= 2087040, round(2087040/945) = 2209
+    */
+
+    uint32_t temp = cycles;
+
+    // In order to round up, we use a single bit (using fixed-point arithmetic).
+    // We first add 0.5 and then truncate the result.
+    //
+    //  t = truncate((a*b)/c + 0.5)
+    //   which is equivalent to
+    //  2*t = truncate((a*2*b)/c + 2*0.5)
+    //    t = truncate((a*2*b)/c + 1) / 2
+
+
+
+    temp *= 960*2; // 4174080 for the above example
+    temp /= 945;   // 4417 for the above example
+    temp++;        // 4418
+    temp>>=1;      // 2209
+    return (uint16_t) temp;
+}
+
+void tzx__turbo_block_callback(uint16_t pilot, uint16_t sync0, uint16_t sync1, uint16_t pulse0, uint16_t pulse1, uint32_t data_len,
+                              uint8_t last_byte_len)
+{
+    uint8_t txbuf[24];
     int i = 0;
-    txbuf[i++] = 0x01;
+
+    if (last_byte_len==0)
+        last_byte_len = 1;
+
+    if (last_byte_len>8)
+        last_byte_len = 8;
+
+    pilot = tapplayer__compute_tstate_delay(pilot);
+    sync0 = tapplayer__compute_tstate_delay(sync0);
+    sync1 = tapplayer__compute_tstate_delay(sync1);
+    pulse0 = tapplayer__compute_tstate_delay(pulse0);
+    pulse1 = tapplayer__compute_tstate_delay(pulse1);
+
+    txbuf[i++] = TAP_INTERNALCMD_SET_PILOT;
     txbuf[i++] = pilot & 0xff;
     txbuf[i++] = pilot>>8;
-    txbuf[i++] = 0x02;
+    txbuf[i++] = TAP_INTERNALCMD_SET_SYNC0;
     txbuf[i++] = sync0 & 0xff;
     txbuf[i++] = sync0>>8;
-    txbuf[i++] = 0x03;
+    txbuf[i++] = TAP_INTERNALCMD_SET_SYNC1;
     txbuf[i++] = sync1 & 0xff;
     txbuf[i++] = sync1>>8;
-    txbuf[i++] = 0x04;
+    txbuf[i++] = TAP_INTERNALCMD_SET_PULSE0;
     txbuf[i++] = pulse0 & 0xff;
     txbuf[i++] = pulse0>>8;
-    txbuf[i++] = 0x05;
+    txbuf[i++] = TAP_INTERNALCMD_SET_PULSE1;
     txbuf[i++] = pulse1 & 0xff;
     txbuf[i++] = pulse1>>8;
+    txbuf[i++] = TAP_INTERNALCMD_DATALEN_EXTERNAL;  // This informs player that block len is not in stream
+    txbuf[i++] = TAP_INTERNALCMD_SET_DATALEN1;
+    txbuf[i++] = data_len & 0xff;
+    txbuf[i++] = (data_len >> 8) & 0xff;
+    txbuf[i++] = TAP_INTERNALCMD_SET_DATALEN2;
+    txbuf[i++] = (data_len >> 16) & 0xff;
+    txbuf[i++] = (8 - last_byte_len);
+
 
     fpga__load_tap_fifo_command(txbuf, i, 1000);
 }
@@ -240,7 +308,6 @@ static void do_play_tzx()
 static void tapplayer__task(void*data)
 {
     struct tapcmd cmd;
-    int r;
 
     while (1) {
         if (xQueueReceive(tap_evt_queue, &cmd, 50)==pdTRUE) {

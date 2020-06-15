@@ -11,6 +11,7 @@ enum tzx_state
     STANDARD,
     TURBOSPEED,
     RAWDATA,
+    IGNOREDATA,
     INVALID
 };
 
@@ -26,7 +27,8 @@ struct tzx {
 void tzx__init(struct tzx *t);
 void tzx__chunk(struct tzx *t, const uint8_t *data, int len);
 void tzx__standard_block_callback(uint16_t length, uint16_t pause_after);
-void tzx__turbo_block_callback(uint16_t pilot, uint16_t sync0, uint16_t sync1, uint16_t pulse0, uint16_t pulse1, uint16_t data_len);
+void tzx__turbo_block_callback(uint16_t pilot, uint16_t sync0, uint16_t sync1, uint16_t pulse0, uint16_t pulse1, uint32_t data_len,
+                              uint8_t last_byte_len);
 void tzx__data_callback(const uint8_t *data, int len);
 
 #endif
