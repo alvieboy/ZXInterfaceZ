@@ -75,7 +75,7 @@ begin
 	GENERIC MAP (
 		intended_device_family => "Cyclone IV E",
 		lpm_numwords => 1024,
-		lpm_showahead => "OFF",
+		lpm_showahead => "ON",
 		lpm_type => "dcfifo",
 		lpm_width => 9,
 		lpm_widthu => 10,

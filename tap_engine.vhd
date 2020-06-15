@@ -87,7 +87,7 @@ begin
     enable_i  => enable_i,
     restart_i => restart_i,
 
-    ready_i   => ready_s,
+    valid_i   => ready_s,
     data_i    => data_s,
     rd_o      => rd_s,
 

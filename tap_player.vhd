@@ -12,7 +12,7 @@ entity tap_player is
     enable_i  : in std_logic;
     restart_i : in std_logic;
 
-    ready_i   : in std_logic;
+    valid_i   : in std_logic;
     data_i    : in std_logic_vector(8 downto 0);
     rd_o      : out std_logic;
 
@@ -29,9 +29,8 @@ architecture beh of tap_player is
     LOAD_SIZE_LSB,
     LOAD_SIZE_MSB,
     LOAD_TYPE,
-    LOAD_CMD,
-    LOAD_CMD2,
-    DISPATCHCMD,
+    LOAD_DATA0,
+    LOAD_DATA1,
     SEND_PILOT,
     GAP,
     PLAY_DATA
@@ -39,22 +38,23 @@ architecture beh of tap_player is
 
   type regs_type is record
     state           : state_type;
-    chunk_size      : unsigned(15 downto 0);
+    chunk_size      : unsigned(23 downto 0);
     cnt             : unsigned(15 downto 0);
     pilot_dly       : unsigned(11 downto 0);
     gap_dly         : unsigned(11 downto 0);
     bitindex        : natural range 0 to 7;
     chunk_type      : std_logic_vector(7 downto 0);
-    pulse_data      : std_logic_vector(11 downto 0);
+    cmd             : std_logic_vector(6 downto 0);
+    pulse_data      : std_logic_vector(7 downto 0); -- LSB of pulse
     pilot_header_len : unsigned(11 downto 0);
     pilot_data_len  : unsigned(11 downto 0);
     gap_len         : unsigned(11 downto 0);
+    len_outside_blk : std_logic;
+    last_byte_len   : unsigned(2 downto 0);
   end record;
 
   signal pulse_ready_s  : std_logic;
-  signal pulse_rd_s     : std_logic;
-  --signal pulse_idle_s   : std_logic;
-  signal pulse_data_r   : std_logic_vector(3 downto 0);
+  signal pulse_busy_s   : std_logic;
   signal pulse_data_s   : std_logic_vector(3 downto 0);
   signal pulse_custom_s : std_logic_vector(11 downto 0);
   signal tick_1ms_s     : std_logic;
@@ -85,200 +85,213 @@ begin
     arst_i    => arst_i,
     tstate_i  => tstate_i,
 
-    ready_i   => pulse_ready_s,
-    data_i    => pulse_data_r,
-    rd_o      => pulse_rd_s,
+    valid_i   => pulse_ready_s,
+    data_i    => pulse_data_s,
+    busy_o    => pulse_busy_s,
     len_i     => pulse_custom_s,
---    idle_o    => pulse_idle_s,
     audio_o   => audio_o
   );
 
-  pulse_custom_s <= std_logic_vector(r.pulse_data);
+  pulse_custom_s <= data_i(3 downto 0) & std_logic_vector(r.pulse_data);
 
-  process(clk_i)
-  begin
-    if rising_edge(clk_i) then
-      if pulse_rd_s='1' then
-        pulse_data_r <= pulse_data_s;
-      end if;
-    end if;
-  end process;
-
-  process(clk_i,arst_i,r,enable_i,ready_i, pulse_rd_s, restart_i, data_i, tstate_i)
+  process(clk_i,arst_i,r,enable_i,valid_i, pulse_busy_s, restart_i, data_i, tstate_i)
     variable w: regs_type;
+    variable wait_pulse: boolean;
   begin
     w     := r;
-    rd_o   <= '0';
+    rd_o          <= '0';
     pulse_ready_s <= '0';
-    pulse_data_s <= (others => 'X');
+    pulse_data_s  <= (others => 'X');
+    wait_pulse    := false;
 
-    case r.state is
-      when IDLE =>
-        rd_o <= ready_i AND enable_i;
-        if enable_i='1' and restart_i='0' and ready_i='1' then
-          w.state := LOAD_SIZE_LSB;
-        end if;
+    if enable_i='1' then
 
-      when LOAD_CMD =>
-        rd_o <= ready_i AND enable_i;
-        if ready_i='1' and enable_i='1' then
-          case r.chunk_size(7 downto 0) is
-            when x"01" | x"02" | x"03" | x"04" | x"05" | x"06" | x"07" | x"08" | x"09"=> -- Set pulses
-              w.pulse_data(7 downto 0) := data_i(7 downto 0);
-              w.state := LOAD_CMD2;
-            when others =>
-          end case;
-        end if;
+      case r.state is
+        when IDLE =>
+          if valid_i='1' then
+            if data_i(8)='1' then
+              -- Command access
+              if data_i(7)='0' then -- Pulse information
+                w.state := LOAD_DATA0;
+                w.cmd := data_i(6 downto 0);
+              else
+                -- Simple cmd
+                case data_i(6 downto 0) is
+                  when "0000000" =>
+                    -- Reset to defaults
+                    pulse_data_s        <= SET_PULSE_TAP; -- Reset to defaults
+                    pulse_ready_s       <= '1';
+                    wait_pulse          := true;
+                    w.pilot_header_len  := to_unsigned(8063,12);
+                    w.pilot_data_len    := to_unsigned(3223,12);
+                    w.gap_len           := to_unsigned(2000,12);
+                    w.len_outside_blk   := '0';
 
-      when LOAD_CMD2 =>
-        --rd_o <= ready_i AND enable_i;
-        if ready_i='1' and enable_i='1' then
-          case r.chunk_size(7 downto 0) is
-            when x"01" | x"02" | x"03" | x"04" | x"05" | x"06" | x"07" | x"08" | x"09"=> -- Set pulses
-              w.pulse_data(11 downto 8) := data_i(3 downto 0);
-              w.state := DISPATCHCMD;
-            when others =>
+                  when "0000010" =>
+                    w.len_outside_blk := '0';
+                  when "0000011" =>
+                    w.len_outside_blk := '1';
 
-          end case;
-        end if;
+                  when others =>
 
-      when DISPATCHCMD =>
-        rd_o <= ready_i AND enable_i;
-        if ready_i='1' and enable_i='1' then
-          case r.chunk_size(7 downto 0) is
-            when x"01"  =>  pulse_data_s <= SET_PULSE_PILOT;-- Set PILOT pulse
-                            pulse_ready_s <= '1';
-            when x"02"  =>  pulse_data_s <= SET_PULSE_SYNC0;
-                            pulse_ready_s <= '1';
-            when x"03"  =>  pulse_data_s <= SET_PULSE_SYNC1;
-                            pulse_ready_s <= '1';
-            when x"04"  =>  pulse_data_s <= SET_PULSE_LOGIC0;
-                            pulse_ready_s <= '1';
-            when x"05"  =>  pulse_data_s <= SET_PULSE_LOGIC1;
-                            pulse_ready_s <= '1';
-            when x"06"  =>  pulse_data_s <= SET_PULSE_TAP; -- Reset to defaults
-                            pulse_ready_s <= '1';
-                            w.pilot_header_len := to_unsigned(8063,12);
-                            w.pilot_data_len   := to_unsigned(3223,12);
-                            w.gap_len          := to_unsigned(2000,12);
-
-            when x"07"  =>  w.pilot_header_len := unsigned(r.pulse_data);
-                            w.state := LOAD_SIZE_LSB;
-            when x"08"  =>  w.pilot_data_len := unsigned(r.pulse_data);
-                            w.state := LOAD_SIZE_LSB;
-            when x"09"  =>  w.gap_len := unsigned(r.pulse_data);
-                            w.state := LOAD_SIZE_LSB;
-            when others =>
-
-          end case;
-          if pulse_rd_s='1' then
-            w.state := LOAD_SIZE_LSB;
-          end if;
-        end if;
-        
-
-      when LOAD_SIZE_LSB =>
-        rd_o <= ready_i AND enable_i;
-        if ready_i='1' and enable_i='1' then
-          -- This is reused for command parsing.
-          w.chunk_size(7 downto 0) := unsigned(data_i(7 downto 0));
-          if data_i(8)='0' then
-            w.state := LOAD_SIZE_MSB;
-          else
-            w.state := LOAD_CMD;
-          end if;
-        end if;
-        if restart_i='1' then
-          w.state := IDLE;
-        end if;
-
-      when LOAD_SIZE_MSB =>
-        rd_o <= ready_i AND enable_i;
-        if ready_i='1' and enable_i='1' then
-          w.state := LOAD_TYPE;
-          w.chunk_size(15 downto 8) := unsigned(data_i(7 downto 0));
-        end if;
-        if restart_i='1' then
-          w.state := IDLE;
-        end if;
-
-      when LOAD_TYPE =>
-        rd_o <= '0';
-        if ready_i='1' and enable_i='1' and tstate_i='1' then
-          w.state := SEND_PILOT;
-          w.chunk_type(7 downto 0) := data_i(7 downto 0);
-          if data_i=x"00" then
-            w.pilot_dly := unsigned(r.pilot_header_len);
-          else
-            w.pilot_dly := unsigned(r.pilot_data_len);
-          end if;
-        end if;
-        if restart_i='1' then
-          w.state := IDLE;
-        end if;
-
-      when SEND_PILOT =>
-        if r.pilot_dly=0 then
-          pulse_data_s    <= PULSE_SYNC; -- Sync
-        else
-          pulse_data_s    <= PULSE_PILOT; -- Pilot
-        end if;
-        pulse_ready_s   <= '1';
-        if pulse_rd_s='1' then
-          if r.pilot_dly=0 then
-            w.state := PLAY_DATA;
-            w.bitindex := 7;
-          else
-            w.pilot_dly := r.pilot_dly - 1;
-          end if;
-        end if;
-
-      when PLAY_DATA  =>
-        if data_i(r.bitindex)='1' then
-          pulse_data_s <= PULSE_LOGIC1;
-        else
-          pulse_data_s <= PULSE_LOGIC0;
-        end if;
-        pulse_ready_s <= '1';
-        rd_o <= '0';
-        if pulse_rd_s='1' then
-          if r.bitindex=0 then
-            if r.chunk_size=0 then
-              w.state := GAP;
-              w.gap_dly := r.gap_len;
-            else
-              w.bitindex := 7;
-              --rd_o <= '1';
-              rd_o <= ready_i AND enable_i;
-              if ready_i='0' or enable_i='0' then
-                w.state := IDLE;
+                end case;
               end if;
 
-              w.chunk_size := r.chunk_size - 1;
+              if wait_pulse then
+                rd_o <= not pulse_busy_s;
+              else
+                rd_o <= '1';
+              end if;
+
+            else
+              -- Data access
+              if r.len_outside_blk='0' then
+                w.chunk_size(7 downto 0) := unsigned(data_i(7 downto 0));
+                w.chunk_size(23 downto 16) := (others => '0');
+                w.state := LOAD_SIZE_MSB;
+                rd_o <= '1';
+              else
+                -- This is data w/o size header.
+                w.state := LOAD_TYPE;
+                -- Don't remove from FIFO.
+                rd_o <= '0';
+              end if;
+
             end if;
+
+
+          end if; -- Valid_i
+
+
+        when LOAD_DATA0 =>
+          rd_o <= '1';
+          if valid_i='1' then
+            w.pulse_data(7 downto 0) := data_i(7 downto 0);
+            w.state := LOAD_DATA1;
+          end if;
+
+        when LOAD_DATA1 =>
+
+          if valid_i='1' then
+            pulse_ready_s <= not r.cmd(3); -- 0 to 7 are handled by pulse generator
+
+            case r.cmd(2 downto 0) is
+              when "000"  =>  pulse_data_s        <= SET_PULSE_PILOT;-- Set PILOT pulse
+              when "001"  =>  pulse_data_s        <= SET_PULSE_SYNC0;
+              when "010"  =>  pulse_data_s        <= SET_PULSE_SYNC1;
+              when "011"  =>  pulse_data_s        <= SET_PULSE_LOGIC0;
+              when others =>  pulse_data_s        <= SET_PULSE_LOGIC1;
+            end case;
+
+            if r.cmd(3)='1' then
+              -- Internal configuration
+              case r.cmd(2 downto 0) is
+                when "000"    =>  w.pilot_header_len      := unsigned(data_i(3 downto 0) & r.pulse_data);
+                when "001"    =>  w.pilot_data_len        := unsigned(data_i(3 downto 0) & r.pulse_data);
+                when "010"    =>  w.gap_len               := unsigned(data_i(3 downto 0) & r.pulse_data);
+                when "011"    =>  w.chunk_size(15 downto 0) := unsigned(data_i(7 downto 0) & r.pulse_data);
+                when "100"    =>  w.chunk_size(23 downto 16) := unsigned(r.pulse_data);
+                                  w.last_byte_len         := unsigned(data_i(2 downto 0));
+                when others =>
+              end case;
+
+            end if;
+
+            if r.cmd(3)='0' then
+              rd_o <= not pulse_busy_s;
+              w.state := IDLE;
+            else
+              rd_o <= '1';
+              w.state := IDLE;
+            end if;
+
+          end if;
+
+
+
+        when LOAD_SIZE_MSB =>
+          rd_o <= '1';
+          if valid_i='1' then
+            w.state := LOAD_TYPE;
+            w.chunk_size(15 downto 8) := unsigned(data_i(7 downto 0));
+          end if;
+          if restart_i='1' then
+            w.state := IDLE;
+          end if;
+  
+        when LOAD_TYPE =>
+
+          if tstate_i='1' then
+            if valid_i='1' then
+              rd_o <= '1';
+              w.state := SEND_PILOT;
+              w.chunk_type(7 downto 0) := data_i(7 downto 0);
+              if data_i=x"00" then
+                w.pilot_dly := unsigned(r.pilot_header_len);
+              else
+                w.pilot_dly := unsigned(r.pilot_data_len);
+              end if;
+            end if;
+          end if;
+  
+        when SEND_PILOT =>
+          if r.pilot_dly=0 then
+            pulse_data_s    <= PULSE_SYNC; -- Sync
           else
-            w.bitindex := r.bitindex-1;
+            pulse_data_s    <= PULSE_PILOT; -- Pilot
           end if;
-        end if;
+          pulse_ready_s   <= '1';
 
-      when GAP =>
-        pulse_ready_s <= '0';
-        if tstate_i='1' then
-          if r.gap_dly=0 then
-            w.state := LOAD_SIZE_LSB;
-          elsif tick_1ms_s='1' then
-            w.gap_dly := r.gap_dly - 1;
+          if pulse_busy_s='0' then
+            if r.pilot_dly=0 then
+              w.state := PLAY_DATA;
+              w.bitindex := 7;
+            else
+              w.pilot_dly := r.pilot_dly - 1;
+            end if;
           end if;
-        end if;
-        if ready_i='0' or enable_i='0' then
-          w.state := IDLE;
-        end if;
-      when others =>
-      report "Uninmplemneted" severity failure;
+  
+        when PLAY_DATA  =>
 
-    end case;
+          if data_i(r.bitindex)='1' then
+            pulse_data_s <= PULSE_LOGIC1;
+          else
+            pulse_data_s <= PULSE_LOGIC0;
+          end if;
 
-    if enable_i='0' then
+          pulse_ready_s <= '1';
+
+          if pulse_busy_s='0' then
+            if (r.bitindex=0 or (r.chunk_size=0 and r.bitindex=r.last_byte_len)) then -- Last bit being played.
+              if r.chunk_size=0 then
+                w.state := GAP;
+                w.gap_dly := r.gap_len;
+              else
+                w.bitindex := 7;
+                rd_o  <= '1';
+                w.chunk_size := r.chunk_size - 1;
+              end if;
+            else
+              w.bitindex := r.bitindex-1;
+            end if;
+          end if;
+  
+        when GAP =>
+          if tstate_i='1' then
+            if r.gap_dly=0 then
+
+              w.state := LOAD_SIZE_LSB;
+            elsif tick_1ms_s='1' then
+              w.gap_dly := r.gap_dly - 1;
+            end if;
+          end if;
+
+        when others =>
+        report "Uninmplemneted" severity failure;
+  
+      end case;
+
+    else -- enable_i='0'
       w.state := IDLE;
       pulse_ready_s <= '0';
     end if;
@@ -289,7 +302,7 @@ begin
       r.pilot_header_len <= to_unsigned(8063,12);
       r.pilot_data_len   <= to_unsigned(3223,12);
       r.gap_len          <= to_unsigned(2000,12);
-
+      r.len_outside_blk  <= '0';
     elsif rising_edge(clk_i) then
       r <= w;
     end if;

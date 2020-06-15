@@ -10,11 +10,11 @@ entity tap_pulse is
     arst_i    : in std_logic;
     tstate_i  : in std_logic; -- '1' each 3.5Mhz
 
-    ready_i   : in std_logic;
+    valid_i   : in std_logic;
     data_i    : in std_logic_vector(3 downto 0);
     len_i     : in std_logic_vector(11 downto 0);
-    rd_o      : out std_logic;
-    idle_o    : out std_logic;
+    --rd_o      : out std_logic;
+    busy_o    : out std_logic;
 
     audio_o   : out std_logic
 );
@@ -36,6 +36,8 @@ architecture beh of tap_pulse is
     state : state_type;
     dly   : unsigned(11 downto 0);
     audio : std_logic;
+    cmd   : std_logic_vector(3 downto 0);
+    len   : std_logic_vector(11 downto 0);
     pulse_pilot  : pulse_type;
     pulse_sync0  : pulse_type;
     pulse_sync1  : pulse_type;
@@ -73,60 +75,67 @@ architecture beh of tap_pulse is
 
 begin
 
-  idle_o <= '1' when r.state=IDLE else '0';
-  
-  process(clk_i, arst_i, data_i, ready_i, r, tstate_i)
+  process(clk_i, arst_i, data_i, valid_i, r, tstate_i)
     variable w: regs_type;
   begin
     w := r;
     case r.state is
       when IDLE =>
-        rd_o <= ready_i;
-        if ready_i='1' then
+        busy_o <= '0';
+        if valid_i='1' then
+          w.len   := len_i;
+          w.cmd   := data_i;
           w.state := LOADDATA;
         end if;
 
       when LOADDATA =>
-        rd_o    <= '0';
+
+        busy_o <= '1';
 
         w.state := IDLE;
-        case data_i is
-            when SET_PULSE_PILOT  => w.pulse_pilot  := unsigned(len_i);
-            when SET_PULSE_SYNC0  => w.pulse_sync0  := unsigned(len_i);
-            when SET_PULSE_SYNC1  => w.pulse_sync1  := unsigned(len_i);
-            when SET_PULSE_LOGIC0 => w.pulse_logic0 := unsigned(len_i);
-            when SET_PULSE_LOGIC1 => w.pulse_logic1 := unsigned(len_i);
-            when SET_PULSE_TAP    =>
-              w.pulse_pilot  := to_unsigned(2168,12);
-              w.pulse_sync0  := to_unsigned(667,12);
-              w.pulse_sync1  := to_unsigned(735,12);
-              w.pulse_logic0 := to_unsigned(855,12);
-              w.pulse_logic1 := to_unsigned(1710,12);
 
-            when others =>
-              w.state := PULSEHIGH;
-              w.audio := not r.audio;
-              w.dly   := pulse_high(r,data_i);
+        case r.cmd is
+          when SET_PULSE_PILOT  => w.pulse_pilot  := unsigned(r.len);
+          when SET_PULSE_SYNC0  => w.pulse_sync0  := unsigned(r.len);
+          when SET_PULSE_SYNC1  => w.pulse_sync1  := unsigned(r.len);
+          when SET_PULSE_LOGIC0 => w.pulse_logic0 := unsigned(r.len);
+          when SET_PULSE_LOGIC1 => w.pulse_logic1 := unsigned(r.len);
+          when SET_PULSE_TAP    =>
+            w.pulse_pilot  := to_unsigned(t_compensate(2168)-1,12);
+            w.pulse_sync0  := to_unsigned(t_compensate(667)-1,12);
+            w.pulse_sync1  := to_unsigned(t_compensate(735)-1,12);
+            w.pulse_logic0 := to_unsigned(t_compensate(855)-1,12);
+            w.pulse_logic1 := to_unsigned(t_compensate(1710)-1,12);
+
+          when others =>
+            w.state := PULSEHIGH;
+            w.audio := not r.audio;
+            w.dly   := pulse_high(r,r.cmd);
         end case;
+
       when PULSEHIGH =>
-        rd_o    <= '0';
+        busy_o  <= '1';
         if tstate_i='1' then
           if r.dly=0 then
             w.state := PULSELOW;
             w.audio := not r.audio;
-            w.dly   := pulse_low(r,data_i);
+            w.dly   := pulse_low(r,r.cmd);
           else
             w.dly := r.dly - 1;
           end if;
         end if;
+
       when PULSELOW =>
-        rd_o    <= '0';
+        busy_o <= '1';
         if tstate_i='1' then
           if r.dly=0 then
+            busy_o <= '0';
             w.state := IDLE;
             -- Unless we have more data. If so, process it.
-            rd_o <= ready_i;
-            if ready_i='1' then
+            w.len   := len_i;
+            w.cmd   := data_i;
+
+            if valid_i='1' then
               w.state := LOADDATA;
             else
               -- Generate the pulse when we are to stop.
@@ -136,17 +145,18 @@ begin
             w.dly := r.dly - 1;
           end if;
         end if;
+
     end case;
 
     if arst_i='1' then
       r.state <= IDLE;
       r.dly   <= (others => '0');
       r.audio <= '0';
-      r.pulse_pilot  <= to_unsigned(2168,12);
-      r.pulse_sync0  <= to_unsigned(667,12);
-      r.pulse_sync1  <= to_unsigned(735,12);
-      r.pulse_logic0 <= to_unsigned(855,12);
-      r.pulse_logic1 <= to_unsigned(1710,12);
+      r.pulse_pilot  <= to_unsigned(t_compensate(2168)-1,12);
+      r.pulse_sync0  <= to_unsigned(t_compensate(667)-1,12);
+      r.pulse_sync1  <= to_unsigned(t_compensate(735)-1,12);
+      r.pulse_logic0 <= to_unsigned(t_compensate(855)-1,12);
+      r.pulse_logic1 <= to_unsigned(t_compensate(1710)-1,12);
 
     elsif rising_edge(clk_i) then
       r <= w;
