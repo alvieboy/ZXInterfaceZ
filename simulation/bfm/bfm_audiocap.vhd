@@ -21,21 +21,26 @@ architecture sim of bfm_audiocap is
 begin
 
   process
-    variable delta: time;
-    variable rise:  time;
-    variable fall:  time;
+    variable last_event       : time;
+    variable last_event_valid : boolean;
+    variable trans            : natural := 0;
   begin
     if Cmd_i.Enabled then
-      l: loop
-        wait until rising_edge(audio_i);
-        rise := now;
-        wait until falling_edge(audio_i) for 1 ms;
-        fall := now;
-  
-        delta := fall - rise;
-        report "Edge " & time'image(delta);
-      end loop;
+      wait on Cmd_i.Enabled, audio_i;
+      if Cmd_i.Enabled then
+        if audio_i'event then
+          if last_event_valid then
+            trans := trans + 1;
+            Data_o.Delta <= now - last_event;
+            Data_o.Polarity <= audio_i;
+            Data_o.Trans <= trans;
+          end if;
+          last_event        := now;
+          last_event_valid  := true;
+        end if;
+      end if;
     else
+      last_event_valid := false;
       wait on Cmd_i.Enabled;
     end if;
   end process;

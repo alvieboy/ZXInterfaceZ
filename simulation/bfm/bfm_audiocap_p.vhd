@@ -10,19 +10,10 @@ package bfm_audiocap_p is
     SETMEM
   );
 
-  type DetectedPulse is (
-    PULSE_PILOT,
-    PULSE_SYNC,
-    PULSE_DATA0,
-    PULSE_DATA1,
-    PULSE_INVALID
-  );
-
   type Data_Audiocap_type is record
     Trans     : natural;
-    Pulse     : DetectedPulse;
-    PeriodHigh: time;
-    PeriodLow : time;
+    Delta     : time;
+    Polarity  : std_logic;
   end record;
 
   type Cmd_Audiocap_type is record
