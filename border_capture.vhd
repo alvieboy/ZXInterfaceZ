@@ -81,7 +81,7 @@ begin
         if start_delay_r/=0 then
           start_delay_r <= start_delay_r -1;
         -- synthesis translate_off
-          report "Delay " & hstr(std_logic_vector(start_delay_r));
+         -- report "Delay " & hstr(std_logic_vector(start_delay_r));
         -- synthesis translate_on
         else
           shreg32_r(4*(seq_r+1)-1 downto 4*seq_r) <= border_ear_i;
