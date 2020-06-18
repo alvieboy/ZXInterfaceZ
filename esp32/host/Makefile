@@ -5,7 +5,7 @@ ESP_IDF=/home/alvieboy/Temp/esp-idf/
 FREERTOS:=./FreeRTOS
 FREERTOSKERNEL:=$(FREERTOS)/Source/
 
-CFLAGS=-O2 -g -DIDF_VER=\"0.1\" \
+CFLAGS=-O2 -g -Wall -Wextra -DIDF_VER=\"0.1\" \
 	$(shell pkg-config --cflags glib-2.0) \
 	-I$(FREERTOSKERNEL)/include \
        -I$(FREERTOSKERNEL)/portable/GCC/Linux \

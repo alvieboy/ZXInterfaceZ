@@ -66,7 +66,7 @@ char startupdir[512] = {0};
 
 int main(int argc, char **argv)
 {
-    TaskHandle_t *h;
+    TaskHandle_t h;
     getcwd(startupdir, sizeof(startupdir));
     xTaskCreate(wrap_app_main, "main", 4096, NULL, 7, &h);
     vTaskStartScheduler();

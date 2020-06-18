@@ -21,6 +21,24 @@
 #include "sna.h"
 #include "fpga_ota.h"
 
+
+
+#ifdef __linux__
+
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+
+static inline char* inet_ntoa_r(struct in_addr in, char *dest, unsigned len)
+{
+    char *n  = inet_ntoa(in);
+    strncpy(dest, n, len);
+    return dest;
+}
+
+#endif
+
+
 static int netcmd__send_framebuffer(command_t *cmdt, int argc, char **argv);
 static int netcmd__send_captures(command_t *cmdt, int argc, char **argv);
 
@@ -268,7 +286,7 @@ static int netcmd__reset_custom_spectrum(command_t *cmdt, int argc, char **argv)
 
 static int netcmd__vgamode(command_t *cmdt, int argc, char **argv)
 {
-    int mode;
+    //int mode;
     /*
     if (strtoint(argv[0], &mode)<0) {
         return -1;

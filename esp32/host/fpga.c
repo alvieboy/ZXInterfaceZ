@@ -20,7 +20,6 @@ static xQueueHandle fpga_spi_queue = NULL;
 static hdlc_encoder_t hdlc_encoder;
 static hdlc_decoder_t hdlc_decoder;
 static uint8_t hdlcbuf[512];
-static uint8_t hdlcrx[512];
 static uint8_t writebuf[512];
 static unsigned writebufptr = 0;
 static unsigned hdlcrxlen = 0;
@@ -84,7 +83,9 @@ int fpga_init()
 
     // Start RX thread
     xTaskCreate(fpga_rxthread, "fpgathread", 4096, NULL, 6, NULL);
+    return 0;
 }
+#if 0
 
 static void dump(const char *t, const uint8_t *buffer, size_t len)
 {
@@ -94,7 +95,7 @@ static void dump(const char *t, const uint8_t *buffer, size_t len)
     }
     printf(" ]\n");
 }
-
+#endif
 
 extern void gpio_isr_do_trigger(gpio_num_t num);
 
@@ -130,7 +131,7 @@ void fpga_rxthread(void *arg)
         do {
             r = recv(emulator_socket, localbuf, sizeof(localbuf), 0);
         } while ((r<0) && (errno==EINTR));
-        if (r<0) {
+        if (r<=0) {
             printf("Error receiving: %s\n", strerror(errno));
             close(emulator_socket);
             emulator_socket = -1;

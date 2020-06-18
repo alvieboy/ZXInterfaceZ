@@ -5,7 +5,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 
-static SemaphoreHandle_t *spi_sem;
+static SemaphoreHandle_t spi_sem;
 
 void spi__init_bus()
 {

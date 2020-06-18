@@ -45,30 +45,23 @@ static bool is_tzx = false;
 #define TAP_INTERNALCMD_RESET 0x80
 #define TAP_INTERNALCMD_DATALEN_EXTERNAL 0x82
 #define TAP_INTERNALCMD_DATALEN_INTERNAL 0x83
+#define TAP_INTERNALCMD_PURE 0x84
+#define TAP_INTERNALCMD_STANDARD 0x85
 
 #define TAP_INTERNALCMD_SET_PILOT 0x00
 #define TAP_INTERNALCMD_SET_SYNC0 0x01
 #define TAP_INTERNALCMD_SET_SYNC1 0x02
 #define TAP_INTERNALCMD_SET_PULSE0 0x03
 #define TAP_INTERNALCMD_SET_PULSE1 0x04
+
 #define TAP_INTERNALCMD_SET_PILOT_HEADER_LEN_PAIRS 0x08
 #define TAP_INTERNALCMD_SET_PILOT_DATA_LEN_PAIRS 0x09
 #define TAP_INTERNALCMD_SET_GAP 0x0A
 #define TAP_INTERNALCMD_SET_DATALEN1 0x0B
 #define TAP_INTERNALCMD_SET_DATALEN2 0x0C
+#define TAP_INTERNALCMD_PLAY_PULSE 0x0D /* Follows pulse t-states, repeats for REPEAT */
+#define TAP_INTERNALCMD_SET_REPEAT 0x0E /* Follows pulse repeat */
 
-
-void tzx__standard_block_callback(uint16_t length, uint16_t pause_after)
-{
-    uint8_t txbuf[4];
-    int i = 0;
-    txbuf[i++] = TAP_INTERNALCMD_RESET;
-    txbuf[i++] = TAP_INTERNALCMD_SET_GAP;
-    txbuf[i++] = pause_after & 0xff;
-    txbuf[i++] = pause_after >> 8;
-
-    fpga__load_tap_fifo_command(txbuf, i, 1000);
-}
 
 static inline uint16_t tapplayer__compute_tstate_delay(uint16_t cycles)
 {
@@ -95,18 +88,107 @@ static inline uint16_t tapplayer__compute_tstate_delay(uint16_t cycles)
     //    t = truncate((a*2*b)/c + 1) / 2
 
 
-
+#ifdef __linux__
+    return temp;
+#else
     temp *= 960*2; // 4174080 for the above example
     temp /= 945;   // 4417 for the above example
     temp++;        // 4418
     temp>>=1;      // 2209
     return (uint16_t) temp;
+#endif
+}
+
+static void tzx__do_load_data(const uint8_t *buf, unsigned size)
+{
+    do {
+        int sent = fpga__load_tap_fifo(buf, size, 10000);
+        size -= sent;
+        buf += sent;
+    } while (size>0);
+
+}
+
+static void tzx__do_load_command(const uint8_t *buf, unsigned size)
+{
+    do {
+        int sent = fpga__load_tap_fifo_command(buf, size, 10000);
+        size -= sent;
+        buf += sent;
+    } while (size>0);
+
+}
+
+void tzx__tone_callback(uint16_t tstates, uint16_t count)
+{
+    uint8_t txbuf[6];
+    int i = 0;
+    //count--;
+
+    txbuf[i++] = TAP_INTERNALCMD_SET_REPEAT;
+    txbuf[i++] = count & 0xff;
+    txbuf[i++] = count >> 8;
+
+    tstates = tapplayer__compute_tstate_delay(tstates);
+
+    txbuf[i++] = TAP_INTERNALCMD_PLAY_PULSE;
+    txbuf[i++] = tstates & 0xff;
+    txbuf[i++] = tstates >> 8;
+
+    tzx__do_load_command(txbuf,i);
+}
+
+void tzx__pulse_callback(uint8_t count, const uint16_t *t_states /* these are words */)
+{
+    uint8_t txbuf[3];
+    int i = 0;
+
+    txbuf[i++] = TAP_INTERNALCMD_SET_REPEAT;
+    txbuf[i++] = 0;
+    txbuf[i++] = 0;
+
+    tzx__do_load_command(txbuf, i);
+    ESP_LOGI(TAG, "Transmitting pulses (%d)", count);
+    // Now, play all pulses. Improve this for speed please
+    while (count--) {
+        i = 0;
+        uint16_t ts = tapplayer__compute_tstate_delay(*t_states);
+        txbuf[i++] = TAP_INTERNALCMD_PLAY_PULSE;
+        txbuf[i++] = ts & 0xff;
+        txbuf[i++] = ts>>8;
+        ESP_LOGI(TAG, " - %d", ts);
+        t_states++;
+        tzx__do_load_command(txbuf, i);
+    }
+
+}
+
+void tzx__standard_block_callback(uint16_t length, uint16_t pause_after)
+{
+    uint8_t txbuf[12];
+    int i = 0;
+    txbuf[i++] = TAP_INTERNALCMD_RESET;
+    txbuf[i++] = TAP_INTERNALCMD_SET_GAP;
+    txbuf[i++] = pause_after & 0xff;
+    txbuf[i++] = pause_after >> 8;
+    txbuf[i++] = TAP_INTERNALCMD_DATALEN_EXTERNAL;  // This informs player that block len is not in stream
+    txbuf[i++] = TAP_INTERNALCMD_SET_DATALEN1;
+    txbuf[i++] = length & 0xff;
+    txbuf[i++] = (length >> 8) & 0xff;
+    txbuf[i++] = TAP_INTERNALCMD_SET_DATALEN2;
+    txbuf[i++] = 0x00;
+    txbuf[i++] = 0;
+    txbuf[i++] = TAP_INTERNALCMD_STANDARD;
+
+    tzx__do_load_command(txbuf, i);
 }
 
 void tzx__turbo_block_callback(uint16_t pilot, uint16_t sync0, uint16_t sync1, uint16_t pulse0, uint16_t pulse1, uint32_t data_len,
                               uint8_t last_byte_len)
 {
     uint8_t txbuf[24];
+    //uint8_t *txptr = &txbuf[0];
+
     int i = 0;
 
     if (last_byte_len==0)
@@ -144,15 +226,47 @@ void tzx__turbo_block_callback(uint16_t pilot, uint16_t sync0, uint16_t sync1, u
     txbuf[i++] = (data_len >> 16) & 0xff;
     txbuf[i++] = (8 - last_byte_len);
 
-
-    fpga__load_tap_fifo_command(txbuf, i, 1000);
+    tzx__do_load_command(txbuf, i);
 }
+
+void tzx__pure_data_callback(uint16_t pulse0, uint16_t pulse1, uint32_t data_len, uint16_t gap,
+                             uint8_t last_byte_len)
+{
+    uint8_t txbuf[17];
+    //uint8_t *txptr = &txbuf[0];
+    int i = 0;
+
+    pulse0 = tapplayer__compute_tstate_delay(pulse0);
+    pulse1 = tapplayer__compute_tstate_delay(pulse1);
+
+    txbuf[i++] = TAP_INTERNALCMD_SET_GAP;
+    txbuf[i++] = gap & 0xff;
+    txbuf[i++] = gap >> 8;
+    txbuf[i++] = TAP_INTERNALCMD_SET_PULSE0;
+    txbuf[i++] = pulse0 & 0xff;
+    txbuf[i++] = pulse0>>8;
+    txbuf[i++] = TAP_INTERNALCMD_SET_PULSE1;
+    txbuf[i++] = pulse1 & 0xff;
+    txbuf[i++] = pulse1>>8;
+    txbuf[i++] = TAP_INTERNALCMD_DATALEN_EXTERNAL;  // This informs player that block len is not in stream
+    txbuf[i++] = TAP_INTERNALCMD_SET_DATALEN1;
+    txbuf[i++] = data_len & 0xff;
+    txbuf[i++] = (data_len >> 8) & 0xff;
+    txbuf[i++] = TAP_INTERNALCMD_SET_DATALEN2;
+    txbuf[i++] = (data_len >> 16) & 0xff;
+    txbuf[i++] = (8 - last_byte_len);
+    txbuf[i++] = TAP_INTERNALCMD_PURE;
+
+    tzx__do_load_command(txbuf, i);
+
+}
+
+
 
 void tzx__data_callback(const uint8_t *data, int len)
 {
-    fpga__load_tap_fifo(data, len, 1000);
+    tzx__do_load_data(data,len);
 }
-
 
 void tapplayer__stop()
 {
@@ -264,14 +378,22 @@ static void do_play_tap()
             tapfh = -1;
             return;
         }
-        ESP_LOGI(TAG, "Write TAP chunk %d (%d, %d)",r, playsize, currplay);
-        fpga__load_tap_fifo(chunk,r,4000);
-        currplay+=r;
-        if (playsize==currplay) {
+        if (r>0) {
+            ESP_LOGI(TAG, "Write TAP chunk %d (%d, %d)",r, playsize, currplay);
+            fpga__load_tap_fifo(chunk,r,4000);
+            currplay+=r;
+            if (playsize==currplay) {
+                ESP_LOGI(TAG, "Finished TAP fill");
+                close(tapfh);
+                tapfh = -1;
+                state = TAP_WAITDRAIN;
+            }
+        } else {
             ESP_LOGI(TAG, "Finished TAP fill");
             close(tapfh);
             tapfh = -1;
             state = TAP_WAITDRAIN;
+
         }
     }
 }
@@ -310,7 +432,7 @@ static void tapplayer__task(void*data)
     struct tapcmd cmd;
 
     while (1) {
-        if (xQueueReceive(tap_evt_queue, &cmd, 50)==pdTRUE) {
+        if (xQueueReceive(tap_evt_queue, &cmd, 5/portTICK_RATE_MS)==pdTRUE) {
 
             switch (cmd.cmd) {
             case TAP_CMD_PLAY:
@@ -332,6 +454,7 @@ static void tapplayer__task(void*data)
                     ESP_LOGW(TAG,"Negative FD! Cannot play!");
                     state = TAP_IDLE;
                 } else {
+                    //ESP_LOGI(TAG,"TAP tick!");
                     if (is_tzx) {
                         do_play_tzx();
                     } else {

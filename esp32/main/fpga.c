@@ -122,6 +122,8 @@ static int fpga__configurefromflash()
     spi_flash_munmap(mmap_handle);
 
     return r;
+#else
+    return 0;
 #endif
 }
 
@@ -515,7 +517,7 @@ int fpga__load_tap_fifo_command(const uint8_t *data, unsigned len, int timeout)
     uint8_t txbuf[TAP_LOCAL_CHUNK_SIZE+1];
 
     uint16_t stat = fpga__get_tap_fifo_usage();
-//    ESP_LOGI(TAG, "TAP stat %04x\n", stat);
+    //ESP_LOGI(TAG, "TAP stat %04x\n", stat);
 
     if (stat& 0x8000)
         return 0; // FIFO full

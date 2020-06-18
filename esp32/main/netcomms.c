@@ -2,6 +2,7 @@
 #include "lwip/err.h"
 #include "lwip/sockets.h"
 #include <string.h>
+#include <stdio.h>
 
 void netcomms__send_ok(int sock)
 {

@@ -794,8 +794,8 @@ void vPortClearInterruptMask( portBASE_TYPE xMask )
 void vPortForciblyEndThread( void *pxTaskToDelete )
 {
     xTaskHandle hTaskToDelete = ( xTaskHandle )pxTaskToDelete;
-    pthread_t ThreadToDelete;
-    pthread_t ThreadToResume;
+    pthread_t ThreadToDelete = -1;
+    pthread_t ThreadToResume = -1;
     int success;
 
     pthread_mutex_lock(&xSingleThreadMutex);

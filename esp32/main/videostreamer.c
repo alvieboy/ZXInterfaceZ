@@ -19,6 +19,7 @@
 #include "gpio.h"
 #include "usb_ll.h"
 // Target needs extra 4 bytes at start
+#include <arpa/inet.h>
 
 volatile int client_socket = -1;
 static volatile unsigned interrupt_count = 0;
@@ -263,7 +264,7 @@ int videostreamer__start_stream(struct in_addr addr, uint16_t port)//command_t *
             break;
         }
 
-        ESP_LOGI(TAG, "Socket created, %s:%d", inet_ntoa(s.sin_addr.s_addr), (int)port);
+        ESP_LOGI(TAG, "Socket created, %s:%d", inet_ntoa(s.sin_addr), (int)port);
         client_socket = tsock;
         r = 0;
 

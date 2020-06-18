@@ -154,7 +154,7 @@ static int usb_mouse__probe(struct usb_device *dev, struct usb_interface *i)
     return r;
 }
 
-static void usb_mouse__disconnect(struct usb_interface *intf)
+static void usb_mouse__disconnect(struct usb_device *dev, struct usb_interface *intf)
 {
     struct usb_mouse *m = intf->drvdata;
     // Cancel any pending requests

@@ -143,7 +143,7 @@ static esp_err_t webserver_req__upload(httpd_req_t *req, const char *querystr)
 static esp_err_t webserver_req__delete(httpd_req_t *req, const char *querystr)
 {
     char fullpath[FILE_PATH_MAX];
-    char path[FILE_PATH_MAX];
+    char path[FILE_PATH_MAX - 8];
 
     if (httpd_query_key_value(querystr, "path", path, sizeof(path))!=ESP_OK) {
         ESP_LOGI(TAG,"Missing parameters");
@@ -175,7 +175,7 @@ static esp_err_t webserver_req__rename(httpd_req_t *req, const char *querystr)
 {
     char fullpath[FILE_PATH_MAX];
     char fullnewpath[FILE_PATH_MAX];
-    char path[FILE_PATH_MAX];
+    char path[FILE_PATH_MAX - 8];
 
     if (httpd_query_key_value(querystr, "path", path, sizeof(path))!=ESP_OK) {
         ESP_LOGI(TAG,"Missing parameters");
@@ -214,7 +214,7 @@ static esp_err_t webserver_req__rename(httpd_req_t *req, const char *querystr)
 static esp_err_t webserver_req__mkdir(httpd_req_t *req, const char *querystr)
 {
     char fullpath[FILE_PATH_MAX];
-    char path[FILE_PATH_MAX];
+    char path[FILE_PATH_MAX - 8];
 
     if (httpd_query_key_value(querystr, "path", path, sizeof(path))!=ESP_OK) {
         ESP_LOGI(TAG,"Missing parameters");
@@ -236,7 +236,7 @@ static esp_err_t webserver_req__mkdir(httpd_req_t *req, const char *querystr)
 static esp_err_t webserver_req__rmdir(httpd_req_t *req, const char *querystr)
 {
     char fullpath[FILE_PATH_MAX];
-    char path[FILE_PATH_MAX];
+    char path[FILE_PATH_MAX - 8];
 
     if (httpd_query_key_value(querystr, "path", path, sizeof(path))!=ESP_OK) {
         ESP_LOGI(TAG,"Missing parameters");

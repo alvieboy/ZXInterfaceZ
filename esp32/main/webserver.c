@@ -20,6 +20,9 @@
 #include "webserver.h"
 #include "fileaccess.h"
 
+size_t
+strlcpy(char *dst, const char *src, size_t siz);
+
 #define IS_FILE_EXT(filename, ext) \
     (strcasecmp(&filename[strlen(filename) - sizeof(ext) + 1], ext) == 0)
 
