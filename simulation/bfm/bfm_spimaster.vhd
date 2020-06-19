@@ -55,7 +55,14 @@ begin
             data_r(i) <= miso_i;
             wait for Cmd_i.Period / 2;
           end loop;
-  
+        when FLUSH =>
+          l2: for i in 7 downto 0 loop
+            sck_o  <= '0';
+            wait for Cmd_i.Period / 2;
+            sck_o  <= '1';
+            wait for Cmd_i.Period / 2;
+          end loop;
+
         when others =>
           null;
       end case;

@@ -430,7 +430,7 @@ begin
                 state_r <= WRTAPFIFO;
                 tapcmd_r <= '0';
 
-              when x"E6" => -- Write TAP FIFO contents
+              when x"E6" => -- Write TAP command FIFO contents
                 txden_s <= '1';
                 txload_s <= '1';
                 txdat_s <= "00000000";

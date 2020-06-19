@@ -21,22 +21,21 @@ package tappkg is
 
   function t_compensate(cycles: in natural) return natural;
 
-  constant PULSE_PILOT  : std_logic_vector(3 downto 0) := "0000";
-  constant PULSE_SYNC   : std_logic_vector(3 downto 0) := "0001";
-  constant PULSE_LOGIC0 : std_logic_vector(3 downto 0) := "0010";
-  constant PULSE_LOGIC1 : std_logic_vector(3 downto 0) := "0011";
-
-  constant SET_PULSE_PILOT  : std_logic_vector(3 downto 0) := "1000";
-  constant SET_PULSE_SYNC0  : std_logic_vector(3 downto 0) := "1001";
-  constant SET_PULSE_LOGIC0 : std_logic_vector(3 downto 0) := "1010";
-  constant SET_PULSE_LOGIC1 : std_logic_vector(3 downto 0) := "1011";
-  constant SET_PULSE_SYNC1  : std_logic_vector(3 downto 0) := "1100";
-  constant SET_PULSE_TAP    : std_logic_vector(3 downto 0) := "1111";
-
+  constant PULSE_SINGLE  : std_logic_vector(3 downto 0) := "0000";
+  constant PULSE_DUAL    : std_logic_vector(3 downto 0) := "0001";
 
   -- TAP commands as placed in FIFO
 
-  constant TAPCMD_DELAY     : std_logic_vector(7 downto 0) := x"00";
+  constant TAPCMD_LOGIC0_SIZE     : std_logic_vector(7 downto 0) := "10000000";
+  constant TAPCMD_LOGIC1_SIZE     : std_logic_vector(7 downto 0) := "10000001";
+  constant TAPCMD_GAP             : std_logic_vector(7 downto 0) := "10000010";
+  constant TAPCMD_CHUNK_SIZE_LSB  : std_logic_vector(7 downto 0) := "10000011";
+  constant TAPCMD_CHUNK_SIZE_MSB  : std_logic_vector(7 downto 0) := "10000100";
+  constant TAPCMD_PLAY_PULSE      : std_logic_vector(7 downto 0) := "10000101";
+  constant TAPCMD_SET_REPEAT      : std_logic_vector(7 downto 0) := "10000110";
+  constant TAPCMD_FLUSH           : std_logic_vector(7 downto 0) := "10000111";
+
+
 
 end package;
 

@@ -5,6 +5,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include "tzx.h"
+#include "byteops.h"
+
 #ifdef __linux__
 
 #define do_log(m, tag,x...) do { \
@@ -30,7 +32,7 @@
 
 
 
-static int tzx_check(struct tzx *t, const uint8_t **data, int *len, int needed)
+static int tzx__check(struct tzx *t, const uint8_t **data, int *len, int needed)
 {
     //int have;
     while (t->tzxbufptr<needed && (*len>0) ) {
@@ -45,16 +47,6 @@ static int tzx_check(struct tzx *t, const uint8_t **data, int *len, int needed)
     return -1;
 }
 
-static inline uint32_t extractle16(const uint8_t *source)
-{
-    return (((uint16_t)source[1])<<8) + ((uint16_t)source[0]);
-}
-
-static inline uint32_t extractle24(const uint8_t *source)
-{
-    return (((uint32_t)source[2])<<16) +
-        (((uint32_t)source[1])<<8) + ((uint32_t)source[0]);
-}
 
 static const uint8_t tzxsig[8] = {
     'Z','X','T','a','p','e','!', 0x1A };
@@ -64,7 +56,12 @@ void tzx__chunk(struct tzx *t, const uint8_t *data, int len)
     uint32_t val, pause;
     int alen;
 
-#define NEED(x) if (tzx_check(t, &data, &len, x)<0) return;
+#define NEED(x) if (tzx__check(t, &data, &len, x)<0) return;
+
+    if (len==0) {
+        tzx__finished_callback();
+        return;
+    }
     //ESP_LOGI(TAG, "Parse chunk len %d", len);
     do {
         switch (t->state) {
@@ -186,7 +183,7 @@ void tzx__chunk(struct tzx *t, const uint8_t *data, int len)
 
         case RAWDATA:
 
-            alen = MIN(len, t->datachunk);
+            alen = MIN((int)len, (int)t->datachunk);
 
             tzx__data_callback(data, alen);
 
@@ -194,13 +191,15 @@ void tzx__chunk(struct tzx *t, const uint8_t *data, int len)
             len-=alen;
             data+=alen;
 
-            if (t->datachunk==0)
+            if (t->datachunk==0) {
+                tzx__data_finished_callback();
                 t->state = BLOCK;
+            }
 
             break;
 
         case IGNOREDATA:
-            alen = MIN(len, t->datachunk);
+            alen = MIN((int)len, (int)t->datachunk);
             ESP_LOGI(TAG," SKIP %d alen %d", t->datachunk, alen);
             t->datachunk-=alen;
             len-=alen;
@@ -229,7 +228,7 @@ void tzx__chunk(struct tzx *t, const uint8_t *data, int len)
 
         case TURBOSPEED:
             NEED(18);
-            uint16_t pilot, sync0, sync1, pulse0, pulse1;
+            uint16_t pilot, sync0, sync1, pulse0, pulse1, pilot_len, gap_len;
             uint32_t data_len;
             //uint8_t lastbyte;
 
@@ -239,14 +238,16 @@ void tzx__chunk(struct tzx *t, const uint8_t *data, int len)
             sync1 = extractle16(&t->tzxbuf[4]);
             pulse0 = extractle16(&t->tzxbuf[6]);
             pulse1 = extractle16(&t->tzxbuf[8]);
+            pilot_len = extractle16(&t->tzxbuf[0x0a]);
+            t->lastbytesize = t->tzxbuf[0x0c];
+            gap_len = extractle16(&t->tzxbuf[0x0d]);
             data_len = extractle24(&t->tzxbuf[0x0f]);
 
-            t->lastbytesize = t->tzxbuf[0x0c];
             //ESP_LOGE(TAG,("Data len: %d (last byte %d bits)\n", data_len, t->lastbytesize);
             ESP_LOGI(TAG,"Turbo-speed block ahead, %d bytes", data_len);
             t->datachunk = data_len;
             t->state = RAWDATA;
-            tzx__turbo_block_callback(pilot, sync0, sync1, pulse0, pulse1, data_len, t->lastbytesize);
+            tzx__turbo_block_callback(pilot, sync0, sync1, pulse0, pulse1, pilot_len, gap_len, data_len, t->lastbytesize);
 
             break;
 
@@ -291,7 +292,7 @@ int main(int argc, char **argv)
 void tzx__standard_block_callback(uint16_t length, uint16_t pause_after)
 {
 }
-void tzx__turbo_block_callback(uint16_t pilot, uint16_t sync0, uint16_t sync1, uint16_t pulse0, uint16_t pulse1, uint32_t data_len,
+void tzx__turbo_block_callback(uint16_t pilot, uint16_t sync0, uint16_t sync1, uint16_t pulse0, uint16_t pulse1, uint16_t pilot_len, uint32_t data_len,
                                uint8_t last_byte_len)
 {
 }

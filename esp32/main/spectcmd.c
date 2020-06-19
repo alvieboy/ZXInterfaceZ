@@ -10,7 +10,7 @@
 #include "fileaccess.h"
 #include "interfacez_resources.h"
 #include "sna.h"
-#include "tapplayer.h"
+#include "tapeplayer.h"
 
 #define COMMAND_BUFFER_MAX 128
 static uint8_t command_buffer[COMMAND_BUFFER_MAX]; // Max 128 bytes.
@@ -193,7 +193,7 @@ static int spectcmd__playtape()
     memcpy(filename, &command_buffer[2], filenamelen);
     filename[filenamelen] = '\0';
 
-    tapplayer__play(filename);
+    tapeplayer__play(filename);
 
     return ret;
 }

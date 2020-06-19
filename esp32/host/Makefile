@@ -91,10 +91,10 @@ sna_relocs.c          \
 spectcmd.c            \
 spectint.c            \
 spi.c                 \
-status_resource.c      \
-strcmpi.c              \
+status_resource.c     \
+strcmpi.c             \
 string_resource.c     \
-tapplayer.c           \
+tapeplayer.c          \
 usb_descriptor.c      \
 usb_driver.c          \
 usb_driver_list.c     \
@@ -108,7 +108,8 @@ videostreamer.c       \
 webserver.c           \
 webserver_req.c       \
 wifi.c                \
-tzx.c 
+tzx.c                 \
+tap.c
 
 
 _OBJ:=$(SRC:.c=.o)

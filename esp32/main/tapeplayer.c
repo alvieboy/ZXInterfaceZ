@@ -6,14 +6,16 @@
 #include "esp_system.h"
 #include "esp_log.h"
 #include "defs.h"
-#include "tapplayer.h"
+#include "tapeplayer.h"
 #include <string.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
 #include "fileaccess.h"
+#include "tap.h"
 #include "tzx.h"
+#include "byteops.h"
 
 #define TAP_CMD_STOP 0
 #define TAP_CMD_PLAY 1
@@ -21,7 +23,10 @@
 
 static xQueueHandle tap_evt_queue = NULL;
 
-static struct tzx tzx;
+static union {
+    struct tzx tzx;
+    struct tap tap;
+} tape_data;
 
 struct tapcmd
 {
@@ -41,29 +46,26 @@ static int tapfh = -1;
 static int playsize;
 static int currplay;
 static bool is_tzx = false;
+static uint32_t gap; // Upcoming gap
 
-#define TAP_INTERNALCMD_RESET 0x80
-#define TAP_INTERNALCMD_DATALEN_EXTERNAL 0x82
-#define TAP_INTERNALCMD_DATALEN_INTERNAL 0x83
-#define TAP_INTERNALCMD_PURE 0x84
-#define TAP_INTERNALCMD_STANDARD 0x85
+#define TAP_INTERNALCMD_SET_LOGIC0 0x80
+#define TAP_INTERNALCMD_SET_LOGIC1 0x81
+#define TAP_INTERNALCMD_GAP        0x82
+#define TAP_INTERNALCMD_SET_DATALEN1 0x83
+#define TAP_INTERNALCMD_SET_DATALEN2 0x84
+#define TAP_INTERNALCMD_SET_REPEAT 0x85 /* Follows pulse repeat */
+#define TAP_INTERNALCMD_PLAY_PULSE 0x86 /* Follows pulse t-states, repeats for REPEAT */
+#define TAP_INTERNALCMD_FLUSH 0x87 /* Ignored. Use to flush SPI */
 
-#define TAP_INTERNALCMD_SET_PILOT 0x00
-#define TAP_INTERNALCMD_SET_SYNC0 0x01
-#define TAP_INTERNALCMD_SET_SYNC1 0x02
-#define TAP_INTERNALCMD_SET_PULSE0 0x03
-#define TAP_INTERNALCMD_SET_PULSE1 0x04
+#define TAP_DEFAULT_PILOT_LEN (8063) /* This depends on header/data, use same */
 
-#define TAP_INTERNALCMD_SET_PILOT_HEADER_LEN_PAIRS 0x08
-#define TAP_INTERNALCMD_SET_PILOT_DATA_LEN_PAIRS 0x09
-#define TAP_INTERNALCMD_SET_GAP 0x0A
-#define TAP_INTERNALCMD_SET_DATALEN1 0x0B
-#define TAP_INTERNALCMD_SET_DATALEN2 0x0C
-#define TAP_INTERNALCMD_PLAY_PULSE 0x0D /* Follows pulse t-states, repeats for REPEAT */
-#define TAP_INTERNALCMD_SET_REPEAT 0x0E /* Follows pulse repeat */
+#define TAP_DEFAULT_PILOT_TSTATES 2168
+#define TAP_DEFAULT_SYNC0_TSTATES 667
+#define TAP_DEFAULT_SYNC1_TSTATES 735
+#define TAP_DEFAULT_LOGIC0_TSTATES 855
+#define TAP_DEFAULT_LOGIC1_TSTATES 1710
 
-
-static inline uint16_t tapplayer__compute_tstate_delay(uint16_t cycles)
+static inline uint16_t tapeplayer__compute_tstate_delay(uint16_t cycles)
 {
     /* NOTES ABOUT T-CYCLE COMPENSATION
 
@@ -99,17 +101,16 @@ static inline uint16_t tapplayer__compute_tstate_delay(uint16_t cycles)
 #endif
 }
 
-static void tzx__do_load_data(const uint8_t *buf, unsigned size)
+static void tapeplayer__do_load_data(const uint8_t *buf, unsigned size)
 {
     do {
         int sent = fpga__load_tap_fifo(buf, size, 10000);
         size -= sent;
         buf += sent;
     } while (size>0);
-
 }
 
-static void tzx__do_load_command(const uint8_t *buf, unsigned size)
+static void tapeplayer__do_load_command(const uint8_t *buf, unsigned size)
 {
     do {
         int sent = fpga__load_tap_fifo_command(buf, size, 10000);
@@ -129,13 +130,13 @@ void tzx__tone_callback(uint16_t tstates, uint16_t count)
     txbuf[i++] = count & 0xff;
     txbuf[i++] = count >> 8;
 
-    tstates = tapplayer__compute_tstate_delay(tstates);
+    tstates = tapeplayer__compute_tstate_delay(tstates);
 
     txbuf[i++] = TAP_INTERNALCMD_PLAY_PULSE;
     txbuf[i++] = tstates & 0xff;
     txbuf[i++] = tstates >> 8;
 
-    tzx__do_load_command(txbuf,i);
+    tapeplayer__do_load_command(txbuf,i);
 }
 
 void tzx__pulse_callback(uint8_t count, const uint16_t *t_states /* these are words */)
@@ -147,46 +148,87 @@ void tzx__pulse_callback(uint8_t count, const uint16_t *t_states /* these are wo
     txbuf[i++] = 0;
     txbuf[i++] = 0;
 
-    tzx__do_load_command(txbuf, i);
+    tapeplayer__do_load_command(txbuf, i);
     ESP_LOGI(TAG, "Transmitting pulses (%d)", count);
     // Now, play all pulses. Improve this for speed please
     while (count--) {
         i = 0;
-        uint16_t ts = tapplayer__compute_tstate_delay(*t_states);
+        uint16_t ts = tapeplayer__compute_tstate_delay(*t_states);
         txbuf[i++] = TAP_INTERNALCMD_PLAY_PULSE;
         txbuf[i++] = ts & 0xff;
         txbuf[i++] = ts>>8;
         ESP_LOGI(TAG, " - %d", ts);
         t_states++;
-        tzx__do_load_command(txbuf, i);
+        tapeplayer__do_load_command(txbuf, i);
     }
 
 }
 
-void tzx__standard_block_callback(uint16_t length, uint16_t pause_after)
+static void tapeplayer__standard_block(uint16_t length, uint16_t pause_after, uint16_t pilot_len)
 {
-    uint8_t txbuf[12];
+    uint8_t txbuf[32];
     int i = 0;
-    txbuf[i++] = TAP_INTERNALCMD_RESET;
-    txbuf[i++] = TAP_INTERNALCMD_SET_GAP;
-    txbuf[i++] = pause_after & 0xff;
-    txbuf[i++] = pause_after >> 8;
-    txbuf[i++] = TAP_INTERNALCMD_DATALEN_EXTERNAL;  // This informs player that block len is not in stream
+
+    uint16_t pulse0 = tapeplayer__compute_tstate_delay(TAP_DEFAULT_LOGIC0_TSTATES);
+    uint16_t pulse1 = tapeplayer__compute_tstate_delay(TAP_DEFAULT_LOGIC1_TSTATES);
+
+    txbuf[i++] = TAP_INTERNALCMD_SET_LOGIC0;
+    txbuf[i++] = pulse0 & 0xff;
+    txbuf[i++] = pulse0>>8;
+
+    txbuf[i++] = TAP_INTERNALCMD_SET_LOGIC1;
+    txbuf[i++] = pulse1 & 0xff;
+    txbuf[i++] = pulse1>>8;
+
     txbuf[i++] = TAP_INTERNALCMD_SET_DATALEN1;
     txbuf[i++] = length & 0xff;
     txbuf[i++] = (length >> 8) & 0xff;
+
     txbuf[i++] = TAP_INTERNALCMD_SET_DATALEN2;
     txbuf[i++] = 0x00;
     txbuf[i++] = 0;
-    txbuf[i++] = TAP_INTERNALCMD_STANDARD;
 
-    tzx__do_load_command(txbuf, i);
+    // Send pilot tone
+    txbuf[i++] = TAP_INTERNALCMD_SET_REPEAT;
+    i += putle16_c(&txbuf[i], pilot_len);
+
+    // Send pilot tone
+    txbuf[i++] = TAP_INTERNALCMD_PLAY_PULSE;
+    i += putle16_c(&txbuf[i], TAP_DEFAULT_PILOT_TSTATES);
+
+    // Send sync
+    txbuf[i++] = TAP_INTERNALCMD_SET_REPEAT;
+    txbuf[i++] = 0;
+    txbuf[i++] = 0;
+
+    txbuf[i++] = TAP_INTERNALCMD_PLAY_PULSE;
+    i += putle16_c(&txbuf[i], TAP_DEFAULT_SYNC0_TSTATES);
+
+    txbuf[i++] = TAP_INTERNALCMD_PLAY_PULSE;
+    i += putle16_c(&txbuf[i], TAP_DEFAULT_SYNC1_TSTATES);
+
+    gap = pause_after;
+
+    tapeplayer__do_load_command(txbuf, i);
 }
 
-void tzx__turbo_block_callback(uint16_t pilot, uint16_t sync0, uint16_t sync1, uint16_t pulse0, uint16_t pulse1, uint32_t data_len,
-                              uint8_t last_byte_len)
+
+void tzx__standard_block_callback(uint16_t length, uint16_t pause_after)
 {
-    uint8_t txbuf[24];
+    tapeplayer__standard_block(length, pause_after, TAP_DEFAULT_PILOT_LEN);
+}
+
+void tzx__turbo_block_callback(uint16_t pilot,
+                               uint16_t sync0,
+                               uint16_t sync1,
+                               uint16_t pulse0,
+                               uint16_t pulse1,
+                               uint16_t pilot_len,
+                               uint16_t gap_len,
+                               uint32_t data_len,
+                               uint8_t last_byte_len)
+{
+    uint8_t txbuf[32];
     //uint8_t *txptr = &txbuf[0];
 
     int i = 0;
@@ -197,28 +239,20 @@ void tzx__turbo_block_callback(uint16_t pilot, uint16_t sync0, uint16_t sync1, u
     if (last_byte_len>8)
         last_byte_len = 8;
 
-    pilot = tapplayer__compute_tstate_delay(pilot);
-    sync0 = tapplayer__compute_tstate_delay(sync0);
-    sync1 = tapplayer__compute_tstate_delay(sync1);
-    pulse0 = tapplayer__compute_tstate_delay(pulse0);
-    pulse1 = tapplayer__compute_tstate_delay(pulse1);
+    pilot = tapeplayer__compute_tstate_delay(pilot);
+    sync0 = tapeplayer__compute_tstate_delay(sync0);
+    sync1 = tapeplayer__compute_tstate_delay(sync1);
+    pulse0 = tapeplayer__compute_tstate_delay(pulse0);
+    pulse1 = tapeplayer__compute_tstate_delay(pulse1);
 
-    txbuf[i++] = TAP_INTERNALCMD_SET_PILOT;
-    txbuf[i++] = pilot & 0xff;
-    txbuf[i++] = pilot>>8;
-    txbuf[i++] = TAP_INTERNALCMD_SET_SYNC0;
-    txbuf[i++] = sync0 & 0xff;
-    txbuf[i++] = sync0>>8;
-    txbuf[i++] = TAP_INTERNALCMD_SET_SYNC1;
-    txbuf[i++] = sync1 & 0xff;
-    txbuf[i++] = sync1>>8;
-    txbuf[i++] = TAP_INTERNALCMD_SET_PULSE0;
+    gap = gap_len;
+
+    txbuf[i++] = TAP_INTERNALCMD_SET_LOGIC0;
     txbuf[i++] = pulse0 & 0xff;
     txbuf[i++] = pulse0>>8;
-    txbuf[i++] = TAP_INTERNALCMD_SET_PULSE1;
+    txbuf[i++] = TAP_INTERNALCMD_SET_LOGIC1;
     txbuf[i++] = pulse1 & 0xff;
     txbuf[i++] = pulse1>>8;
-    txbuf[i++] = TAP_INTERNALCMD_DATALEN_EXTERNAL;  // This informs player that block len is not in stream
     txbuf[i++] = TAP_INTERNALCMD_SET_DATALEN1;
     txbuf[i++] = data_len & 0xff;
     txbuf[i++] = (data_len >> 8) & 0xff;
@@ -226,49 +260,119 @@ void tzx__turbo_block_callback(uint16_t pilot, uint16_t sync0, uint16_t sync1, u
     txbuf[i++] = (data_len >> 16) & 0xff;
     txbuf[i++] = (8 - last_byte_len);
 
-    tzx__do_load_command(txbuf, i);
+    // Send pilot tone
+    txbuf[i++] = TAP_INTERNALCMD_SET_REPEAT;
+    i += putle16_c(&txbuf[i], pilot_len);
+
+    // Send pilot tone
+    txbuf[i++] = TAP_INTERNALCMD_PLAY_PULSE;
+    i += putle16_c(&txbuf[i], pilot);
+
+    // Send sync
+    txbuf[i++] = TAP_INTERNALCMD_SET_REPEAT;
+    txbuf[i++] = 0;
+    txbuf[i++] = 0;
+
+    txbuf[i++] = TAP_INTERNALCMD_PLAY_PULSE;
+    i += putle16_c(&txbuf[i], sync0);
+
+    txbuf[i++] = TAP_INTERNALCMD_PLAY_PULSE;
+    i += putle16_c(&txbuf[i], sync1);
+
+
+    tapeplayer__do_load_command(txbuf, i);
 }
 
-void tzx__pure_data_callback(uint16_t pulse0, uint16_t pulse1, uint32_t data_len, uint16_t gap,
+void tzx__pure_data_callback(uint16_t pulse0,
+                             uint16_t pulse1,
+                             uint32_t data_len,
+                             uint16_t gap_len,
                              uint8_t last_byte_len)
 {
     uint8_t txbuf[17];
-    //uint8_t *txptr = &txbuf[0];
     int i = 0;
 
-    pulse0 = tapplayer__compute_tstate_delay(pulse0);
-    pulse1 = tapplayer__compute_tstate_delay(pulse1);
+    pulse0 = tapeplayer__compute_tstate_delay(pulse0);
+    pulse1 = tapeplayer__compute_tstate_delay(pulse1);
 
-    txbuf[i++] = TAP_INTERNALCMD_SET_GAP;
-    txbuf[i++] = gap & 0xff;
-    txbuf[i++] = gap >> 8;
-    txbuf[i++] = TAP_INTERNALCMD_SET_PULSE0;
+    gap = gap_len;
+
+    txbuf[i++] = TAP_INTERNALCMD_SET_LOGIC0;
     txbuf[i++] = pulse0 & 0xff;
     txbuf[i++] = pulse0>>8;
-    txbuf[i++] = TAP_INTERNALCMD_SET_PULSE1;
+    txbuf[i++] = TAP_INTERNALCMD_SET_LOGIC1;
     txbuf[i++] = pulse1 & 0xff;
     txbuf[i++] = pulse1>>8;
-    txbuf[i++] = TAP_INTERNALCMD_DATALEN_EXTERNAL;  // This informs player that block len is not in stream
     txbuf[i++] = TAP_INTERNALCMD_SET_DATALEN1;
     txbuf[i++] = data_len & 0xff;
     txbuf[i++] = (data_len >> 8) & 0xff;
     txbuf[i++] = TAP_INTERNALCMD_SET_DATALEN2;
     txbuf[i++] = (data_len >> 16) & 0xff;
     txbuf[i++] = (8 - last_byte_len);
-    txbuf[i++] = TAP_INTERNALCMD_PURE;
 
-    tzx__do_load_command(txbuf, i);
-
+    tapeplayer__do_load_command(txbuf, i);
 }
 
 
+void tap__standard_block_callback(uint16_t length, uint16_t pause_after)
+{
+    tapeplayer__standard_block(length, pause_after, TAP_DEFAULT_PILOT_LEN);
+}
 
 void tzx__data_callback(const uint8_t *data, int len)
 {
-    tzx__do_load_data(data,len);
+    tapeplayer__do_load_data(data,len);
 }
 
-void tapplayer__stop()
+static void tapeplayer__data_finished(void)
+{
+    uint8_t txbuf[3];
+    int i = 0;
+
+    txbuf[i++] = TAP_INTERNALCMD_GAP;
+    txbuf[i++] = gap & 0xff;
+    txbuf[i++] = gap >>8;
+
+    tapeplayer__do_load_command(txbuf, i);
+}
+
+
+void tzx__data_finished_callback(void)
+{
+    tapeplayer__data_finished();
+}
+
+static void tapeplayer__finished()
+{
+    if (tapfh>0)
+        close(tapfh);
+    tapfh = -1;
+
+    state = TAP_WAITDRAIN;
+
+}
+
+void tzx__finished_callback(void)
+{
+    tapeplayer__finished();
+}
+
+void tap__finished_callback(void)
+{
+    tapeplayer__finished();
+}
+
+void tap__data_finished_callback(void)
+{
+    tapeplayer__data_finished();
+}
+
+void tap__data_callback(const uint8_t *data, int len)
+{
+    tapeplayer__do_load_data(data,len);
+}
+
+void tapeplayer__stop()
 {
     struct tapcmd cmd;
     cmd.cmd = TAP_CMD_STOP;
@@ -276,7 +380,7 @@ void tapplayer__stop()
     xQueueSend(tap_evt_queue, &cmd, 1000);
 }
 
-void tapplayer__play(const char *filename)
+void tapeplayer__play(const char *filename)
 {
     struct tapcmd cmd;
     cmd.cmd = TAP_CMD_PLAY;
@@ -284,7 +388,7 @@ void tapplayer__play(const char *filename)
     xQueueSend(tap_evt_queue, &cmd, 1000);
 }
 
-static void tapplayer__do_start_play(const char *filename)
+static void tapeplayer__do_start_play(const char *filename)
 {
     struct stat st;
 
@@ -322,7 +426,10 @@ static void tapplayer__do_start_play(const char *filename)
     if (ext) {
         if (ext_match(ext,"tzx")) {
             is_tzx = true;
-            tzx__init(&tzx);
+            tzx__init(&tape_data.tzx);
+        } else {
+            is_tzx = false;
+            tap__init(&tape_data.tap);
         }
     }
 
@@ -337,7 +444,7 @@ static void tapplayer__do_start_play(const char *filename)
     state = TAP_PLAYING;
 }
 
-static void tapplayer__do_stop()
+static void tapeplayer__do_stop()
 {
     if (tapfh) {
         close(tapfh);
@@ -348,28 +455,26 @@ static void tapplayer__do_stop()
     state = TAP_IDLE;
 }
 
-static void tapplayer__do_record()
+static void tapeplayer__do_record()
 {
 }
 
 static void do_play_tap()
 {
-    uint8_t chunk[256];
+    uint8_t chunk[32];
     int r;
 
-    if (currplay < playsize) {
-        unsigned av = fpga__get_tap_fifo_free();
-        if (av==0) {
-            ESP_LOGW(TAG,"No room");
-            return;
-        }
-        if (av>sizeof(chunk)) {
-            av = sizeof(chunk);
-        }
-        if (av>(playsize-currplay)) {
-            av = playsize-currplay;
-        }
-        r = read(tapfh, chunk, av);
+    unsigned av = fpga__get_tap_fifo_free();
+
+    if (av>sizeof(chunk)) {
+        av = sizeof(chunk);
+    }
+    if (av>(playsize-currplay)) {
+        av = playsize-currplay;
+    }
+
+    if (av>0) {
+        r = read( tapfh, chunk, av);
         if (r<0) {
             // Error reading
             ESP_LOGE(TAG,"Read error");
@@ -378,23 +483,7 @@ static void do_play_tap()
             tapfh = -1;
             return;
         }
-        if (r>0) {
-            ESP_LOGI(TAG, "Write TAP chunk %d (%d, %d)",r, playsize, currplay);
-            fpga__load_tap_fifo(chunk,r,4000);
-            currplay+=r;
-            if (playsize==currplay) {
-                ESP_LOGI(TAG, "Finished TAP fill");
-                close(tapfh);
-                tapfh = -1;
-                state = TAP_WAITDRAIN;
-            }
-        } else {
-            ESP_LOGI(TAG, "Finished TAP fill");
-            close(tapfh);
-            tapfh = -1;
-            state = TAP_WAITDRAIN;
-
-        }
+        tap__chunk(&tape_data.tap, chunk, r);
     }
 }
 
@@ -403,31 +492,30 @@ static void do_play_tzx()
     uint8_t chunk[32];
     int r;
 
-    if (currplay < playsize) {
-        unsigned av = fpga__get_tap_fifo_free();
+    unsigned av = fpga__get_tap_fifo_free();
 
-        if (av>sizeof(chunk)) {
-            av = sizeof(chunk);
+    if (av>sizeof(chunk)) {
+        av = sizeof(chunk);
+    }
+    if (av>(playsize-currplay)) {
+        av = playsize-currplay;
+    }
+
+    if (av>0) {
+        r = read( tapfh, chunk, av);
+        if (r<0) {
+            // Error reading
+            ESP_LOGE(TAG,"Read error");
+            state = TAP_IDLE;
+            close(tapfh);
+            tapfh = -1;
+            return;
         }
-        if (av>(playsize-currplay)) {
-            av = playsize-currplay;
-        }
-        if (av>0) {
-            r = read( tapfh, chunk, av);
-            if (r<0) {
-                // Error reading
-                ESP_LOGE(TAG,"Read error");
-                state = TAP_IDLE;
-                close(tapfh);
-                tapfh = -1;
-                return;
-            }
-            tzx__chunk(&tzx, chunk, r);
-        }
+        tzx__chunk(&tape_data.tzx, chunk, r);
     }
 }
 
-static void tapplayer__task(void*data)
+static void tapeplayer__task(void*data)
 {
     struct tapcmd cmd;
 
@@ -436,13 +524,13 @@ static void tapplayer__task(void*data)
 
             switch (cmd.cmd) {
             case TAP_CMD_PLAY:
-                tapplayer__do_start_play(cmd.file);
+                tapeplayer__do_start_play(cmd.file);
                 break;
             case TAP_CMD_STOP:
-                tapplayer__do_stop();
+                tapeplayer__do_stop();
                 break;
             case TAP_CMD_RECORD:
-                tapplayer__do_record();
+                tapeplayer__do_record();
                 break;
             }
 
@@ -479,9 +567,9 @@ static void tapplayer__task(void*data)
 }
 
 
-void tapplayer__init()
+void tapeplayer__init()
 {
     tap_evt_queue = xQueueCreate(2, sizeof(struct tapcmd));
 
-    xTaskCreate(tapplayer__task, "tapplayer_task", 4096, NULL, 10, NULL);
+    xTaskCreate(tapeplayer__task, "tapeplayer_task", 4096, NULL, 10, NULL);
 }

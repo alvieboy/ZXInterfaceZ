@@ -19,7 +19,7 @@
 #include "videostreamer.h"
 #include "netcmd.h"
 #include "sdcard.h"
-#include "tapplayer.h"
+#include "tapeplayer.h"
 #include "rom.h"
 #include "usbh.h"
 #include "usb_ll.h"
@@ -129,7 +129,7 @@ void app_main()
     spectcmd__init();
     videostreamer__init();
     netcmd__init();
-    tapplayer__init();
+    tapeplayer__init();
     usbh__init();
     keyboard__init();
     webserver__init();

@@ -11,6 +11,7 @@
 #include "esp_partition.h"
 #include "esp_spi_flash.h"
 #include <alloca.h>
+#include "byteops.h"
 
 static spi_device_handle_t spi0_fpga;
 static fpga_flags_t latched_flags = 0;
@@ -78,7 +79,7 @@ unsigned fpga__read_id()
     dump__buffer(&idbuf[0], 4);
     printf("\r\n");
 
-    return getbe32(&idbuf[0]);
+    return extractbe32(&idbuf[0]);
 }
 
 static int fpga__configurefromflash()
@@ -160,7 +161,7 @@ uint16_t fpga__get_spectrum_pc()
     buf[1] = 0x00;
     buf[2] = 0x00;
     spi__transceive(spi0_fpga, buf, sizeof(buf));
-    return getbe16(&buf[1]);
+    return extractbe16(&buf[1]);
 }
 
 void fpga__set_clear_flags(fpga_flags_t enable, fpga_flags_t disable)
@@ -227,7 +228,7 @@ uint32_t fpga__get_register(uint8_t reg)
 
     spi__transceive(spi0_fpga, buf, sizeof(buf));
 
-    return getbe32(&buf[2]);
+    return extractbe32(&buf[2]);
 }
 
 void fpga__set_capture_mask(uint32_t mask)
@@ -251,7 +252,7 @@ uint32_t fpga__get_capture_status()
     buf[5] = 0x00;
 
     spi__transceive(spi0_fpga, buf, sizeof(buf));
-    uint32_t ret = getbe32( &buf[2] );
+    uint32_t ret = extractbe32( &buf[2] );
     return ret;
 }
 
@@ -464,7 +465,7 @@ uint16_t fpga__get_tap_fifo_usage()
     buf[1] = 0x00;
     buf[2] = 0x00;
     spi__transceive(spi0_fpga, buf, 3);
-    return getbe16(&buf[1]);
+    return extractbe16(&buf[1]);
 }
 
 

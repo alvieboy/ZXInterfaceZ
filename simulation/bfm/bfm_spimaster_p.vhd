@@ -9,7 +9,8 @@ package bfm_spimaster_p is
     NONE,
     SELECT_DEVICE,
     DESELECT_DEVICE,
-    TRANSCEIVE
+    TRANSCEIVE,
+    FLUSH
   );
 
 
@@ -47,6 +48,10 @@ package bfm_spimaster_p is
       signal din  : in spiPayload_type;
       signal dout : out spiPayload_type
     );
+  procedure Spi_Flush (
+      signal Cmd  : out Cmd_Spimaster_type;
+      signal Data : in Data_Spimaster_type
+    );
 
 end package;
 
@@ -78,6 +83,16 @@ package body bfm_spimaster_p is
     wait for 0 ps;
     wait until Data.Busy = false;
 
+  end procedure;
+
+  procedure Spi_Flush (
+      signal Cmd  : out Cmd_Spimaster_type;
+      signal Data : in Data_Spimaster_type
+    ) is
+  begin
+    Cmd.Cmd <= FLUSH;
+    wait for 0 ps;
+    wait until Data.Busy = false;
   end procedure;
 
 

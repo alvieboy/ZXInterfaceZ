@@ -49,22 +49,6 @@
 #define BUFFER_PORT 8003
 
 
-static inline uint32_t getbe32(const uint8_t *source)
-{
-    uint32_t ret = (((uint32_t)source[0]) << 24) +
-        (((uint32_t)source[1]) << 16) +
-        (((uint32_t)source[2]) << 8) +
-        ((uint32_t)source[3]);
-    return ret;
-}
-
-static inline uint16_t getbe16(const uint8_t *source)
-{
-    uint16_t ret = ((((uint16_t)source[0]) << 8) +
-        ((uint16_t)source[1]));
-    return ret;
-}
-
 void request_restart();
 
 

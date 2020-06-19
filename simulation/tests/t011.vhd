@@ -1,4 +1,5 @@
 use work.tbc_device_p.all;
+use work.tappkg.all;
 library ieee;
 use ieee.math_real.all;
 
@@ -44,7 +45,7 @@ begin
     spiPayload_in_s(1) <= x"00";
     spiPayload_in_s(2) <= x"00";
 
-    Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 2, spiPayload_in_s, spiPayload_out_s);
+    --Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 2, spiPayload_in_s, spiPayload_out_s);
 
     Check("SPI fifo MSB is cleared", spiPayload_out_s(1), x"00");
     Check("SPI fifo LSB is cleared", spiPayload_out_s(2), x"00");
@@ -52,68 +53,65 @@ begin
     -- Set pulse widths
 
     spiPayload_in_s(0) <= x"E6"; -- Commands
-    spiPayload_in_s(1) <= x"00"; --    pilot
-    spiPayload_in_s(2) <= x"07"; --
-    spiPayload_in_s(3) <= x"00"; --
 
-    spiPayload_in_s(4) <= x"01"; --    sync0
-    spiPayload_in_s(5) <= x"02"; --
+    -- Play pure tone pulse
+
+    spiPayload_in_s(1) <= TAPCMD_SET_REPEAT;
+    spiPayload_in_s(2) <= x"03"; --
+    spiPayload_in_s(3) <= x"00"; -- 4 pulses
+
+    spiPayload_in_s(4) <= TAPCMD_PLAY_PULSE; -- Pilot
+    spiPayload_in_s(5) <= x"09"; -- 10 T-states
     spiPayload_in_s(6) <= x"00"; --
 
-    spiPayload_in_s(7) <= x"02"; --   sync1
-    spiPayload_in_s(8) <= x"01"; --
-    spiPayload_in_s(9) <= x"00"; --
+    spiPayload_in_s(7) <= TAPCMD_SET_REPEAT;
+    spiPayload_in_s(8) <= x"00"; --
+    spiPayload_in_s(9) <= x"00"; -- 1 pulses
 
-    spiPayload_in_s(10) <= x"03"; --  logic 0
-    spiPayload_in_s(11) <= x"05"; --
+    spiPayload_in_s(10) <= TAPCMD_PLAY_PULSE; -- Pilot
+    spiPayload_in_s(11) <= x"06"; -- 7 T-states
     spiPayload_in_s(12) <= x"00"; --
-
-    spiPayload_in_s(13) <= x"04"; --
-    spiPayload_in_s(14) <= x"03"; --  logic 1
+    spiPayload_in_s(13) <= TAPCMD_PLAY_PULSE; -- Pilot
+    spiPayload_in_s(14) <= x"05"; -- 6 T-states
     spiPayload_in_s(15) <= x"00"; --
 
-    spiPayload_in_s(16) <= x"08"; --  Header pilot pulses
-    spiPayload_in_s(17) <= x"08"; --
-    spiPayload_in_s(18) <= x"00"; --
+    -- Data block.
 
-    spiPayload_in_s(19) <= x"09"; -- Data pilot pulses
-    spiPayload_in_s(20) <= x"08"; --
-    spiPayload_in_s(21) <= x"00"; --
+    spiPayload_in_s(16) <= TAPCMD_LOGIC0_SIZE;
+    spiPayload_in_s(17) <= x"03"; --
+    spiPayload_in_s(18) <= x"00"; -- 4 T-states
 
-    spiPayload_in_s(22) <= x"0A"; -- Gap in ms
+    spiPayload_in_s(19) <= TAPCMD_LOGIC1_SIZE;
+    spiPayload_in_s(20) <= x"04"; --
+    spiPayload_in_s(21) <= x"00"; -- 5 T-states
+
+    spiPayload_in_s(22) <= TAPCMD_CHUNK_SIZE_LSB;
     spiPayload_in_s(23) <= x"01"; --
-    spiPayload_in_s(24) <= x"00"; --
+    spiPayload_in_s(24) <= x"00"; -- 8 bytes
 
-    spiPayload_in_s(25) <= x"83"; -- TZX mode
+    spiPayload_in_s(25) <= TAPCMD_CHUNK_SIZE_MSB;
+    spiPayload_in_s(26) <= x"00"; --
+    spiPayload_in_s(27) <= x"07";
 
-    spiPayload_in_s(26) <= x"0B"; -- Datalen LSB
-    spiPayload_in_s(27) <= x"02"; --
-    spiPayload_in_s(28) <= x"00"; --
+    --spiPayload_in_s(22) <= TAPCMD_FLUSH; --
 
-    spiPayload_in_s(29) <= x"0C"; -- Datalen MSB, including byte len
-    spiPayload_in_s(30) <= x"00"; --
-    spiPayload_in_s(31) <= x"02"; -- 6 bits. (8-2 == 6)
-
-    Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 32, spiPayload_in_s, spiPayload_out_s);
-
-    --spiPayload_in_s(0) <= x"E6"; -- Commands
-    --spiPayload_in_s(1) <= x"80"; -- Reset to defaults
-
-    --Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 2, spiPayload_in_s, spiPayload_out_s);
+    Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 28, spiPayload_in_s, spiPayload_out_s);
 
 
+    spiPayload_in_s(0) <= x"E4"; -- Data
+    spiPayload_in_s(1) <= x"0F"; -- Data
+    spiPayload_in_s(2) <= x"00"; -- Data
+--    spiPayload_in_s(2) <= x"00"; -- Data
+--    spiPayload_in_s(3) <= x"FF"; -- Data
+--    spiPayload_in_s(4) <= x"AA"; -- Data
+--    spiPayload_in_s(5) <= x"55"; -- Data
+--    spiPayload_in_s(6) <= x"AA"; -- Data
+--    spiPayload_in_s(7) <= x"AA"; -- Data
+--    spiPayload_in_s(8) <= x"AA"; -- Data
 
-    -- Play
+    Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 3, spiPayload_in_s, spiPayload_out_s);
 
-    spiPayload_in_s(0) <= x"E4";
-    spiPayload_in_s(1) <= x"00";  -- Type
-
-    spiPayload_in_s(2) <= x"55";
-    spiPayload_in_s(3) <= x"AA";
-    spiPayload_in_s(4) <= x"F0";  -- Will only send 6 bits out of 8
-
-    Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 33, spiPayload_in_s, spiPayload_out_s);
-
+    Spi_Flush( Spimaster_Cmd, Spimaster_Data);
 
     wait for 100 ms;
 
