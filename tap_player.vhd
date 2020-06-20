@@ -148,12 +148,12 @@ begin
                 w.chunk_size(23 downto 16)  := unsigned(r.pulse_data);
                 w.last_byte_len             := unsigned(data_i(2 downto 0));
                 w.state       := IDLE;
-              when "101"    =>
+              when "110"    =>
                 w.pulse_len   := data_i(3 downto 0) & r.pulse_data;
                 w.state       := PULSE;
                 w.cnt         := r.repeat;
 
-              when "110"    =>
+              when "101"    =>
                 w.repeat    := unsigned( data_i(7 downto 0) & r.pulse_data);
                 w.state       := IDLE;
 
@@ -206,12 +206,10 @@ begin
           end if;
   
         when GAP =>
-          if tstate_i='1' then
-            if r.cnt=0 then
-              w.state := IDLE;
-            elsif tick_1ms_s='1' then
-              w.cnt := r.cnt - 1;
-            end if;
+          if r.cnt=0 then
+            w.state := IDLE;
+          elsif tick_1ms_s='1' then
+            w.cnt := r.cnt - 1;
           end if;
 
         when others =>
