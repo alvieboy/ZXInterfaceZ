@@ -16,6 +16,7 @@
 #include <string.h>
 #include "interfacez_resources.h"
 #include "nvs.h"
+#include "mdns.h"
 
 #define EXAMPLE_ESP_WIFI_SSID      CONFIG_ESP_WIFI_SSID
 #define EXAMPLE_ESP_WIFI_PASS      CONFIG_ESP_WIFI_PASSWORD
@@ -65,6 +66,12 @@ static void ip_event_handler(void* arg, esp_event_base_t event_base,
         ESP_LOGI(TAG, "got ip: " IPSTR, IP2STR(&event->ip_info.ip));
         xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
         led__set(LED2, 1);
+
+        mdns_init();
+        mdns_hostname_set("interfacez.local");
+        mdns_instance_name_set("ZX InterfaceZ");
+
+
         break;
     default:
         ESP_LOGW(TAG,"Unhandled IP event %d", event_id);
@@ -112,6 +119,9 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,
         break;
     case WIFI_EVENT_AP_START:
         ESP_LOGI(TAG,"WiFi AP started");
+        mdns_init();
+        mdns_hostname_set("interfacez.local");
+        mdns_instance_name_set("ZX InterfaceZ");
         break;
     default:
         ESP_LOGW(TAG,"Unhandled WIFI event %d", event_id);
@@ -204,6 +214,8 @@ void wifi_init_softap()
 
     issta = false;
 
+    mdns_free();
+
     info.ip.addr = nvs__u32("ip", U32_IP_ADDR(192, 168, 120, 1));
     info.gw.addr = nvs__u32("gw", U32_IP_ADDR(0, 0, 0, 0));
     info.netmask.addr = nvs__u32("mask", U32_IP_ADDR(255, 255, 255, 0));
@@ -261,6 +273,8 @@ void wifi_init_softap()
 void wifi_init_wpa2()
 {
     issta = true;
+
+    mdns_free();
 
     ESP_ERROR_CHECK(tcpip_adapter_dhcps_stop(TCPIP_ADAPTER_IF_AP));
 
