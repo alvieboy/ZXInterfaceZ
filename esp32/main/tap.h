@@ -10,7 +10,7 @@ enum tap_state {
 
 struct tap {
     enum tap_state state;
-    uint8_t tapbuf[2];
+    uint8_t tapbuf[16];
     uint8_t tapbufptr;
     uint16_t datachunk;
 };

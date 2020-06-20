@@ -1,6 +1,8 @@
 #include "tap.h"
 #include "byteops.h"
+#include "esp_log.h"
 
+#define TAG "TAP"
 
 #ifndef MIN
 #define MIN(a,b) ((a) < (b) ? (a) : (b))
@@ -37,17 +39,20 @@ void tap__chunk(struct tap *t, const uint8_t *data, int len)
         tap__finished_callback();
         return;
     }
-    //ESP_LOGI(TAG, "Parse chunk len %d", len);
+    //ESP_LOGI(TAG, "Parse chunk len %d state %d", len, t->state);
     do {
         switch (t->state) {
         case LENGTH:
             NEED(2);
             t->datachunk = extractle16(&t->tapbuf[0]);
+            ESP_LOGI(TAG, "Standard block ahead, %d bytes", t->datachunk );
             tap__standard_block_callback( t->datachunk , TAP_STANDARD_GAP );
             t->state = DATA;
             break;
         case DATA:
             alen = MIN((int)len, (int)t->datachunk);
+
+            //ESP_LOGI(TAG, "Data %d bytes", alen);
 
             tap__data_callback(data, alen);
 

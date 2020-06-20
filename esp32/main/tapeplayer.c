@@ -172,6 +172,8 @@ static void tapeplayer__standard_block(uint16_t length, uint16_t pause_after, ui
     uint16_t pulse0 = tapeplayer__compute_tstate_delay(TAP_DEFAULT_LOGIC0_TSTATES);
     uint16_t pulse1 = tapeplayer__compute_tstate_delay(TAP_DEFAULT_LOGIC1_TSTATES);
 
+    length--;
+
     txbuf[i++] = TAP_INTERNALCMD_SET_LOGIC0;
     txbuf[i++] = pulse0 & 0xff;
     txbuf[i++] = pulse0>>8;
@@ -206,6 +208,8 @@ static void tapeplayer__standard_block(uint16_t length, uint16_t pause_after, ui
 
     txbuf[i++] = TAP_INTERNALCMD_PLAY_PULSE;
     i += putle16_c(&txbuf[i], TAP_DEFAULT_SYNC1_TSTATES);
+
+    ESP_LOGI(TAG, " Standard block 0=%d 1=%d", pulse0, pulse1);
 
     gap = pause_after;
 
@@ -245,6 +249,7 @@ void tzx__turbo_block_callback(uint16_t pilot,
     pulse0 = tapeplayer__compute_tstate_delay(pulse0);
     pulse1 = tapeplayer__compute_tstate_delay(pulse1);
 
+    data_len --;
     gap = gap_len;
 
     txbuf[i++] = TAP_INTERNALCMD_SET_LOGIC0;
@@ -296,6 +301,7 @@ void tzx__pure_data_callback(uint16_t pulse0,
     pulse1 = tapeplayer__compute_tstate_delay(pulse1);
 
     gap = gap_len;
+    data_len --;
 
     txbuf[i++] = TAP_INTERNALCMD_SET_LOGIC0;
     txbuf[i++] = pulse0 & 0xff;
@@ -426,9 +432,11 @@ static void tapeplayer__do_start_play(const char *filename)
     if (ext) {
         if (ext_match(ext,"tzx")) {
             is_tzx = true;
+            ESP_LOGI(TAG,"Initializing TZX structure");
             tzx__init(&tape_data.tzx);
         } else {
             is_tzx = false;
+            ESP_LOGI(TAG,"Initializing TAP structure");
             tap__init(&tape_data.tap);
         }
     }
@@ -439,7 +447,7 @@ static void tapeplayer__do_start_play(const char *filename)
     fpga__set_flags(FPGA_FLAG_TAPFIFO_RESET| FPGA_FLAG_TAP_ENABLED | FPGA_FLAG_ULAHACK);
     fpga__clear_flags(FPGA_FLAG_TAPFIFO_RESET);
 
-    ESP_LOGI(TAG, "Starting TAP play of '%s'\n", filename);
+    ESP_LOGI(TAG, "Starting TAP/TZX play of '%s'", filename);
     // Fill in buffers
     state = TAP_PLAYING;
 }
@@ -520,7 +528,7 @@ static void tapeplayer__task(void*data)
     struct tapcmd cmd;
 
     while (1) {
-        if (xQueueReceive(tap_evt_queue, &cmd, 5/portTICK_RATE_MS)==pdTRUE) {
+        if (xQueueReceive(tap_evt_queue, &cmd, 50/portTICK_RATE_MS)==pdTRUE) {
 
             switch (cmd.cmd) {
             case TAP_CMD_PLAY:
@@ -555,7 +563,7 @@ static void tapeplayer__task(void*data)
             case TAP_WAITDRAIN:
                 if (fpga__tap_fifo_empty()) {
                     ESP_LOGI(TAG, "Finished TAP play");
-                    fpga__clear_flags(FPGA_FLAG_TAP_ENABLED);// | FPGA_FLAG_ULAHACK);
+                    fpga__clear_flags(FPGA_FLAG_TAP_ENABLED | FPGA_FLAG_ULAHACK);
                     fpga__set_flags(FPGA_FLAG_TAPFIFO_RESET);
                     state = TAP_IDLE;
                 }
