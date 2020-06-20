@@ -1,4 +1,6 @@
 use work.tbc_device_p.all;
+library ieee;
+use ieee.math_real.all;
 
 architecture t006 of tbc_device is
 
@@ -46,47 +48,37 @@ begin
 
     Check("SPI fifo MSB is cleared", spiPayload_out_s(1), x"00");
     Check("SPI fifo LSB is cleared", spiPayload_out_s(2), x"00");
-    
 
-    -- Play
-    spiPayload_in_s(0) <= x"E4";
-    spiPayload_in_s(1) <= x"13";
-    spiPayload_in_s(2) <= x"00";
-    spiPayload_in_s(3) <= x"00";
-    spiPayload_in_s(4) <= x"00";
-    spiPayload_in_s(5) <= x"4d";
-    spiPayload_in_s(6) <= x"2e";
-    spiPayload_in_s(7) <= x"4d";
-    spiPayload_in_s(8) <= x"49";
-    spiPayload_in_s(9) <= x"4e";
-    spiPayload_in_s(10) <= x"45";
-    spiPayload_in_s(11) <= x"52";
-    spiPayload_in_s(12) <= x"20";
-    spiPayload_in_s(13) <= x"32";
-    spiPayload_in_s(14) <= x"20";
-    spiPayload_in_s(15) <= x"43";
-    spiPayload_in_s(16) <= x"01";
-    spiPayload_in_s(17) <= x"00";
-    spiPayload_in_s(18) <= x"00";
-    spiPayload_in_s(19) <= x"0a";
-    spiPayload_in_s(20) <= x"01";
-    spiPayload_in_s(21) <= x"45";
-    spiPayload_in_s(22) <= x"09";
-    spiPayload_in_s(23) <= x"00";
-    spiPayload_in_s(24) <= x"ff";
-    spiPayload_in_s(25) <= x"00";
-    spiPayload_in_s(26) <= x"00";
-    spiPayload_in_s(27) <= x"a5";
-    spiPayload_in_s(28) <= x"00";
-    spiPayload_in_s(29) <= x"e7";
-    spiPayload_in_s(30) <= x"c3";
-    spiPayload_in_s(31) <= x"a7";
-    spiPayload_in_s(32) <= x"3a";
+    spiPayload_in_s(0 to 27) <= (
+    x"E6",
+    x"80", x"57", x"03",
+    x"81", x"ae", x"06",
+    x"83", x"13", x"00",
+    x"84", x"00", x"00",
+    --x"85", x"7f", x"1f",
+    x"85", x"04", x"00",
+    x"86", x"78", x"08",
+    x"85", x"00", x"00",
+    x"86", x"9b", x"02",
+    x"86", x"df", x"02"
+ );
 
-    Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 33, spiPayload_in_s, spiPayload_out_s);
+    Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 28, spiPayload_in_s, spiPayload_out_s);
 
+    spiPayload_in_s(0 to 19) <= (
+    x"E4",
+    x"00", x"00", x"73", x"6b",
+    x"6f", x"6f", x"6c", x"64",
+    x"61", x"7a", x"65", x"20",
+    x"1b", x"00", x"0a", x"00",
+    x"1b", x"00", x"44"
+ );
 
-    wait for 100 ms;
+    Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 20, spiPayload_in_s, spiPayload_out_s);
+
+    Spi_Flush(Spimaster_Cmd, Spimaster_Data);
+
+    wait for 200 ms;
 
     FinishTest(
       SysClk_Cmd,
@@ -95,5 +87,45 @@ begin
 
   end process;
 
+    process
+      variable r: real;
+      variable period: time;
+      variable pulses: integer;
+      variable last: integer := 0;
+      variable bitindex: integer := 7;
+      variable byte: std_logic_vector(7 downto 0);
+      variable bitv: std_logic;
+    begin
+      wait on Audiocap_Data.Trans;
+
+      r := real(Audiocap_Data.Delta / 285.71429 ps) / 1000.0;
+      pulses := integer(round(r));
+      report "EVENT pulse: " & time'image(Audiocap_Data.Delta) & ", T-state pulses " &
+        str(pulses) & " polarity " & str(Audiocap_Data.Polarity);
+
+      if last=pulses then
+        last := 0;
+        bitv := 'X';
+        if pulses>842 and pulses<846 then
+          bitv := '0';
+        elsif pulses>1681 and pulses<1687 then
+          bitv := '1';
+        else
+          bitindex := 7;
+        end if;
+
+        if not is_x(bitv) then
+          byte(bitindex) := bitv;
+          if bitindex=0 then
+            bitindex := 7;
+            report "BYTE: " & hstr(byte);
+          else
+            bitindex := bitindex - 1;
+          end if;
+        end if;
+      else
+        last := pulses;
+      end if;
+   end process;
 
 end t006;
