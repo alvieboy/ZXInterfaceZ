@@ -13,3 +13,8 @@ typedef struct
 
 
 extern const struct usb_driver usb_hid_driver;
+
+struct usb_hid;
+
+uint32_t usb_hid__get_id(const struct usb_hid *usbhid);
+const char *usb_hid__get_serial(const struct usb_hid *usbhid);

@@ -10,6 +10,9 @@
 #include <unistd.h>
 #include <dirent.h>
 #include "webserver.h"
+#include <fcntl.h>
+#include "devmap.h"
+#include "wifi.h"
 
 struct webserver_req_entry {
     const char *path;
@@ -256,6 +259,83 @@ static esp_err_t webserver_req__rmdir(httpd_req_t *req, const char *querystr)
 }
 
 
+static esp_err_t webserver_req__post_file(httpd_req_t *req, const char *querystr)
+{
+    char fullpath[FILE_PATH_MAX];
+    char path[FILE_PATH_MAX - 8];
+
+    if (httpd_query_key_value(querystr, "path", path, sizeof(path))!=ESP_OK) {
+        ESP_LOGI(TAG,"Missing parameters");
+        return webserver_req__send_error(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Invalid path");
+        return ESP_FAIL;
+    }
+
+    webserver_req__get_sdcard_path(path, fullpath, sizeof(fullpath));
+
+    int total_len = req->content_len;
+    int received;
+    char buf[512];
+
+    // TODO: sanitize path
+
+    // Check if file exists.
+
+    int fd = __open(fullpath,O_CREAT|O_WRONLY, 0660);
+    if (fd<0)
+    {
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "File exists");
+        return ESP_FAIL;
+    }
+
+    while (total_len>0) {
+        received = httpd_req_recv(req, buf, total_len > sizeof(buf)?sizeof(buf):total_len);
+        if (received <= 0) {
+            /* Respond with 500 Internal Server Error */
+            httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to post control value");
+            close(fd);
+            unlink(fullpath);
+            return ESP_FAIL;
+        }
+        if (write(fd, buf, received)!=received) {
+            close(fd);
+            httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Cannot write file");
+            unlink(fullpath);
+            return ESP_FAIL;
+        }
+        total_len -= received;
+    }
+    if (close(fd)<0) {
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Cannot close file");
+        unlink(fullpath);
+        return ESP_FAIL;
+    }
+
+    return ESP_OK;
+}
+
+int webserver_req__devlist(httpd_req_t *req, const char *querystr)
+{
+    cJSON *root = cJSON_CreateObject();
+
+    devmap__populate_devices(root);
+
+    webserver_req__send_and_free_json(req, root);
+    return ESP_OK;
+}
+
+
+int webserver_req__wifi(httpd_req_t *req, const char *querystr)
+{
+    cJSON *root = cJSON_CreateObject();
+
+    wifi__get_conf_json(root);
+
+    webserver_req__send_and_free_json(req, root);
+    return ESP_OK;
+}
+
+
+
 static const struct webserver_req_entry req_handlers[] = {
     { "version", &webserver_req__version },
     { "list",    &webserver_req__list },
@@ -264,12 +344,15 @@ static const struct webserver_req_entry req_handlers[] = {
     { "rename",  &webserver_req__rename },
     { "mkdir",   &webserver_req__mkdir },
     { "rmdir",   &webserver_req__rmdir },
+    { "devlist",   &webserver_req__devlist },
+};
+
+static const struct webserver_req_entry post_handlers[] = {
+    { "file",    &webserver_req__post_file },
 };
 
 
-
-
-webserver_req_handler_t webserver_req__find_handler(const char *path)
+webserver_req_handler_t webserver_find_handler(const char *path, const struct webserver_req_entry *handlers, unsigned num_entries)
 {
     unsigned int i;
     char reqname[128];
@@ -299,16 +382,22 @@ webserver_req_handler_t webserver_req__find_handler(const char *path)
 
 
 
-    for (i=0; i<sizeof(req_handlers)/sizeof(req_handlers[0]); i++) {
-        if (strcmp(req_handlers[i].path, delim)==0) {
-            return req_handlers[i].req;
+    for (i=0; i<num_entries; i++) {
+        if (strcmp(handlers[i].path, delim)==0) {
+            return handlers[i].req;
         }
     }
     return NULL;
 }
 
 
-webserver_req_post_handler_t webserver_req__find_post_handler(const char *path)
+webserver_req_handler_t webserver_req__find_handler(const char *path)
 {
-    return NULL;
+    return webserver_find_handler(path, req_handlers, sizeof(req_handlers)/sizeof(req_handlers[0]));
+}
+
+webserver_req_handler_t webserver_req__find_post_handler(const char *path)
+{
+
+    return webserver_find_handler(path, post_handlers, sizeof(post_handlers)/sizeof(post_handlers[0]));
 }

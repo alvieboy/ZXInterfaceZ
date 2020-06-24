@@ -48,6 +48,46 @@ static int usbh__control_request_completed_reply(uint8_t chan, uint8_t stat, str
 static int usbh__request_completed_reply(uint8_t chan, uint8_t stat, void *req);
 static int usbh__issue_setup_data_request(struct usb_request *req);
 
+static void usbh__add_device(struct usb_device *);
+static void usbh__remove_device(struct usb_device *);
+
+static struct usb_device_entry *usb_devices = NULL;
+
+const struct usb_device_entry *usbh__get_devices()
+{
+    // THIS IS NOT RACE-FREE!!
+    return usb_devices;
+}
+
+static void usbh__add_device(struct usb_device *dev)
+{
+    struct usb_device_entry *e = (struct usb_device_entry*)malloc(sizeof(struct usb_device_entry));
+    if (e==NULL) {
+        return;
+    }
+    e->dev = dev;
+    e->next = usb_devices;
+    usb_devices = e;
+}
+
+static void usbh__remove_device(struct usb_device *dev)
+{
+    struct usb_device_entry *e = usb_devices;
+    struct usb_device_entry *parent = NULL;
+    while (e) {
+        if (e->dev == dev) {
+            if (parent) {
+                parent->next = e->next;
+            } else {
+                usb_devices = e->next;
+            }
+            free(e);
+            break;
+        }
+        e = e->next;
+    }
+}
+
 static uint8_t usbh__allocate_address()
 {
     usb_address++;
@@ -151,6 +191,75 @@ void usbh__reset()
     vTaskDelay(100 / portTICK_RATE_MS);
 }
 
+void usbh__device_free(struct usb_device *dev)
+{
+    if (dev->config_descriptor)
+        free(dev->config_descriptor);
+
+    if (dev->vendor)
+        free(dev->vendor);
+    if (dev->product)
+        free(dev->product);
+    if (dev->serial)
+        free(dev->serial);
+}
+
+char *usbh__string_unicode8_to_char(const uint8_t  *src, unsigned len)
+{
+    if (len&1) {
+        ESP_LOGE(TAG,"String len is odd!");
+        return NULL;
+    }
+    len>>=1;
+    char *ret = (char*)malloc(len+1);
+    if (ret==NULL)
+        return ret;
+    char *tptr = ret;
+    while (len) {
+        uint8_t a = *src++;
+        uint8_t b = *src++;
+        if (a==0) {
+            *tptr++=b;
+        } else {
+            *tptr++='?';
+        }
+    }
+    *tptr='\0';
+    return ret;
+}
+
+
+
+static char *usbh__get_device_string(struct usb_device *dev,uint16_t index)
+{
+    uint8_t local_string_descriptor[256];
+
+    if (index<1)
+        return NULL;
+
+    if (usbh__get_descriptor(dev,
+                             USB_REQ_TYPE_STANDARD | USB_REQ_RECIPIENT_DEVICE,
+                             USB_DESC_STRING | index,
+                             (uint8_t*)local_string_descriptor,
+                             sizeof(local_string_descriptor)) <0) {
+        return NULL;
+    }
+    uint8_t len = local_string_descriptor[0];
+    uint8_t type = local_string_descriptor[1];
+    if (type!=USB_DESC_TYPE_STRING || (len<4)) {
+        ESP_LOGE(TAG,"String descriptor NOT a string!");
+        return NULL;
+    }
+    return usbh__string_unicode8_to_char(&local_string_descriptor[2], len - 2);
+}
+
+int usbh__get_device_strings(struct usb_device *dev)
+{
+    dev->vendor = usbh__get_device_string(dev, dev->device_descriptor.iManufacturer);
+    dev->product = usbh__get_device_string(dev, dev->device_descriptor.iProduct);
+    dev->serial = usbh__get_device_string(dev, dev->device_descriptor.iSerialNumber);
+    return 0;
+}
 int usbh__detect_and_assign_address()
 {
     struct usb_device dev;
@@ -160,6 +269,9 @@ int usbh__detect_and_assign_address()
     dev.ep0_size = 64; // Default
     dev.address = 0;
     dev.claimed = 0;
+    dev.vendor = NULL;
+    dev.product = NULL;
+    dev.serial = NULL;
 
     ESP_LOGI(USBHTAG, "Resetting BUS");
     usbh__reset();
@@ -201,6 +313,8 @@ int usbh__detect_and_assign_address()
     USBHDEBUG("Allocated channel %d for EP0 of %d\n", dev.ep0_chan, dev.address);
     // Get configuration header. (9 bytes)
 
+    // Get strings.
+    usbh__get_device_strings(&dev);
 
     if (usbh__get_descriptor(&dev,
                              USB_REQ_TYPE_STANDARD | USB_REQ_RECIPIENT_DEVICE,
@@ -265,7 +379,10 @@ int usbh__detect_and_assign_address()
     if (newdev->claimed==0) {
         // No driver.
         free(dev.config_descriptor);
-        free(newdev);
+        usbh__device_free(newdev);
+    } else {
+        // Add to list.
+        usbh__add_device(newdev);
     }
 
     return 0;

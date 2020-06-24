@@ -29,6 +29,7 @@
 #include "config.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "devmap.h"
 
 static int8_t videomode = 0;
 
@@ -130,6 +131,7 @@ void app_main()
     videostreamer__init();
     netcmd__init();
     tapeplayer__init();
+    devmap__init();
     usbh__init();
     keyboard__init();
     webserver__init();

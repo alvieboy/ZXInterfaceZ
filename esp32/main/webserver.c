@@ -231,7 +231,11 @@ static esp_err_t webserver__req_get_handler(httpd_req_t *req)
 
 static esp_err_t webserver__req_post_handler(httpd_req_t *req)
 {
-    webserver_req_post_handler_t handler = webserver_req__find_post_handler(req->uri);
+
+    char query[FILE_PATH_MAX];
+    char *qptr = query;
+
+    webserver_req_handler_t handler = webserver_req__find_post_handler(req->uri);
 
     if (handler==NULL) {
         /* Respond with 404 Not Found */
@@ -239,44 +243,27 @@ static esp_err_t webserver__req_post_handler(httpd_req_t *req)
         return ESP_FAIL;
     }
 
-    int total_len = req->content_len;
-
-    int cur_len = 0;
-
-    char *buf = (char*)scratch;
-
-    int received = 0;
-    if (total_len >= SCRATCH_BUFSIZE) {
-        /* Respond with 500 Internal Server Error */
-        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "content too long");
+    int r = httpd_req_get_url_query_str(req, query, sizeof(query));
+    switch (r) {
+    case ESP_OK:
+        break;
+    case ESP_ERR_NOT_FOUND:
+        qptr = NULL;
+        break;
+    default:
+        ESP_LOGE(TAG,"Cannot get query or invalid query string");
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Invalid query string");
         return ESP_FAIL;
     }
 
-    while (cur_len < total_len) {
-        received = httpd_req_recv(req, buf + cur_len, total_len);
-        if (received <= 0) {
-            /* Respond with 500 Internal Server Error */
-            httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to post control value");
-            return ESP_FAIL;
-        }
-        cur_len += received;
-    }
-    buf[total_len] = '\0';
-
-
-    cJSON *root = cJSON_Parse(buf);
-    if (root==NULL) {
-        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "content too long");
-        return ESP_FAIL;
+    if (qptr) {
+        webserver__decodeurl(qptr);
     }
 
-    esp_err_t result = handler(req);
+    httpd_resp_set_type(req, "application/json");
 
-    cJSON_Delete(root);
-
-    return result;
+    return handler(req, qptr);
 }
-
 int webserver__init(void)
 {
     /* Allocate memory for server data */

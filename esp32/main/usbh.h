@@ -31,7 +31,9 @@ struct usb_device
     usb_device_descriptor_t device_descriptor;
     usb_config_descriptor_t config_descriptor_short;
     usb_config_descriptor_t *config_descriptor;
-    //host_state_t state;
+    char *vendor;
+    char *product;
+    char *serial;
     struct usb_interface interfaces[0];
 };
 
@@ -60,6 +62,10 @@ struct usb_request
     uint8_t channel:3;
 };
 
+struct usb_device_entry {
+    struct usb_device_entry *next;
+    struct usb_device *dev;
+};
 
 int usbh__init(void);
 
@@ -76,6 +82,7 @@ void usbh__submit_request(struct usb_request *req);
 int usbh__wait_completion(struct usb_request *req);
 uint32_t usbh__get_device_id(const struct usb_device*dev);
 
-
+const struct usb_device_entry *usbh__get_devices();
+uint32_t usbh__get_device_id(const struct usb_device *dev);
 
 #endif

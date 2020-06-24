@@ -1,5 +1,7 @@
 #include <inttypes.h>
 
+typedef uint32_t device_id_t;
+
 #define MAX_HID_ENTRIES 32
 #define MAX_HID_USAGES 32
 #define MAX_HID_FIELDS 32
@@ -76,10 +78,19 @@ struct hid
     hid_report_t *reports;
 };
 
-typedef uint32_t device_id;
+#define HID_BUS_USB 0
 
+typedef union {
+    uint8_t bus;
+} hid_device_t;
 
 struct hid * hid_parse(const uint8_t *hid, int len);
 void hid_free(struct hid*);
 int hid_extract_field_aligned(const hid_field_t *field, uint8_t index, const uint8_t *data, uint8_t *dest);
-void hid__field_entry_changed_callback(const device_id dev_id, const struct hid_field* field, uint8_t entry_index, uint8_t new_value);
+void hid__field_entry_changed_callback(const hid_device_t *hiddev, const struct hid_field* field, uint8_t entry_index, uint8_t new_value);
+
+uint32_t hid__get_id(const hid_device_t *hiddev);
+const char *hid__get_serial(const hid_device_t *hiddev);
+
+void hid__get_devices(hid_device_t *devices, unsigned *num, unsigned max);
+

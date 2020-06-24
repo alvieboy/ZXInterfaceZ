@@ -4,6 +4,9 @@
 #include "esp_log.h"
 #include "fpga.h"
 #include <malloc.h>
+#include "json.h"
+#include <string.h>
+#include "devmap.h"
 
 enum map_type {
         MAP_KEYBOARD,
@@ -22,9 +25,14 @@ typedef struct devmap_e {
 
 typedef struct devmap_d {
     struct devmap_d *next;
-    device_id id;
+    uint32_t id;
+    char *manufacturer;
+    char *product;
+    char *serial;
     devmap_e_t *entries;
 } devmap_d_t;
+
+static devmap_d_t *root_devmap;
 
 
 /* For testing purposes */
@@ -72,12 +80,96 @@ static const devmap_d_t devmap[] = {
 };
 */
 
-devmap_d_t *devmap__load_from_file()
+
+
+#define DEVMAP_JSON_FILENAME "/config/devmap.jsn"
+#define TAG "Devmap"
+
+int devmap__parse_usb_id(const char *str, uint32_t *target_device)
 {
-    return NULL;
+    char hex[5];
+    char *end = NULL;
+
+    if (strlen(str)!=9) {
+        ESP_LOGE(TAG,"ID too short");
+        return -1;
+    }
+
+    if (str[4]!=':') {
+        ESP_LOGE(TAG,"ID missing separator");
+        return -1;
+    }
+
+    strncpy(hex, str, 4);
+
+    unsigned long vendor = strtoul(hex, &end,16);
+    if (end==NULL || *end!='\0') {
+        ESP_LOGE(TAG,"Cannot parse vendor '%s'", hex);
+        return -1;
+    }
+    end = NULL;
+    unsigned long product = strtoul(&str[5], &end,16);
+
+    if (end==NULL || *end!='\0') {
+        ESP_LOGE(TAG,"Cannot parse product '%s'", &str[5]);
+        return -1;
+    }
+    *target_device = ((uint32_t)vendor << 16)+ (uint32_t)product;
+    return 0;
 }
 
-#include <cJSON.h>
+void devmap__free_d(devmap_d_t *d)
+{
+    if (d->serial)
+        free(d->serial);
+    if (d->manufacturer)
+        free(d->manufacturer);
+    if (d->product)
+        free(d->product);
+    free(d);
+}
+
+
+void devmap__init()
+{
+    cJSON *root = json__load_from_file(DEVMAP_JSON_FILENAME);
+
+    if (!root) {
+        ESP_LOGW(TAG,"Could not load JSON devmap");
+        return;
+    }
+
+    cJSON *devices = cJSON_GetObjectItemCaseSensitive(root, "devices");
+    cJSON *device;
+
+    cJSON_ArrayForEach(device, devices) {
+        devmap_d_t *dm = calloc(1,sizeof(devmap_d_t));
+
+        const char *id = json__get_string(device,"id");
+        if (id==NULL) {
+            ESP_LOGE(TAG,"Cannot find ID node");
+            devmap__free_d(dm);
+            break;
+        }
+        if (devmap__parse_usb_id(id, &dm->id)!=0) {
+            ESP_LOGE(TAG,"Error parsing ID '%s'", id);
+            devmap__free_d(dm);
+            break;
+        }
+
+        dm->serial = json__get_string_alloc(device,"serial");
+        dm->manufacturer = json__get_string_alloc(device,"manufacturer");
+        dm->product = json__get_string_alloc(device,"product");
+
+        ESP_LOGI(TAG,"Loaded %s", id);
+        dm->next = root_devmap;
+        root_devmap = dm;
+    }
+
+    cJSON_Delete(root);
+
+}
+
             
 const char *devmap__map_name_from_type(enum map_type type)
 {
@@ -101,7 +193,7 @@ int devmap__save_to_file(const char *filename, const devmap_d_t *devmap)
         cJSON *entry = cJSON_CreateObject(); // device entry
         cJSON *mapping = cJSON_CreateArray(); // device map entries
 
-        cJSON_AddItemToObject(entry, "__main", mapping);
+        cJSON_AddItemToObject(entry, "default", mapping);
 
         // Populate entries
         devmap_e_t *e;
@@ -115,7 +207,7 @@ int devmap__save_to_file(const char *filename, const devmap_d_t *devmap)
                 cJSON_AddNumberToObject(item, "threshold", e->analog_threshold);
             switch (e->map) {
             case MAP_KEYBOARD:
-                cJSON_AddStringToObject(item, "key", keyboard__get_name_by_key(e->action_value));
+                cJSON_AddStringToObject(item, "value", keyboard__get_name_by_key(e->action_value));
                 break;
             default:
                 break;
@@ -143,16 +235,20 @@ int devmap__save_to_file(const char *filename, const devmap_d_t *devmap)
     return 0;
 }
 
-static devmap_d_t *root_devmap;
-
-static const devmap_d_t *devmap__find_by_id(const device_id dev_id)
+static const devmap_d_t *devmap__find(const hid_device_t *dev)
 {
-//    unsigned i;
     devmap_d_t *devmap = root_devmap;
-
+    
     while (devmap!=NULL) {
-        if (devmap->id == dev_id) {
-            return devmap;
+        switch (dev->bus) {
+        case HID_BUS_USB:
+
+            if (devmap->id == hid__get_id(dev)) {
+
+                return devmap;
+            }
+        default:
+            break;
         }
     }
     return NULL;
@@ -207,9 +303,10 @@ static void devmap__trigger_entry(const devmap_e_t *entry, const struct hid_fiel
     }
 }
 
-void hid__field_entry_changed_callback(const device_id dev_id, const struct hid_field* field, uint8_t entry_index, uint8_t new_value)
+void hid__field_entry_changed_callback(const hid_device_t *dev, const struct hid_field* field, uint8_t entry_index, uint8_t new_value)
 {
-    const devmap_d_t *d = devmap__find_by_id(dev_id);
+    const devmap_d_t *d = devmap__find(dev);
+
     const devmap_e_t *map;
 
     if (d==NULL)
@@ -226,4 +323,42 @@ void hid__field_entry_changed_callback(const device_id dev_id, const struct hid_
         }
     }
 //    ESP_LOGW("DEVMAP", "Cannot find handle for index %d", entry_index);
+}
+
+bool devmap__is_connected(const devmap_d_t *d)
+{
+    hid_device_t devs[DEVMAP_MAX_DEVICES];
+    unsigned num_devices;
+    unsigned i;
+
+    hid__get_devices(&devs[0], &num_devices, DEVMAP_MAX_DEVICES);
+
+    for (i=0;i<num_devices;i++) {
+        //device_id id = usbh__get_device_id(e->device);
+    }
+    return false;
+}
+
+
+
+void devmap__populate_devices(cJSON *node)
+{
+    char idstr[10];
+    cJSON *devices = cJSON_CreateArray(); // device map entries
+
+    cJSON_AddItemToObject(node, "devices", devices);
+
+    const devmap_d_t *d = root_devmap;
+    while (d) {
+        cJSON *entry = cJSON_CreateObject();
+        sprintf(idstr,"%04x:%04x", (d->id>>16), d->id&0xFFFF);
+        cJSON_AddStringToObject(entry, "id", idstr);
+        cJSON_AddStringToObject(entry, "manufacturer", d->manufacturer);
+        cJSON_AddStringToObject(entry, "product", d->product);
+        cJSON_AddStringToObject(entry, "serial", d->serial);
+        cJSON_AddStringToObject(entry, "connected", devmap__is_connected(d) ? "true":"false");
+        cJSON_AddNullToObject(entry, "use");
+        cJSON_AddItemToArray(devices, entry);
+        d = d->next;
+    }
 }

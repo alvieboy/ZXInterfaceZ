@@ -18,6 +18,7 @@ static int usb_hid__set_idle(struct usb_device *dev, usb_interface_descriptor_t 
 
 struct usb_hid
 {
+    hid_device_t hiddev;
     uint8_t epchan:7;
     uint8_t seq:1;
     struct usb_device *dev;
@@ -28,6 +29,17 @@ struct usb_hid
     uint8_t prev_payload[64];
     uint8_t prev_size;
 };
+
+uint32_t usb_hid__get_id(const struct usb_hid *usbhid)
+{
+    return usbh__get_device_id(usbhid->dev);
+}
+
+const char *usb_hid__get_serial(const struct usb_hid *usbhid)
+{
+    return usbhid->dev->serial;
+}
+
 
 static int usb_hid__submit_in(struct usb_hid *h);
 
@@ -89,7 +101,7 @@ static void usb_hid__parse_report(struct usb_hid *hid)
                            new_value
                           );
 
-                    hid__field_entry_changed_callback(usbh__get_device_id(hid->dev), field, entry_index, new_value);
+                    hid__field_entry_changed_callback((hid_device_t*)hid, field, entry_index, new_value);
                 }
                 entry_index++;
             }
@@ -265,6 +277,7 @@ static int usb_hid__probe(struct usb_device *dev, struct usb_interface *i)
 
     struct usb_hid *h =  malloc(sizeof(struct usb_hid)); // TBD.
 
+    h->hiddev.bus = HID_BUS_USB;
     h->dev = dev;
     h->intf = i;
     h->seq = 0;

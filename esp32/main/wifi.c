@@ -1,4 +1,3 @@
-#ifndef __linux__
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -17,6 +16,7 @@
 #include "interfacez_resources.h"
 #include "nvs.h"
 #include "mdns.h"
+#include "json.h"
 
 #define EXAMPLE_ESP_WIFI_SSID      CONFIG_ESP_WIFI_SSID
 #define EXAMPLE_ESP_WIFI_PASS      CONFIG_ESP_WIFI_PASSWORD
@@ -34,6 +34,7 @@ static EventGroupHandle_t s_wifi_event_group;
     ((uint32_t)((b) & 0xff) << 8)  | \
     (uint32_t)((a) & 0xff)
 
+#ifndef __linux__
 
 static bool issta = false;
 char wifi_ssid[33];
@@ -53,6 +54,9 @@ bool wifi__issta()
     return issta;
 }
 
+static uint32_t wifi__config_get_ip() { return nvs__u32("ip", U32_IP_ADDR(192, 168, 120, 1)); }
+static uint32_t wifi__config_get_gw() { return nvs__u32("gw", U32_IP_ADDR(0,0,0,0)); }
+static uint32_t wifi__config_get_netmask() { return nvs__u32("mask", U32_IP_ADDR(255,255,255,0)); }
 
 static void ip_event_handler(void* arg, esp_event_base_t event_base,
                              int32_t event_id, void* event_data)
@@ -84,6 +88,7 @@ static void wifi__parse_scan();
 static void wifi_event_handler(void* arg, esp_event_base_t event_base,
                           int32_t event_id, void* event_data)
 {
+    char hostname[64];
     if (event_base != WIFI_EVENT)
         return;
 
@@ -120,8 +125,8 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,
     case WIFI_EVENT_AP_START:
         ESP_LOGI(TAG,"WiFi AP started");
         mdns_init();
-        mdns_hostname_set("interfacez.local");
-        mdns_instance_name_set("ZX InterfaceZ");
+        nvs__str("hostname",hostname,sizeof(hostname),"interfacez.local");
+        mdns_instance_name_set(hostname);
         break;
     default:
         ESP_LOGW(TAG,"Unhandled WIFI event %d", event_id);
@@ -216,9 +221,9 @@ void wifi_init_softap()
 
     mdns_free();
 
-    info.ip.addr = nvs__u32("ip", U32_IP_ADDR(192, 168, 120, 1));
-    info.gw.addr = nvs__u32("gw", U32_IP_ADDR(0, 0, 0, 0));
-    info.netmask.addr = nvs__u32("mask", U32_IP_ADDR(255, 255, 255, 0));
+    info.ip.addr = wifi__config_get_ip();
+    info.gw.addr = wifi__config_get_gw();
+    info.netmask.addr = wifi__config_get_netmask();
 
     ESP_ERROR_CHECK(tcpip_adapter_set_ip_info(TCPIP_ADAPTER_IF_AP, &info));
     ESP_ERROR_CHECK(tcpip_adapter_dhcps_start(TCPIP_ADAPTER_IF_AP));
@@ -322,8 +327,14 @@ void wifi__init()
         wifi_init_wpa2();
     }
 }
+
+
 #else
 #include <stdbool.h>
+#include "json.h"
+#include <inttypes.h>
+#include "wifi.h"
+#include "esp_wifi.h"
 
 void wifi__init()
 {
@@ -345,4 +356,49 @@ bool wifi__issta()
 
 char wifi_ssid[33] = {0} ;
 
+static uint32_t wifi__config_get_ip() { return nvs__u32("ip", U32_IP_ADDR(192, 168, 120, 1)); }
+static uint32_t wifi__config_get_gw() { return nvs__u32("gw", U32_IP_ADDR(0,0,0,0)); }
+static uint32_t wifi__config_get_netmask() { return nvs__u32("mask", U32_IP_ADDR(255,255,255,0)); }
+
 #endif
+
+void wifi__get_conf_json(cJSON *node)
+{
+    char temp[64];
+    struct ip4_addr addr;
+
+    bool issta = nvs__u8("wifi", WIFI_MODE_STA)==WIFI_MODE_STA;
+    cJSON_AddStringToObject(node, "mode", issta? "sta":"ap");
+    if (issta) {
+        cJSON *sta = cJSON_CreateObject();
+        nvs__fetch_str("sta_ssid", temp, sizeof(temp),"");
+        cJSON_AddStringToObject(sta, "ssid", temp);
+        nvs__fetch_str("hostname",  temp, sizeof(temp),"");
+        cJSON_AddStringToObject(sta, "hostname", temp);
+        // only DHCP for now
+        cJSON_AddStringToObject(sta, "ip", "dhcp");
+        cJSON_AddItemToObject(node, "sta", sta);
+    } else {
+        cJSON *ap = cJSON_CreateObject();
+        nvs__fetch_str("ap_ssid", temp, sizeof(temp),"");
+        cJSON_AddStringToObject(ap, "ssid", temp);
+        nvs__fetch_str("hostname",  temp, sizeof(temp),"");
+        cJSON_AddStringToObject(ap, "hostname", temp);
+        cJSON_AddNumberToObject(ap, "channel", nvs__u8("ap_chan", 3));
+
+        addr.addr = wifi__config_get_ip();
+        inet_ntoa_r( addr , temp, sizeof(temp) );
+        cJSON_AddStringToObject(ap, "ip", temp);
+
+        addr.addr = wifi__config_get_gw();
+        inet_ntoa_r( addr , temp, sizeof(temp) );
+        cJSON_AddStringToObject(ap, "gw", temp);
+
+        addr.addr = wifi__config_get_netmask();
+        inet_ntoa_r( addr , temp, sizeof(temp) );
+        cJSON_AddStringToObject(ap, "netmask", temp);
+
+        cJSON_AddItemToObject(node, "ap", ap);
+    }
+}
+
