@@ -70,7 +70,7 @@ Install these dependencies
 - Debian/Ubuntu
 
 ```bash
-sudo apt install libjson-c-dev libglib2.0-dev
+sudo apt install libglib2.0-dev
 ```
 
 ### Building host-mode
