@@ -6,11 +6,11 @@ Here are the basic instructions to fully build the InterfaceZ. It is split into 
 - [Building host-mode firmware](#building-host-mode-firmware)
 
 ## Getting the source.
-Make sure you have an updated repository. place it in directory /path/to/interfacez (example used throughout,use your own path)
+Make sure you have an updated repository. Place it in any path and then `export INTERFACE_Z=/path/to/interfacez`.
 
 ## Building the FPGA binary file
 
-### Pre-requesites
+### Prerequisites
 You will need Intel Quartus (Lite or better) in order to build the FPGA design. It will also need to include the Cyclone IV support.
 You can download the Lite edition for free from [the Intel website](https://fpgasoftware.intel.com/?edition=lite).
 
@@ -28,7 +28,7 @@ cd esp-idf
 bash install.sh
 source export.sh
 # Patch the httpd server code - only needed for host-mode
-cat /path/to/interfacez/patches/esp-idf-patch-webserver-select.diff | patch -p1
+cat $INTERFACE_Z/patches/esp-idf-patch-webserver-select.diff | patch -p1
 ```
 
 Note that anytime you need to use the IDF you need to source the "export.sh" file as above.
@@ -38,7 +38,7 @@ Note that anytime you need to use the IDF you need to source the "export.sh" fil
 Build the esp32 code by typing "make" on the esp32 directory
 
 ```bash
-cd /path/to/interfacez/esp32
+cd $INTERFACE_Z/esp32
 make
 ```
 It should generate all required files for programming.
@@ -56,7 +56,7 @@ Once you connect the device, enter programming mode using the following steps:
 At this point, the green LED on the top left should have stopped flashing.
 Proceed to flash the InterfaceZ by issuing the following commands:
 ```bash
-cd /path/to/interfacez/esp32
+cd $INTERFACE_Z/esp32
 make flash
 ```
 It should program the board, but it will be held in programming mode. To exit programming mode back to run time mode, do
@@ -64,24 +64,27 @@ It should program the board, but it will be held in programming mode. To exit pr
 
 ## Building host-mode firmware
 The Host-mode firmware is used solely for development.
-### Pre-requesites
-Install these dependencies (example for debian/ubuntu):
-	
-	- lcjson  (libcjson-dev)
-	- glib-2.0 (libglib2.0-dev)
+### Prerequisites
+Install these dependencies
+
+- Debian/Ubuntu
+
+```bash
+sudo apt install libglib2.0-dev
+```
 
 ### Building host-mode
 If you already tested building the ESP32 firmware, some simple steps are required to build the host firmware:
 
 ```bash
-cd /path/to/interfacez/esp32
+cd $INTERFACE_Z/esp32
 make -C host
 ```
 ### Starting host-mode
 You can then start the application in host mode:
 ```bash
-cd /path/to/interfacez/esp32
+cd $INTERFACE_Z/esp32
 host/interfacez
 ```
-To open the web interface on host mode, point your browser to [http://localhost:8000/index,html]([http://localhost:8000/index,html)
+To open the web interface on host mode, point your browser to http://localhost:8000
 
