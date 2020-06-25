@@ -6,6 +6,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <string.h>
+#include "esp_wifi.h"
 
 void vAssertCalled( unsigned long ulLine, const char * const pcFileName )
 {
@@ -82,6 +83,8 @@ void wifi_scan_task(void *data)
     while (1) {
         if (xQueueReceive(scan_queue, &resp, portMAX_DELAY)==pdTRUE) {
             printf("Requested scan\n");
+            vTaskDelay(5000 / portTICK_RATE_MS);
+            // Notify completion
         }
     }
 }
@@ -89,7 +92,22 @@ void wifi_scan_task(void *data)
 
 int esp_wifi_scan_get_ap_records(uint16_t *number, wifi_ap_record_t *ap_records)
 {
-    *number = 0;
+    memset(ap_records[0].bssid, 0, 6);
+    strcpy((char*)ap_records[0].ssid, "Ap WPA2");
+    ap_records[0].primary = 1;
+    ap_records[0].second = 10;
+    ap_records[0].rssi = 50;
+    ap_records[0].authmode = WIFI_AUTH_WPA2_PSK;
+    ap_records[0].pairwise_cipher = WIFI_CIPHER_TYPE_TKIP_CCMP;
+    ap_records[0].group_cipher = WIFI_CIPHER_TYPE_TKIP_CCMP;
+    ap_records[0].ant = 0;
+    ap_records[0].phy_11b = 0;
+    ap_records[0].phy_11g = 1;
+    ap_records[0].phy_11n = 1;
+    ap_records[0].phy_lr = 0;
+    ap_records[0].wps = 0;
+
+    *number = 1;
     return 0;
 }
 
