@@ -1,6 +1,8 @@
 #include "aplist_resource.h"
 #include "fpga.h"
 #include <string.h>
+#include "esp_wifi.h"
+#include "wifi.h"
 
 void aplist_resource__clear(struct aplist_resource*ar)
 {
@@ -56,5 +58,55 @@ int aplist_resource__sendToFifo(struct resource *r)
 {
     struct aplist_resource *ar = (struct aplist_resource*)r;
     return fpga__load_resource_fifo(ar->buf, ar->bufpos, RESOURCE_DEFAULT_TIMEOUT);
+}
+
+
+void aplist_resource__wifi_scan_reset(void *a)
+{
+    struct aplist_resource *ar = (struct aplist_resource*)a;
+    ar->needlen = 0;
+}
+
+void aplist_resource__wifi_apcount(void *a, uint8_t apcount, size_t ssidlensum)
+{
+    struct aplist_resource *ar = (struct aplist_resource*)a;
+
+    ar->needlen = 1 + ssidlensum + (apcount * 2); // SSIDlen + flags
+
+    aplist_resource__setnumaps(a, apcount );
+}
+
+void aplist_resource__wifi_ap(void *a, uint8_t auth, const char *ssid, size_t ssidlen)
+{
+    uint8_t flags = 0;
+    switch ( auth ) {
+    case WIFI_AUTH_OPEN:
+    case WIFI_AUTH_WPA_PSK:
+    case WIFI_AUTH_WPA2_PSK:
+        case WIFI_AUTH_WPA_WPA2_PSK:
+            flags=1;
+            break;
+        default:
+            break;
+        }
+    aplist_resource__addap(a, flags, ssid, ssidlen);
+}
+
+void aplist_resource__wifi_finish(void *a)
+{
+}
+
+static const wifi_scan_parser_t scan_parser =  {
+    .reset = &aplist_resource__wifi_scan_reset,
+    .apcount = &aplist_resource__wifi_apcount,
+    .ap = &aplist_resource__wifi_ap,
+    .finish = &aplist_resource__wifi_finish
+};
+
+
+
+int aplist_resource__request_wifi_scan(struct aplist_resource *r)
+{
+    return wifi__scan(&scan_parser, r);
 }
 

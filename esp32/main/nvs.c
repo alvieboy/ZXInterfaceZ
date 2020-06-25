@@ -27,7 +27,7 @@ int nvs__fetch_i32(const char *key, int32_t *value, int32_t def)
     }
 
     err = nvs_get_i32(nvsh, key, value);
-    if (err==ESP_ERR_NVS_NOT_FOUND) {
+    if (err==ESP_ERR_NOT_FOUND) {
         *value = def;
         return 0;
     }
@@ -48,7 +48,7 @@ int nvs__fetch_u32(const char *key, uint32_t *value, uint32_t def)
     }
 
     err = nvs_get_u32(nvsh, key, value);
-    if (err==ESP_ERR_NVS_NOT_FOUND) {
+    if (err==ESP_ERR_NOT_FOUND) {
         *value = def;
         return 0;
     }
@@ -69,7 +69,7 @@ int nvs__fetch_u8(const char *key, uint8_t *value, uint8_t def)
     }
 
     err = nvs_get_u8(nvsh, key, value);
-    if (err==ESP_ERR_NVS_NOT_FOUND) {
+    if (err==ESP_ERR_NOT_FOUND) {
         *value = def;
         return 0;
     }
@@ -120,7 +120,7 @@ int nvs__fetch_str(const char *key, char *value, unsigned maxlen, const char* de
     }
 
     err = nvs_get_str(nvsh, key, value, &len);
-    if (err==ESP_ERR_NVS_NOT_FOUND) {
+    if (err==ESP_ERR_NOT_FOUND) {
         len = strlen(def);
         memcpy( value, def, len );
         value[len] = '\0';

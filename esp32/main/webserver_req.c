@@ -335,6 +335,29 @@ int webserver_req__wifi(httpd_req_t *req, const char *querystr)
 }
 
 
+int webserver_req__post_scan(httpd_req_t *req, const char *querystr)
+{
+    cJSON *root = cJSON_CreateObject();
+
+    int r = 0;
+
+    if (wifi__scanning()) {
+        r = -1;
+        cJSON_AddStringToObject(root, "errorstring", "Scan in already in progress");
+    } else {
+        r = wifi__scan_json();
+        if (r<0) {
+            cJSON_AddStringToObject(root, "errorstring", "Internal scan error");
+        }
+    };
+
+    cJSON_AddStringToObject(root, "success", r==0?"true":"false");
+    webserver_req__send_and_free_json(req, root);
+
+    return ESP_OK;
+}
+
+
 
 static const struct webserver_req_entry req_handlers[] = {
     { "version", &webserver_req__version },
@@ -344,11 +367,13 @@ static const struct webserver_req_entry req_handlers[] = {
     { "rename",  &webserver_req__rename },
     { "mkdir",   &webserver_req__mkdir },
     { "rmdir",   &webserver_req__rmdir },
-    { "devlist",   &webserver_req__devlist },
+    { "devlist", &webserver_req__devlist },
+    { "wifi",    &webserver_req__wifi },
 };
 
 static const struct webserver_req_entry post_handlers[] = {
     { "file",    &webserver_req__post_file },
+    { "scan",    &webserver_req__post_scan },
 };
 
 
