@@ -6,11 +6,12 @@ FREERTOS:=./FreeRTOS
 FREERTOSKERNEL:=$(FREERTOS)/Source/
 
 CFLAGS=-O2 -g -Wall -Wextra -DIDF_VER=\"0.1\" \
-	$(shell pkg-config --cflags glib-2.0 libcjson) \
+	$(shell pkg-config --cflags glib-2.0) \
 	-I$(FREERTOSKERNEL)/include \
        -I$(FREERTOSKERNEL)/portable/GCC/Linux \
        -I$(FREERTOS)/ \
        -Iesplayer \
+       -Icjson \
        -I. \
        -I../main/ \
        -I$(ESP_IDF)/components/esp_system/include/ 	\
@@ -37,8 +38,7 @@ CFLAGS=-O2 -g -Wall -Wextra -DIDF_VER=\"0.1\" \
        -I$(ESP_IDF)/components/nghttp/port/include/ \
        -I$(ESP_IDF)/components/nvs_flash/include/ \
        -I$(ESP_IDF)/components/tcpip_adapter/include/ \
-       -I$(ESP_IDF)/components/driver/include/ \
-       -I/usr/include/cjson 
+       -I$(ESP_IDF)/components/driver/include/
 
 FREERTOS_SRC := $(FREERTOSKERNEL)/list.c \
 		$(FREERTOSKERNEL)/portable/GCC/Linux/port.c \
@@ -124,6 +124,8 @@ OBJS:=$(FREERTOS_OBJS) $(OBJ) \
 	main.o \
 	fpga.o \
 	strlcpy.o \
+	cjson/cJSON.o \
+	cjson/cJSON_Utils.o \
 	esplayer/nvs_flash.o \
 	esplayer/driver/gpio.o \
 	esplayer/driver/spi_master.o \
@@ -138,8 +140,8 @@ OBJS:=$(FREERTOS_OBJS) $(OBJ) \
 
 
 interfacez: $(OBJS)
-	$(CC) $(CFLAGS) -o interfacez $(OBJS) -lpthread $(shell pkg-config --libs glib-2.0 libcjson)
+	$(CC) $(CFLAGS) -o interfacez $(OBJS) -lpthread $(shell pkg-config --libs glib-2.0)
 
 clean:
-	rm $(OBJS)
+	rm -f $(OBJS)
 	
