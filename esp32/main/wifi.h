@@ -13,7 +13,7 @@ void wifi__get_conf_json(cJSON *node);
 typedef struct {
     void (*reset)(void *user);
     void (*apcount)(void *user, uint8_t apcount, size_t ssidlensum);
-    void (*ap)(void *user, uint8_t auth, const char *ssid, size_t ssidlen);
+    void (*ap)(void *user, uint8_t auth, uint8_t channel, const char *ssid, size_t ssidlen);
     void (*finish)(void*user);
 } wifi_scan_parser_t;
 

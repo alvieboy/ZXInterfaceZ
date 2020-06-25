@@ -27,8 +27,8 @@
 /* FreeRTOS event group to signal when we are connected*/
 static EventGroupHandle_t s_wifi_event_group;
 
-#define WIFI_CONNECTED_BIT BIT0
-#define WIFI_SCANNING_BIT BIT1
+#define WIFI_CONNECTED_BIT (1<<0)
+#define WIFI_SCANNING_BIT (1<<1)
 
 #define U32_IP_ADDR(a,b,c,d) \
     ((uint32_t)((d) & 0xff) << 24) | \
@@ -92,7 +92,7 @@ static void ip_event_handler(void* arg, esp_event_base_t event_base,
 static void wifi__parse_scan();
 
 static void wifi_event_handler(void* arg, esp_event_base_t event_base,
-                          int32_t event_id, void* event_data)
+                               int32_t event_id, void* event_data)
 {
     char hostname[64];
     if (event_base != WIFI_EVENT)
@@ -292,19 +292,27 @@ static int wifi__start_scan()
 #include "wifi.h"
 #include "esp_wifi.h"
 
+void wifi__end_scan()
+{
+    ESP_LOGI(TAG,"WiFI scan finished");
+    wifi__parse_scan();
+    xEventGroupClearBits(s_wifi_event_group, WIFI_SCANNING_BIT);
+
+}
+
 void wifi__init()
 {
+    s_wifi_event_group = xEventGroupCreate();
 }
+
 bool wifi__isconnected()
 {
     return false;
 }
 
-static volatile bool wifi_scanning = false;
-
 bool wifi__scanning()
 {
-    return wifi_scanning;
+    return xEventGroupGetBits(s_wifi_event_group) & WIFI_SCANNING_BIT;
 }
 
 bool wifi__issta()
@@ -322,7 +330,8 @@ extern int do_hw_wifi_scan(void);
 
 int wifi__start_scan()
 {
-    wifi_scanning = true;
+    xEventGroupSetBits(s_wifi_event_group, WIFI_SCANNING_BIT);
+
     return do_hw_wifi_scan();
 }
 
@@ -369,13 +378,14 @@ void wifi__get_conf_json(cJSON *node)
 }
 
 
-static void wifi__ap_json_entry(void *user, uint8_t auth, const char *ssid, size_t ssidlen)
+static void wifi__ap_json_entry(void *user, uint8_t auth, uint8_t channel, const char *ssid, size_t ssidlen)
 {
     cJSON *e = cJSON_CreateObject();
     cJSON *array = (cJSON *)user;
 
     cJSON_AddNumberToObject(e, "auth", auth);
     cJSON_AddStringToObject(e, "ssid", ssid);
+    cJSON_AddNumberToObject(e, "channel", channel);
     cJSON_AddItemToArray(array, e);
 }
 
@@ -457,7 +467,7 @@ void wifi__parse_scan()
 
     //aplist_resource__setnumaps(&aplistresource, ap_num );
     for (int i=0;i<ap_num; i++) {
-        scan_parser->ap(scan_parser_data, ap_records[i].authmode, (const char*)ap_records[i].ssid, strlen((char*)ap_records[i].ssid));
+        scan_parser->ap(scan_parser_data, ap_records[i].authmode, ap_records[i].primary, (const char*)ap_records[i].ssid, strlen((char*)ap_records[i].ssid));
     }
     if (scan_parser->finish)
         scan_parser->finish(scan_parser_data);
