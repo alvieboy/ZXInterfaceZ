@@ -6,7 +6,7 @@ FREERTOS:=./FreeRTOS
 FREERTOSKERNEL:=$(FREERTOS)/Source/
 
 CFLAGS=-O2 -g -Wall -Wextra -DIDF_VER=\"0.1\" \
-	$(shell pkg-config --cflags glib-2.0) \
+	$(shell pkg-config --cflags glib-2.0 libcjson) \
 	-I$(FREERTOSKERNEL)/include \
        -I$(FREERTOSKERNEL)/portable/GCC/Linux \
        -I$(FREERTOS)/ \
@@ -138,7 +138,7 @@ OBJS:=$(FREERTOS_OBJS) $(OBJ) \
 
 
 interfacez: $(OBJS)
-	$(CC) $(CFLAGS) -o interfacez $(OBJS) -lpthread -lcjson $(shell pkg-config --libs glib-2.0)
+	$(CC) $(CFLAGS) -o interfacez $(OBJS) -lpthread $(shell pkg-config --libs glib-2.0 libcjson)
 
 clean:
 	rm $(OBJS)
