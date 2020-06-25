@@ -65,10 +65,13 @@ It should program the board, but it will be held in programming mode. To exit pr
 ## Building host-mode firmware
 The Host-mode firmware is used solely for development.
 ### Pre-requesites
-Install these dependencies (example for debian/ubuntu):
-	
-	- lcjson  (libcjson-dev)
-	- glib-2.0 (libglib2.0-dev)
+Install these dependencies
+
+- Debian/Ubuntu
+
+```bash
+sudo apt install libjson-c-dev libglib2.0-dev
+```
 
 ### Building host-mode
 If you already tested building the ESP32 firmware, some simple steps are required to build the host firmware:
