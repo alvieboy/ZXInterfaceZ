@@ -10,7 +10,7 @@ Make sure you have an updated repository. Place it in any path and then `export 
 
 ## Building the FPGA binary file
 
-### Pre-requesites
+### Prerequisites
 You will need Intel Quartus (Lite or better) in order to build the FPGA design. It will also need to include the Cyclone IV support.
 You can download the Lite edition for free from [the Intel website](https://fpgasoftware.intel.com/?edition=lite).
 
@@ -64,7 +64,7 @@ It should program the board, but it will be held in programming mode. To exit pr
 
 ## Building host-mode firmware
 The Host-mode firmware is used solely for development.
-### Pre-requesites
+### Prerequisites
 Install these dependencies
 
 - Debian/Ubuntu
