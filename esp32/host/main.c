@@ -77,6 +77,8 @@ int do_hw_wifi_scan(void)
 }
 
 
+extern void wifi__end_scan();
+
 void wifi_scan_task(void *data)
 {
     uint32_t resp;
@@ -85,6 +87,7 @@ void wifi_scan_task(void *data)
             printf("Requested scan\n");
             vTaskDelay(5000 / portTICK_RATE_MS);
             // Notify completion
+            wifi__end_scan();
         }
     }
 }
