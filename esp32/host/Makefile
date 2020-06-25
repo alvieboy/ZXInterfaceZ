@@ -1,6 +1,6 @@
 all: interfacez
 
-ESP_IDF=/home/alvieboy/Temp/esp-idf/
+ESP_IDF=$(IDF_PATH)
 
 FREERTOS:=./FreeRTOS
 FREERTOSKERNEL:=$(FREERTOS)/Source/
