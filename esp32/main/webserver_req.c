@@ -335,7 +335,7 @@ int webserver_req__wifi(httpd_req_t *req, const char *querystr)
 }
 
 
-int webserver_req__post_scan(httpd_req_t *req, const char *querystr)
+int webserver_req__start_scan(httpd_req_t *req, const char *querystr)
 {
     cJSON *root = cJSON_CreateObject();
 
@@ -357,6 +357,32 @@ int webserver_req__post_scan(httpd_req_t *req, const char *querystr)
     return ESP_OK;
 }
 
+int webserver_req__scan(httpd_req_t *req, const char *querystr)
+{
+    cJSON *root = cJSON_CreateObject();
+
+    int r = 0;
+
+    if (wifi__scanning()) {
+        r = -1;
+        cJSON_AddStringToObject(root, "errorstring", "Scan in progress");
+        cJSON_AddStringToObject(root, "success", "false");
+
+    } else {
+        cJSON_AddStringToObject(root, "success", "true");
+
+        cJSON *aplist = wifi__ap_get_json();
+
+        cJSON_AddItemToObject(root, "aplist", aplist);
+
+
+    };
+    webserver_req__send_and_free_json(req, root);
+
+
+    return ESP_OK;
+}
+
 
 
 static const struct webserver_req_entry req_handlers[] = {
@@ -369,11 +395,12 @@ static const struct webserver_req_entry req_handlers[] = {
     { "rmdir",   &webserver_req__rmdir },
     { "devlist", &webserver_req__devlist },
     { "wifi",    &webserver_req__wifi },
+    { "scan",    &webserver_req__scan },
+    { "startscan",    &webserver_req__start_scan },
 };
 
 static const struct webserver_req_entry post_handlers[] = {
     { "file",    &webserver_req__post_file },
-    { "scan",    &webserver_req__post_scan },
 };
 
 
