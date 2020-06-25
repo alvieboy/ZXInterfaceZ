@@ -212,10 +212,13 @@ char *usbh__string_unicode8_to_char(const uint8_t  *src, unsigned len)
     }
     len>>=1;
     char *ret = (char*)malloc(len+1);
+
     if (ret==NULL)
         return ret;
+
     char *tptr = ret;
-    while (len) {
+
+    while (len--) {
         uint8_t a = *src++;
         uint8_t b = *src++;
         if (a==0) {
