@@ -129,14 +129,14 @@ OBJS:=$(FREERTOS_OBJS) $(OBJ) \
 	esplayer/nvs_flash.o \
 	esplayer/driver/gpio.o \
 	esplayer/driver/spi_master.o \
-/home/alvieboy/Temp/esp-idf/components/esp_http_server/src/httpd_parse.o \
-/home/alvieboy/Temp/esp-idf/components/esp_http_server/src/httpd_txrx.o  \
-/home/alvieboy/Temp/esp-idf/components/esp_http_server/src/httpd_sess.o  \
-/home/alvieboy/Temp/esp-idf/components/esp_http_server/src/httpd_ws.o    \
-/home/alvieboy/Temp/esp-idf/components/esp_http_server/src/httpd_uri.o   \
-/home/alvieboy/Temp/esp-idf/components/esp_http_server/src/httpd_main.o  \
-/home/alvieboy/Temp/esp-idf/components/esp_http_server/src/util/ctrl_sock.o  \
-/home/alvieboy/Temp/esp-idf/components/nghttp/nghttp2/third-party/http-parser/http_parser.o
+	$(ESP_IDF)/components/esp_http_server/src/httpd_parse.o \
+	$(ESP_IDF)/components/esp_http_server/src/httpd_txrx.o  \
+	$(ESP_IDF)/components/esp_http_server/src/httpd_sess.o  \
+	$(ESP_IDF)/components/esp_http_server/src/httpd_ws.o    \
+	$(ESP_IDF)/components/esp_http_server/src/httpd_uri.o   \
+	$(ESP_IDF)/components/esp_http_server/src/httpd_main.o  \
+	$(ESP_IDF)/components/esp_http_server/src/util/ctrl_sock.o  \
+	$(ESP_IDF)/components/nghttp/nghttp2/third-party/http-parser/http_parser.o
 
 
 interfacez: $(OBJS)
