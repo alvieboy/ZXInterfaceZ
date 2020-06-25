@@ -76,7 +76,7 @@ void aplist_resource__wifi_apcount(void *a, uint8_t apcount, size_t ssidlensum)
     aplist_resource__setnumaps(a, apcount );
 }
 
-void aplist_resource__wifi_ap(void *a, uint8_t auth, const char *ssid, size_t ssidlen)
+void aplist_resource__wifi_ap(void *a, uint8_t auth, uint8_t channel, const char *ssid, size_t ssidlen)
 {
     uint8_t flags = 0;
     switch ( auth ) {

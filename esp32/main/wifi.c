@@ -61,13 +61,14 @@ bool wifi__issta()
 }
 
 static uint32_t wifi__config_get_ip() { return nvs__u32("ip", U32_IP_ADDR(192, 168, 120, 1)); }
-static uint32_t wifi__config_get_gw() { return nvs__u32("gw", U32_IP_ADDR(0,0,0,0)); }
+static uint32_t wifi__config_get_gw() { return nvs__u32("gw", U32_IP_ADDR(192, 168, 120, 1)); }
 static uint32_t wifi__config_get_netmask() { return nvs__u32("mask", U32_IP_ADDR(255,255,255,0)); }
 
 static void ip_event_handler(void* arg, esp_event_base_t event_base,
                              int32_t event_id, void* event_data)
 
 {
+    char hostname[64];
     ip_event_got_ip_t* event;
 
     switch (event_id) {
@@ -77,9 +78,9 @@ static void ip_event_handler(void* arg, esp_event_base_t event_base,
         xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
         led__set(LED2, 1);
 
-        mdns_init();
-        mdns_hostname_set("interfacez.local");
-        mdns_instance_name_set("ZX InterfaceZ");
+        ESP_ERROR_CHECK(mdns_init());
+        nvs__str("hostname",hostname,sizeof(hostname),"interfacez.local");
+        ESP_ERROR_CHECK(mdns_instance_name_set("ZX InterfaceZ"));
 
 
         break;
@@ -130,9 +131,9 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,
         break;
     case WIFI_EVENT_AP_START:
         ESP_LOGI(TAG,"WiFi AP started");
-        mdns_init();
+        ESP_ERROR_CHECK(mdns_init());
         nvs__str("hostname",hostname,sizeof(hostname),"interfacez.local");
-        mdns_instance_name_set(hostname);
+        ESP_ERROR_CHECK(mdns_instance_name_set(hostname));
         break;
     default:
         ESP_LOGW(TAG,"Unhandled WIFI event %d", event_id);
@@ -277,7 +278,7 @@ static int wifi__start_scan()
 {
     int r = esp_wifi_scan_start(&scan_config, false);
     if (r<0) {
-        ESP_LOGE(TAG, "Cannot start scan process");
+        ESP_LOGE(TAG, "Cannot start scan process: %s", esp_err_to_name(r));
         return r;
     }
     xEventGroupSetBits(s_wifi_event_group, WIFI_SCANNING_BIT);
