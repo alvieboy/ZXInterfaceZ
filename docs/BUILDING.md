@@ -86,5 +86,5 @@ You can then start the application in host mode:
 cd $INTERFACE_Z/esp32
 host/interfacez
 ```
-To open the web interface on host mode, point your browser to [http://localhost:8000/index,html]([http://localhost:8000/index,html)
+To open the web interface on host mode, point your browser to http://localhost:8000
 
