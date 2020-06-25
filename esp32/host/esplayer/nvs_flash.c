@@ -38,7 +38,7 @@ esp_err_t nvs_get_i32 (nvs_handle_t handle, const char* key, int32_t* out_value)
         return ESP_OK;
     }
 
-    return ESP_ERR_NOT_FOUND;
+    return ESP_ERR_NVS_NOT_FOUND;
 }
 
 esp_err_t nvs_get_u32 (nvs_handle_t handle, const char* key, uint32_t* out_value)
@@ -54,7 +54,7 @@ esp_err_t nvs_get_u32 (nvs_handle_t handle, const char* key, uint32_t* out_value
         return ESP_OK;
     }
 
-    return ESP_ERR_NOT_FOUND;
+    return ESP_ERR_NVS_NOT_FOUND;
 }
 
 esp_err_t nvs_get_u8 (nvs_handle_t handle, const char* key, uint8_t* out_value)
@@ -70,7 +70,7 @@ esp_err_t nvs_get_u8 (nvs_handle_t handle, const char* key, uint8_t* out_value)
         return ESP_OK;
     }
 
-    return ESP_ERR_NOT_FOUND;
+    return ESP_ERR_NVS_NOT_FOUND;
 }
 
 esp_err_t nvs_get_str(nvs_handle_t handle, const char* key, char* out_value, size_t* length)
@@ -88,7 +88,7 @@ esp_err_t nvs_get_str(nvs_handle_t handle, const char* key, char* out_value, siz
         return ESP_OK;
     }
 
-    return ESP_ERR_NOT_FOUND;
+    return ESP_ERR_NVS_NOT_FOUND;
 }
 
 void nvs_close(nvs_handle_t handle)
