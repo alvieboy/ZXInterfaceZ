@@ -13,6 +13,6 @@
 #define ESP_LOGI(tag,x...) do_log("I", tag, x)
 #define ESP_LOGE(tag,x...) do_log("E", tag, x)
 #define ESP_LOGW(tag,x...) do_log("W", tag, x)
-#define ESP_LOGD(tag,x...) 
+#define ESP_LOGD(tag,x...) do_log("D", tag, x)
 
 #endif

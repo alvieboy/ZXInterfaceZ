@@ -12,6 +12,7 @@ CFLAGS=-O2 -g -Wall -Wextra -DIDF_VER=\"0.1\" \
        -I$(FREERTOS)/ \
        -Iesplayer \
        -I. \
+       -I../main/ \
        -I$(ESP_IDF)/components/esp_system/include/ 	\
        -I$(ESP_IDF)/components/soc/soc/esp32/include/ 	\
        -I$(ESP_IDF)/components/esp_common/include/ \
@@ -100,6 +101,7 @@ usb_driver.c          \
 usb_driver_list.c     \
 usbh.c                \
 usb_hid.c             \
+hid.c                 \
 usb_ll.c              \
 usb_mouse.c           \
 version.c             \
@@ -109,7 +111,8 @@ webserver.c           \
 webserver_req.c       \
 wifi.c                \
 tzx.c                 \
-tap.c
+tap.c                 \
+json.c
 
 
 _OBJ:=$(SRC:.c=.o)

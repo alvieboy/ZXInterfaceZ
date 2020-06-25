@@ -27,7 +27,7 @@ esp_err_t nvs_open(const char* name, nvs_open_mode_t open_mode, nvs_handle_t *ou
 
 esp_err_t nvs_get_i32 (nvs_handle_t handle, const char* key, int32_t* out_value)
 {
-    GError *error;
+    GError *error = NULL;
 
     gint64 val = g_key_file_get_int64 (f,
                                        "interfacez",
@@ -43,7 +43,7 @@ esp_err_t nvs_get_i32 (nvs_handle_t handle, const char* key, int32_t* out_value)
 
 esp_err_t nvs_get_u32 (nvs_handle_t handle, const char* key, uint32_t* out_value)
 {
-    GError *error;
+    GError *error = NULL;
 
     gint64 val = g_key_file_get_int64 (f,
                                        "interfacez",
@@ -59,7 +59,7 @@ esp_err_t nvs_get_u32 (nvs_handle_t handle, const char* key, uint32_t* out_value
 
 esp_err_t nvs_get_u8 (nvs_handle_t handle, const char* key, uint8_t* out_value)
 {
-    GError *error;
+    GError *error = NULL;
 
     gint64 val = g_key_file_get_int64 (f,
                                        "interfacez",
@@ -75,7 +75,7 @@ esp_err_t nvs_get_u8 (nvs_handle_t handle, const char* key, uint8_t* out_value)
 
 esp_err_t nvs_get_str(nvs_handle_t handle, const char* key, char* out_value, size_t* length)
 {
-    GError *error;
+    GError *error = NULL;
 
     char *str = g_key_file_get_string (f,
                                        "interfacez",
