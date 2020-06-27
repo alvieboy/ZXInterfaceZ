@@ -68,6 +68,12 @@
           <a class="nav-link" href="#" onClick="setpage('status');">Status</a>
         </li>
         <li class="nav-item">
+          <a class="nav-link" href="#" onClick="setpage('wifi');">WiFi</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#" onClick="setpage('devices');">Devices</a>
+        </li>
+        <li class="nav-item">
           <a class="nav-link" href="#" onClick="setpage('about');">About</a>
         </li>
         <!--<li class="nav-item">
@@ -83,12 +89,29 @@
     <script src="popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
     <script src="bootstrap.min.js" integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI" crossorigin="anonymous"></script>
 	
-Hello!
-        
 </header>
 
 <!-- Begin page content -->
 <main role="main" class="flex-shrink-0">
+
+<div class="modal fade" id="errorModal" tabindex="-1" role="dialog" aria-labelledby="errorModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="errorModalLabel">Error</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
   <div class="container" id="content">
   </div>
   
@@ -105,6 +128,11 @@ Hello!
      {
      	$.getJSON( "req/"+name , param, success );
      }
+     
+     function displayerror(string) {
+      $('#errorModal').modal();
+     }
+     
   </script>
   <script>
      $(document).ready(function() {

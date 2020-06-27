@@ -1,0 +1,45 @@
+<style>
+.usbrow {
+	height: 2rem;
+        font: sans-serif;
+}
+.usbrow:hover {
+	background: rgb(243, 242, 241) none repeat scroll 0% 0%;
+        }
+
+.usbrow .action {
+	display: none;
+}
+.usbrow:hover .action {
+	display: inline;
+}
+
+</style>
+
+<h1 class="mt-5">Devices</h1>
+
+<div class="container">
+ <div class="row">
+  <div class="col-md-2">ID</div>
+  <div class="col-md-3">Vendor</div>
+  <div class="col-md-3">Product</div>
+  <div class="col-md-1">Connected</div>
+  <div class="col-md-2"></div>
+ </div>
+</div>
+
+<div class="container" id="list">
+ <div class="row usbrow">
+  <div class="col-md-2">2345:a872</div>
+  <div class="col-md-3">Laaa</div>
+  <div class="col-md-3">Plcd</div>
+  <div class="col-md-1">Yes</div>
+  <div class="col-md-1 action"><button class="btn btn-outline-secondary btn-sm action">Edit</button></div>
+ </div>
+</div>
+
+<script>
+	request( "devlist", function(data){ console.log(data)});
+
+</script>
+

@@ -1,6 +1,48 @@
 <html>
-<h1 class="mt-5">SD card</h1>
+<style type="text/css">
+.filerow {
+	height: 2rem;
+        font: sans-serif;
+}
+.filerow:hover {
+	background: rgb(243, 242, 241) none repeat scroll 0% 0%;
+        }
+.filerow .action {
+	display: none;
+}
+.filerow:hover .action {
+	display: inline;
+}
+        
+</style>
+<script>
 
+var path=[];
+
+function updatepath()
+{       	
+        var pe=[];
+        var lpath = ['SD card'];
+        lpath = lpath.concat(path);
+        console.log("size " +lpath.length);
+        var i;
+        for (i=0; i<lpath.length; i++) {	
+        	var v = lpath[i];
+        	if (i==lpath.length-1) {
+        	pe.push(
+                	v );
+                } else {
+        	pe.push(
+                	'<a href="#" onClick="changedirabs(' + "''" + ');">'
+                        + v + '</a>' );
+        	}
+        };
+        
+      
+	$("#path").html(pe.join("<span>/</span>"));
+}
+
+</script>
 <!--
 <div id="up" onDrop="upload()">Drag here to upload</div>
 
@@ -9,23 +51,70 @@
  </form>
 
 <div>-->
-<ul id="list">
-<li>jkjk</li>
-</ul>
 
+
+<div class="container">
+ <div class="row">
+  <div class="col-xs-6">
+  <button class="btn btn-outline-primary" id="uploadbutton">Upload...</button>
+  </div>
+ </div>
+</div>
+
+<div class="container">
+Browsing: <span id="path"></span></div>
+</div>
+
+<p/>
+
+<div class="container">
+ <div class="row">
+  <div class="col-md-1"></div>
+  <div class="col-md-4">Name</div>
+  <div class="col-md-1">Size</div>
+  <div class="col-md-1"></div>
+ </div>
+</div>
+
+<div class="container" id="list">
 </div>
 
 
 <script>
+        
+        function icompare(a,b)
+        {
+    		a = a.toLowerCase();
+    		b = b.toLowerCase();
+    		if (a == b) return 0;
+    		if (a > b) return 1;
+    		return -1;
+	}
 	function status( data ) {
         	console.log(data);
+                updatepath();
         	var items = [];
-                
+                data.entries.sort(function(a,b){
+                	if (a.type!=b.type) {
+                         return icompare(a.type,b.type);
+                        }
+                        return icompare(a.name,b.name);
+                });
            	$.each( data.entries, function( key, val ) {
                 	if (val.type=="file") {
-           			items.push("<li> [File] "+val.name + "</li>");
+           			items.push('<div class="row filerow">'
+                                +'<div class="col-md-1"><img src="cassete.png"/></div>' 
+                                +'<div class="col-md-4">'+ val.name + '</div>'
+                                +'<div class="col-md-1">'+ val.size + '</div>'
+                                +'<div class="col-md-2"><button class="btn btn-outline-secondary btn-sm action">Remove</button></div>'
+                                +'</div>');
                         } else {
-           			items.push("<li> [DIR] "+val.name + "</li>");
+           			items.push('<div class="row filerow">'
+                                +'<div class="col-md-1">Dir</div>' 
+                                +'<div class="col-md-4"><a href="#" onClick="enterdir('+ "'" + val.name + "'" +'); return false;">'+ val.name + '</a></div>'
+                                +'<div class="col-md-1"></div>'
+                                +'</div>');
+           			
                         }
            	});
            
@@ -33,21 +122,87 @@
      
 	}
         
-        function upload(ev) {
-  		ev.stopPropagation();
-  		ev.preventDefault();
+        var Uploader = function (file) {
+    		this.file = file;
+	};
 
-  		var files = ev.originalEvent.dataTransfer.files, filePairs = [];
-  		for (var i = 0; i < files.length; i++) {
-      			filePairs.push(files[i].name);
-    		}
-	}
+	Uploader.prototype.getName = function() {
+    		return this.file.name;
+	};
+
+	Uploader.prototype.doUpload = function (successcb, errorcb) {
+    		var that = this;
+    		var formData = new FormData();                        
+                
+		$.ajax({
+        		type: "POST",
+        		url: "upload/file?path="+getpath()+"/"+this.getName(),
+        		xhr: function () {
+                        var myXhr = $.ajaxSettings.xhr();
+                        if (myXhr.upload) {
+                            myXhr.upload.addEventListener('progress', that.progressHandling, false);
+                        }
+                        return myXhr;
+	        },
+                success: successcb,
+                error: errorcb,
+                async: true,
+                data: this.file,
+                cache: false,
+                contentType: false,
+                processData: false,
+                timeout: 60000
+            });
+	};
         
+        function upload(ev) {
+            ev.stopPropagation();
+            ev.preventDefault();
+            var input = document.createElement('input');
+            input.type = 'file';
+  
+            input.onchange = e => { 
+                    var file = e.target.files[0];
+                    var u = new Uploader(file);
+                    u.doUpload( function () { 
+                        alert("Uploaded");       
+		    	request_data( "list", { "path": "/"+getpath() }, status );
+
+                    }, function(error) { 
+                    	displayerror("Error uploading");
+	                    });
+            };
+            input.click();
+        }
+
+	function getpath()
+        {
+        	return path.join("/");
+        }
         
+	function changedirabs(dir)
+        {
+        	if (dir=="") {
+                	path=[];
+                }
+                else {
+        		path = dir.split("/\\//");
+		}
+        	request_data( "list", { "path": "/"+getpath() }, status );
+                console.log("PATH "+getpath());
+        }
+        function enterdir(dir)
+        {
+        	path.push(dir);
+        	request_data( "list", { "path": "/"+getpath() }, status );
+                console.log("PATH "+getpath());
+
+        }
 </script>
 
 <script>
-	request_data( "list", { "path": "/"}, status );
+	$("#uploadbutton").click(upload);
+        changedirabs('');
 </script>
 
 </html>

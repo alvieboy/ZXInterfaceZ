@@ -1,0 +1,24 @@
+
+<h1 class="mt-5">WiFi</h1>
+
+<div class="container">
+ <div class="row">
+  <div class="col-xs-6">
+  <button class="btn btn-outline-primary" id="scanbutton">Scan...</button>
+  </div>
+ </div>
+</div>
+
+<script>
+
+	function scan()
+    	{
+		request( "startscan", function(data){ console.log(data)});
+	};
+
+                      
+	$("#scanbutton").click(scan);
+	request( "wifi", function(data){ console.log(data)});
+
+</script>
+
