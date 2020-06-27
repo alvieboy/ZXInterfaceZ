@@ -144,3 +144,39 @@ int nvs__str(const char *key, char *value, unsigned maxlen, const char* def)
     }
     return r;
 }
+
+int nvs__set_u32(const char *key, uint32_t val)
+{
+    esp_err_t err;
+    if (nvsh==NVS_NO_HANDLE) {
+        err = nvs_open(STORAGE_NAMESPACE, NVS_READWRITE, &nvsh);
+        if (err != ESP_OK) return err;
+    }
+    return nvs_set_u32(nvsh,key,val);
+}
+
+int nvs__set_u8(const char *key, uint8_t val)
+{
+    esp_err_t err;
+    if (nvsh==NVS_NO_HANDLE) {
+        err = nvs_open(STORAGE_NAMESPACE, NVS_READWRITE, &nvsh);
+        if (err != ESP_OK) return err;
+    }
+    return nvs_set_u8(nvsh,key,val);
+
+}
+
+int nvs__set_str(const char *key, const char* val)
+{
+    esp_err_t err;
+    if (nvsh==NVS_NO_HANDLE) {
+        err = nvs_open(STORAGE_NAMESPACE, NVS_READWRITE, &nvsh);
+        if (err != ESP_OK) return err;
+    }
+    return nvs_set_str(nvsh,key,val);
+}
+
+int nvs__commit()
+{
+    return nvs_commit(nvsh);
+}

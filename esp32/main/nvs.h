@@ -18,8 +18,13 @@ uint32_t nvs__u32(const char *key, uint32_t def);
 uint8_t nvs__u8(const char *key, uint8_t def);
 int nvs__str(const char *key, char *value, unsigned maxlen, const char* def);
 
-void nvs__close();
+int nvs__set_u32(const char *key, uint32_t val);
+int nvs__set_u8(const char *key, uint8_t val);
+int nvs__set_str(const char *key, const char* val);
 
+int nvs__commit();
+
+void nvs__close();
 
 
 
