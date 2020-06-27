@@ -213,7 +213,7 @@ begin
           end if;
 
         when others =>
-        report "Uninmplemneted" severity failure;
+        report "Uninmplemented" severity failure;
   
       end case;
 
