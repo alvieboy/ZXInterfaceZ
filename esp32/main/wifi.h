@@ -21,6 +21,11 @@ int wifi__scan( const wifi_scan_parser_t *parser, void *data );
 cJSON *wifi__ap_get_json();
 int wifi__scan_json();
 
+int wifi__config_sta(const char *ssid, const char *pwd);
+int wifi__config_ap(const char *ssid, const char *pwd, uint8_t channel);
+
+
+
 
 
 extern char wifi_ssid[33];

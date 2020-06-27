@@ -154,6 +154,11 @@ static esp_netif_t *netif;
 
 void wifi_init_softap()
 {
+    if (netif) {
+        esp_netif_destroy(netif);
+        esp_wifi_stop();
+    }
+
     netif = esp_netif_create_default_wifi_ap();
 
     ESP_ERROR_CHECK(esp_netif_dhcps_stop(netif));
@@ -172,23 +177,8 @@ void wifi_init_softap()
     ESP_ERROR_CHECK(esp_netif_set_ip_info(netif, &info));
     ESP_ERROR_CHECK(esp_netif_dhcps_start(netif));
 
-
-    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
-
-    ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL));
-
     wifi_config_t wifi_config;
-    /*= {
-        .ap = {
-            .channel = 3,
-            .ssid = EXAMPLE_ESP_WIFI_SSID,
-            .ssid_len = strlen(EXAMPLE_ESP_WIFI_SSID),
-            .password = EXAMPLE_ESP_WIFI_PASS,
-            .max_connection = EXAMPLE_MAX_STA_CONN,
-            .authmode = WIFI_AUTH_WPA_WPA2_PSK
-        },
-        };*/
+
     memset(&wifi_config,0,sizeof(wifi_config));
 
     wifi_config.ap.channel = nvs__u8("ap_chan", 3);
@@ -214,21 +204,10 @@ void wifi_init_softap()
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
     ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_AP, &wifi_config));
     ESP_ERROR_CHECK(esp_wifi_start());
-
-    ESP_LOGI(TAG, "wifi_init_softap finished. SSID:%s password:%s, max sta %d", 
-             EXAMPLE_ESP_WIFI_SSID, EXAMPLE_ESP_WIFI_PASS, EXAMPLE_MAX_STA_CONN);
 }
 
-void wifi_init_wpa2()
+static void wifi__init_core()
 {
-    issta = true;
-
-    mdns_free();
-
-    netif = esp_netif_create_default_wifi_sta();
-
-    ESP_ERROR_CHECK(esp_netif_dhcps_stop(netif));
-
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
 
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
@@ -236,6 +215,21 @@ void wifi_init_wpa2()
     ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL));
     ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, ESP_EVENT_ANY_ID, &ip_event_handler, NULL));
 
+}
+
+void wifi_init_wpa2()
+{
+    if (netif) {
+        esp_netif_destroy(netif);
+        esp_wifi_stop();
+    }
+
+    issta = true;
+
+    mdns_free();
+
+    netif = esp_netif_create_default_wifi_sta();
+    ESP_ERROR_CHECK(esp_netif_dhcps_stop(netif));
 
     wifi_config_t wifi_config;
     memset(&wifi_config, 0, sizeof(wifi_config));
@@ -267,6 +261,7 @@ void wifi__init()
     esp_netif_init();
     ESP_ERROR_CHECK(esp_event_loop_create_default());
 
+    wifi__init_core();
     if (nvs__u8("wifi", WIFI_MODE_AP)==WIFI_MODE_STA) {
         wifi_init_wpa2();
     } else {
@@ -283,6 +278,69 @@ static int wifi__start_scan()
     }
     xEventGroupSetBits(s_wifi_event_group, WIFI_SCANNING_BIT);
     return 0;
+}
+
+int wifi__config_sta(const char *ssid, const char *pwd)
+{
+    esp_err_t err;
+
+    err = nvs__set_str("sta_ssid", ssid);
+
+    if (err<0)
+        return err;
+
+    err = nvs__set_str("sta_pwd", pwd);
+    if (err<0)
+        return err;
+
+    err = nvs__set_u8("wifi", WIFI_MODE_STA);
+
+    if (err<0)
+        return err;
+
+    err = nvs__commit();
+
+    if (err<0)
+        return err;
+
+    wifi_init_wpa2();
+
+    return 0;
+}
+
+int wifi__config_ap(const char *ssid, const char *pwd, uint8_t channel)
+{
+    esp_err_t err;
+
+    err = nvs__set_str("ap_ssid", ssid);
+
+    if (err<0)
+        return err;
+
+    err = nvs__set_str("ap_pwd", pwd);
+
+    if (err<0)
+        return err;
+
+    err = nvs__set_u8("ap_chan", channel);
+
+    if (err<0)
+        return err;
+
+    err = nvs__set_u8("wifi", WIFI_MODE_AP);
+
+    if (err<0)
+        return err;
+
+    err = nvs__commit();
+
+    if (err<0)
+        return err;
+
+    wifi_init_softap();
+
+    return 0;
+
 }
 
 

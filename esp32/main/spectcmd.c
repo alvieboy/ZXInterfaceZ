@@ -11,14 +11,20 @@
 #include "interfacez_resources.h"
 #include "sna.h"
 #include "tapeplayer.h"
+#include "wifi.h"
 
 #define COMMAND_BUFFER_MAX 128
 static uint8_t command_buffer[COMMAND_BUFFER_MAX]; // Max 128 bytes.
-static uint8_t cmdptr = 0;
+static uint8_t __cmdptr = 0;
+
+static void spectcmd__removedata()
+{
+    __cmdptr = 0;
+}
 
 void spectcmd__init()
 {
-    cmdptr = 0;
+    spectcmd__removedata();
 }
 
 static void spectcmd__ackinterrupt()
@@ -31,13 +37,18 @@ static int spectcmd__loadresource(struct resource *r)
     return resource__sendtofifo(r);
 }
 
-static int spectcmd__set_filter()
-{
-    if (cmdptr<2) {
-        return -1;
-    }
+#define NEED(x) do {  \
+    if (len<x) { \
+    return -1; \
+    } \
+    len-=x; \
+} while (0);
 
-    cmdptr = 0;
+static int spectcmd__set_filter(unsigned len)
+{
+    NEED(1);
+
+    spectcmd__removedata();
 
     directory_resource__set_filter(&directoryresource, command_buffer[1]);
 
@@ -45,17 +56,15 @@ static int spectcmd__set_filter()
 }
 
 
-static int spectcmd__load_resource()
+static int spectcmd__load_resource(unsigned len)
 {
     int ret = 0;
     struct resource *r;
     uint8_t error_resp = 0xff;
 
-    if (cmdptr<2) {
-        return ret;
-    }
+    NEED(1);
 
-    cmdptr = 0;
+    spectcmd__removedata();
 
     r = resource__find(command_buffer[1]);
     if (r!=NULL) {
@@ -70,21 +79,18 @@ static int spectcmd__load_resource()
     return ret;
 }
 
-static int spectcmd__savesna()
+static int spectcmd__savesna(unsigned len)
 {
     char filename[64];
     int ret = 0;
-    if (cmdptr<2) {
-        return ret;
-    }
+
+    NEED(1);
 
     uint8_t filelen = command_buffer[1];
-    int psize = 2+filelen;
 
-    if (cmdptr < psize)
-        return ret;
+    NEED(filelen);
 
-    cmdptr = 0;
+    spectcmd__removedata();
 
     opstatus__set_status( OPSTATUS_IN_PROGRESS, "");
     ESP_LOGI(TAG, "Saving snapshot file len %d", filelen);
@@ -110,49 +116,46 @@ static int spectcmd__savesna()
     return ret;
 }
 
-static int spectcmd__enterdir()
+static int spectcmd__enterdir(unsigned len)
 {
     int ret = 0;
-    if (cmdptr<2) {
-        return ret;
-    }
+
+    NEED(1);
 
     uint8_t dirlen = command_buffer[1];
-    int psize = 2+dirlen;
 
-    if (cmdptr < psize)
-        return ret;
+    NEED(dirlen);
 
     opstatus__set_status(OPSTATUS_IN_PROGRESS,"");
 
     // NULL-terminate string
-    command_buffer[cmdptr] = '\0';
+    command_buffer[__cmdptr] = '\0';
     ESP_LOGI(TAG,"Chdir request to '%s'", &command_buffer[2]);
     if (__chdir((const char*)&command_buffer[2])!=0) {
         opstatus__set_status(OPSTATUS_ERROR,"Cannot chdir");
     } else {
         opstatus__set_status(OPSTATUS_SUCCESS,"");
     }
-    cmdptr = 0;
+
+    spectcmd__removedata();
+
     return ret;
 }
 
-static int spectcmd__loadsna()
+static int spectcmd__loadsna(unsigned len)
 {
     char filename[32];
     int ret = 0;
-    if (cmdptr<2) {
-        return ret;
-    }
+
+    NEED(1);
 
     uint8_t filenamelen = command_buffer[1];
-    int psize = 2+filenamelen;
 
-    if (cmdptr < psize)
-        return ret;
+    NEED(filenamelen);
 
     ESP_LOGI(TAG,"Loading snapshot from filesystem");
-    cmdptr = 0;
+
+    spectcmd__removedata();
 
     opstatus__set_status(OPSTATUS_IN_PROGRESS,"");
 
@@ -171,22 +174,20 @@ static int spectcmd__loadsna()
     return ret;
 }
 
-static int spectcmd__playtape()
+static int spectcmd__playtape(unsigned len)
 {
     char filename[32];
     int ret = 0;
-    if (cmdptr<2) {
-        return ret;
-    }
+
+    NEED(1);
 
     uint8_t filenamelen = command_buffer[1];
-    int psize = 2+filenamelen;
 
-    if (cmdptr < psize)
-        return ret;
+    NEED(filenamelen);
 
     ESP_LOGI(TAG,"Playing tape");
-    cmdptr = 0;
+
+    spectcmd__removedata();
 
     opstatus__set_status(OPSTATUS_IN_PROGRESS,"");
 
@@ -198,16 +199,19 @@ static int spectcmd__playtape()
     return ret;
 }
 
-static int spectcmd__setvideomode()
+static int spectcmd__setvideomode(unsigned len)
 {
     int ret = 0;
-    if (cmdptr<2) {
-        return ret;
-    }
+
+    NEED(1);
+
     uint8_t mode = command_buffer[1];
+
     if (mode>3)
         mode = 0;
-    cmdptr = 0;
+
+    spectcmd__removedata();
+
     switch (mode) {
     case 0:
         fpga__clear_flags(FPGA_FLAG_VIDMODE0 | FPGA_FLAG_VIDMODE1);
@@ -225,6 +229,51 @@ static int spectcmd__setvideomode()
     return ret;
 }
 
+static int spectcmd__setwifi(unsigned len)
+{
+    const uint8_t *buf = &command_buffer[1];
+    const char *ssidstart;
+    const char *pwdstart;
+    char ssid[33];
+    char pwd[33];
+    uint8_t channel;
+
+    NEED(1);
+
+    uint8_t mode = *buf++;
+
+    uint8_t ssidlen = *buf++;
+    NEED(ssidlen);
+    ssidstart = (const char*)buf;
+    buf += ssidlen;
+    uint8_t pwdlen = *buf++;
+    NEED(pwdlen);
+    pwdstart = (const char*)buf;
+    buf += pwdlen;
+
+    if ((ssidlen>32) || (pwdlen>32)) {
+        spectcmd__removedata();
+        return -1;
+    }
+
+    if (mode==0x00) { // AP
+        NEED(1);
+        channel = *buf++;
+        strncpy(ssid, ssidstart, ssidlen);
+        strncpy(pwd, pwdstart, pwdlen);
+
+        return wifi__config_ap(ssid, pwd, channel);
+    } else {
+        // STA
+        strncpy(ssid, ssidstart, ssidlen);
+        strncpy(pwd, pwdstart, pwdlen);
+        return wifi__config_sta(ssid, pwd);
+    }
+
+    spectcmd__removedata();
+    return 0;
+}
+
 static int spectcmd__check()
 {
     int ret = 0;
@@ -233,29 +282,32 @@ static int spectcmd__check()
     ESP_LOGI(TAG,"Command in: %02x", command_buffer[0]);
     switch (command_buffer[0]) {
     case SPECTCMD_CMD_GETRESOURCE:
-        ret = spectcmd__load_resource();
+        ret = spectcmd__load_resource(__cmdptr-1);
         break;
     case SPECTCMD_CMD_SAVESNA:
-        ret = spectcmd__savesna();
+        ret = spectcmd__savesna(__cmdptr-1);
         break;
     case SPECTCMD_CMD_ENTERDIR:
-        ret = spectcmd__enterdir();
+        ret = spectcmd__enterdir(__cmdptr-1);
         break;
     case SPECTCMD_CMD_SETFILEFILTER:
-        ret = spectcmd__set_filter();
+        ret = spectcmd__set_filter(__cmdptr-1);
         break;
     case SPECTCMD_CMD_LOADSNA:
-        ret = spectcmd__loadsna();
+        ret = spectcmd__loadsna(__cmdptr-1);
         break;
     case SPECTCMD_CMD_PLAYTAPE:
-        ret = spectcmd__playtape();
+        ret = spectcmd__playtape(__cmdptr-1);
         break;
     case SPECTCMD_CMD_SETVIDEOMODE:
-        ret = spectcmd__setvideomode();
+        ret = spectcmd__setvideomode(__cmdptr-1);
+        break;
+    case SPECTCMD_CMD_SETWIFI:
+        ret = spectcmd__setwifi(__cmdptr-1);
         break;
     default:
         ESP_LOGI(TAG, "Invalid command 0x%02x", command_buffer[0]);
-        cmdptr=0;
+        spectcmd__removedata();
         ret = fpga__load_resource_fifo(&error_resp, sizeof(error_resp), RESOURCE_DEFAULT_TIMEOUT);
         break;
     }
@@ -274,8 +326,8 @@ void spectcmd__request()
         if (r<0) {
             break; // No more data
         }
-        if (cmdptr<sizeof(command_buffer)) {
-            command_buffer[cmdptr++] = r & 0xff;
+        if (__cmdptr<sizeof(command_buffer)) {
+            command_buffer[__cmdptr++] = r & 0xff;
             spectcmd__check();
         } else {
             ESP_LOGW(TAG, "Command buffer overflow!");
