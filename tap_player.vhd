@@ -96,7 +96,7 @@ begin
     rd_o          <= '0';
     pulse_ready_s <= '0';
     pulse_len_s     <= (others => 'X');
-
+    pulse_data_s    <= (others => 'X');
     if enable_i='1' then
 
       case r.state is
