@@ -54,7 +54,7 @@ entity interfacez_top is
     FLED_o        : out std_logic_vector(2 downto 0);
 
     -- RAM interface
-    RAMD_io       : inout std_logic_vector(7 downto 0);
+    RAMD_io       : inout std_logic_vector(3 downto 0);
     RAMCLK_o      : out std_logic;
     RAMNCS_o      : out std_logic;
 
@@ -63,19 +63,19 @@ entity interfacez_top is
     USB_VM_i      : in std_logic;
     USB_RCV_i     : in std_logic;
     USB_OE_o      : out std_logic;
-    USB_SOFTCON_o : out std_logic;
+    USB_MODE_o    : out std_logic;
     USB_SPEED_o   : out std_logic;
+    USB_SUSPEND_o : out std_logic;
     USB_VMO_o     : out std_logic;
     USB_VPO_o     : out std_logic;
     -- USB power control
     USB_FLT_i     : in std_logic;
     USB_PWREN_o   : out std_logic;
     -- Extension connector
-    EXT_o         : out std_logic_vector(7 downto 0);
+    EXT_io        : inout std_logic_vector(13 downto 0);
 
     -- Testpoints
-    TP4_o         : out std_logic;
-    TP5_o         : out std_logic
+    TP4_o         : out std_logic
   );
 end interfacez_top;
 
@@ -181,8 +181,10 @@ begin
       USB_VM_i      => USB_VM_i,
       USB_RCV_i     => USB_RCV_i,
       USB_OE_o      => USB_OE_o,
-      USB_SOFTCON_o => USB_SOFTCON_o,
+      USB_SOFTCON_o => open,
       USB_SPEED_o   => USB_SPEED_o,
+      USB_MODE_o    => USB_MODE_o,
+      USB_SUSPEND_o => USB_SUSPEND_o,
       USB_VMO_o     => USB_VMO_o,
       USB_VPO_o     => USB_VPO_o,
       -- USB power control
@@ -190,7 +192,6 @@ begin
       USB_PWREN_o   => USB_PWREN_o,
       USB_INTN_o    => ESP_QWP_io, -- TODO: Rename
       -- Debug
-      TP5           => TP5_o,
       TP4           => TP4_o,
       dbg_o         => dbg_s,
       -- Interrupts
@@ -208,22 +209,23 @@ begin
 
   extconn_vga: if C_ENABLE_VGA generate
 
-    EXT_o(0) <= hsync_s;
-    EXT_o(1) <= vsync_s;
-    EXT_o(2) <= grb_s(1); -- Red 1
-    EXT_o(3) <= bright_s and grb_s(1); -- Red 0
+    EXT_io(0) <= hsync_s;
+    EXT_io(1) <= vsync_s;
+    EXT_io(2) <= grb_s(1); -- Red 1
+    EXT_io(3) <= bright_s and grb_s(1); -- Red 0
   
-    EXT_o(4) <= grb_s(2); -- Green 1
-    EXT_o(5) <= bright_s and grb_s(2); -- Green 0
+    EXT_io(4) <= grb_s(2); -- Green 1
+    EXT_io(5) <= bright_s and grb_s(2); -- Green 0
   
-    EXT_o(6) <= grb_s(0); -- Blue 1
-    EXT_o(7) <= bright_s and grb_s(0); -- Blue 0
+    EXT_io(6) <= grb_s(0); -- Blue 1
+    EXT_io(7) <= bright_s and grb_s(0); -- Blue 0
 
   end generate;
 
   extconn_dbg: if not C_ENABLE_VGA generate
-    EXT_o     <= dbg_s(7 downto 0);
+    EXT_io(7 downto 0)     <= dbg_s(7 downto 0);
   end generate;
+  EXT_io(13 downto 8) <= (others => 'Z');
 
   FORCE_ROMCS_o   <= FORCE_ROMCS_s;
   FORCE_NMI_o     <= FORCE_NMI_s;

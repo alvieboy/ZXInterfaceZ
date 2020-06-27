@@ -65,6 +65,8 @@ ENTITY usbhostctrl IS
     speed_o     : out std_logic;
     vpo_o       : out std_logic;
     vmo_o       : out std_logic;
+    mode_o      : out std_logic;
+    suspend_o   : out std_logic;
 
     rcv_i       : in std_logic;
     vp_i        : in  std_logic;
@@ -262,6 +264,7 @@ ARCHITECTURE rtl OF usbhostctrl is
 BEGIN
 
   rstinv      <= not ausbrst_i;
+  suspend_o   <= '0';
 
   statusreg_s <= '0' &
     r.sr.fulllowspeed & 
