@@ -41,7 +41,7 @@ static esp_err_t webserver__set_content_type_from_file(httpd_req_t *req, const c
         return httpd_resp_set_type(req, "image/x-icon");
     } else if (IS_FILE_EXT(filename, ".css")) {
         return httpd_resp_set_type(req, "text/css");
-    }else if (IS_FILE_EXT(filename, ".css.gz")) {
+    } else if (IS_FILE_EXT(filename, ".css.gz")) {
         return httpd_resp_set_type(req, "text/css");
     } else if (IS_FILE_EXT(filename, ".js")) {
         return httpd_resp_set_type(req, "text/javascript");
@@ -116,14 +116,14 @@ static esp_err_t webserver__get_handler(httpd_req_t *req)
 
     if (!filename) {
         ESP_LOGE(TAG, "Filename is too long");
-        /* Respond with 500 Internal Server Error */
-        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Filename too long");
+        /* Respond with 400 Bad request */
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Filename too long");
         return ESP_FAIL;
     }
 
     /* If name has trailing '/', respond with directory contents */
     if (filename[strlen(filename) - 1] == '/') {
-        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Filename too long");
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Filename can not end with /");
 
         //return http_resp_dir_html(req, filepath);
     }
@@ -145,7 +145,6 @@ static esp_err_t webserver__get_handler(httpd_req_t *req)
         /* If file not present on SPIFFS check if URI
          * corresponds to one of the hardcoded paths */
         ESP_LOGE(TAG, "Failed to stat file : %s", filepath);
-        /* Respond with 404 Not Found */
         httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "File does not exist");
         return ESP_FAIL;
     }
@@ -202,11 +201,11 @@ static esp_err_t webserver__req_get_handler(httpd_req_t *req)
     webserver_req_handler_t handler = webserver_req__find_handler(req->uri);
 
     if (handler==NULL) {
-        /* Respond with 404 Not Found */
-        httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "File does not exist");
+        httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "Not found");
         return ESP_FAIL;
     }
 
+    // TODO Maybe use httpd_rq_get_url_query_len to allocate query buffer.
     int r = httpd_req_get_url_query_str(req, query, sizeof(query));
     switch (r) {
     case ESP_OK:
@@ -216,7 +215,7 @@ static esp_err_t webserver__req_get_handler(httpd_req_t *req)
         break;
     default:
         ESP_LOGE(TAG,"Cannot get query or invalid query string");
-        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Invalid query string");
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid query string");
         return ESP_FAIL;
     }
 
@@ -238,8 +237,7 @@ static esp_err_t webserver__req_post_handler(httpd_req_t *req)
     webserver_req_handler_t handler = webserver_req__find_post_handler(req->uri);
 
     if (handler==NULL) {
-        /* Respond with 404 Not Found */
-        httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "File does not exist");
+        httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "Not found");
         return ESP_FAIL;
     }
 
@@ -252,7 +250,7 @@ static esp_err_t webserver__req_post_handler(httpd_req_t *req)
         break;
     default:
         ESP_LOGE(TAG,"Cannot get query or invalid query string");
-        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Invalid query string");
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid query string");
         return ESP_FAIL;
     }
 
