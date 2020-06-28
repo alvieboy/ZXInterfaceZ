@@ -152,7 +152,7 @@ static const wifi_scan_config_t scan_config = {
 
 static esp_netif_t *netif;
 
-void wifi_init_softap()
+void wifi__init_softap()
 {
     if (netif) {
         esp_netif_destroy(netif);
@@ -217,7 +217,7 @@ static void wifi__init_core()
 
 }
 
-void wifi_init_wpa2()
+void wifi__init_wpa2()
 {
     if (netif) {
         esp_netif_destroy(netif);
@@ -263,9 +263,9 @@ void wifi__init()
 
     wifi__init_core();
     if (nvs__u8("wifi", WIFI_MODE_AP)==WIFI_MODE_STA) {
-        wifi_init_wpa2();
+        wifi__init_wpa2();
     } else {
-        wifi_init_softap();
+        wifi__init_softap();
     }
 }
 
@@ -280,68 +280,6 @@ static int wifi__start_scan()
     return 0;
 }
 
-int wifi__config_sta(const char *ssid, const char *pwd)
-{
-    esp_err_t err;
-
-    err = nvs__set_str("sta_ssid", ssid);
-
-    if (err<0)
-        return err;
-
-    err = nvs__set_str("sta_pwd", pwd);
-    if (err<0)
-        return err;
-
-    err = nvs__set_u8("wifi", WIFI_MODE_STA);
-
-    if (err<0)
-        return err;
-
-    err = nvs__commit();
-
-    if (err<0)
-        return err;
-
-    wifi_init_wpa2();
-
-    return 0;
-}
-
-int wifi__config_ap(const char *ssid, const char *pwd, uint8_t channel)
-{
-    esp_err_t err;
-
-    err = nvs__set_str("ap_ssid", ssid);
-
-    if (err<0)
-        return err;
-
-    err = nvs__set_str("ap_pwd", pwd);
-
-    if (err<0)
-        return err;
-
-    err = nvs__set_u8("ap_chan", channel);
-
-    if (err<0)
-        return err;
-
-    err = nvs__set_u8("wifi", WIFI_MODE_AP);
-
-    if (err<0)
-        return err;
-
-    err = nvs__commit();
-
-    if (err<0)
-        return err;
-
-    wifi_init_softap();
-
-    return 0;
-
-}
 
 
 #else
@@ -377,6 +315,14 @@ bool wifi__scanning()
 bool wifi__issta()
 {
     return false;
+}
+
+void wifi__init_softap()
+{
+}
+
+void wifi__init_wpa2()
+{
 }
 
 char wifi_ssid[33] = {0} ;
@@ -549,5 +495,68 @@ int wifi__scan( const wifi_scan_parser_t *parser, void *data )
         scan_parser = NULL;
 
     return r;
+}
+
+int wifi__config_sta(const char *ssid, const char *pwd)
+{
+    esp_err_t err;
+
+    err = nvs__set_str("sta_ssid", ssid);
+
+    if (err<0)
+        return err;
+
+    err = nvs__set_str("sta_pwd", pwd);
+    if (err<0)
+        return err;
+
+    err = nvs__set_u8("wifi", WIFI_MODE_STA);
+
+    if (err<0)
+        return err;
+
+    err = nvs__commit();
+
+    if (err<0)
+        return err;
+
+    wifi__init_wpa2();
+
+    return 0;
+}
+
+int wifi__config_ap(const char *ssid, const char *pwd, uint8_t channel)
+{
+    esp_err_t err;
+
+    err = nvs__set_str("ap_ssid", ssid);
+
+    if (err<0)
+        return err;
+
+    err = nvs__set_str("ap_pwd", pwd);
+
+    if (err<0)
+        return err;
+
+    err = nvs__set_u8("ap_chan", channel);
+
+    if (err<0)
+        return err;
+
+    err = nvs__set_u8("wifi", WIFI_MODE_AP);
+
+    if (err<0)
+        return err;
+
+    err = nvs__commit();
+
+    if (err<0)
+        return err;
+
+    wifi__init_softap();
+
+    return 0;
+
 }
 
