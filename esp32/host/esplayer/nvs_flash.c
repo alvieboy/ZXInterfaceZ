@@ -95,3 +95,40 @@ void nvs_close(nvs_handle_t handle)
 {
 }
 
+esp_err_t nvs_set_u32 (nvs_handle_t handle, const char* key,
+                       uint32_t value)
+{
+    g_key_file_set_int64 (f,
+                          "interfacez",
+                          key,
+                          value);
+    return ESP_OK;
+}
+
+esp_err_t nvs_set_u8 (nvs_handle_t handle, const char* key,
+                      uint8_t value)
+{
+    return nvs_set_u32(handle, key, value);
+}
+
+esp_err_t nvs_set_str (nvs_handle_t handle, const char* key,
+                      const char*value)
+{
+    g_key_file_set_string (f,
+                          "interfacez",
+                          key,
+                          value);
+
+}
+
+esp_err_t nvs_commit(nvs_handle_t handle)
+{
+    GError *error = NULL;
+    if (!g_key_file_save_to_file (f, "nvs.txt", &error))
+    {
+        fprintf(stderr, "Error saving key file: %s", error->message);
+        return ESP_ERR_NVS_BASE;
+    }
+    return ESP_OK;
+}
+
