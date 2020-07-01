@@ -49,14 +49,15 @@ entity ym2149_mixer is
     noise_i           : in std_logic;
     chan_volume_i     : in std_logic_vector(4 downto 0);
     env_volume_i      : in std_logic_vector(3 downto 0);
-    audio_o           : out std_logic_vector(7 downto 0)
+    audio_o           : out std_logic_vector(7 downto 0);
+    update_o          : out std_logic
   );
 end entity ym2149_mixer;
 
 architecture beh of ym2149_mixer is
 
   signal audio_r  : std_logic_vector(3 downto 0);
-
+  signal update_r : std_logic;
 begin
 
   volume_inst: entity work.ym2149_volume
@@ -68,8 +69,10 @@ begin
   process(clk_i, arst_i)
   begin
     if arst_i='1' then
-      audio_r <= (others => '0');
+      audio_r   <= (others => '0');
+      update_r  <='0';
     elsif rising_edge(clk_i) then
+      update_r  <= '0';
       if clken_i='1' then
         if ((disable_tone_i or freq_i) and (disable_noise_i or noise_i)) = '0' then
           audio_r <= (others => '0');
@@ -79,8 +82,11 @@ begin
           -- Envelope
           audio_r <= env_volume_i(3 downto 0);
         end if;
+        update_r <= '1';
       end if;
     end if;
   end process;
 
+  update_o <= update_r;
+  
 end beh;

@@ -45,6 +45,7 @@ entity ym2149_clocking is
     arst_i      : in std_logic;
     clkdiv16_o  : out std_logic;
     clkdiv8_o   : out std_logic;
+    dsel_o      : out std_logic_vector(1 downto 0);
     env_div_o   : out std_logic
   );
 end entity ym2149_clocking;
@@ -72,13 +73,13 @@ begin
     end if;
   end process;
 
-  clkdiv8_s <= '1' when cnt_r(2 downto 0)="000" and clken_i='1' else '0';
-  clkdiv16_s <= '1' when cnt_r(3 downto 0)="0000" and clken_i='1' else '0';
+  clkdiv8_s   <= '1' when cnt_r(2 downto 0)="000" and clken_i='1' else '0';
+  clkdiv16_s  <= '1' when cnt_r(3 downto 0)="0000" and clken_i='1' else '0';
 
-  env_div_o <= clkdiv16_s; -- For AY. Use clk8 for YM
+  env_div_o   <= clkdiv16_s; -- For AY. Use clk8 for YM
 
-  clkdiv8_o <= clkdiv8_s;
-  clkdiv16_o <= clkdiv16_s;
+  clkdiv8_o   <= clkdiv8_s;
+  clkdiv16_o  <= clkdiv16_s;
 
 end beh;
 

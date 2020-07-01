@@ -83,4 +83,6 @@ begin
     end if;
   end process;
 
+  noise_o <= noise_r;
+
 end beh;

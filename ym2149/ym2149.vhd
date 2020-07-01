@@ -48,6 +48,7 @@ entity ym2149 is
     adr_i     : in std_logic_vector(3 downto 0);
     we_i      : in std_logic;
     rd_i      : in std_logic;
+    update_o  : out std_logic; -- '1' after outputs are updated
     audio_a_o : out std_logic_vector(7 downto 0);
     audio_b_o : out std_logic_vector(7 downto 0);
     audio_c_o : out std_logic_vector(7 downto 0)
@@ -76,6 +77,7 @@ architecture str of ym2149 is
 
   signal env_volume_s     : std_logic_vector(3 downto 0);
   signal audio_s          : audio_array_type;
+  signal updated_s        : std_logic_vector(2 downto 0);
 
 begin
 
@@ -157,7 +159,8 @@ begin
         noise_i         => noise_s,
         chan_volume_i   => volume_s(chan),
         env_volume_i    => env_volume_s,
-        audio_o         => audio_s(chan)
+        audio_o         => audio_s(chan),
+        update_o        => updated_s(chan)
       );
 
   end generate;
@@ -165,5 +168,6 @@ begin
   audio_a_o <= audio_s(0);
   audio_b_o <= audio_s(1);
   audio_c_o <= audio_s(2);
+  update_o <= updated_s(0);
 
 end str;
