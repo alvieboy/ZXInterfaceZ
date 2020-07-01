@@ -164,43 +164,44 @@ set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to XMREQ_i
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to XM1_i
 set_global_assignment -name ENABLE_INIT_DONE_OUTPUT OFF
 set_global_assignment -name ON_CHIP_BITSTREAM_DECOMPRESSION ON
-set_instance_assignment -name IO_STANDARD "3.3-V LVCMOS" -to EXT_io[7]
-set_location_assignment PIN_121 -to EXT_o[7]
-set_location_assignment PIN_124 -to EXT_o[6]
-set_location_assignment PIN_125 -to EXT_o[5]
-set_location_assignment PIN_126 -to EXT_o[4]
-set_location_assignment PIN_127 -to EXT_o[3]
-set_location_assignment PIN_128 -to EXT_o[2]
-set_location_assignment PIN_133 -to EXT_o[1]
+set_location_assignment PIN_144 -to EXT_io[13]
+set_location_assignment PIN_142 -to EXT_io[12]
+set_location_assignment PIN_114 -to EXT_io[11]
+set_location_assignment PIN_115 -to EXT_io[10]
+set_location_assignment PIN_119 -to EXT_io[9]
+set_location_assignment PIN_120 -to EXT_io[8]
+set_location_assignment PIN_121 -to EXT_io[7]
+set_location_assignment PIN_124 -to EXT_io[6]
+set_location_assignment PIN_125 -to EXT_io[5]
+set_location_assignment PIN_126 -to EXT_io[4]
+set_location_assignment PIN_127 -to EXT_io[3]
+set_location_assignment PIN_128 -to EXT_io[2]
+set_location_assignment PIN_133 -to EXT_io[1]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to EXT_io[*]
 set_location_assignment PIN_137 -to FORCE_NMI_o
 set_location_assignment PIN_76 -to FLED_o[0]
 set_location_assignment PIN_77 -to FLED_o[1]
 set_location_assignment PIN_80 -to FLED_o[2]
-set_location_assignment PIN_135 -to EXT_o[0]
+set_location_assignment PIN_135 -to EXT_io[0]
 set_location_assignment PIN_136 -to FORCE_IORQULA_o
 set_location_assignment PIN_2 -to LED2_o
 set_location_assignment PIN_84 -to RAMCLK_o
-set_location_assignment PIN_83 -to RAMD_io[4]
-set_location_assignment PIN_100 -to RAMD_io[3]
-set_location_assignment PIN_87 -to RAMD_io[2]
-set_location_assignment PIN_98 -to RAMD_io[1]
-set_location_assignment PIN_99 -to RAMD_io[0]
-set_location_assignment PIN_103 -to RAMNCS_o
-set_location_assignment PIN_115 -to USB_FLT_i
-set_location_assignment PIN_110 -to USB_OE_o
-set_location_assignment PIN_119 -to USB_PWREN_o
-set_location_assignment PIN_111 -to USB_SOFTCON_o
-set_location_assignment PIN_112 -to USB_SPEED_o
-set_location_assignment PIN_104 -to USB_VM_i
-set_location_assignment PIN_114 -to USB_VMO_o
-set_location_assignment PIN_105 -to USB_VP_i
-set_location_assignment PIN_113 -to USB_VPO_o
-set_location_assignment PIN_144 -to TP5_o
-set_location_assignment PIN_85 -to RAMD_io[7]
-set_location_assignment PIN_86 -to RAMD_io[6]
-set_location_assignment PIN_101 -to RAMD_io[5]
+set_location_assignment PIN_83 -to RAMD_io[0]
+set_location_assignment PIN_87 -to RAMD_io[1]
+set_location_assignment PIN_86 -to RAMD_io[2]
+set_location_assignment PIN_85 -to RAMD_io[3]
+set_location_assignment PIN_98 -to RAMNCS_o
+set_location_assignment PIN_112 -to USB_FLT_i
+set_location_assignment PIN_104 -to USB_OE_o
+set_location_assignment PIN_113 -to USB_PWREN_o
+set_location_assignment PIN_105 -to USB_MODE_o
+set_location_assignment PIN_106 -to USB_SPEED_o
+set_location_assignment PIN_100 -to USB_VM_i
+set_location_assignment PIN_111 -to USB_VMO_o
+set_location_assignment PIN_101 -to USB_VP_i
+set_location_assignment PIN_110 -to USB_VPO_o
+set_location_assignment PIN_103 -to USB_RCV_i
 set_location_assignment PIN_8 -to TP4_o
-set_location_assignment PIN_106 -to USB_RCV_i
 set_global_assignment -name CYCLONEIII_CONFIGURATION_SCHEME "PASSIVE SERIAL"
 set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to RAMCLK_o
 set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to RAMNCS_o
@@ -208,18 +209,10 @@ set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to RAMD_io[0]
 set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to RAMD_io[1]
 set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to RAMD_io[2]
 set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to RAMD_io[3]
-set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to RAMD_io[4]
-set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to RAMD_io[5]
-set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to RAMD_io[6]
-set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to RAMD_io[7]
 set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to RAMD_io[0]
 set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to RAMD_io[1]
 set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to RAMD_io[2]
 set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to RAMD_io[3]
-set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to RAMD_io[4]
-set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to RAMD_io[5]
-set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to RAMD_io[6]
-set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to RAMD_io[7]
 set_global_assignment -name EDA_TEST_BENCH_ENABLE_STATUS TEST_BENCH_MODE -section_id eda_simulation
 set_global_assignment -name EDA_NATIVELINK_SIMULATION_TEST_BENCH t006 -section_id eda_simulation
 set_global_assignment -name EDA_TEST_BENCH_NAME t006 -section_id eda_simulation

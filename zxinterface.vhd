@@ -59,6 +59,8 @@ entity zxinterface is
     USB_RCV_i     : in std_logic;
     USB_OE_o      : out std_logic;
     USB_SOFTCON_o : out std_logic;
+    USB_MODE_o    : out std_logic;
+    USB_SUSPEND_o : out std_logic;
     USB_SPEED_o   : out std_logic;
     USB_VMO_o     : out std_logic;
     USB_VPO_o     : out std_logic;
@@ -1101,6 +1103,8 @@ begin
     speed_o       => USB_SPEED_o,
     vpo_o         => USB_VPO_o,
     vmo_o         => USB_VMO_o,
+    mode_o        => USB_MODE_o,
+    suspend_o     => USB_SUSPEND_o,
 
     rcv_i         => USB_RCV_i,
     vp_i          => USB_VP_i,
