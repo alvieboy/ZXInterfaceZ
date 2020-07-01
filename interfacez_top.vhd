@@ -231,7 +231,12 @@ begin
   extconn_dbg: if not C_ENABLE_VGA generate
     EXT_io(7 downto 0)     <= dbg_s(7 downto 0);
   end generate;
-  EXT_io(13 downto 8) <= (others => 'Z');
+
+  EXT_io(11) <= audio_l_s;
+  EXT_io(12) <= audio_r_s;
+
+  EXT_io(13) <= 'Z';
+  EXT_io(10 downto 8) <= (others => 'Z');
 
   FORCE_ROMCS_o   <= FORCE_ROMCS_s;
   FORCE_NMI_o     <= FORCE_NMI_s;
@@ -240,9 +245,9 @@ begin
   ESP_IO27_o     <= spec_nreq_s;
 
   FLED_o(0)     <= dbg_s(8);
-  FLED_o(1)     <= audio_l_s;--'1';
+  FLED_o(1)     <= '1';
   FLED_o(2)     <= not FORCE_ROMCS_s;
-  LED2_o        <= audio_r_s;--'1';
+  LED2_o        <= '1';
 
   -- The delays are only used for simulation
   ram_buf: entity work.iobuf
