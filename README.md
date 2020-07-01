@@ -18,7 +18,9 @@ This section refers to the schematics and printed circuit board design of the In
 ### Licensing
 Schematics and PCB are released under [CC-BY-SA 2.0](https://creativecommons.org/licenses/by-sa/2.0/). This applies to all versions of the schematics and PCBs.
 ### Version
-Current hardware version is 2.1. This is a prototype version, not intented for general public availability.
+Current hardware version is 2.2. This is a prototype version, not intented for general public availability.
+### Status (version 2.2)
+- Still under test.
 ### Status (version 2.1)
 - Interfacing with ZX Spectrum 48K proven.
 - Support of other Spectrums, like 128K, +2A, +3, will need at least #1 fixed.
