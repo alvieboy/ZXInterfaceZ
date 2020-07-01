@@ -51,7 +51,10 @@ package zxinterfacepkg is
   constant SPECT_PORT_KEMPSTON_MOUSEY_MASK    : std_logic_vector(15 downto 0) := "0000011100100001";
   constant SPECT_PORT_KEMPSTON_MOUSEB         : std_logic_vector(15 downto 0) := "0000001000011111";
   constant SPECT_PORT_KEMPSTON_MOUSEB_MASK    : std_logic_vector(15 downto 0) := "0000001100100001";
-
+  constant SPECT_PORT_AY_REGISTER             : std_logic_vector(15 downto 0) := "1100000000000001";
+  constant SPECT_PORT_AY_REGISTER_MASK        : std_logic_vector(15 downto 0) := "1100000000000011";
+  constant SPECT_PORT_AY_DATA                 : std_logic_vector(15 downto 0) := "1000000000000001";
+  constant SPECT_PORT_AY_DATA_MASK            : std_logic_vector(15 downto 0) := "1100000000000011";
 
 end package;
 

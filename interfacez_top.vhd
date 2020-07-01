@@ -113,6 +113,10 @@ architecture str of interfacez_top is
   signal RAMD_oe_s    : std_logic_vector(7 downto 0);
   signal RAMCLK_s   : std_logic;
   signal RAMNCS_s   : std_logic;
+
+  signal audio_r_s  : std_logic;
+  signal audio_l_s  : std_logic;
+
   signal dbg_s      : std_logic_vector(15 downto 0);
 begin
 
@@ -201,7 +205,9 @@ begin
       hsync_o       => hsync_s,
       vsync_o       => vsync_s,
       bright_o      => bright_s,
-      grb_o         => grb_s
+      grb_o         => grb_s,
+      audio_l_o     => audio_l_s,
+      audio_r_o     => audio_r_s
     );
 
   FORCE_ROMCS_o <= FORCE_ROMCS_s;
@@ -232,9 +238,9 @@ begin
   ESP_IO27_o     <= spec_nreq_s;
 
   FLED_o(0)     <= dbg_s(8);
-  FLED_o(1)     <= '1';
+  FLED_o(1)     <= audio_l_s;--'1';
   FLED_o(2)     <= not FORCE_ROMCS_s;
-  LED2_o        <= '1';
+  LED2_o        <= audio_r_s;--'1';
 
   -- The delays are only used for simulation
   ram_buf: entity work.iobuf

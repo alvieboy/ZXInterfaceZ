@@ -28,6 +28,8 @@ entity interfacez_io is
 
     port_fe_o : out std_logic_vector(5 downto 0);
     audio_i   : in std_logic;
+    ear_o     : out std_logic; -- Comes from the cassete player
+    mic_o     : out std_logic; -- Goes to cassete player
 
     forceiorqula_o  : out std_logic;
     keyb_trigger_o  : out std_logic;
@@ -64,6 +66,12 @@ entity interfacez_io is
     mouse_x_i             : in std_logic_vector(7 downto 0);
     mouse_y_i             : in std_logic_vector(7 downto 0);
     mouse_buttons_i       : in std_logic_vector(1 downto 0);
+    -- AY interface
+    ay_wr_o               : out std_logic;
+    ay_din_i              : in std_logic_vector(7 downto 0);
+    ay_adr_o              : out std_logic_vector(3 downto 0);
+    ay_dout_o             : out std_logic_vector(7 downto 0);
+
     dbg_o                 : out std_logic_vector(7 downto 0)
   );
 
@@ -99,18 +107,27 @@ architecture beh of interfacez_io is
   signal kempston_mousex_sel_s  : std_logic;
   signal kempston_mousey_sel_s  : std_logic;
   signal kempston_mouseb_sel_s  : std_logic;
-  signal kempston_mouse_sel_s  : std_logic;
+  signal kempston_mouse_sel_s   : std_logic;
+
+  signal ay_register_sel_s      : std_logic;
+  signal ay_data_sel_s          : std_logic;
+  signal ayreg_r                : std_logic_vector(3 downto 0);
 
 begin
 
-  kempston_joy_sel_s <= '1' when ((adr_i AND SPECT_PORT_KEMPSTON_JOYSTICK_MASK) = SPECT_PORT_KEMPSTON_JOYSTICK) else '0';
+  kempston_joy_sel_s    <= '1' when ((adr_i AND SPECT_PORT_KEMPSTON_JOYSTICK_MASK) = SPECT_PORT_KEMPSTON_JOYSTICK) else '0';
   kempston_mousex_sel_s <= '1' when ((adr_i AND SPECT_PORT_KEMPSTON_MOUSEX_MASK) = SPECT_PORT_KEMPSTON_MOUSEX) else '0';
   kempston_mousey_sel_s <= '1' when ((adr_i AND SPECT_PORT_KEMPSTON_MOUSEY_MASK) = SPECT_PORT_KEMPSTON_MOUSEY) else '0';
   kempston_mouseb_sel_s <= '1' when ((adr_i AND SPECT_PORT_KEMPSTON_MOUSEB_MASK) = SPECT_PORT_KEMPSTON_MOUSEB) else '0';
-  kempston_mouse_sel_s <= kempston_mousex_sel_s or kempston_mousey_sel_s or kempston_mouseb_sel_s;
+  kempston_mouse_sel_s  <= kempston_mousex_sel_s or kempston_mousey_sel_s or kempston_mouseb_sel_s;
+
+  ay_register_sel_s     <= '1' when ((adr_i AND SPECT_PORT_AY_REGISTER_MASK) = SPECT_PORT_AY_REGISTER) else '0';
+  ay_data_sel_s         <= '1' when ((adr_i AND SPECT_PORT_AY_DATA_MASK) = SPECT_PORT_AY_DATA) else '0';
+
+  ay_adr_o <= ayreg_r;
 
   -- Address match for reads
-  process (adr_i, joy_en_i, mouse_en_i)
+  process (adr_i, joy_en_i, mouse_en_i, ay_register_sel_s, ay_data_sel_s)
   begin
     addr_match_s<='0';
     if adr_i(0)='1' and adr_i(1)='1' and adr_i(5)='1' and adr_i(7)='0' then
@@ -120,6 +137,9 @@ begin
         addr_match_s <= '1';
       end if;
       if kempston_mouse_sel_s='1' then -- We always reply even if disabled.
+        addr_match_s <= '1';
+      end if;
+      if ay_register_sel_s='1' or ay_data_sel_s='1' then -- We always reply even if disabled.
         addr_match_s <= '1';
       end if;
 		end if;
@@ -138,11 +158,13 @@ begin
       cmdfifo_wr_r  <= '0';
       ram_wr_r      <= '0';
       ram_rd_r      <= '0';
+      ay_wr_o       <= '0';
 
     elsif rising_edge(clk_i) then
 
       resfifo_rd_o <= '0';
       cmdfifo_wr_r <= '0';
+      ay_wr_o      <= '0';
 
       if wrp_i='1' and adr_i(0)='0' then -- ULA write
         port_fe_r <= dat_i(5 downto 0);
@@ -176,9 +198,17 @@ begin
             d_write_r     <= dat_i;
             ram_wr_r      <= '1';
 
-
           when others =>
         end case;
+
+        if ay_register_sel_s='1' then
+          ayreg_r <= dat_i(3 downto 0); -- AY register
+        end if;
+
+        if ay_data_sel_s='1' then
+          ay_wr_o   <= '1';
+          ay_dout_o <= dat_i;
+        end if;
 
       end if;
 
@@ -241,6 +271,10 @@ begin
           else
             dataread_r <= x"FF";
           end if;
+        end if;
+
+        if ay_register_sel_s='1' or ay_data_sel_s='1' then
+          dataread_r <= ay_din_i;
         end if;
 
       end if;
@@ -343,5 +377,6 @@ begin
   ram_wr_o        <= ram_wr_r;
   ram_rd_o        <= ram_rd_r;
   ram_addr_o      <= std_logic_vector(ram_addr_r);
+  mic_o           <= audio_i xor port_fe_r(5);
  
 end beh;

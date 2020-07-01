@@ -81,7 +81,10 @@ entity zxinterface is
     hsync_o       : out std_logic;
     vsync_o       : out std_logic;
     bright_o      : out std_logic;
-    grb_o         : out std_logic_vector(2 downto 0)
+    grb_o         : out std_logic_vector(2 downto 0);
+    -- Audio
+    audio_l_o     : out std_logic;
+    audio_r_o     : out std_logic
 
   );
 
@@ -330,6 +333,16 @@ architecture beh of zxinterface is
   signal mouse_y_sync_s             : std_logic_vector(7 downto 0);
   signal mouse_buttons_sync_s       : std_logic_vector(1 downto 0);
 
+  signal audio_left_s               : std_logic;
+  signal audio_right_s              : std_logic;
+  signal ear_s                      : std_logic;
+  signal mic_s                      : std_logic;
+
+  signal ay_we_s                    : std_logic;
+  signal ay_din_s                   : std_logic_vector(7 downto 0);
+  signal ay_adr_s                   : std_logic_vector(3 downto 0);
+  signal ay_dout_s                  : std_logic_vector(7 downto 0);
+ 
 begin
 
   rst48_inst: entity work.rstgen
@@ -491,6 +504,8 @@ begin
       audio_i         => tap_audio_s,
 
       port_fe_o       => port_fe_s,
+      ear_o           => ear_s,
+      mic_o           => mic_s,
       ulahack_i       => ulahack_s,
 
       resfifo_rd_o    => resfifo_rd_s,
@@ -516,6 +531,12 @@ begin
       mouse_x_i       => mouse_x_sync_s,
       mouse_y_i       => mouse_y_sync_s,
       mouse_buttons_i => mouse_buttons_sync_s,
+
+      ay_wr_o          => ay_we_s,
+      ay_din_i         => ay_din_s,
+      ay_adr_o         => ay_adr_s,
+      ay_dout_o        => ay_dout_s,
+
       dbg_o           => dbg_o(15 downto 8)
   );
 
@@ -808,6 +829,33 @@ begin
     end if;
   end process;
 
+  -- Audio
+  zxaudio_inst: entity work.zxaudio
+  port map (
+    clk_i   => clk_i,
+    arst_i  => arst_i,
+    ear_i   => ear_s,
+    mic_i   => mic_s,
+
+    dat_i   => ay_dout_s,
+    dat_o   => ay_din_s,
+    adr_i   => ay_adr_s,
+    we_i    => ay_we_s,
+    rd_i    => '1',
+    left_vol_0_i  => x"0100",
+    right_vol_0_i => x"0100",
+    left_vol_1_i  => x"0100",
+    right_vol_1_i => x"0100",
+    left_vol_2_i  => x"0100",
+    right_vol_2_i => x"0100",
+    left_vol_3_i  => x"0100",
+    right_vol_3_i => x"0100",
+
+
+    audio_left_o => audio_left_s,
+    audio_right_o => audio_right_s
+  );
+
   -- TAP player.
 
   tap_engine_inst: entity work.tap_engine
@@ -1079,6 +1127,9 @@ begin
 
   ahb_null_m2s <= C_AHB_NULL_M2S;
   USB_INTN_o <= not usb_int_async_s;
+
+  audio_l_o <= audio_left_s;
+  audio_r_o <= audio_right_s;
 
 end beh;
 

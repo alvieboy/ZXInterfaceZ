@@ -252,6 +252,16 @@ set_global_assignment -name EDA_TEST_BENCH_FILE simulation/tests/t004.vhd -secti
 set_global_assignment -name EDA_TEST_BENCH_FILE simulation/tests/t005.vhd -section_id t006
 set_global_assignment -name EDA_TEST_BENCH_FILE simulation/tests/t001.vhd -section_id t006
 set_instance_assignment -name SLEW_RATE 2 -to RAMCLK_o
+set_global_assignment -name VHDL_FILE dac_dsm3.vhd
+set_global_assignment -name VHDL_FILE zxaudio.vhd
+set_global_assignment -name VHDL_FILE ym2149/ym2149_volume.vhd
+set_global_assignment -name VHDL_FILE ym2149/ym2149_tonegen.vhd
+set_global_assignment -name VHDL_FILE ym2149/ym2149_regs.vhd
+set_global_assignment -name VHDL_FILE ym2149/ym2149_noisegen.vhd
+set_global_assignment -name VHDL_FILE ym2149/ym2149_mixer.vhd
+set_global_assignment -name VHDL_FILE ym2149/ym2149_envelopegen.vhd
+set_global_assignment -name VHDL_FILE ym2149/ym2149_clocking.vhd
+set_global_assignment -name VHDL_FILE ym2149/ym2149.vhd
 set_global_assignment -name VHDL_FILE tappkg.vhd
 set_global_assignment -name VHDL_FILE usb/usb_txclkgen.vhd
 set_global_assignment -name VHDL_FILE usb/usb_dpll.vhd
@@ -325,4 +335,5 @@ set_global_assignment -name QIP_FILE videopll.qip
 set_global_assignment -name QIP_FILE videopllreconfig.qip
 set_global_assignment -name QIP_FILE videoram.qip
 set_global_assignment -name QIP_FILE epram.qip
+set_global_assignment -name QIP_FILE audiomult.qip
 set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top
