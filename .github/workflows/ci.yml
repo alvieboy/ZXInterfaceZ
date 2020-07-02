@@ -1,0 +1,38 @@
+name: CI
+
+# Controls when the action will run. Triggers the workflow on push or pull request
+# events but only for the master branch
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+
+# vhdl:
+# roms:
+  esp32:
+    runs-on: ubuntu-latest
+    container:
+      image: espressif/idf:release-v4.2
+
+    steps:
+    # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+    - name: Checkout the code
+      uses: actions/checkout@v2
+
+    - name: Build esp32
+      run: |
+        apt-get update
+        apt-get install -y libglib2.0-dev
+        . $IDF_PATH/export.sh
+        make -C esp32
+
+    - name: Build esp32/host
+      run: |
+        apt-get update
+        apt-get install -y libglib2.0-dev
+        . $IDF_PATH/export.sh
+        make -C esp32/home
