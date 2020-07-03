@@ -14889,7 +14889,7 @@ We've spent an enormous amount of time creating and checking these footprints an
 <label x="241.3" y="462.28" size="1.778" layer="95"/>
 </segment>
 </net>
-<net name="EXT8" class="0">
+<net name="EXT11" class="0">
 <segment>
 <pinref part="IC2" gate="G$1" pin="__IO_67"/>
 <wire x1="548.64" y1="480.06" x2="548.64" y2="490.22" width="0.1524" layer="91"/>
@@ -14901,7 +14901,7 @@ We've spent an enormous amount of time creating and checking these footprints an
 <label x="345.44" y="416.56" size="1.778" layer="95"/>
 </segment>
 </net>
-<net name="EXT9" class="0">
+<net name="EXT10" class="0">
 <segment>
 <pinref part="IC2" gate="G$1" pin="__IO_66"/>
 <wire x1="551.18" y1="480.06" x2="551.18" y2="490.22" width="0.1524" layer="91"/>
@@ -14913,7 +14913,7 @@ We've spent an enormous amount of time creating and checking these footprints an
 <label x="345.44" y="414.02" size="1.778" layer="95"/>
 </segment>
 </net>
-<net name="EXT10" class="0">
+<net name="EXT9" class="0">
 <segment>
 <pinref part="IC2" gate="G$1" pin="__IO_65"/>
 <wire x1="561.34" y1="480.06" x2="561.34" y2="490.22" width="0.1524" layer="91"/>
@@ -14925,7 +14925,7 @@ We've spent an enormous amount of time creating and checking these footprints an
 <label x="345.44" y="411.48" size="1.778" layer="95"/>
 </segment>
 </net>
-<net name="EXT11" class="0">
+<net name="EXT8" class="0">
 <segment>
 <pinref part="IC2" gate="G$1" pin="__IO_64"/>
 <wire x1="563.88" y1="480.06" x2="563.88" y2="490.22" width="0.1524" layer="91"/>
