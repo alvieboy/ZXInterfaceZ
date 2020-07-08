@@ -118,6 +118,19 @@ architecture str of interfacez_top is
   signal audio_l_s  : std_logic;
 
   signal dbg_s      : std_logic_vector(15 downto 0);
+
+  alias EXT_VGA_HSYNC   : std_logic is EXT_io(0);
+  alias EXT_VGA_VSYNC   : std_logic is EXT_io(1);
+  alias EXT_VGA_RED1    : std_logic is EXT_io(2);
+  alias EXT_VGA_RED0    : std_logic is EXT_io(3);
+  alias EXT_VGA_GREEN1  : std_logic is EXT_io(4);
+  alias EXT_VGA_GREEN0  : std_logic is EXT_io(5);
+  alias EXT_VGA_BLUE1   : std_logic is EXT_io(6);
+  alias EXT_VGA_BLUE0   : std_logic is EXT_io(7);
+  alias EXT_VGA_BLUE2   : std_logic is EXT_io(8);
+  alias EXT_VGA_RED2    : std_logic is EXT_io(9);
+  alias EXT_VGA_GREEN2  : std_logic is EXT_io(10);
+
 begin
 
   rstgen_inst: entity work.rstgen
@@ -215,17 +228,21 @@ begin
 
   extconn_vga: if C_ENABLE_VGA generate
 
-    EXT_io(0) <= hsync_s;
-    EXT_io(1) <= vsync_s;
-    EXT_io(2) <= grb_s(1); -- Red 1
-    EXT_io(3) <= bright_s and grb_s(1); -- Red 0
-  
-    EXT_io(4) <= grb_s(2); -- Green 1
-    EXT_io(5) <= bright_s and grb_s(2); -- Green 0
-  
-    EXT_io(6) <= grb_s(0); -- Blue 1
-    EXT_io(7) <= bright_s and grb_s(0); -- Blue 0
+    EXT_VGA_HSYNC <= hsync_s;
+    EXT_VGA_VSYNC <= vsync_s;
+    EXT_VGA_RED2  <= grb_s(1); -- Red 1
+    EXT_VGA_RED1  <= bright_s and grb_s(1); -- Red 0
+    EXT_VGA_RED0  <= bright_s and grb_s(1); -- Red 0
 
+    EXT_VGA_GREEN2  <= grb_s(2); 
+    EXT_VGA_GREEN1  <= bright_s and grb_s(2); 
+    EXT_VGA_GREEN0  <= bright_s and grb_s(2); 
+
+    EXT_VGA_BLUE2   <= grb_s(0);
+    EXT_VGA_BLUE1   <= bright_s and grb_s(0);
+    EXT_VGA_BLUE0   <= bright_s and grb_s(0);
+  
+  
   end generate;
 
   extconn_dbg: if not C_ENABLE_VGA generate
@@ -236,7 +253,6 @@ begin
   EXT_io(12) <= audio_r_s;
 
   EXT_io(13) <= 'Z';
-  EXT_io(10 downto 8) <= (others => 'Z');
 
   FORCE_ROMCS_o   <= FORCE_ROMCS_s;
   FORCE_NMI_o     <= FORCE_NMI_s;

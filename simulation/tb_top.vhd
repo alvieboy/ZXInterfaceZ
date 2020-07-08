@@ -119,7 +119,7 @@ architecture sim of tb_top is
 
   signal spect_clk_s: std_logic;
 
-  signal RAMD_s       : std_logic_vector(7 downto 0);
+  signal RAMD_s       : std_logic_vector(3 downto 0);
   signal RAMCLK_s      : std_logic;
   signal RAMNCS_s      : std_logic;
 
@@ -136,7 +136,7 @@ architecture sim of tb_top is
   signal USB_FLT_s     : std_logic := '0';
   signal USB_PWREN_s   : std_logic;
   -- Extension connector
-  signal EXT_s        : std_logic_vector(7 downto 0);
+  signal EXT_s        : std_logic_vector(13 downto 0);
   signal audio_s      : std_logic;
   signal USB_dm_s     : std_logic;
   signal USB_dp_s     : std_logic;
@@ -321,7 +321,7 @@ begin
     USB_VP_i      => USB_VP_s,
     USB_VM_i      => USB_VM_s,
     USB_OE_o      => USB_OE_s,
-    USB_SOFTCON_o => USB_SOFTCON_s,
+    --USB_SOFTCON_o => USB_SOFTCON_s,
     USB_SPEED_o   => USB_SPEED_s,
     USB_VMO_o     => USB_VMO_s,
     USB_VPO_o     => USB_VPO_s,
@@ -330,9 +330,9 @@ begin
     USB_FLT_i     => USB_FLT_s,
     USB_PWREN_o   => USB_PWREN_s,
     -- Extension connector
-    EXT_o        => EXT_s,
+    EXT_io        => EXT_s,
 
-    TP5_o         => audio_s,
+    --TP5_o         => audio_s,
 
     XA_i => XA_s,
     XCK_i => XCK_s,

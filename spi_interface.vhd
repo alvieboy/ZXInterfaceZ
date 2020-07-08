@@ -106,7 +106,8 @@ entity spi_interface is
     mouse_en_o            : out std_logic;
     mouse_x_o             : out std_logic_vector(7 downto 0);
     mouse_y_o             : out std_logic_vector(7 downto 0);
-    mouse_buttons_o       : out std_logic_vector(1 downto 0)
+    mouse_buttons_o       : out std_logic_vector(1 downto 0);
+    volume_o              : out std_logic_vector(63 downto 0)
   );
 
 end entity spi_interface;
@@ -127,14 +128,15 @@ architecture beh of spi_interface is
   signal flags_r      : std_logic_vector(15 downto 0);
   signal capmem_adr_r : unsigned(CAPTURE_MEMWIDTH_BITS-1 downto 0);
 
-  constant NUMREGS32  : natural := 7;
+  constant NUMREGS32  : natural := 8;
 
   subtype reg32_type is std_logic_vector(31 downto 0);
   type regs32_type is array(0 to NUMREGS32-1) of reg32_type;
 
-  signal regs32_r     : regs32_type;
-  signal current_reg_r: natural range 0 to NUMREGS32-1;
-  signal pc_latch_r   : std_logic_vector(7 downto 0);
+  signal regs32_r       : regs32_type;
+  signal tempreg_r      : std_logic_vector(23 downto 0);
+  signal current_reg_r  : natural range 0 to NUMREGS32-1;
+  signal pc_latch_r     : std_logic_vector(7 downto 0);
 
   type state_type is (
     IDLE,
@@ -531,7 +533,8 @@ begin
           txdat_s <= regs32_r(current_reg_r)(31 downto 24);
           if dat_valid_s='1' then
             if wreg_en_r='1' then
-              regs32_r(current_reg_r)(31 downto 24) <= dat_s;
+              --regs32_r(current_reg_r)(31 downto 24) <= dat_s;
+              tempreg_r(23 downto 16) <= dat_s;
             end if;
             state_r <= SETREG32_2;
           end if;
@@ -542,7 +545,8 @@ begin
           txdat_s <= regs32_r(current_reg_r)(23 downto 16);
           if dat_valid_s='1' then
             if wreg_en_r='1' then
-              regs32_r(current_reg_r)(23 downto 16) <= dat_s;
+              --regs32_r(current_reg_r)(23 downto 16) <= dat_s;
+              tempreg_r(15 downto 8) <= dat_s;
             end if;
             state_r <= SETREG32_3;
           end if;
@@ -553,7 +557,7 @@ begin
           txdat_s <= regs32_r(current_reg_r)(15 downto 8);
           if dat_valid_s='1' then
             if wreg_en_r='1' then
-              regs32_r(current_reg_r)(15 downto 8) <= dat_s;
+              tempreg_r(7 downto 0) <= dat_s;
             end if;
             state_r <= SETREG32_4;
           end if;
@@ -564,7 +568,7 @@ begin
           txdat_s <= regs32_r(current_reg_r)(7 downto 0);
           if dat_valid_s='1' then
             if wreg_en_r='1' then
-              regs32_r(current_reg_r)(7 downto 0) <= dat_s;
+              regs32_r(current_reg_r) <= tempreg_r & dat_s;
             end if;
             state_r <= UNKNOWN;
           end if;
@@ -857,12 +861,14 @@ begin
 
   kbd_force_press_o     <= regs32_r(4)(7 downto 0) & regs32_r(3);
 
-  -- Joystick data
-  joy_data_o            <= regs32_r(5)(4 downto 0);
+  -- Joystick and mouse data
 
-  -- Mouse
-  mouse_x_o             <= regs32_r(6)(7 downto 0);
-  mouse_y_o             <= regs32_r(6)(15 downto 8);
-  mouse_buttons_o       <= regs32_r(6)(17 downto 16);
+  mouse_x_o             <= regs32_r(5)(7 downto 0);
+  mouse_y_o             <= regs32_r(5)(15 downto 8);
+  mouse_buttons_o       <= regs32_r(5)(17 downto 16);
+  joy_data_o            <= regs32_r(5)(22 downto 18);
+
+  -- Volumes
+  volume_o              <= regs32_r(7) & regs32_r(6);
 
 end beh;

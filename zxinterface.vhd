@@ -344,7 +344,15 @@ architecture beh of zxinterface is
   signal ay_din_s                   : std_logic_vector(7 downto 0);
   signal ay_adr_s                   : std_logic_vector(3 downto 0);
   signal ay_dout_s                  : std_logic_vector(7 downto 0);
- 
+
+  signal volume_spisck_s            : std_logic_vector(63 downto 0);
+  signal volume_s                   : std_logic_vector(63 downto 0);
+
+  function genvolume(vol: in std_logic_vector(7 downto 0)) return std_logic_vector is
+  begin
+    return x"00" & vol;
+  end function;
+
 begin
 
   rst48_inst: entity work.rstgen
@@ -747,7 +755,8 @@ begin
     mouse_en_o            => mouse_en_spisck_s,
     mouse_x_o             => mouse_x_spisck_s,
     mouse_y_o             => mouse_y_spisck_s,
-    mouse_buttons_o       => mouse_buttons_spisck_s
+    mouse_buttons_o       => mouse_buttons_spisck_s,
+    volume_o              => volume_spisck_s
   );
 
   fmretn: entity work.async_pulse port map (
@@ -831,6 +840,19 @@ begin
     end if;
   end process;
 
+  vol_sync: entity work.syncv
+    generic map (
+      WIDTH => 64,
+      RESET => '0'
+    ) port map (
+      clk_i   => clk_i,
+      arst_i  => arst_i,
+      din_i   => volume_spisck_s,
+      dout_o  => volume_s
+    );
+
+
+
   -- Audio
   zxaudio_inst: entity work.zxaudio
   port map (
@@ -844,15 +866,14 @@ begin
     adr_i   => ay_adr_s,
     we_i    => ay_we_s,
     rd_i    => '1',
-    left_vol_0_i  => x"0100",
-    right_vol_0_i => x"0100",
-    left_vol_1_i  => x"0100",
-    right_vol_1_i => x"0100",
-    left_vol_2_i  => x"0100",
-    right_vol_2_i => x"0100",
-    left_vol_3_i  => x"0100",
-    right_vol_3_i => x"0100",
-
+    left_vol_0_i  => genvolume(volume_s(7 downto 0)),
+    right_vol_0_i => genvolume(volume_s(15 downto 8)),
+    left_vol_1_i  => genvolume(volume_s(23 downto 16)),
+    right_vol_1_i => genvolume(volume_s(31 downto 24)),
+    left_vol_2_i  => genvolume(volume_s(39 downto 32)),
+    right_vol_2_i => genvolume(volume_s(47 downto 40)),
+    left_vol_3_i  => genvolume(volume_s(55 downto 48)),
+    right_vol_3_i => genvolume(volume_s(63 downto 56)),
 
     audio_left_o => audio_left_s,
     audio_right_o => audio_right_s
