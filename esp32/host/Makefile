@@ -141,7 +141,7 @@ OBJS:=$(FREERTOS_OBJS) $(OBJ) \
 
 
 interfacez: $(OBJS)
-	$(CC) $(CFLAGS) -o interfacez $(OBJS) -lpthread $(shell pkg-config --libs glib-2.0)
+	$(CC) $(CFLAGS) -o interfacez $(OBJS) -lpthread -lm $(shell pkg-config --libs glib-2.0)
 
 clean:
 	rm -f $(OBJS)
