@@ -199,7 +199,7 @@ begin
             -- Clip. I think this can be done with the multiplier instead.
             audio_final_right_r <= (others => '1');
           else
-            audio_final_right_r <= signed(audio_mix_left_s(17 downto 8));
+            audio_final_right_r <= signed(audio_mix_right_s(17 downto 8));
           end if;
         end if;
       end if;

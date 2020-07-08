@@ -377,6 +377,6 @@ begin
   ram_wr_o        <= ram_wr_r;
   ram_rd_o        <= ram_rd_r;
   ram_addr_o      <= std_logic_vector(ram_addr_r);
-  mic_o           <= audio_i xor port_fe_r(3) xor port_fe_r(4);
+  mic_o           <= audio_i xor (port_fe_r(3) or port_fe_r(4));
  
 end beh;
