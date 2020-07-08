@@ -119,6 +119,7 @@ esp_err_t nvs_set_str (nvs_handle_t handle, const char* key,
                           key,
                           value);
 
+    return 0;
 }
 
 esp_err_t nvs_commit(nvs_handle_t handle)
