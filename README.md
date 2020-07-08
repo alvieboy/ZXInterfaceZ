@@ -1,5 +1,7 @@
 # ZX Interface Z
 
+![Build status](https://github.com/alvieboy/ZXInterfaceZ/workflows/CI/badge.svg)
+
 Interface Z - an expansion card for the ZX Spectrum which supports
 
 - VGA Output
