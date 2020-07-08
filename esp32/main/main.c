@@ -31,6 +31,7 @@
 #include "freertos/task.h"
 #include "devmap.h"
 #include "audio.h"
+#include "console.h"
 
 static int8_t videomode = 0;
 
@@ -167,27 +168,13 @@ void app_main()
             //ESP_LOGI(TAG,"Interrupts: %d", videostreamer__getinterrupts());
             iter=0;
         }
-        STATUS s = uart_rx_one_char(&c);
-        if (s==OK) {
-            if (c=='p') {
-                ESP_LOGI(TAG, "Powering ON USB");
-                usb_ll__set_power(1);
-            } else if (c=='o') {
-                ESP_LOGI(TAG, "Powering OFF USB");
-                usb_ll__set_power(0);
-            } else if (c=='f') {
-                ESP_LOGI(TAG, "Dumping information");
-                usbh__dump_info(0);
-            } else if (c=='d') {
-                loglevel = 0xffffffff;
-            } else if (c=='h') {
-                ESP_LOGI(TAG, "Disable ULAHACK");
-                fpga__clear_flags(FPGA_FLAG_ULAHACK);
-            } else if (c=='H') {
-                ESP_LOGI(TAG, "Enable ULAHACK");
-                fpga__set_flags(FPGA_FLAG_ULAHACK);
+        STATUS s;
+        do {
+            s = uart_rx_one_char(&c);
+            if (s==OK) {
+                console__char(c);
             }
-        }
+        } while (s==OK);
 
     }
 }

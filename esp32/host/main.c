@@ -38,8 +38,11 @@ BaseType_t xTaskCreatePinnedToCore(TaskFunction_t pvTaskCode, const char *const 
     return r;
 }
 
-int uart_rx_one_char()
+int uart_rx_one_char(uint8_t *c)
 {
+    if (read(0, c, 1)==1) {
+        return 0;
+    }
     return -1;
 }
 
@@ -122,6 +125,8 @@ int main(int argc, char **argv)
 {
     TaskHandle_t h;
     getcwd(startupdir, sizeof(startupdir));
+
+    fcntl(0, F_SETFL, fcntl(0,F_GETFL)|O_NONBLOCK);
 
     scan_queue = xQueueCreate(4, sizeof(uint32_t));
 

@@ -383,6 +383,11 @@ int webserver_req__scan(httpd_req_t *req, const char *querystr)
     return ESP_OK;
 }
 
+static esp_err_t webserver_req__post_volume(httpd_req_t *req, const char *querystr)
+{
+    httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Cannot close file");
+    return ESP_FAIL;
+}
 
 
 static const struct webserver_req_entry req_handlers[] = {
@@ -401,6 +406,7 @@ static const struct webserver_req_entry req_handlers[] = {
 
 static const struct webserver_req_entry post_handlers[] = {
     { "file",    &webserver_req__post_file },
+    { "volume",    &webserver_req__post_volume },
 };
 
 

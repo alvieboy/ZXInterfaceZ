@@ -125,6 +125,7 @@ esp_err_t nvs_set_str (nvs_handle_t handle, const char* key,
 esp_err_t nvs_commit(nvs_handle_t handle)
 {
     GError *error = NULL;
+    printf("Saving NVS\n");
     if (!g_key_file_save_to_file (f, "nvs.txt", &error))
     {
         fprintf(stderr, "Error saving key file: %s", error->message);

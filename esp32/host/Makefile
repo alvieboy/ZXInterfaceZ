@@ -113,7 +113,8 @@ wifi.c                \
 tzx.c                 \
 tap.c                 \
 json.c                \
-audio.c
+audio.c               \
+console.c
 
 
 _OBJ:=$(SRC:.c=.o)

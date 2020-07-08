@@ -83,34 +83,40 @@ static void audio__balance_to_channel(uint8_t chan,
 
 void audio__init()
 {
-    audio__balance_to_channel(0,
-                              nvs__float("vol_ch0", 1.0F),
-                              nvs__float("bal_ch0", 0.0F),
-                              &volumes.v[0]
+    unsigned i;
+    char vol_key[8] = "vol_chX";
+    char bal_key[8] = "bal_chX";
+    for (i=0; i<4; i++) {
+        vol_key[6] = '0' + i;
+        bal_key[6] = '0' + i;
+        audio__balance_to_channel(i,
+                                  nvs__float(vol_key, 1.0F),
+                                  nvs__float(bal_key, 0.0F),
+                                  &volumes.v[i]
                              );
-    audio__balance_to_channel(1,
-                              nvs__float("vol_ch1", 1.0F),
-                              nvs__float("bal_ch1", 0.0F),
-                              &volumes.v[1]
-                             );
-    audio__balance_to_channel(2,
-                              nvs__float("vol_ch2", 1.0F),
-                              nvs__float("bal_ch2", 0.0F),
-                              &volumes.v[2]
-                             );
-    audio__balance_to_channel(3,
-                              nvs__float("vol_ch3", 1.0F),
-                              nvs__float("bal_ch3", 0.0F),
-                              &volumes.v[3]
-                             );
-
+    }
     audio__update();
 }
 
-void audio__set_volume( int balance)
+void audio__set_volume_f(uint8_t chan, float volume, float balance)
 {
-    // Gain: gL + gR
-    // Balance: -63 to 63
+    char vol_key[8] = "vol_chX";
+    char bal_key[8] = "bal_chX";
+
+    vol_key[6] = '0' + chan;
+    bal_key[6] = '0' + chan;
+
+    audio__balance_to_channel(chan,
+                              volume,
+                              balance,
+                              &volumes.v[chan]
+                             );
+
+    nvs__set_float(vol_key, volume);
+    nvs__set_float(bal_key, balance);
+
+    audio__update();
+    nvs__commit();
 
 }
 
