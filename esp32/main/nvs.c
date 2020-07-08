@@ -5,6 +5,11 @@
 
 static nvs_handle_t nvsh = NVS_NO_HANDLE;
 
+typedef union {
+    float f;
+    uint32_t u;
+} float_uint_t;
+
 void nvs__init()
 {
     //Initialize NVS
@@ -80,6 +85,19 @@ int nvs__fetch_u8(const char *key, uint8_t *value, uint8_t def)
     return 0;
 }
 
+int nvs__fetch_float(const char *key, float *value, float def)
+{
+    float_uint_t v;
+    float_uint_t d;
+    d.f = def;
+
+    int r = nvs__fetch_u32(key, &v.u, d.u);
+    if (r==0) {
+        *value = v.f;
+    }
+    return r;
+}
+
 int32_t nvs__i32(const char *key, int32_t def)
 {
     int32_t ret;
@@ -93,6 +111,14 @@ uint32_t nvs__u32(const char *key, uint32_t def)
     ESP_ERROR_CHECK(nvs__fetch_u32(key, &ret, def));
     return ret;
 }
+
+float nvs__float(const char *key, float def)
+{
+    float ret;
+    ESP_ERROR_CHECK(nvs__fetch_float(key, &ret, def));
+    return ret;
+}
+
 
 uint8_t nvs__u8(const char *key, uint8_t def)
 {
@@ -163,6 +189,20 @@ int nvs__set_u8(const char *key, uint8_t val)
         if (err != ESP_OK) return err;
     }
     return nvs_set_u8(nvsh,key,val);
+
+}
+
+int nvs__set_float(const char *key, float val)
+{
+    float_uint_t v;
+    v.f = val;
+
+    esp_err_t err;
+    if (nvsh==NVS_NO_HANDLE) {
+        err = nvs_open(STORAGE_NAMESPACE, NVS_READWRITE, &nvsh);
+        if (err != ESP_OK) return err;
+    }
+    return nvs_set_u32(nvsh,key,v.u);
 
 }
 
