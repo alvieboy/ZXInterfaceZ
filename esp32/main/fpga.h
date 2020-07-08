@@ -75,10 +75,13 @@ typedef struct
 #define REG_KEYB1_DATA      0x03
 #define REG_KEYB2_DATA      0x04
 #define REG_JOY_DATA        0x05
-#define REG_MOUSE_DATA      0x06
+#define REG_MOUSE_DATA      0x05 /* Same as joy */
+#define REG_VOLUME(x)       (0x06+(x))
 
 #define FPGA_RESOURCE_FIFO_SIZE 1024 /* Should be 1024 */
 #define FPGA_TAP_FIFO_SIZE 1023 /* Should be 1024 */
+
+
 
 int fpga__init(void);
 
