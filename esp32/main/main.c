@@ -30,6 +30,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "devmap.h"
+#include "audio.h"
 
 static int8_t videomode = 0;
 
@@ -134,6 +135,7 @@ void app_main()
     devmap__init();
     usbh__init();
     keyboard__init();
+    audio__init();
     webserver__init();
 
     // Start capture
