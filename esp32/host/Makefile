@@ -112,7 +112,8 @@ webserver_req.c       \
 wifi.c                \
 tzx.c                 \
 tap.c                 \
-json.c
+json.c                \
+audio.c
 
 
 _OBJ:=$(SRC:.c=.o)
