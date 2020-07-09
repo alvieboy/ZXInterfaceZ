@@ -220,6 +220,7 @@ static void wifi__init_core()
 void wifi__init_wpa2()
 {
     if (netif) {
+        ESP_ERROR_CHECK(esp_netif_dhcps_stop(netif));
         esp_netif_destroy(netif);
         esp_wifi_stop();
     }
@@ -229,7 +230,7 @@ void wifi__init_wpa2()
     mdns_free();
 
     netif = esp_netif_create_default_wifi_sta();
-    ESP_ERROR_CHECK(esp_netif_dhcps_stop(netif));
+    //ESP_ERROR_CHECK(esp_netif_dhcps_stop(netif));
 
     wifi_config_t wifi_config;
     memset(&wifi_config, 0, sizeof(wifi_config));
@@ -506,9 +507,11 @@ int wifi__config_sta(const char *ssid, const char *pwd)
     if (err<0)
         return err;
 
-    err = nvs__set_str("sta_pwd", pwd);
-    if (err<0)
-        return err;
+    if (pwd) {
+        err = nvs__set_str("sta_pwd", pwd);
+        if (err<0)
+            return err;
+    }
 
     err = nvs__set_u8("wifi", WIFI_MODE_STA);
 
@@ -529,20 +532,26 @@ int wifi__config_ap(const char *ssid, const char *pwd, uint8_t channel)
 {
     esp_err_t err;
 
-    err = nvs__set_str("ap_ssid", ssid);
+    if (ssid) {
+        err = nvs__set_str("ap_ssid", ssid);
 
-    if (err<0)
-        return err;
+        if (err<0)
+            return err;
+    }
 
-    err = nvs__set_str("ap_pwd", pwd);
+    if (pwd) {
+        err = nvs__set_str("ap_pwd", pwd);
 
-    if (err<0)
-        return err;
+        if (err<0)
+            return err;
+    }
 
-    err = nvs__set_u8("ap_chan", channel);
+    if (channel>0) {
+        err = nvs__set_u8("ap_chan", channel);
 
-    if (err<0)
-        return err;
+        if (err<0)
+            return err;
+    }
 
     err = nvs__set_u8("wifi", WIFI_MODE_AP);
 
