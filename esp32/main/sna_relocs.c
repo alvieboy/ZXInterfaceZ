@@ -81,7 +81,7 @@ static int apply_single_reloc(const char *name, const uint8_t *src, sna_writefun
         fun(userdata, offset + e->offset, v);
         break;
     case RELOC_EIDI:
-        if (src[0]&1) {
+        if (src[0]&4) {
             // EI
             v = 0xFB;
         }  else {
