@@ -41,14 +41,28 @@ esp_err_t spi_device_polling_transmit(spi_device_handle_t handle, spi_transactio
         int i;
         uint32_t addr = ext->base.addr;
 
-        for (i = ext->command_bits/8; i>0; i--) {
+        for (i = ext->address_bits/8; i>0; i--) {
             *tptr++ = (addr>>(8*(i-1))) & 0xff;
             txlen++;
         }
     }
     memcpy(tptr, ext->base.tx_buffer, ext->base.length/8);
 
+    do {
+        printf("SPI TX: [ ");
+        for (int z=0;z<txlen;z++) {
+            if (tptr == &transaction[z]) {
+                printf("$ ");
+            }
+            printf("%02x ", transaction[z]);
+        }
+        printf("]\n");
+    } while (0);
+
+
     fpga_do_transaction( transaction, txlen );
+
+
 
     if (ext->base.rx_buffer) {
         memcpy(ext->base.rx_buffer, tptr, ext->base.rxlength/8);

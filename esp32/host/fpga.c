@@ -19,8 +19,8 @@ static xQueueHandle fpga_spi_queue = NULL;
 
 static hdlc_encoder_t hdlc_encoder;
 static hdlc_decoder_t hdlc_decoder;
-static uint8_t hdlcbuf[512];
-static uint8_t writebuf[512];
+static uint8_t hdlcbuf[8192];
+static uint8_t writebuf[8192];
 static unsigned writebufptr = 0;
 static unsigned hdlcrxlen = 0;
 
