@@ -13,6 +13,7 @@
 #include <fcntl.h>
 #include "devmap.h"
 #include "wifi.h"
+#include <errno.h>
 
 struct webserver_req_entry {
     const char *path;
@@ -280,9 +281,10 @@ static esp_err_t webserver_req__post_file(httpd_req_t *req, const char *querystr
 
     // Check if file exists.
 
-    int fd = __open(fullpath,O_CREAT|O_WRONLY, 0660);
+    int fd = __open(fullpath,O_CREAT|O_WRONLY|O_TRUNC, 0660);
     if (fd<0)
     {
+        ESP_LOGE(TAG, "Cannot create '%s': %d", fullpath, errno);
         httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "File exists");
         return ESP_FAIL;
     }
