@@ -7,9 +7,11 @@
 #include "audio.h"
 #include "usbh.h"
 #include "fpga.h"
+#include "wifi.h"
 
 char cmd[256];
 uint8_t cmdptr = 0;
+
 #define CTAG "CONSOLE"
 
 static int console__volume(int argc, char **argv)
@@ -91,6 +93,51 @@ static int console__ulahack(int argc, char **argv)
     return 0;
 }
 
+static int console__wifi(int argc, char **argv)
+{
+    const char *ssid = NULL;
+    const char *password = NULL;
+    int channel = 0;
+
+    if (argc<1) {
+        ESP_LOGE(CTAG, "Too few arguments");
+        return -1;
+    }
+    if (strcmp(argv[0],"ap")==0) {
+        if (argc>1) {
+            // Get ssid
+            ssid = argv[1];
+            if (argc>2) {
+                password = argv[2];
+                if (argc>3) {
+                    if ((strtoint(argv[3], &channel)<0) || (channel<0) || (channel>255)) {
+                        ESP_LOGE(CTAG,"Invalid channel specified");
+                        return -1;
+                    }
+                }
+            }
+        }
+        return wifi__config_ap(ssid, password, channel);
+
+    } else if (strcmp(argv[0],"sta")==0) {
+        if (argc<3) {
+            ESP_LOGE(CTAG, "Too few arguments");
+            return -1;
+        }
+        ssid = argv[1];
+        password = argv[2];
+
+        return wifi__config_sta(ssid, password);
+
+    } else {
+        ESP_LOGE(CTAG, "Unrecognised WiFi command %s", argv[0]);
+    }
+    return 0;
+}
+
+
+
+
 static struct {
     const char *cmd;
     int (*handler)(int, char**);
@@ -98,6 +145,7 @@ static struct {
     { "vol", &console__volume },
     { "usb", &console__usb },
     { "ulahack", &console__ulahack },
+    { "wifi", &console__wifi },
 };
 
 static int console__parse_string(char *cmd);
