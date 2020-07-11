@@ -16,5 +16,18 @@ static inline int strtoint(const char *str, int *dest)
     return -1;
 }
 
+static inline int strtoint_octal(const char *str, int *dest)
+{
+    char *endptr;
+    int val = strtoul(str,&endptr, 8);
+    if (endptr) {
+        if (*endptr=='\0') {
+            *dest = val;
+            return 0;
+        }
+    }
+    return -1;
+}
+
 
 #endif

@@ -8,7 +8,6 @@
 #include <string.h>
 #include "flash_pgm.h"
 #include "gpio.h"
-#include "esp_partition.h"
 #include "esp_spi_flash.h"
 #include <alloca.h>
 #include "byteops.h"

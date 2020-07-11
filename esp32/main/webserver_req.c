@@ -14,6 +14,7 @@
 #include "devmap.h"
 #include "wifi.h"
 #include <errno.h>
+#include "firmware.h"
 
 struct webserver_req_entry {
     const char *path;
@@ -26,6 +27,19 @@ static void webserver_req__send_and_free_json(httpd_req_t *req, cJSON *response)
     httpd_resp_sendstr(req, data);
     free(data);
     cJSON_Delete(response);
+}
+
+static void webserver_req__simple_json_reply(httpd_req_t *req, const char *errorstr)
+{
+    cJSON *root = cJSON_CreateObject();
+
+    if (errorstr) {
+        cJSON_AddStringToObject(root, "errorstring", errorstr);
+    };
+
+    cJSON_AddStringToObject(root, "success", errorstr==NULL?"true":"false");
+
+    webserver_req__send_and_free_json(req, root);
 }
 
 static esp_err_t webserver_req__version(httpd_req_t *req, const char *querystring)
@@ -312,6 +326,8 @@ static esp_err_t webserver_req__post_file(httpd_req_t *req, const char *querystr
         return ESP_FAIL;
     }
 
+    webserver_req__simple_json_reply(req, NULL);
+
     return ESP_OK;
 }
 
@@ -363,10 +379,7 @@ int webserver_req__scan(httpd_req_t *req, const char *querystr)
 {
     cJSON *root = cJSON_CreateObject();
 
-    int r = 0;
-
     if (wifi__scanning()) {
-        r = -1;
         cJSON_AddStringToObject(root, "errorstring", "Scan in progress");
         cJSON_AddStringToObject(root, "success", "false");
 
@@ -376,9 +389,8 @@ int webserver_req__scan(httpd_req_t *req, const char *querystr)
         cJSON *aplist = wifi__ap_get_json();
 
         cJSON_AddItemToObject(root, "aplist", aplist);
-
-
     };
+
     webserver_req__send_and_free_json(req, root);
 
 
@@ -387,8 +399,56 @@ int webserver_req__scan(httpd_req_t *req, const char *querystr)
 
 static esp_err_t webserver_req__post_volume(httpd_req_t *req, const char *querystr)
 {
-    httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Cannot close file");
+    httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Not implemented");
     return ESP_FAIL;
+}
+
+static int firmware_read_wrapper(void *user, uint8_t *buf, int size)
+{
+    int remain = size;
+    int read = 0;
+    char *rbuf = (char*)buf;
+    do {
+        int r = httpd_req_recv((httpd_req_t*)user, rbuf, remain);
+        if (r<0)
+            return -1;
+        if (r==0) {
+            return read;
+        }
+        read += r;
+        rbuf += r;
+        remain -= r;
+    } while (remain>0);
+
+#if 0
+    ESP_LOGI(TAG, "FW READ: %d %d\n", size, read);
+    int i;
+    for (i=0;i<size;i++) {
+        printf("%02x ", buf[i]);
+        if ((i%32)==31)
+            printf("\n");
+    }
+#endif
+    return read;
+}
+
+static esp_err_t webserver_req__firmware_upgrade(httpd_req_t *req, const char *querystr)
+{
+    firmware_upgrade_t f;
+
+    firmware__init(&f,
+                   firmware_read_wrapper,
+                   req);
+
+    if (firmware__upgrade(&f)<0) {
+
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Error");
+    }
+    firmware__deinit(&f);
+
+    webserver_req__simple_json_reply(req, NULL);
+
+    return ESP_OK;
 }
 
 
@@ -408,6 +468,7 @@ static const struct webserver_req_entry req_handlers[] = {
 
 static const struct webserver_req_entry post_handlers[] = {
     { "file",    &webserver_req__post_file },
+    { "fwupgrade", &webserver_req__firmware_upgrade },
     { "volume",    &webserver_req__post_volume },
 };
 

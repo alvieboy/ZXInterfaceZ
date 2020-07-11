@@ -309,7 +309,7 @@ struct commandhandler_t hand[] = {
     { CMD("reset"), &netcmd__reset_spectrum },
     { CMD("scap"), &netcmd__scap },
     { CMD("resettocustom"), &netcmd__reset_custom_spectrum },
-    { CMD("ota"), &ota__performota },
+    { CMD("ota"), &ota__performota_cmd },
     { CMD("fpgaota"), &fpga_ota__performota },
     { CMD("uploadsna"), &sna__uploadsna },
     { CMD("uploadres"), &res__upload },

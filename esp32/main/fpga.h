@@ -3,17 +3,10 @@
 
 #include <inttypes.h>
 #include "esp_system.h"
+#include "esp_partition.h"
 
 typedef uint16_t fpga_flags_t;
 typedef uint8_t fpga_status_t;
-
-typedef struct
-{
-    int first_unerased_address;
-    int current_write_address;
-    unsigned flashid;
-    //uint8_t page[FLASH_PAGE_SIZE];
-} fpga_program_state_t;
 
 #define FPGA_SPI_CMD_READ_STATUS (0xDE)
 #define FPGA_SPI_CMD_READ_VIDEOMEM (0xDF)
