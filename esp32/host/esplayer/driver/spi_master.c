@@ -3,6 +3,8 @@
 #include <unistd.h>
 #include <string.h>
 
+#undef DEBUG_SPI_TRANSACTIONS
+
 extern void fpga_do_transaction(uint8_t *buffer, size_t len);
 
 esp_err_t spi_bus_initialize(spi_host_device_t host_id, const spi_bus_config_t *bus_config, int dma_chan)
@@ -48,6 +50,7 @@ esp_err_t spi_device_polling_transmit(spi_device_handle_t handle, spi_transactio
     }
     memcpy(tptr, ext->base.tx_buffer, ext->base.length/8);
 
+#ifdef DEBUG_SPI_TRANSACTIONS
     do {
         printf("SPI TX: [ ");
         for (int z=0;z<txlen;z++) {
@@ -58,7 +61,7 @@ esp_err_t spi_device_polling_transmit(spi_device_handle_t handle, spi_transactio
         }
         printf("]\n");
     } while (0);
-
+#endif
 
     fpga_do_transaction( transaction, txlen );
 

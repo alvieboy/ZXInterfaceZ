@@ -114,7 +114,8 @@ tzx.c                 \
 tap.c                 \
 json.c                \
 audio.c               \
-console.c
+console.c             \
+firmware.c  
 
 
 _OBJ:=$(SRC:.c=.o)
@@ -125,6 +126,8 @@ OBJ:=$(patsubst %, $(SRCPATH)/%, $(_OBJ))
 OBJS:=$(FREERTOS_OBJS) $(OBJ) \
 	main.o \
 	fpga.o \
+	partition.o \
+	ota.o \
 	strlcpy.o \
 	cjson/cJSON.o \
 	cjson/cJSON_Utils.o \

@@ -121,6 +121,8 @@ int esp_wifi_scan_get_ap_records(uint16_t *number, wifi_ap_record_t *ap_records)
 
 char startupdir[512] = {0};
 
+extern int partition_init();
+
 int main(int argc, char **argv)
 {
     TaskHandle_t h;
@@ -130,7 +132,15 @@ int main(int argc, char **argv)
 
     scan_queue = xQueueCreate(4, sizeof(uint32_t));
 
+    if (partition_init()<0)
+        return -1;
+
     xTaskCreate(wrap_app_main, "main", 4096, NULL, 7, &h);
     xTaskCreate(wifi_scan_task, "wifi_scan", 4096, NULL, 5, &h);
     vTaskStartScheduler();
 }
+
+const char *esp_err_to_name(int err)
+{
+    return "Unknown";
+};
