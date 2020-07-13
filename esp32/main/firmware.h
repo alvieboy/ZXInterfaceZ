@@ -5,7 +5,7 @@
 #include <cJSON.h>
 #include <stdbool.h>
 
-typedef int (*firmware_read_fun)(void *, uint8_t *buffer, int len);
+typedef int (*firmware_read_fun)(void *, uint8_t *buffer, size_t len);
 
 
 typedef enum {

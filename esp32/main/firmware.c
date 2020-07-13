@@ -8,6 +8,7 @@
 #include "fpga.h"
 #include "flash_pgm.h"
 #include "ota.h"
+#include "rle.h"
 
 #define TAG "Firmware"
 
@@ -273,7 +274,7 @@ static int firmware__read_manifest_content(firmware_upgrade_t *f)
     return 0;
 }
 
-typedef int (*firmware_streamer_t)(void *, const uint8_t *, unsigned);
+typedef int (*firmware_streamer_t)(void *, const uint8_t *, unsigned int);
 
 static int firmware__stream_file(firmware_upgrade_t *f,
                                  firmware_compress_t compression,
@@ -281,15 +282,37 @@ static int firmware__stream_file(firmware_upgrade_t *f,
                                  void *streamerdata)
 {
     int size = f->size;
+    int r;
 
-    while (size>0) {
-        int read = f->readfun(f->readfundata, f->buffer, 512);
-        if (read<=0) {
-            ESP_LOGE(TAG,"Short read on fpga file");
-            return -1;
+    if (compression == FIRMWARE_COMPRESS_NONE) {
+        while (size>0) {
+            int read = f->readfun(f->readfundata, f->buffer, 512);
+            if (read<=0) {
+                ESP_LOGE(TAG,"Short read on fpga file");
+                return -1;
+            }
+            streamer(streamerdata, f->buffer, read > size ? size: read);
+            size-=read;
         }
-        streamer(streamerdata, f->buffer, read > size ? size: read);
-        size-=read;
+    } else {
+        // RLE compression.
+
+        r = rle_decompress_stream(f->readfun,
+                                  f->readfundata,
+                                  streamer,
+                                  streamerdata,
+                                  size);
+        if (r<0)
+            return r;
+        // Read rest of TAR block.
+        int partial_read = size % 512;
+        if (partial_read>0) {
+            ESP_LOGI(TAG, "Reading remaining %d", 512-partial_read);
+
+            if (f->readfun(f->readfundata, f->buffer, 512-partial_read)<0)
+                return -1;
+        }
+
     }
     return 0;
 }
@@ -371,8 +394,10 @@ static int firmware__read_file_entry(firmware_upgrade_t *f)
 
     struct manifest_file_info *info = firmware__get_file_info(f, hdr->name);
 
-    if (info==NULL)
+    if (info==NULL) {
+        ESP_LOGE(TAG,"Cannot find firmware information for '%s'", hdr->name);
         return -1;
+    }
 
     if (info->completed) {
         ESP_LOGE(TAG, "Firmware '%s' already programmed", hdr->name);
@@ -467,6 +492,7 @@ int firmware__upgrade(firmware_upgrade_t *f)
             break;
         }
         if (r<0)  {
+            ESP_LOGE(TAG, "Error occurred, aborting firmware upgrade");
             f->state = ERROR;
             break;
         }
