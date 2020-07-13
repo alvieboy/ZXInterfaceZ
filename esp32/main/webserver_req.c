@@ -403,7 +403,7 @@ static esp_err_t webserver_req__post_volume(httpd_req_t *req, const char *querys
     return ESP_FAIL;
 }
 
-static int firmware_read_wrapper(void *user, uint8_t *buf, int size)
+static int firmware_read_wrapper(void *user, uint8_t *buf, size_t size)
 {
     int remain = size;
     int read = 0;
@@ -440,14 +440,24 @@ static esp_err_t webserver_req__firmware_upgrade(httpd_req_t *req, const char *q
                    firmware_read_wrapper,
                    req);
 
-    if (firmware__upgrade(&f)<0) {
-
-        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Error");
-    }
+    int r =firmware__upgrade(&f);
     firmware__deinit(&f);
 
-    webserver_req__simple_json_reply(req, NULL);
+    if (r<0) {
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Error");
+    } else {
+        webserver_req__simple_json_reply(req, NULL);
 
+        request_restart();
+    }
+
+    return ESP_OK;
+}
+
+static esp_err_t webserver_req__restart(httpd_req_t *req, const char *querystr)
+{
+    webserver_req__simple_json_reply(req, NULL);
+    request_restart();
     return ESP_OK;
 }
 
@@ -470,6 +480,7 @@ static const struct webserver_req_entry post_handlers[] = {
     { "file",    &webserver_req__post_file },
     { "fwupgrade", &webserver_req__firmware_upgrade },
     { "volume",    &webserver_req__post_volume },
+    { "restart",    &webserver_req__restart },
 };
 
 
