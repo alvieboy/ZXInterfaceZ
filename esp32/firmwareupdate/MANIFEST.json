@@ -4,9 +4,9 @@
     "compat": "r2.2",
     "files" : [
                 { "name": "esp32_interfacez.bin", "type": "ota", "compress":"none" },
-                        { "name": "resources.bin", "type": "resources", "compress":"rle" },
-                        { "name": "fpga.bin", "type": "fpga", "compress":"none" },
-                        { "name": "intz.rom", "type": "rom", "compress":"rle" }
-                ]
+                { "name": "resources.rle", "type": "resources", "compress":"rle" },
+                { "name": "fpga.bin", "type": "fpga", "compress":"none" },
+                { "name": "intz.rle", "type": "rom", "compress":"rle" }
+              ]
         }
 }
