@@ -115,7 +115,8 @@ tap.c                 \
 json.c                \
 audio.c               \
 console.c             \
-firmware.c  
+firmware.c            \
+rle.c
 
 
 _OBJ:=$(SRC:.c=.o)

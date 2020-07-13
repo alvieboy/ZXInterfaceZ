@@ -29,7 +29,8 @@ void vApplicationTickHook()
 
 void esp_restart()
 {
-    abort();
+    fprintf(stderr,"RESTART REQUESTED!!!!");
+    exit(0);
 }
 
 BaseType_t xTaskCreatePinnedToCore(TaskFunction_t pvTaskCode, const char *const pcName, const uint32_t usStackDepth, void *const pvParameters, UBaseType_t uxPriority, TaskHandle_t *const pvCreatedTask, const BaseType_t xCoreID)
