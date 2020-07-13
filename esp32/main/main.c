@@ -153,13 +153,20 @@ void app_main()
         }
         lastsw = sw;
         */
-        if (restart_requested)
-            do_restart = 1;
+        if (restart_requested) {
+            do_restart = 20;
+            restart_requested = 0;
+        }
 
         vTaskDelay(100 / portTICK_RATE_MS);
 
-        if (do_restart)
+        if (do_restart==1) {
             esp_restart();
+        } else if (do_restart>0) {
+            printf("Restart tick %d\n", do_restart);
+            do_restart--;
+        }
+
 
         fpga__get_status();
         iter++;
