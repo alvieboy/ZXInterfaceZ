@@ -21,10 +21,10 @@ Not implemented yet.
 
 #### Keyboard
 
-- _Q_ - Up
-- _A_ - Down
-- _ENTER_ - Select
-- _???_ - Back
+- `Q` - Up
+- `A` - Down
+- `ENTER` - Select
+- `BREAK` - Back
 
 ## Video
 
@@ -36,8 +36,14 @@ Adjusting Video output
 
 ## Play Tape
 
+- Type in `LOAD ""`
+- Trigger the _main menu_, and chose _Play tape..._ choose the TAP or TZX file.
+- Enjoy as if you were using a real tape.
+
 ## Poke
 
 # Web Interface
 
 ## Connecting to Wifi
+
+Default is _SSID_ `ZXInterfaceZ`, _password_ `zxspectrum`, and IP `192.168.120.1`.
