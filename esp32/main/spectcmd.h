@@ -13,6 +13,12 @@
 #define SPECTCMD_CMD_ENTERDIR   (0x0B)
 #define SPECTCMD_CMD_SETVIDEOMODE (0x0C)
 
+
+// System calls
+#define SPECTCMD_CMD_SYSCALL_OPEN (0x10)
+
+
+
 void spectcmd__request(void);
 void spectcmd__init(void);
 
