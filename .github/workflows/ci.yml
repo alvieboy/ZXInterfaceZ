@@ -28,5 +28,9 @@ jobs:
         apt-get update
         apt-get install -y libglib2.0-dev
         . $IDF_PATH/export.sh
-        make -C esp32
         make -C esp32/host
+
+    - name: Build esp32 main firmware
+      run: |
+        . $IDF_PATH/export.sh
+        make -C esp32
