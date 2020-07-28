@@ -283,6 +283,8 @@ architecture beh of zxinterface is
 
   signal psram_ahb_m2s          : AHB_M2S;
   signal psram_ahb_s2m          : AHB_S2M;
+  signal psram_hp_ahb_m2s       : AHB_M2S; -- High-priotity requests
+  signal psram_hp_ahb_s2m       : AHB_S2M; -- High-priotity requests
 
   signal ram_addr_s             : std_logic_vector(23 downto 0);
   signal ram_dat_wr_s           : std_logic_vector(7 downto 0);
@@ -1044,6 +1046,9 @@ begin
       ahb_i   => psram_ahb_m2s,
       ahb_o   => psram_ahb_s2m,
 
+      hp_ahb_i   => psram_hp_ahb_m2s,
+      hp_ahb_o   => psram_hp_ahb_s2m,
+
       cs_n_o  => RAMNCS_o,
       clk_o   => RAMCLK_o,
       d_o     => RAMD_o(3 downto 0),
@@ -1067,16 +1072,19 @@ begin
   );
 
 
+  psram_hp_ahb_m2s    <= ahb_spect_m2s;
+  ahb_spect_s2m       <= psram_hp_ahb_s2m;
+
   arb_inst: entity work.ahb_arb
     port map (
       CLK         => clk_i,
       RST         => arst_i,
 
-      HMAST0_I    => ahb_spect_m2s,
-      HMAST0_O    => ahb_spect_s2m,
+      HMAST0_I    => ahb_spi_m2s,
+      HMAST0_O    => ahb_spi_s2m,
 
-      HMAST1_I    => ahb_spi_m2s,
-      HMAST1_O    => ahb_spi_s2m,
+      HMAST1_I    => ahb_null_m2s,
+      HMAST1_O    => ahb_null_s2m,
 
       HMAST2_I    => ahb_null_m2s,
       HMAST2_O    => ahb_null_s2m,

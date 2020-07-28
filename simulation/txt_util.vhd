@@ -342,10 +342,13 @@ package body txt_util is
        variable hex : string(1 to 16);
        variable fourbit : std_logic_vector(3 downto 0);
      begin
+       report "1";
        hexlen := (slv'left+1)/4;
        if (slv'left+1) mod 4 /= 0 then
          hexlen := hexlen + 1;
        end if;
+       report "2" & str(slv'left);
+
        longslv(slv'left downto 0) := slv;
        for i in (hexlen -1) downto 0 loop
          fourbit := longslv(((i*4)+3) downto (i*4));

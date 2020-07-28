@@ -1,4 +1,5 @@
 use work.tbc_device_p.all;
+use work.zxinterfacepkg.all;
 
 architecture t007 of tbc_device is
 
@@ -9,6 +10,7 @@ begin
 
   process
     variable data: std_logic_vector(7 downto 0);
+    variable exp:  std_logic_vector(7 downto 0);
   begin
     report "T007: RAM manipulation";
 
@@ -30,18 +32,20 @@ begin
 
     -- Re-write on top to ensure addresses are OK
     l: for i in 1 to 2 loop
-      SpectrumWriteIo(Spectrum_Cmd, Spectrum_Data, x"0011", x"14"); -- Address low
-      SpectrumWriteIo(Spectrum_Cmd, Spectrum_Data, x"0013", x"45"); -- Address high
-      SpectrumWriteIo(Spectrum_Cmd, Spectrum_Data, x"0015", x"00"); -- Address high
-      SpectrumWriteIo(Spectrum_Cmd, Spectrum_Data, x"0017", x"DE"); -- Data
-      SpectrumWriteIo(Spectrum_Cmd, Spectrum_Data, x"0017", x"AD"); -- Data
+      SpectrumWriteIo(Spectrum_Cmd, Spectrum_Data, x"00" & SPECT_PORT_RAM_ADDR_LOW, x"14"); -- Address low
+      SpectrumWriteIo(Spectrum_Cmd, Spectrum_Data, x"00" & SPECT_PORT_RAM_ADDR_MIDDLE, x"45"); -- Address high
+      SpectrumWriteIo(Spectrum_Cmd, Spectrum_Data, x"00" & SPECT_PORT_RAM_ADDR_HIGH, x"00"); -- Address high
+      SpectrumWriteIo(Spectrum_Cmd, Spectrum_Data, x"00" & SPECT_PORT_RAM_DATA, x"DE"); -- Data
+      SpectrumWriteIo(Spectrum_Cmd, Spectrum_Data, x"00" & SPECT_PORT_RAM_DATA, x"AD"); -- Data
   
-      SpectrumWriteIo(Spectrum_Cmd, Spectrum_Data, x"0011", x"14"); -- Address low
-      SpectrumWriteIo(Spectrum_Cmd, Spectrum_Data, x"0013", x"45"); -- Address high
-      SpectrumReadIo(Spectrum_Cmd, Spectrum_Data, x"0017", data); -- Data
-      Check("First data read is OK", data, x"DE");
-      SpectrumReadIo(Spectrum_Cmd, Spectrum_Data, x"0017", data); -- Data
-      Check("Second data read is OK", data, x"AD");
+      SpectrumWriteIo(Spectrum_Cmd, Spectrum_Data,  x"00" & SPECT_PORT_RAM_ADDR_LOW, x"14"); -- Address low
+      SpectrumWriteIo(Spectrum_Cmd, Spectrum_Data,  x"00" & SPECT_PORT_RAM_ADDR_MIDDLE, x"45"); -- Address high
+      SpectrumReadIo(Spectrum_Cmd, Spectrum_Data,   x"00" & SPECT_PORT_RAM_DATA, data); -- Data
+      exp := x"de";
+      Check("First data read is OK", data, exp);
+      SpectrumReadIo(Spectrum_Cmd, Spectrum_Data, x"00" & SPECT_PORT_RAM_DATA, data); -- Data
+      exp := x"ad";
+      Check("Second data read is OK", data, exp);
     end loop;
 
     wait for 2 us;
@@ -89,16 +93,16 @@ begin
     Check("Fourth SPI data read is OK", spiPayload_out_s(8), x"a5");
 
     -- Try reading from Spectrum now.
-    SpectrumWriteIo(Spectrum_Cmd, Spectrum_Data, x"0011", x"03"); -- Address low
-    SpectrumWriteIo(Spectrum_Cmd, Spectrum_Data, x"0013", x"20"); -- Address high
-    SpectrumWriteIo(Spectrum_Cmd, Spectrum_Data, x"0015", x"01"); -- Address high
-    SpectrumReadIo(Spectrum_Cmd, Spectrum_Data, x"0017", data); -- Data
+    SpectrumWriteIo(Spectrum_Cmd, Spectrum_Data, x"00" & SPECT_PORT_RAM_ADDR_LOW, x"03"); -- Address low
+    SpectrumWriteIo(Spectrum_Cmd, Spectrum_Data, x"00" & SPECT_PORT_RAM_ADDR_MIDDLE, x"20"); -- Address high
+    SpectrumWriteIo(Spectrum_Cmd, Spectrum_Data,  x"00" & SPECT_PORT_RAM_ADDR_HIGH, x"01"); -- Address high
+    SpectrumReadIo(Spectrum_Cmd, Spectrum_Data, x"00" & SPECT_PORT_RAM_DATA, data); -- Data
     Check("data read is OK", data, x"c0");
-    SpectrumReadIo(Spectrum_Cmd, Spectrum_Data, x"0017", data); -- Data
+    SpectrumReadIo(Spectrum_Cmd, Spectrum_Data, x"00" & SPECT_PORT_RAM_DATA, data); -- Data
     Check("data read is OK", data, x"fe");
-    SpectrumReadIo(Spectrum_Cmd, Spectrum_Data, x"0017", data); -- Data
+    SpectrumReadIo(Spectrum_Cmd, Spectrum_Data, x"00" & SPECT_PORT_RAM_DATA, data); -- Data
     Check("data read is OK", data, x"ca");
-    SpectrumReadIo(Spectrum_Cmd, Spectrum_Data, x"0017", data); -- Data
+    SpectrumReadIo(Spectrum_Cmd, Spectrum_Data, x"00" & SPECT_PORT_RAM_DATA, data); -- Data
     Check("data read is OK", data, x"a5");
 
 

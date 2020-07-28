@@ -53,6 +53,18 @@ begin
     D_io(i) <= 'Z' when Cmd_i.Enabled=false or oe_s(i)='0' else data_out_s(i);
   end generate;
 
+  process
+  begin
+    wait on Cmd_i.Cmd;
+    if Cmd_i.Cmd=SETMEM then
+      qspiram( Cmd_i.Address )(3 downto 0) := Cmd_i.Data(7 downto 4);
+      qspiram( Cmd_i.Address )(7 downto 4) := Cmd_i.Data(3 downto 0);
+      report "QSPI: internal write " & str(Cmd_i.Address) & " data 0x"  & hstr(Cmd_i.Data);
+    end if;
+  end process;
+
+
+
   process(CSn_i, SCK_i, Cmd_i.Enabled)
     variable din_byte_v : std_logic_vector(7 downto 0);
     variable write_v : std_logic_vector(7 downto 0);
@@ -62,9 +74,9 @@ begin
   begin
     if Cmd_i.Enabled then
       if CSn_i='1' then
-        state <= CMD;
+        state   <= CMD;
         index_r <= 7;
-        oe_s <= "0000";
+        oe_s    <= "0000";
       else
         if rising_edge(SCK_i) then
           code_complete_v := false;
@@ -216,7 +228,7 @@ begin
     if rising_edge(CSn_i) then
       delta := now - lastclk;
       if delta < 20 ns then
-        report "TIMING VIOLATION: tCHD<20ns failed, tCHD=" & time'image(delta) severity failure;
+        report "TIMING VIOLATION: tCHD<20ns failed, tCHD=" & time'image(delta);-- severity failure;
       end if;
     end if;
     if falling_edge(CSn_i) then
