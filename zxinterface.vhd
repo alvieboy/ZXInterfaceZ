@@ -120,6 +120,8 @@ architecture beh of zxinterface is
   signal rom_enable_s       : std_logic;
   signal ram_enable_s       : std_logic;
 
+  signal rom_write_s        : std_logic;
+
   signal fifo_rd_s          : std_logic;
   signal fifo_2_rd_s        : std_logic;
   signal fifo_wr_s          : std_logic;
@@ -439,6 +441,9 @@ begin
 
 
   r: if ROM_ENABLED generate
+
+  rom_write_s <= mem_wr_p_s and '0';  -- TODO: Add masked
+
   rom: entity work.generic_dp_ram
     generic map (
       ADDRESS_BITS => 14, -- 16Kb
@@ -447,8 +452,8 @@ begin
     port map (
       clka    => clk_i,
       ena     => rom_active_s,
-      wea     => '0',
-      dia     => "00000000",
+      wea     => rom_write_s,
+      dia     => d_s,
       doa     => romdata_o_s,
       addra   => a_s(13 downto 0),
 

@@ -43,18 +43,18 @@ package zxinterfacepkg is
   -- UNUSED: "01111011";
   -- UNUSED: "01111111";
 
-  constant SPECT_PORT_KEMPSTON_JOYSTICK       : std_logic_vector(15 downto 0) := "0000000000011111";
-  constant SPECT_PORT_KEMPSTON_JOYSTICK_MASK  : std_logic_vector(15 downto 0) := "0000000011100001";
-  constant SPECT_PORT_KEMPSTON_MOUSEX         : std_logic_vector(15 downto 0) := "0000001100011111";
-  constant SPECT_PORT_KEMPSTON_MOUSEX_MASK    : std_logic_vector(15 downto 0) := "0000011100100001";
-  constant SPECT_PORT_KEMPSTON_MOUSEY         : std_logic_vector(15 downto 0) := "0000011100011111";
-  constant SPECT_PORT_KEMPSTON_MOUSEY_MASK    : std_logic_vector(15 downto 0) := "0000011100100001";
-  constant SPECT_PORT_KEMPSTON_MOUSEB         : std_logic_vector(15 downto 0) := "0000001000011111";
-  constant SPECT_PORT_KEMPSTON_MOUSEB_MASK    : std_logic_vector(15 downto 0) := "0000001100100001";
-  constant SPECT_PORT_AY_REGISTER             : std_logic_vector(15 downto 0) := "1100000000000001";
-  constant SPECT_PORT_AY_REGISTER_MASK        : std_logic_vector(15 downto 0) := "1100000000000011";
-  constant SPECT_PORT_AY_DATA                 : std_logic_vector(15 downto 0) := "1000000000000001";
-  constant SPECT_PORT_AY_DATA_MASK            : std_logic_vector(15 downto 0) := "1100000000000011";
+  constant SPECT_PORT_KEMPSTON_JOYSTICK       : std_logic_vector(15 downto 0) := "00000000" & "00011111";
+  constant SPECT_PORT_KEMPSTON_JOYSTICK_MASK  : std_logic_vector(15 downto 0) := "00000000" & "11100001";
+  constant SPECT_PORT_KEMPSTON_MOUSEX         : std_logic_vector(15 downto 0) := "00000011" & "00011111";
+  constant SPECT_PORT_KEMPSTON_MOUSEX_MASK    : std_logic_vector(15 downto 0) := "00000111" & "00100001";
+  constant SPECT_PORT_KEMPSTON_MOUSEY         : std_logic_vector(15 downto 0) := "00000111" & "00011111";
+  constant SPECT_PORT_KEMPSTON_MOUSEY_MASK    : std_logic_vector(15 downto 0) := "00000111" & "00100001";
+  constant SPECT_PORT_KEMPSTON_MOUSEB         : std_logic_vector(15 downto 0) := "00000010" & "00011111";
+  constant SPECT_PORT_KEMPSTON_MOUSEB_MASK    : std_logic_vector(15 downto 0) := "00000011" & "00100001";
+  constant SPECT_PORT_AY_REGISTER             : std_logic_vector(15 downto 0) := "11000000" & "00000001";
+  constant SPECT_PORT_AY_REGISTER_MASK        : std_logic_vector(15 downto 0) := "11000000" & "00000011";
+  constant SPECT_PORT_AY_DATA                 : std_logic_vector(15 downto 0) := "10000000" & "00000001";
+  constant SPECT_PORT_AY_DATA_MASK            : std_logic_vector(15 downto 0) := "11000000" & "00000011";
 
 end package;
 

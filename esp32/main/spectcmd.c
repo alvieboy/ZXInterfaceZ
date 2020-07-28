@@ -70,7 +70,7 @@ static int spectcmd__load_resource(const uint8_t *cmdbuf, unsigned len)
 
     r = resource__find(cmdbuf[0]);
     if (r!=NULL) {
-            ESP_LOGI(TAG, "Found internal resource");
+        ESP_LOGI(TAG, "Found internal resource");
         return spectcmd__do_load_resource(r);
     } else {
         // Send null.

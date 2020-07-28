@@ -16,6 +16,9 @@ entity psram is
     ahb_i   : in AHB_M2S;
     ahb_o   : out AHB_S2M;
 
+    hp_ahb_i   : in AHB_M2S;
+    hp_ahb_o   : out AHB_S2M;
+
     cs_n_o  : out std_logic := '1';
     clk_o   : out std_logic;
     d_i     : in std_logic_vector(3 downto 0);
@@ -73,23 +76,16 @@ architecture beh of psram is
   constant CMD_QUADREAD       : std_logic_vector(7 downto 0) := x"EB";--x"35";
   constant CMD_QUADWRITE      : std_logic_vector(7 downto 0) := x"38";--x"35";
 
-  signal test_ready: boolean := false;
+  signal clock_disable_s      : std_logic;
+  signal master_r             : std_logic; -- '0': regular master, '1': high priority master
 
-  signal clock_disable_s  : std_logic;
 begin
 
-  cs_n_o <= csn_r;
-
-  --bufs: for i in 0 to 3 generate
-
-  --d_io(i)  <= data_out_r(i) when bus_oe_s(i)='1' else 'Z';
-
-  --end generate;
-  oe_o <= bus_oe_s;
-  d_o  <= data_out_r;
-
-  clk_o       <= clkgen_s(0);
-  test_ready  <= true after 2 us;
+  cs_n_o          <= csn_r;
+  oe_o            <= bus_oe_s;
+  d_o             <= data_out_r;
+  clk_o           <= clkgen_s(0);
+  test_ready      <= true after 2 us;
   clock_disable_s <= not clock_enable_r;
 
   clk_inst : ALTDDIO_OUT
@@ -125,7 +121,12 @@ begin
         clock_enable_s <= '0';
       when IDLE    =>
         clock_enable_s <= '0';
-        ahb_o.HREADY  <= '1';
+        if (hp_ahb_i.HTRANS=C_AHB_TRANS_IDLE) then
+          ahb_o.HREADY  <= '1';
+        else
+          ahb_o.HREADY  <= '0';
+        end if;
+        hp_ahb_o.HREADY <= '1';
       when WRDATA3 =>
       when DESELECT_WAIT1 | DESELECT_WAIT2 =>
         clock_enable_s <= '0';
@@ -135,8 +136,15 @@ begin
         clock_enable_s <= '0';
       when DESELECT =>
         clock_enable_s <= '0';
-        ahb_o.HREADY  <= '1';
-      when others   =>
+
+        if (hp_ahb_i.HTRANS=C_AHB_TRANS_IDLE) then
+          ahb_o.HREADY  <= '1';
+        else
+          ahb_o.HREADY  <= '0';
+        end if;
+        hp_ahb_o.HREADY <= '1';
+
+      --when others   =>
 
     end case;
   end process;
@@ -186,17 +194,27 @@ begin
         when IDLE =>
           if ahb_i.HTRANS/=C_AHB_TRANS_IDLE then
             if ahb_i.HTRANS=C_AHB_TRANS_SEQ then
-              wr_r        <= ahb_i.HWRITE;
-              addr_r      <= ahb_i.HADDR(23 downto 0);
-              wrdata_r    <= ahb_i.HWDATA(7 downto 0);
-  
-              state_r     <= CHIPSELECT;
-              bus_oe_s    <= "1111";
-              csn_r       <= '0';
-              clock_enable_r <= '1';
+              wr_r            <= ahb_i.HWRITE;
+              addr_r          <= ahb_i.HADDR(23 downto 0);
+              wrdata_r        <= ahb_i.HWDATA(7 downto 0);
+
+              state_r         <= CHIPSELECT;
+              bus_oe_s        <= "1111";
+              csn_r           <= '0';
+              clock_enable_r  <= '1';
+              master_r        <= '0';
             end if;
             -- Todo raise HRESP error
           end if;
+
+          -- High priority
+          if hp_ahb_i.HTRANS/=C_AHB_TRANS_IDLE then
+              wr_r            <= hp_ahb_i.HWRITE;
+              addr_r          <= hp_ahb_i.HADDR(23 downto 0);
+              wrdata_r        <= hp_ahb_i.HWDATA(7 downto 0);
+              master_r        <= '1';
+          end if;
+
         when CHIPSELECT =>
           if wr_r='1' then
             data_out_r(3 downto 0) <= CMD_QUADWRITE(7 downto 4);
@@ -214,6 +232,7 @@ begin
           else
             data_out_r(3 downto 0) <= CMD_QUADREAD(3 downto 0);
           end if;
+
         when ADDRESS2 =>
           state_r <= ADDRESS3;
           bus_oe_s    <= "1111";
@@ -254,6 +273,7 @@ begin
           bus_oe_s    <= "1111";
           data_out_r(3 downto 0) <= addr_r(3 downto 0);
           init_cnt_r  <= "110";
+
         when RDDLY =>
           bus_oe_s    <= "0000";
           if init_cnt_r=0 then
@@ -262,14 +282,17 @@ begin
           else
             init_cnt_r  <= init_cnt_r - 1;
           end if;
+
         when RDDATA1 =>
-          bus_oe_s    <= "0000";
-          state_r <= RDDATA2;
-          clock_enable_r<='0';
+          bus_oe_s        <= "0000";
+          state_r         <= RDDATA2;
+          clock_enable_r  <='0';
+
         when RDDATA2 =>
           bus_oe_s    <= "0000";
           data_capture_r(3 downto 0) <= d_neg_r;
           state_r <= RDDATA3;--RDDATA3;
+
         when RDDATA3 =>
           bus_oe_s    <= "0000";
           csn_r <= '1'; -- Looks like early deselect - is not.

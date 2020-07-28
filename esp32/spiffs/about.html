@@ -1,4 +1,13 @@
 <h1 class="mt-5" id="ab">About</h1>
+
+<div class="container">
+ <div class="row">
+  <div class="col-xs-6">
+  <button class="btn btn-outline-primary" id="uploadbutton">Upload firmware...</button>
+  </div>
+ </div>
+</div>
+
 <div>
 <div id="versiondl"/>
 </div>
@@ -9,9 +18,65 @@
 		});
 
         }
+        
+        var Uploader = function (file) {
+    		this.file = file;
+	};
+
+	Uploader.prototype.getName = function() {
+    		return this.file.name;
+	};
+
+	Uploader.prototype.doUpload = function (successcb, errorcb) {
+    		var that = this;
+    		var formData = new FormData();                        
+                
+		$.ajax({
+        		type: "POST",
+        		url: "upload/fwupgrade",
+        		xhr: function () {
+                        var myXhr = $.ajaxSettings.xhr();
+                        if (myXhr.upload) {
+                            myXhr.upload.addEventListener('progress', that.progressHandling, false);
+                        }
+                        return myXhr;
+	        },
+                success: successcb,
+                error: errorcb,
+                async: true,
+                data: this.file,
+                cache: false,
+                contentType: false,
+                processData: false,
+                timeout: 60000
+            });
+	};
+        
+        function upload(ev) {
+            ev.stopPropagation();
+            ev.preventDefault();
+            var input = document.createElement('input');
+            input.type = 'file';
+  
+            input.onchange = e => { 
+                    var file = e.target.files[0];
+                    var u = new Uploader(file);
+                    u.doUpload( function () { 
+                        alert("Uploaded");       
+
+                    }, function(error) { 
+                    	displayerror("Error uploading");
+	                    });
+            };
+            input.click();
+        }
+
 </script>
 
 <script>
+	$("#uploadbutton").click(upload);
+
+
 	request( "version", about );
 
 </script>
