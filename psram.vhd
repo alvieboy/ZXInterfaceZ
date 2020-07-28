@@ -170,13 +170,14 @@ begin
 
       when WRDATA3 =>
 
-      when DESELECT_WAIT1 | DESELECT_WAIT2 =>
+      when DESELECT_WAIT1 =>
+        ahb_o.HREADY      <= not master_r; -- ack only ours
+        hp_ahb_o.HREADY   <= master_r; -- ack only ours
+      when DESELECT_WAIT2 =>
 
       when RDDATA2 =>
       when RDDATA3 =>
       when DESELECT =>
-        ahb_o.HREADY      <= not master_r; -- ack only ours
-        hp_ahb_o.HREADY   <= master_r; -- ack only ours
 
       --when others   =>
       when CHIPSELECT =>

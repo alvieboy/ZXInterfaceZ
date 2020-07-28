@@ -105,7 +105,6 @@ package body tbc_device_p is
     actual: in std_logic_vector;
     expected: in std_logic_vector) is
   begin
-    report "chk1";
     if (actual /= expected) then
       report "CHECK FAILED: "&what&": expected " & hstr(expected)& ", got " &hstr(actual);
       errorCounter := errorCounter + 1;
