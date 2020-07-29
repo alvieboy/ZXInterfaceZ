@@ -32,7 +32,8 @@ int rom__load_from_flash(void)
     }
     esp_partition_iterator_release(i);
 
-    int r = fpga__upload_rom(rom_ptr, rom_partition->size);
+
+    int r = fpga__upload_rom(rom_ptr, ROM_SIZE);
 
     spi_flash_munmap(mmap_handle);
     return r;

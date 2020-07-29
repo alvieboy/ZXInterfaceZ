@@ -77,4 +77,4 @@ NMI_SPVAL	equ 	$5FFE
 
 ; Patched ROM (on-the-fly)  - max 256 bytes
 
-ROM_PATCHED_SNALOAD equ $3F00
+ROM_PATCHED_SNALOAD equ $1F00

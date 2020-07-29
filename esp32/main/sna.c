@@ -339,7 +339,7 @@ int sna__load_sna_extram(const char *file)
         return -1;
     }
 
-    sna_apply_relocs_fpgarom(header, 0x3F00);
+    sna_apply_relocs_fpgarom(header, ROM_PATCHED_SNALOAD_ADDRESS);
 
     // Now, load rest of file to memory
 

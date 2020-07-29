@@ -13,7 +13,7 @@ INTZ.ROM: interfacez-rom.asm keyboard.asm sdcardmenu.asm textinput.asm textmessa
 	pasmo -d --alocal interfacez-rom.asm $@ > $@.out
 	xxd -i $@ > interfacez_rom.c
 	cp $@ $@.unpad
-	./pad $@ 16384
+	./pad $@ 8192
 
 loadscr.rom: loadscr-rom.asm pad
 	pasmo -d loadscr-rom.asm $@ > $@.out
