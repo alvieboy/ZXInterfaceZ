@@ -63,6 +63,7 @@ begin
       when WAITACK =>
         ram_ack_o <= ahb_i.HREADY;
         if ahb_i.HREADY='1' then
+          ram_dat_o <= ahb_i.HRDATA(7 downto 0);
           --ram_ack_o<='1';
           w.state := IDLE;
         end if;
@@ -77,7 +78,6 @@ begin
     end if;
   end process;
 
-  ram_dat_o                 <= ahb_i.HRDATA(7 downto 0);
 
   ahb_o.HSIZE               <= C_AHB_SIZE_BYTE;
   ahb_o.HBURST              <= C_AHB_BURST_INCR;
