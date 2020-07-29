@@ -24,6 +24,13 @@ end entity bfm_spectrum;
 
 architecture sim of bfm_spectrum is
 
+  signal a_s: std_logic_vector(15 downto 0);
+
+  constant C_TDCRA    : time  := 110 ns;
+  constant C_TDCRRD   : time  := 85 ns;
+  constant C_TDCRWR   : time  := 65 ns;
+  constant C_TDCRIORQ : time  := 75 ns;
+  constant C_TSDCF    : time  := 50 ns;
 begin
 
   ck_o <= clk_i;
@@ -47,12 +54,12 @@ begin
       case Cmd_i.Cmd is
         when WRITEIO =>
           wait until rising_edge(clk_i);
-          a_o <= Cmd_i.Address;
+          a_o <= Cmd_i.Address after C_TDCRA;
           wait until falling_edge(clk_i);
-          ioreq_o <= '0';
+          ioreq_o <= '0' after C_TDCRIORQ;
           d_io    <= Cmd_i.Data;
           wait until falling_edge(clk_i);
-          wr_o    <= '0';
+          wr_o    <= '0' after C_TDCRWR;
           wait until falling_edge(clk_i);
           wr_o    <= '1';
           ioreq_o <= '1';
@@ -60,10 +67,10 @@ begin
 
         when READIO =>
           wait until rising_edge(clk_i);
-          a_o <= Cmd_i.Address;
+          a_o <= Cmd_i.Address after C_TDCRA;
           wait until falling_edge(clk_i);
-          ioreq_o <= '0';
-          rd_o    <= '0';
+          ioreq_o <= '0' after C_TDCRIORQ;
+          rd_o    <= '0' after C_TDCRRD;
           --d_io    <= Cmd_i.Data;
           wait until falling_edge(clk_i);
           wait until falling_edge(clk_i);
