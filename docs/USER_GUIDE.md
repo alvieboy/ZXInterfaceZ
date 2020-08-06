@@ -47,3 +47,13 @@ Adjusting Video output
 ## Connecting to Wifi
 
 Default is _SSID_ `ZXInterfaceZ`, _password_ `zxspectrum`, and IP `192.168.120.1`.
+
+# Advance
+
+## Serial Console
+
+You can connect to the _ZX Interface Z_'s serial console by connecting a
+USB-cable to the _micro USB_ port and connecting with a terminal program
+at 115200 baud with 8N1. The The USB chip used is CH330.
+
+# Troubleshooting
