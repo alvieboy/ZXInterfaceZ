@@ -27,6 +27,13 @@ jobs:
         apt-get update
         apt-get install -y make xxd gcc
         make -C roms all
+    - name: Archive built ROMs
+      uses: actions/upload-artifact@v2
+      with:
+        name: spectrum-roms
+        path: |
+          roms/*.rom
+          roms/*.ROM
 
   esp32:
     runs-on: ubuntu-latest
