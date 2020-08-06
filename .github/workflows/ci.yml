@@ -12,7 +12,22 @@ on:
 jobs:
 
 # vhdl:
-# roms:
+  roms:
+    runs-on: ubuntu-latest
+    container:
+      image: rickardvonessen/pasmo:0.6.0.20070113.0-1
+
+    steps:
+    # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+    - name: Checkout the code
+      uses: actions/checkout@v2
+
+    - name: Build ZX Spectrum ROM
+      run: |
+        apt-get update
+        apt-get install -y make xxd gcc
+        make -C roms all
+
   esp32:
     runs-on: ubuntu-latest
     container:
