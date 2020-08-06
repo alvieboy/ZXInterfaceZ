@@ -51,8 +51,20 @@ jobs:
         apt-get install -y libglib2.0-dev
         . $IDF_PATH/export.sh
         make -C esp32/host
+    - name: Archive built host-mode firmware
+      uses: actions/upload-artifact@v2
+      with:
+        name: host-mode-fw
+        path: |
+          esp32/host/interfacez
 
     - name: Build esp32 main firmware
       run: |
         . $IDF_PATH/export.sh
         make -C esp32
+    - name: Archive built main firmware
+      uses: actions/upload-artifact@v2
+      with:
+        name: main-fw
+        path: |
+          esp32/build/**/*.bin
