@@ -57,7 +57,7 @@ static const uint8_t bitRevTable[256] =
 
 static void fpga__init_spi()
 {
-    spi__init_device(&spi0_fpga, 8000000, PIN_NUM_CS);
+    spi__init_device(&spi0_fpga, 10000000, PIN_NUM_CS);
     //spi__init_device(&spi0_fpga_10m, 10000000, PIN_NUM_CS)<0)
     //    return -1;
 }

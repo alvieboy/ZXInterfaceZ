@@ -46,6 +46,7 @@ architecture beh of qspi_slave_resync is
 
   signal sck_resync_s : std_logic;
   signal csn_resync_s : std_logic;
+  signal mosi_resync_s : std_logic;
   signal sck_r        : std_logic;
   signal sck_fall_s   : std_logic;
   signal sck_rise_s   : std_logic;
@@ -74,6 +75,17 @@ begin
     dout_o  => csn_resync_s
     );
 
+  rmosi: entity work.sync
+    generic map (
+      RESET => '0'
+    )
+    port map (
+    clk_i   => clk_i,
+    arst_i  => arst_i,
+    din_i   => MOSI_i,
+    dout_o  => mosi_resync_s
+    );
+
   process(clk_i, arst_i)
   begin
     if arst_i='1' then
@@ -96,9 +108,9 @@ begin
       if sck_rise_s='1' then
         if qen_i='1' then
           --shreg_r   <= shreg_r(3 downto 0) & D_io;
-          shreg_r   <= shreg_r(6 downto 0) & MOSI_i;
+          shreg_r   <= shreg_r(6 downto 0) & mosi_resync_s;--MOSI_i;
         else
-          shreg_r   <= shreg_r(6 downto 0) & MOSI_i;
+          shreg_r   <= shreg_r(6 downto 0) & mosi_resync_s;--MOSI_i;
         end if;
         cnt_r <= cnt_r + 1;
         txready_r <= load_s;
@@ -119,6 +131,7 @@ begin
   begin
     if csn_resync_s='1' then
       outreg_r      <= (others => '0');
+      outen_r <='0';
       --nibbleout_r   <= '1';
     elsif rising_edge(clk_i) then
       if sck_fall_s='1' then
@@ -142,13 +155,13 @@ begin
 
   txready_o     <= txready_r;
 
-  process(qen_i, shreg_r, MOSI_i, outen_r, outreg_r)
+  process(qen_i, shreg_r, mosi_resync_s, outen_r, outreg_r)
   begin
     if qen_i='1' then
       --din_s         <= shreg_r(3 downto 0) & D_io;
-      din_s         <= shreg_r(6 downto 0) & MOSI_i;
+      din_s         <= shreg_r(6 downto 0) & mosi_resync_s;--MOSI_i;
     else
-      din_s         <= shreg_r(6 downto 0) & MOSI_i;
+      din_s         <= shreg_r(6 downto 0) & mosi_resync_s;--MOSI_i;
     end if;
 
     if outen_r='0' then
