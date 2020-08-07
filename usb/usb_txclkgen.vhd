@@ -49,7 +49,7 @@ end entity usb_txclkgen;
 
 architecture beh of usb_txclkgen is
 
-  signal pll_counter_r: unsigned(4 downto 0);
+  signal pll_counter_r: unsigned(4 downto 0) := (others =>'0');
 
 begin
 

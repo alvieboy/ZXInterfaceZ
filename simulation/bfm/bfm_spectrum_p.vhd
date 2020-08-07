@@ -11,7 +11,9 @@ package bfm_spectrum_p is
     READIO,
     WRITEMEM,
     READMEM,
-    READOPCODE
+    READOPCODE,
+    RUNZ80,
+    STOPZ80
   );
 
   type Data_Spectrum_type is record
@@ -38,6 +40,7 @@ package bfm_spectrum_p is
       rfsh_o  : out std_logic;
       ioreq_o : out std_logic;
       m1_o    : out std_logic;
+      wait_i  : in  std_logic;
       a_o     : out std_logic_vector(15 downto 0);
       d_io    : inout std_logic_vector(7 downto 0)
     );

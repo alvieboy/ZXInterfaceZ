@@ -1,4 +1,5 @@
 use work.tbc_device_p.all;
+use work.logger.all;
 
 architecture t008 of tbc_device is
 
@@ -13,7 +14,7 @@ begin
     variable data: std_logic_vector(7 downto 0);
     variable stamp: time;
   begin
-    report "T008: USB";
+    logger_start("T008","USB");
 
     PowerUpAndReset(
       SysRst_Cmd,
@@ -264,6 +265,7 @@ begin
       SysClk_Cmd,
       SpectClk_Cmd
     );
+    logger_end;
 
   end process;
 

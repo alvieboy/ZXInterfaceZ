@@ -21,7 +21,8 @@ entity zxinterface is
 
     FORCE_ROMCS_o : out std_logic;
     FORCE_RESET_o : out std_logic;
-    FORCE_INT_o   : out std_logic;
+    --FORCE_INT_o   : out std_logic;
+    FORCE_WAIT_o  : out std_logic;
     FORCE_NMI_o   : out std_logic;
     FORCE_IORQULA_o   : out std_logic;
 
@@ -163,34 +164,34 @@ architecture beh of zxinterface is
 
   --signal fiforeset_s        : std_logic;
   signal spect_reset_s      : std_logic;
-  signal spect_inten_spisck_s: std_logic;
-  signal spect_capsyncen_spisck_s: std_logic;
-  signal frameend_spisck_s: std_logic;
+  --signal spect_inten_spisck_s: std_logic;
+  --signal spect_capsyncen_spisck_s: std_logic;
+  --signal frameend_spisck_s: std_logic;
   signal spect_inten_s      : std_logic;
   --signal spect_forceromcs_spisck_s: std_logic;
   signal spect_forceromcs_s : std_logic;
   signal spect_forceromcs_bussync_s : std_logic;
-  signal forceromonretn_trig_spisck_s: std_logic;
+  --signal forceromonretn_trig_spisck_s: std_logic;
   signal forceromonretn_trig_s: std_logic;
-  signal forceromcs_spisck_on_s: std_logic;
+  --signal forceromcs_spisck_on_s: std_logic;
   signal forceromcs_on_s: std_logic;
-  signal forceromcs_spisck_off_s: std_logic;
+  --signal forceromcs_spisck_off_s: std_logic;
   signal forceromcs_off_s: std_logic;
   signal forceromonretn_r: std_logic;
-  signal forcenmi_spisck_on_s: std_logic;
-  signal forcenmi_spisck_off_s: std_logic;
+  --signal forcenmi_spisck_on_s: std_logic;
+  --signal forcenmi_spisck_off_s: std_logic;
   signal forcenmi_on_s: std_logic;
   signal forcenmi_off_s: std_logic;
 
   signal retn_det_s   : std_logic;
   signal spect_capsyncen_s: std_logic;
   signal framecmplt_s: std_logic;
-  signal capture_clr_spisck_s:   std_logic;
-  signal capture_cmp_spisck_s:   std_logic;
-  signal capture_run_spisck_s:   std_logic;
+  --signal capture_clr_spisck_s:   std_logic;
+  --signal capture_cmp_spisck_s:   std_logic;
+  --signal capture_run_spisck_s:   std_logic;
   --signal capture_len_spisck_s:   std_logic_vector(CAPTURE_MEMWIDTH_BITS-1 downto 0);
-  signal capture_trig_mask_spisck_s : std_logic_vector(31 downto 0);
-  signal capture_trig_val_spisck_s  : std_logic_vector(31 downto 0);
+  --signal capture_trig_mask_spisck_s : std_logic_vector(31 downto 0);
+  --signal capture_trig_val_spisck_s  : std_logic_vector(31 downto 0);
   signal capmem_en_s:     std_logic;
   signal capmem_data_s:   std_logic_vector(35 downto 0);
   signal capmem_adr_s:    std_logic_vector(CAPTURE_MEMWIDTH_BITS-1 downto 0);
@@ -203,14 +204,6 @@ architecture beh of zxinterface is
   signal rom_wc_di_s:   std_logic_vector(7 downto 0);
   signal rom_wc_addr_s:   std_logic_vector(13 downto 0);
 
-
-  signal capture_clr_s:   std_logic;
-  signal capture_cmp_s:   std_logic;
-  signal capture_run_s:   std_logic;
-  signal capture_len_s:   std_logic_vector(CAPTURE_MEMWIDTH_BITS-1 downto 0);
-  signal capture_trig_mask_s    : std_logic_vector(35-COMPRESS_BITS downto 0);
-  signal capture_trig_val_s     : std_logic_vector(35-COMPRESS_BITS downto 0);
-  signal capture_triggered_s: std_logic;
 
   signal io_enable_s:   std_logic;
   signal io_active_s:   std_logic;
@@ -225,26 +218,26 @@ architecture beh of zxinterface is
   signal resfifo_empty_s        : std_logic;                    -- SPI clock
 
   signal tapfifo_reset_s        : std_logic;
-  signal tapfifo_reset_spisck_s : std_logic;
+  --signal tapfifo_reset_spisck_s : std_logic;
   signal tapfifo_wr_s           : std_logic;
   signal tapfifo_write_s        : std_logic_vector(8 downto 0);
   signal tapfifo_full_s         : std_logic;
   signal tapfifo_used_s         : std_logic_vector(9 downto 0);
-  signal tap_enable_spisck_s    : std_logic;
+  --signal tap_enable_spisck_s    : std_logic;
   signal tap_enable_s           : std_logic;
   signal tap_audio_s            : std_logic;
 
 
   signal cmdfifo_wr_s           : std_logic;
-  signal cmdfifo_rd_spiclk_s    : std_logic;
+  signal cmdfifo_rd_s          : std_logic;
   signal cmdfifo_write_s        : std_logic_vector(7 downto 0);
-  --signal cmdfifo_reset_s        : std_logic;
-  signal cmdfifo_read_spiclk_s  : std_logic_vector(7 downto 0);
+  signal cmdfifo_reset_s        : std_logic;
+
+  signal cmdfifo_read_s  : std_logic_vector(7 downto 0);
   signal cmdfifo_full_s         : std_logic;
-  signal cmdfifo_empty_spiclk_s : std_logic;
   signal cmdfifo_empty_s        : std_logic;
-  signal cmdfifo_reset_spiclk_s : std_logic;
-  signal cmdfifo_intack_spisck_s: std_logic;
+  --signal cmdfifo_reset_s : std_logic;
+  --signal cmdfifo_intack_spisck_s: std_logic;
   signal cmdfifo_intack_s       : std_logic; -- intack in CLK domain
 
   --signal d_io_read_p_s          : std_logic;
@@ -269,7 +262,7 @@ architecture beh of zxinterface is
   signal pc_valid_s             : std_logic;
 
   signal pc_r                   : std_logic_vector(15 downto 0);
-  signal pc_spisck_r            : std_logic_vector(15 downto 0);
+  --signal pc_spisck_r            : std_logic_vector(15 downto 0);
 
   signal vidmode_resync_s       : std_logic_vector(1 downto 0);
   signal nmi_access_s           : std_logic;
@@ -279,7 +272,7 @@ architecture beh of zxinterface is
   signal nmi_r                  : std_logic;
   signal in_nmi_rom_r           : std_logic;
   signal ulahack_s              : std_logic;
-  signal ulahack_spisck_s       : std_logic;
+  --signal ulahack_spisck_s       : std_logic;
 
   signal psram_ahb_m2s          : AHB_M2S;
   signal psram_ahb_s2m          : AHB_S2M;
@@ -315,29 +308,29 @@ architecture beh of zxinterface is
   signal usb_wr_s               : std_logic;
   signal usb_int_s              : std_logic;
   signal usb_int_async_s        : std_logic;
-  signal usb_addr_s             : std_logic_vector(10 downto 0);
-  signal usb_wdat_s             : std_logic_vector(7 downto 0);
+  signal generic_addr_s         : std_logic_vector(10 downto 0);
+  signal generic_wdat_s         : std_logic_vector(7 downto 0);
   signal usb_rdat_s             : std_logic_vector(7 downto 0);
 
   signal keyb_trigger_s         : std_logic;
 
-  signal kbd_en_spisck_s              : std_logic;
-  signal kbd_force_press_spisck_s     : std_logic_vector(39 downto 0); -- 40 keys.
-  signal joy_en_spisck_s              : std_logic;
-  signal joy_data_spisck_s            : std_logic_vector(4 downto 0);
-  signal mouse_en_spisck_s            : std_logic;
-  signal mouse_x_spisck_s             : std_logic_vector(7 downto 0);
-  signal mouse_y_spisck_s             : std_logic_vector(7 downto 0);
-  signal mouse_buttons_spisck_s       : std_logic_vector(1 downto 0);
+  --signal kbd_en_spisck_s              : std_logic;
+  --signal kbd_force_press_spisck_s     : std_logic_vector(39 downto 0); -- 40 keys.
+  --signal joy_en_spisck_s              : std_logic;
+  --signal joy_data_spisck_s            : std_logic_vector(4 downto 0);
+  --signal mouse_en_spisck_s            : std_logic;
+  --signal mouse_x_spisck_s             : std_logic_vector(7 downto 0);
+  --signal mouse_y_spisck_s             : std_logic_vector(7 downto 0);
+  --signal mouse_buttons_spisck_s       : std_logic_vector(1 downto 0);
 
-  signal kbd_en_sync_s              : std_logic;
-  signal kbd_force_press_sync_s     : std_logic_vector(39 downto 0); -- 40 keys.
-  signal joy_en_sync_s              : std_logic;
-  signal joy_data_sync_s            : std_logic_vector(4 downto 0);
-  signal mouse_en_sync_s            : std_logic;
-  signal mouse_x_sync_s             : std_logic_vector(7 downto 0);
-  signal mouse_y_sync_s             : std_logic_vector(7 downto 0);
-  signal mouse_buttons_sync_s       : std_logic_vector(1 downto 0);
+  signal kbd_en_s              : std_logic;
+  signal kbd_force_press_s     : std_logic_vector(39 downto 0); -- 40 keys.
+  signal joy_en_s              : std_logic;
+  signal joy_data_s            : std_logic_vector(4 downto 0);
+  signal mouse_en_s            : std_logic;
+  signal mouse_x_s             : std_logic_vector(7 downto 0);
+  signal mouse_y_s             : std_logic_vector(7 downto 0);
+  signal mouse_buttons_s       : std_logic_vector(1 downto 0);
 
   signal audio_left_s               : std_logic;
   signal audio_right_s              : std_logic;
@@ -349,8 +342,19 @@ architecture beh of zxinterface is
   signal ay_adr_s                   : std_logic_vector(3 downto 0);
   signal ay_dout_s                  : std_logic_vector(7 downto 0);
 
-  signal volume_spisck_s            : std_logic_vector(63 downto 0);
+  --signal volume_spisck_s            : std_logic_vector(63 downto 0);
   signal volume_s                   : std_logic_vector(63 downto 0);
+
+  signal romsel_s                   : std_logic_vector(1 downto 0);
+  signal memsel_s                   : std_logic_vector(2 downto 0);
+
+  signal spect_clk_rise_s           : std_logic;
+  signal spect_clk_fall_s           : std_logic;
+
+
+  signal capture_rd_s          : std_logic;
+  signal capture_wr_s          : std_logic;
+  signal capture_dat_s         : std_logic_vector(7 downto 0);
 
   function genvolume(vol: in std_logic_vector(7 downto 0)) return std_logic_vector is
   begin
@@ -438,69 +442,15 @@ begin
       opcode_rd_p_o => opcode_rd_p_s,
       intr_p_o      => intr_p_s,
       bus_idle_o    => bus_idle_s,
-      m1_o          => m1_s
+      m1_o          => m1_s,
+      clk_rise_o    => spect_clk_rise_s,
+      clk_fall_o    => spect_clk_fall_s
   );
-
-
-  r: if ROM_ENABLED generate
-
-  rom_write_s <= mem_wr_p_s and '0';  -- TODO: Add masked
-
-  rom: entity work.generic_dp_ram
-    generic map (
-      ADDRESS_BITS => 14, -- 16Kb
-      DATA_BITS => 8
-    )
-    port map (
-      clka    => clk_i,
-      ena     => rom_active_s,
-      wea     => rom_write_s,
-      dia     => d_s,
-      doa     => romdata_o_s,
-      addra   => a_s(13 downto 0),
-
-      clkb    => SPI_SCK_i,
-      enb     => rom_wc_en_s,
-      web     => rom_wc_we_s,
-      dib     => rom_wc_di_s,
-      dob     => open,
-      addrb   => rom_wc_addr_s
-    );
-  end generate;
-
-  nr: if not ROM_ENABLED generate
-    romdata_o_s <= (others => '0');
-  end generate;
 
   data_o_s <= romdata_o_s when rom_enable_s='1' else
       iodata_s when io_enable_s='1' else (others => '0');
 
   rom_enable_s  <= mem_active_s and not (a_s(15) or a_s(14));
-
-
-  k1s: entity work.sync generic map (RESET => '0')
-      port map ( clk_i => clk_i, arst_i => arst_i, din_i => kbd_en_spisck_s, dout_o => kbd_en_sync_s );
-
-  k2s: entity work.syncv generic map (WIDTH => 40, RESET => '0')
-      port map ( clk_i => clk_i, arst_i => arst_i, din_i => kbd_force_press_spisck_s, dout_o => kbd_force_press_sync_s );
-
-  j1s: entity work.sync generic map (RESET => '0')
-      port map ( clk_i => clk_i, arst_i => arst_i, din_i => joy_en_spisck_s, dout_o => joy_en_sync_s );
-
-  j2s: entity work.syncv generic map (WIDTH => 5, RESET => '0')
-      port map ( clk_i => clk_i, arst_i => arst_i, din_i => joy_data_spisck_s, dout_o => joy_data_sync_s );
-
-  m1s: entity work.sync generic map (RESET => '0')
-      port map ( clk_i => clk_i, arst_i => arst_i, din_i => mouse_en_spisck_s, dout_o => mouse_en_sync_s );
-
-  m2s: entity work.syncv generic map (WIDTH => 8, RESET => '0')
-      port map ( clk_i => clk_i, arst_i => arst_i, din_i => mouse_x_spisck_s, dout_o => mouse_x_sync_s );
-
-  m3s: entity work.syncv generic map (WIDTH => 8, RESET => '0')
-      port map ( clk_i => clk_i, arst_i => arst_i, din_i => mouse_y_spisck_s, dout_o => mouse_y_sync_s );
-
-  m4s: entity work.syncv generic map (WIDTH => 2, RESET => '0')
-      port map ( clk_i => clk_i, arst_i => arst_i, din_i => mouse_buttons_spisck_s, dout_o => mouse_buttons_sync_s );
 
 
   io_inst: entity work.interfacez_io
@@ -540,19 +490,22 @@ begin
       ram_rd_o        => ram_rd_s,
       ram_ack_i       => ram_ack_s,
 
-      kbd_en_i        => kbd_en_sync_s,
-      kbd_force_press_i => kbd_force_press_sync_s,
-      joy_en_i        => joy_en_sync_s,
-      joy_data_i      => joy_data_sync_s,
-      mouse_en_i      => mouse_en_sync_s,
-      mouse_x_i       => mouse_x_sync_s,
-      mouse_y_i       => mouse_y_sync_s,
-      mouse_buttons_i => mouse_buttons_sync_s,
+      kbd_en_i        => kbd_en_s,
+      kbd_force_press_i => kbd_force_press_s,
+      joy_en_i        => joy_en_s,
+      joy_data_i      => joy_data_s,
+      mouse_en_i      => mouse_en_s,
+      mouse_x_i       => mouse_x_s,
+      mouse_y_i       => mouse_y_s,
+      mouse_buttons_i => mouse_buttons_s,
 
       ay_wr_o          => ay_we_s,
       ay_din_i         => ay_din_s,
       ay_adr_o         => ay_adr_s,
       ay_dout_o        => ay_dout_s,
+
+      romsel_o        => romsel_s,
+      memsel_o        => memsel_s,
 
       dbg_o           => dbg_o(15 downto 8)
   );
@@ -599,7 +552,7 @@ begin
   )
   port map (
     clk_WR      => clk_i,
-    clk_RD      => SPI_SCK_i, 
+    clk_RD      => clk_i,--SPI_SCK_i,
     rst         => arst_i,
     srst        => fifo_reset_s,
     wr          => fifo_wr_s,
@@ -630,7 +583,7 @@ begin
   --
   resourcefifo_inst: entity work.resource_fifo
   port map (
-    wclk_i      => SPI_SCK_i,
+    wclk_i      => clk_i,--SPI_SCK_i,
     rclk_i      => clk_i,
     aclr_i      => resfifo_reset_s,
     wen_i       => resfifo_wr_s,
@@ -647,19 +600,17 @@ begin
   --
   -- Command FIFO. This FIFO is between Spectrum and ESP. Spectrum writes, ESP32 reads.
   --
-  cmdfifo_inst: entity work.command_fifo
+  cmdfifo_inst: entity work.command_fifo_single
   port map (
-    wclk_i     => clk_i,
-    rclk_i      => SPI_SCK_i,
+    clk_i     => clk_i,
     arst_i      => arst_i,
     wr_i        => cmdfifo_wr_s,
-    rd_i        => cmdfifo_rd_spiclk_s,
-    rreset_i    => cmdfifo_reset_spiclk_s,
+    rd_i        => cmdfifo_rd_s,
+    reset_i     => cmdfifo_reset_s,
     wD_i        => cmdfifo_write_s,
-    rQ_o        => cmdfifo_read_spiclk_s,
-    wfull_o     => cmdfifo_full_s,
-    wempty_o    => cmdfifo_empty_s,
-    rempty_o    => cmdfifo_empty_spiclk_s
+    rQ_o        => cmdfifo_read_s,
+    full_o      => cmdfifo_full_s,
+    empty_o     => cmdfifo_empty_s
   );
 
 
@@ -667,14 +618,14 @@ begin
 
   qspi_inst: entity work.spi_interface
   port map (
-    SCK_i         => SPI_SCK_i,
-    CSN_i         => SPI_NCS_i,
+    SCKx_i        => SPI_SCK_i,
+    CSNx_i        => SPI_NCS_i,
     arst_i        => arst_i,
-    --D_io          => spi_data_s,
+    clk_i         => clk_i,
     MOSI_i        => mosi_s,
     MISO_o        => miso_s,
 
-    pc_i          => pc_spisck_r,
+    pc_i          => pc_r,
 
     fifo_empty_i  => fifo_2_empty_s,
     fifo_rd_o     => fifo_2_rd_s,
@@ -684,55 +635,34 @@ begin
     vidmem_adr_o  => vidmem_adr_s,
     vidmem_data_i => vidmem_data_s,
 
-    capmem_en_o     => capmem_en_s,
-    capmem_adr_o    => capmem_adr_s,
-    capmem_data_i   => capmem_data_s,
-
-    -- ROM connections
-    rom_en_o        => rom_wc_en_s,
-    rom_we_o        => rom_wc_we_s,
-    rom_di_o        => rom_wc_di_s,
-    rom_addr_o      => rom_wc_addr_s,
-
-
-    capture_clr_o   => capture_clr_spisck_s,
-    capture_run_o   => capture_run_spisck_s,
-    capture_len_i   => capture_len_s,       -- This is NOT sync!!
-    capture_trig_i  => capture_triggered_s, -- This is NOT sync!!
-    capture_cmp_o   => capture_cmp_spisck_s,
-
-    capture_trig_mask_o => capture_trig_mask_spisck_s,
-    capture_trig_val_o  => capture_trig_val_spisck_s,
-
     vidmode_o     => vidmode_s,
-    ulahack_o     => ulahack_spisck_s,
+    ulahack_o     => ulahack_s,
 
     rstfifo_o     => fifo_reset_s,
     rstspect_o    => spect_reset_s,
-    intenable_o   => spect_inten_spisck_s,
-    capsyncen_o   => spect_capsyncen_spisck_s,
-    frameend_o    => frameend_spisck_s,
-    --forceromcs_o  => spect_forceromcs_spisck_s,
+    intenable_o   => spect_inten_s,
+    frameend_o    => framecmplt_s,
 
     resfifo_reset_o => resfifo_reset_s,
     resfifo_wr_o    => resfifo_wr_s,
     resfifo_write_o => resfifo_write_s,
     resfifo_full_i  => resfifo_full_s,
+
     -- TAP fifo/control
-    tapfifo_reset_o   => tapfifo_reset_spisck_s,
+    tapfifo_reset_o   => tapfifo_reset_s,
     tapfifo_wr_o      => tapfifo_wr_s,
     tapfifo_write_o   => tapfifo_write_s,
     tapfifo_full_i    => tapfifo_full_s,
     tapfifo_used_i    => tapfifo_used_s,
-    tap_enable_o      => tap_enable_spisck_s,
+    tap_enable_o      => tap_enable_s,
 
     -- Command FIFO
 
-    cmdfifo_reset_o       => cmdfifo_reset_spiclk_s,
-    cmdfifo_rd_o          => cmdfifo_rd_spiclk_s,
-    cmdfifo_read_i        => cmdfifo_read_spiclk_s,
-    cmdfifo_empty_i       => cmdfifo_empty_spiclk_s,
-    cmdfifo_intack_o      => cmdfifo_intack_spisck_s,
+    cmdfifo_reset_o       => cmdfifo_reset_s,
+    cmdfifo_rd_o          => cmdfifo_rd_s,
+    cmdfifo_read_i        => cmdfifo_read_s,
+    cmdfifo_empty_i       => cmdfifo_empty_s,
+    cmdfifo_intack_o      => cmdfifo_intack_s,
 
 
     extram_addr_o         => extram_addr_s,
@@ -742,88 +672,35 @@ begin
     extram_we_o           => extram_we_s,
     extram_valid_i        => extram_valid_s,
 
-    forceromonretn_trig_o => forceromonretn_trig_spisck_s,
-    forceromcs_trig_on_o  => forceromcs_spisck_on_s,
-    forceromcs_trig_off_o => forceromcs_spisck_off_s,
-    forcenmi_trig_on_o    => forcenmi_spisck_on_s,
-    forcenmi_trig_off_o    => forcenmi_spisck_off_s,
+    forceromonretn_trig_o => forceromonretn_trig_s,
+    forceromcs_trig_on_o  => forceromcs_on_s,
+    forceromcs_trig_off_o => forceromcs_off_s,
+    forcenmi_trig_on_o    => forcenmi_on_s,
+    forcenmi_trig_off_o    => forcenmi_off_s,
     -- USB
     usb_rd_o              => usb_rd_s,
     usb_wr_o              => usb_wr_s,
-    usb_addr_o            => usb_addr_s,
+
+    generic_addr_o            => generic_addr_s,
+    generic_dat_o             => generic_wdat_s,
+
     usb_dat_i             => usb_rdat_s,
-    usb_dat_o             => usb_wdat_s,
     usb_int_i             => usb_int_s,
 
-    kbd_en_o              => kbd_en_spisck_s,
-    kbd_force_press_o     => kbd_force_press_spisck_s,
-    joy_en_o              => joy_en_spisck_s,
-    joy_data_o            => joy_data_spisck_s,
-    mouse_en_o            => mouse_en_spisck_s,
-    mouse_x_o             => mouse_x_spisck_s,
-    mouse_y_o             => mouse_y_spisck_s,
-    mouse_buttons_o       => mouse_buttons_spisck_s,
-    volume_o              => volume_spisck_s
+    capture_rd_o          => capture_rd_s,
+    capture_wr_o          => capture_wr_s,
+    capture_dat_i         => capture_dat_s,
+
+    kbd_en_o              => kbd_en_s,
+    kbd_force_press_o     => kbd_force_press_s,
+    joy_en_o              => joy_en_s,
+    joy_data_o            => joy_data_s,
+    mouse_en_o            => mouse_en_s,
+    mouse_x_o             => mouse_x_s,
+    mouse_y_o             => mouse_y_s,
+    mouse_buttons_o       => mouse_buttons_s,
+    volume_o              => volume_s
   );
-
-  fmretn: entity work.async_pulse port map (
-    clk_i     => clk_i,
-    rst_i     => arst_i,
-    pulse_i   => forceromonretn_trig_spisck_s,
-    pulse_o   => forceromonretn_trig_s
-  );
-
-  fmromcson: entity work.async_pulse port map (
-    clk_i     => clk_i,
-    rst_i     => arst_i,
-    pulse_i   => forceromcs_spisck_on_s,
-    pulse_o   => forceromcs_on_s
-  );
-
-  fmromcsoff: entity work.async_pulse port map (
-    clk_i     => clk_i,
-    rst_i     => arst_i,
-    pulse_i   => forceromcs_spisck_off_s,
-    pulse_o   => forceromcs_off_s
-  );
-
-  fmnmion: entity work.async_pulse port map (
-    clk_i     => clk_i,
-    rst_i     => arst_i,
-    pulse_i   => forcenmi_spisck_on_s,
-    pulse_o   => forcenmi_on_s
-  );
-
-  fmnmioff: entity work.async_pulse port map (
-    clk_i     => clk_i,
-    rst_i     => arst_i,
-    pulse_i   => forcenmi_spisck_off_s,
-    pulse_o   => forcenmi_off_s
-  );
-
-  specinten_sync: entity work.sync generic map (RESET => '0')
-      port map ( clk_i => clk_i, arst_i => arst_i, din_i => spect_inten_spisck_s, dout_o => spect_inten_s );
-
-  capsync_sync: entity work.sync generic map (RESET => '0')
-      port map ( clk_i => clk_i, arst_i => arst_i, din_i => spect_capsyncen_spisck_s, dout_o => spect_capsyncen_s );
-
-  ulahack_sync: entity work.sync generic map (RESET => '0')
-      port map ( clk_i => clk_i, arst_i => arst_i, din_i => ulahack_spisck_s, dout_o => ulahack_s );
-
-  tapen_sync: entity work.sync generic map (RESET => '0')
-      port map ( clk_i => clk_i, arst_i => arst_i, din_i => tap_enable_spisck_s, dout_o => tap_enable_s );
-
-  tapreset_sync: entity work.sync generic map (RESET => '0')
-      port map ( clk_i => clk_i, arst_i => arst_i, din_i => tapfifo_reset_spisck_s, dout_o => tapfifo_reset_s );
-
-  intack_sync: entity work.async_pulse2
-      port map (
-        clki_i => SPI_SCK_i,
-        clko_i => clk_i,
-        arst_i => arst_i,
-        pulse_i => cmdfifo_intack_spisck_s,
-        pulse_o => cmdfifo_intack_s
-      );
 
   -- Interrupt generation for command FIFO
   process(clk_i, arst_i)
@@ -838,7 +715,7 @@ begin
       end if;
       -- TODO TODO: fix this once we have a fifo with more than 1 element.
       --
-      if cmdfifo_full_s='1' and spec_nreq_delay_r=0 then   -- !! Empty is generated by read (SPI)
+      if cmdfifo_empty_s='0' and spec_nreq_delay_r=0 then   -- !! Empty is generated by read (SPI)
         spec_nreq_r <= '0';
       elsif cmdfifo_intack_s='1' then
         spec_nreq_r <= '1';
@@ -846,19 +723,6 @@ begin
       end if;
     end if;
   end process;
-
-  vol_sync: entity work.syncv
-    generic map (
-      WIDTH => 64,
-      RESET => '0'
-    ) port map (
-      clk_i   => clk_i,
-      arst_i  => arst_i,
-      din_i   => volume_spisck_s,
-      dout_o  => volume_s
-    );
-
-
 
   -- Audio
   zxaudio_inst: entity work.zxaudio
@@ -896,7 +760,7 @@ begin
     enable_i  => tap_enable_s,
     restart_i => tapfifo_reset_s,
 
-    fclk_i    => SPI_SCK_i,
+    fclk_i    => clk_i,--SPI_SCK_i,
     fdata_i   => tapfifo_write_s,
     fwr_i     => tapfifo_wr_s,
     ffull_o   => tapfifo_full_s,
@@ -976,17 +840,7 @@ begin
     end if;
   end process;
 
-  pc_syncv: entity work.syncv generic map (RESET => '0', WIDTH => 16)
-    port map ( clk_i => SPI_SCK_i, arst_i => arst_i, din_i => pc_r, dout_o => pc_spisck_r );
-
   sc: if SCREENCAP_ENABLED generate
-
-  fci: entity work.async_pulse port map (
-    clk_i     => clk_i,
-    rst_i     => arst_i,
-    pulse_i   => frameend_spisck_s,
-    pulse_o   => framecmplt_s
-  );
 
   screencap_inst: entity work.screencap
     port map (
@@ -1068,7 +922,21 @@ begin
       ram_dat_i       => ram_dat_wr_s,
       ram_wr_i        => ram_wr_s,
       ram_rd_i        => ram_rd_s,
-      ram_ack_o       => ram_ack_s
+      ram_ack_o       => ram_ack_s,
+
+      -- Spectrum interface
+      spect_addr_i    => a_s,
+      spect_data_i    => d_s,
+      spect_data_o    => romdata_o_s,
+      rom_active_i    => rom_active_s,
+      spect_clk_rise_i => spect_clk_rise_s,
+      spect_clk_fall_i => spect_clk_fall_s,
+      spect_wait_o    => FORCE_WAIT_o,
+      -- Ticks
+      spect_mem_rd_p_i => mem_rd_p_s,
+      spect_mem_wr_p_i => mem_wr_p_s,
+      romsel_i        => romsel_s,
+      memsel_i        => memsel_s
   );
 
 
@@ -1097,13 +965,16 @@ begin
     );
 
 
-  ahbr_inst: entity work.ahbreq_sync
+  ahbr_inst: entity work.ahbreq
+  generic map (
+    MODE => "LEVEL"
+  )
   port map (
-    mclk_i    => clk_i,
-    marst_i   => arst_i,
+    clk_i    => clk_i,
+    arst_i   => arst_i,
 
-    sclk_i    => SPI_SCK_i,
-    sarst_i   => '0', -- TODO
+    --sclk_i    => clk_i,
+    --sarst_i   => '0', -- TODO
 
     addr_i    => extram_addr_s,
     trans_i   => extram_req_s,
@@ -1121,13 +992,13 @@ begin
     usbclk_i      => clk48_i,
     ausbrst_i     => rst48_s,
 
-    clk_i         => SPI_SCK_i,
+    clk_i         => clk_i,--SPI_SCK_i,
     arst_i        => arst_i,
 
     rd_i          => usb_rd_s,
     wr_i          => usb_wr_s,
-    addr_i        => usb_addr_s,
-    dat_i         => usb_wdat_s,
+    addr_i        => generic_addr_s,
+    dat_i         => generic_wdat_s,
     dat_o         => usb_rdat_s,
     int_o         => usb_int_s,
     int_async_o   => usb_int_async_s,
@@ -1148,12 +1019,41 @@ begin
     dbg_o         => dbg_o(7 downto 0)
   );
 
+  capinst: if C_CAPTURE_ENABLED generate
+    capb: block
+      signal trig_s: std_logic_vector(21 downto 0);
+    begin
+
+      trig_s(15 downto 0) <= a_s;
+
+      scope_inst: entity work.scope
+        generic map (
+          NONTRIGGERABLE_WIDTH  => 8,
+          TRIGGERABLE_WIDTH     => 22,
+          WIDTH_BITS            => 10
+        )
+        port map (
+          clk_i         => clk_i,
+          arst_i        => arst_i,
+      
+          nontrig_i     => d_unlatched_s,
+          trig_i        => trig_s,
+      
+          rd_i          => capture_rd_s,
+          wr_i          => capture_wr_s,
+          addr_i        => generic_addr_s,
+          din_i         => generic_wdat_s,
+          dout_o        => capture_dat_s
+        );
+    end block;
+  end generate capinst;
+
   mosi_s          <= SPI_MOSI_i;
   SPI_MISO_o      <= miso_s;
 
   FORCE_ROMCS_o <= spect_forceromcs_bussync_s;
   FORCE_RESET_o <= spect_reset_s;
-  FORCE_INT_o   <= '0';
+  --FORCE_INT_o   <= '0';
   FORCE_NMI_o   <= nmi_r;
   --FORCE_IORQULA_o <= '0';
 

@@ -4,19 +4,20 @@ NMIHANDLER:
 	; Upon entry we already have AF on the stack.
         LD	A, 0
         OUT	(PORT_RAM_ADDR_0), A         ; Set external RAM LSB
-        OUT	(PORT_RAM_ADDR_1), A         ; 
-        OUT	(PORT_RAM_ADDR_2), A         ; and MSB addresses. So we start read/write at 0x000000
+        OUT	(PORT_RAM_ADDR_2), A         
+        LD	A, $20
+        OUT	(PORT_RAM_ADDR_1), A         ; and MSB addresses. So we start read/write at 0x002000
         
         ; Save regs.
         LD	A, C
         LD	C, PORT_RAM_DATA           ; Data port for external RAM
         
-        OUT	(C), A           ; Ram: 0x0000
-        OUT	(C), B           ; Ram: 0x0001
-        OUT	(C), E           ; Ram: 0x0002
-        OUT	(C), D           ; Ram: 0x0003
-        OUT	(C), L           ; Ram: 0x0004
-        OUT	(C), H           ; Ram: 0x0005
+        OUT	(C), A           ; Ram: 0x2000
+        OUT	(C), B           ; Ram: 0x2001
+        OUT	(C), E           ; Ram: 0x2002
+        OUT	(C), D           ; Ram: 0x2003
+        OUT	(C), L           ; Ram: 0x2004
+        OUT	(C), H           ; Ram: 0x2005
         
         ; Save whole screen + scratch area to External RAM. 
         ; 8192 bytes (0x2000)
@@ -33,32 +34,32 @@ lone:
         
         LD	(NMI_SCRATCH), SP
         LD	HL, (NMI_SCRATCH)     ; HL=SP
-        OUT	(C), L        	; Ram: 0x2006
-        OUT	(C), H        	; Ram: 0x2007
+        OUT	(C), L        	; Ram: 0x4006
+        OUT	(C), H        	; Ram: 0x4007
         
         LD	A, IXL
-        OUT	(C), A        	; Ram: 0x2008
+        OUT	(C), A        	; Ram: 0x4008
         LD	A, IXH
-        OUT	(C), A        	; Ram: 0x2009
+        OUT	(C), A        	; Ram: 0x4009
 
         LD	A, IYL
-        OUT	(C), A        	; Ram: 0x200A
+        OUT	(C), A        	; Ram: 0x400A
         LD	A, IYH
-        OUT	(C), A        	; Ram: 0x200B
+        OUT	(C), A        	; Ram: 0x400B
         
         ; We don't touch alternative registers, so leave them alone for now.
         
         ; Do save AF, however. It's easier to just do it here.
         ; HL still contains SP value
         LD	A, (HL)
-        OUT	(C), A          ; Ram: 0x200C [flags]
+        OUT	(C), A          ; Ram: 0x400C [flags]
         INC	HL
         LD	A, (HL)
-        OUT	(C), A          ; Ram: 0x200D [A]
+        OUT	(C), A          ; Ram: 0x400D [A]
 
         ; Get R 
         LD	A, R
-        OUT	(C), A	   	; Ram: 0x200E
+        OUT	(C), A	   	; Ram: 0x400E
 
         LD	SP, NMI_SPVAL
         PUSH	AF
@@ -66,18 +67,18 @@ lone:
         ; Get flags from SP
         LD	HL, NMI_SPVAL-2
         LD	A, (HL)
-        OUT	(C), A	   	; Ram: 0x200F
+        OUT	(C), A	   	; Ram: 0x400F
         POP	AF
         
         ; Finally, save I
         LD	A, I
-        OUT	(C), A	   	; Ram: 0x2010
+        OUT	(C), A	   	; Ram: 0x4010
         
         ; 
         
         ; Save border.
         IN	A, (PORT_ULA)
-        OUT	(C), A	   	; Ram: 0x2011
+        OUT	(C), A	   	; Ram: 0x4011
 
         ; We are good to go.
 
@@ -92,38 +93,38 @@ NMIRESTORE:
         LD	C, PORT_RAM_DATA	       ; Data port 
         LD	A, $06		; LSB 
         OUT	(PORT_RAM_ADDR_0), A 
-        LD	A, $20          ; MSB
+        LD	A, $40          ; MSB
         OUT	(PORT_RAM_ADDR_1), A
         XOR	A
-        OUT	(PORT_RAM_ADDR_2), A  
+        OUT	(PORT_RAM_ADDR_2), A   ; Address: 0x004006
         
-        IN	L, (C)          ; Ram: 0x2006
-        IN	H, (C)          ; Ram: 0x2007
+        IN	L, (C)          ; Ram: 0x4006
+        IN	H, (C)          ; Ram: 0x4007
         LD	(NMI_SCRATCH), HL
         LD	SP, (NMI_SCRATCH)
         ; SP ready now.
         ; Restore IX, IY now
-        IN	A, (C)          ; Ram: 0x2008
+        IN	A, (C)          ; Ram: 0x4008
         LD	IXL, A
-        IN	A, (C)          ; Ram: 0x2009
+        IN	A, (C)          ; Ram: 0x4009
         LD	IXH, A
-        IN	A, (C)          ; Ram: 0x200A
+        IN	A, (C)          ; Ram: 0x400A
         LD	IYL, A
         IN	A, (C)
-        LD	IYH, A          ; Ram: 0x200B
+        LD	IYH, A          ; Ram: 0x400B
         
         ; Move back to screen area.
         LD	A, $06		; LSB 
         OUT	(PORT_RAM_ADDR_0), A 
-        LD	A, $00          ; MSB
-        OUT	(PORT_RAM_ADDR_1), A
+        LD	A, $20          ; MSB
+        OUT	(PORT_RAM_ADDR_1), A     ; 0x2006
         ; Restore screen and scratchpad memory
         LD	B, $00
         LD	D, $20
         LD	E, A
 	LD	HL, SCREEN
 _l2:
-        INIR                   	; Starts at 0x0006
+        INIR                   	; Starts at 0x2006
         DEC	D
         JR	NZ, _l2
         ; Restore other regs
@@ -131,18 +132,19 @@ _l2:
 
         LD	A, $01		; LSB 
         OUT	(PORT_RAM_ADDR_0), A 
-        LD	A, $00          ; MSB
+        LD	A, $20          ; MSB   
         OUT	(PORT_RAM_ADDR_1), A
         ; BEDLH
-       	IN	B,(C)           ; Ram: 0x0001
-        IN	E,(C)           ; Ram: 0x0002
-        IN	D,(C)           ; Ram: 0x0003
-        IN	L,(C)           ; Ram: 0x0004
-        IN	H,(C)           ; Ram: 0x0005
+       	IN	B,(C)           ; Ram: 0x2001
+        IN	E,(C)           ; Ram: 0x2002
+        IN	D,(C)           ; Ram: 0x2003
+        IN	L,(C)           ; Ram: 0x2004
+        IN	H,(C)           ; Ram: 0x2005
 	; Last one is C.
         XOR	A
-        OUT	(PORT_RAM_ADDR_0), A        ; Ram: 0x0000
-        OUT	(PORT_RAM_ADDR_1), A        ; Ram: 0x0000
+        OUT	(PORT_RAM_ADDR_0), A        ; Ram: 0x2000
+        ;LD	A, $20
+        ;OUT	(PORT_RAM_ADDR_1), A        ; Ram: 0x0000
         IN	C, (C)
         ; SP is "good" here.
 	POP 	AF
@@ -387,11 +389,11 @@ SETUPASKFILENAME:
         ; DE:	pointer to screen address.
         ; TODO: this restores everything.
 RESTORESCREENAREA:
-	; Screen area starts at 0x0006
+	; Screen area starts at 0x2006
         ; Size: 0x1B00
         LD	A, $06
         OUT	(PORT_RAM_ADDR_0), A         ; Set external RAM LSB
-        XOR	A
+        LD	A, $20
         OUT	(PORT_RAM_ADDR_1), A         ; and MSB addresses. So we start read/write at 0x0000
 	LD	HL, SCREEN
 	LD	B, 0

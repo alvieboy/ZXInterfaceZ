@@ -33,7 +33,7 @@
 
 library IEEE;
 use IEEE.std_logic_1164.all; 
-use IEEE.std_logic_unsigned.all; 
+--use IEEE.std_logic_unsigned.all;
 use ieee.numeric_std.all;
 
 entity generic_dp_ram is
@@ -73,9 +73,9 @@ begin
     if rising_edge(clka) then
       if ena='1' then
         if wea='1' then
-          RAM( conv_integer(addra) ) := dia;
+          RAM( to_integer(unsigned(addra)) ) := dia;
         end if;
-        doa <= RAM(conv_integer(addra)) ;
+        doa <= RAM(to_integer(unsigned(addra))) ;
       end if;
     end if;
   end process;
@@ -84,10 +84,12 @@ begin
   begin
     if rising_edge(clkb) then
       if enb='1' then
+        if not is_x(addrb) then
         if web='1' then
-          RAM( conv_integer(addrb) ) := dib;
+          RAM( to_integer(unsigned(addrb)) ) := dib;
         end if;
-      dob <= RAM(conv_integer(addrb)) ;
+        dob <= RAM(to_integer(unsigned(addrb))) ;
+        end if;
       end if;
     end if;
   end process;

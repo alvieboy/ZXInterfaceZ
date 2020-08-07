@@ -5,6 +5,9 @@ LIBRARY work;
 use work.ahbpkg.all;
 
 entity ahbreq is
+  generic (
+    MODE: string -- "LEVEL" or "TOGGLE"
+  );
   port (
     clk_i     : in std_logic;
     arst_i    : in std_logic;
@@ -41,13 +44,15 @@ architecture beh of ahbreq is
 
 begin
 
-  trans_s   <= trans_i xor r.trans;
+  trans_s   <= trans_i xor r.trans when mode="TOGGLE" else trans_i;
 
   process(clk_i,arst_i, addr_i, m_i, trans_s, r, trans_i, we_i, data_i)
     variable w: regs_type;
   begin
     w         := r;
-    w.trans   := trans_i;
+    if mode="TOGGLE" then
+      w.trans   := trans_i;
+    end if;
     w.valid   := '0';
     -- TBD: we mihgt need to delay this due to resyncs
     m_o.HTRANS  <= C_AHB_TRANS_IDLE;
@@ -62,20 +67,22 @@ begin
           m_o.HWDATA  <= data_i;
           w.busy := '1';
           w.write := we_i;
-          w.wdata := data_i;
+          --w.wdata := data_i;
           if m_i.HREADY='0' then
             w.state := WAITREADY;
           else
             w.state := WAITCOMPLETE;
           end if;
         end if;
+
       when WAITREADY =>
         m_o.HTRANS <= C_AHB_TRANS_SEQ;
         m_o.HWRITE <= r.write;
-        m_o.HWDATA  <= r.wdata;
+        m_o.HWDATA  <= data_i; --r.wdata;
         if m_i.HREADY='1' then
           w.state := WAITCOMPLETE;
         end if;
+
       when WAITCOMPLETE =>
         m_o.HWRITE <= r.write;
         m_o.HWDATA  <= data_i;
@@ -92,7 +99,9 @@ begin
       r.state <= IDLE;
       r.busy  <= '0';
       r.valid  <= '0';
-      r.trans  <= '0';
+      if mode="TOGGLE" then
+        r.trans  <= '0';
+      end if;
     elsif rising_edge(clk_i) then
       r <= w;
     end if;

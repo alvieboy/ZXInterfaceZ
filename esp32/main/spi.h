@@ -39,5 +39,10 @@ int spi__transceive_cmd8_addr32(spi_device_handle_t spi,
                                 uint8_t *buffer,
                                 unsigned len);
 
+int spi__transmit_cmd8_addr24(spi_device_handle_t spi,
+                              uint8_t cmd,
+                              uint32_t addr,
+                              const uint8_t *buffer,
+                              unsigned len);
 
 #endif

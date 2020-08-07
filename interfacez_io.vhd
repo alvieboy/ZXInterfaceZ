@@ -72,6 +72,10 @@ entity interfacez_io is
     ay_adr_o              : out std_logic_vector(3 downto 0);
     ay_dout_o             : out std_logic_vector(7 downto 0);
 
+    -- Paging control
+    romsel_o              : out std_logic_vector(1 downto 0);
+    memsel_o              : out std_logic_vector(2 downto 0);
+
     dbg_o                 : out std_logic_vector(7 downto 0)
   );
 
@@ -112,6 +116,9 @@ architecture beh of interfacez_io is
   signal ay_register_sel_s      : std_logic;
   signal ay_data_sel_s          : std_logic;
   signal ayreg_r                : std_logic_vector(3 downto 0);
+
+  signal romsel_r               : std_logic_vector(1 downto 0);
+  signal memsel_r               : std_logic_vector(2 downto 0);
 
 begin
 
@@ -159,6 +166,8 @@ begin
       ram_wr_r      <= '0';
       ram_rd_r      <= '0';
       ay_wr_o       <= '0';
+      romsel_r      <= "00";
+      memsel_r      <= "000";
 
     elsif rising_edge(clk_i) then
 
@@ -198,6 +207,8 @@ begin
             d_write_r     <= dat_i;
             ram_wr_r      <= '1';
 
+          when SPECT_PORT_MEMSEL =>
+            memsel_r      <= dat_i(2 downto 0);
           when others =>
         end case;
 
@@ -378,5 +389,7 @@ begin
   ram_rd_o        <= ram_rd_r;
   ram_addr_o      <= std_logic_vector(ram_addr_r);
   mic_o           <= audio_i xor (port_fe_r(3) or port_fe_r(4));
+  romsel_o        <= romsel_r;
+  memsel_o        <= memsel_r;
  
 end beh;

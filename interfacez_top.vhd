@@ -33,10 +33,10 @@ entity interfacez_top is
     -- ZX Spectrum control
     FORCE_ROMCS_o : out std_logic;
     FORCE_RESET_o : out std_logic;
-    FORCE_INT_o   : out std_logic;
+    --FORCE_INT_o   : out std_logic;
     FORCE_NMI_o   : out std_logic;
     FORCE_IORQULA_o: out std_logic;
-
+    FORCE_WAIT_o  : out std_logic;
 
     -- ESP32 IOs
     ESP_IO26_o   : out std_logic;
@@ -166,9 +166,10 @@ begin
       A_BUS_OE_o    => A_BUS_OE_o,
       FORCE_ROMCS_o => FORCE_ROMCS_s,
       FORCE_RESET_o => FORCE_RESET_o,
-      FORCE_INT_o   => FORCE_INT_o,
+      --FORCE_INT_o   => FORCE_INT_o,
       FORCE_NMI_o   => FORCE_NMI_s,
       FORCE_IORQULA_o => FORCE_IORQULA_s,
+      FORCE_WAIT_o  => FORCE_WAIT_o,
       XA_i          => XA_i,
       XD_io         => XD_io,
       XCK_i         => XCK_i,
@@ -269,8 +270,8 @@ begin
   ram_buf: entity work.iobuf
   generic map (
     WIDTH => 4,
-    tOE   => 4.361 ns,
-    tOP   => 4.7 ns,
+    tOE   => 3.2 ns,
+    tOP   => 3.7 ns,
     tIP   => 1.55 ns
   )
   port map (

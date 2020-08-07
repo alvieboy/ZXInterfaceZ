@@ -1,5 +1,6 @@
 use work.tbc_device_p.all;
 use work.zxinterfacepkg.all;
+use work.logger.all;
 
 architecture t007 of tbc_device is
 
@@ -12,7 +13,7 @@ begin
     variable data: std_logic_vector(7 downto 0);
     variable exp:  std_logic_vector(7 downto 0);
   begin
-    report "T007: RAM manipulation";
+    logger_start("T007","RAM manipulation");
 
     Spimaster_Cmd <= Cmd_Spimaster_Defaults;
 
@@ -61,8 +62,10 @@ begin
     spiPayload_in_s(6) <= x"00";
     Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 7, spiPayload_in_s, spiPayload_out_s);
 
-    Check("First SPI data read is OK", spiPayload_out_s(5), x"DE");
-    Check("Second SPI data read is OK", spiPayload_out_s(6), x"AD");
+    exp := x"de";
+    Check("First SPI data read is OK", spiPayload_out_s(5), exp);
+    exp := x"ad";
+    Check("Second SPI data read is OK", spiPayload_out_s(6), exp);
 
     -- SPI ram write
 
@@ -87,23 +90,32 @@ begin
     spiPayload_in_s(8) <= x"00";
     Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 9, spiPayload_in_s, spiPayload_out_s);
 
-    Check("First SPI data read is OK", spiPayload_out_s(5), x"c0");
-    Check("Second SPI data read is OK", spiPayload_out_s(6), x"fe");
-    Check("Third SPI data read is OK", spiPayload_out_s(7), x"ca");
-    Check("Fourth SPI data read is OK", spiPayload_out_s(8), x"a5");
+    exp := x"c0";
+    Check("First SPI data read is OK", spiPayload_out_s(5), exp);
+    exp := x"fe";
+    Check("Second SPI data read is OK", spiPayload_out_s(6), exp);
+    exp := x"ca";
+    Check("Third SPI data read is OK", spiPayload_out_s(7), exp);
+    exp := x"a5";
+    Check("Fourth SPI data read is OK", spiPayload_out_s(8), exp);
 
     -- Try reading from Spectrum now.
     SpectrumWriteIo(Spectrum_Cmd, Spectrum_Data, x"00" & SPECT_PORT_RAM_ADDR_LOW, x"03"); -- Address low
     SpectrumWriteIo(Spectrum_Cmd, Spectrum_Data, x"00" & SPECT_PORT_RAM_ADDR_MIDDLE, x"20"); -- Address high
     SpectrumWriteIo(Spectrum_Cmd, Spectrum_Data,  x"00" & SPECT_PORT_RAM_ADDR_HIGH, x"01"); -- Address high
+
     SpectrumReadIo(Spectrum_Cmd, Spectrum_Data, x"00" & SPECT_PORT_RAM_DATA, data); -- Data
-    Check("data read is OK", data, x"c0");
+    exp := x"c0";
+    Check("data read is OK", data, exp);
     SpectrumReadIo(Spectrum_Cmd, Spectrum_Data, x"00" & SPECT_PORT_RAM_DATA, data); -- Data
-    Check("data read is OK", data, x"fe");
+    exp := x"fe";
+    Check("data read is OK", data, exp);
     SpectrumReadIo(Spectrum_Cmd, Spectrum_Data, x"00" & SPECT_PORT_RAM_DATA, data); -- Data
-    Check("data read is OK", data, x"ca");
+    exp := x"ca";
+    Check("data read is OK", data, exp);
     SpectrumReadIo(Spectrum_Cmd, Spectrum_Data, x"00" & SPECT_PORT_RAM_DATA, data); -- Data
-    Check("data read is OK", data, x"a5");
+    exp := x"a5";
+    Check("data read is OK", data, exp);
 
 
 
@@ -111,7 +123,7 @@ begin
       SysClk_Cmd,
       SpectClk_Cmd
     );
-
+    logger_end;
   end process;
 
 

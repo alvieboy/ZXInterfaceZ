@@ -25,7 +25,7 @@ package bfm_spimaster_p is
     Data      : std_logic_vector(7 downto 0);
   end record;
 
-  constant Cmd_Spimaster_Defaults: Cmd_Spimaster_type := ( None, 50 ns, x"00" );
+  constant Cmd_Spimaster_Defaults: Cmd_Spimaster_type := ( None, 100 ns, x"00" );
 
   component bfm_spimaster is
     port (

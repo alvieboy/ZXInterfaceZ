@@ -1,5 +1,6 @@
 LIBRARY ieee;
 USE ieee.std_logic_1164.all;
+USE std.textio.all;
 LIBRARY work;
 use work.tbc_device_p.all;
 use work.bfm_reset_p.all;
@@ -7,7 +8,6 @@ use work.bfm_clock_p.all;
 use work.bfm_spimaster_p.all;
 use work.bfm_spectrum_p.all;
 use work.bfm_ctrlpins_p.all;
-use work.bfm_rom_p.all;
 use work.bfm_ula_p.all;
 use work.bfm_audiocap_p.all;
 use work.bfm_qspiram_p.all;
@@ -30,7 +30,6 @@ architecture sim of tb_top is
     Spimaster_Cmd   : out Cmd_Spimaster_type;
     Spectrum_Cmd    : out Cmd_Spectrum_type;
     CtrlPins_Cmd    : out Cmd_CtrlPins_type;
-    Rom_Cmd         : out Cmd_Rom_type;
     Ula_Cmd         : out Cmd_Ula_type;
     Audiocap_Cmd    : out Cmd_Audiocap_type;
     QSPIRam0_Cmd    : out Cmd_QSPIRam_type;
@@ -43,7 +42,8 @@ architecture sim of tb_top is
     CtrlPins_Data   : in Data_CtrlPins_type;
     Ula_Data        : in Data_Ula_type;
     Audiocap_Data   : in Data_Audiocap_type;
-    Usbdevice_Data  : in Data_Usbdevice_type
+    Usbdevice_Data  : in Data_Usbdevice_type;
+    QSPIRam0_Data   : in Data_QSPIRam_type
   );
   end component;
 
@@ -55,7 +55,6 @@ architecture sim of tb_top is
   signal Spimaster_Cmd_s  : Cmd_Spimaster_type := Cmd_Spimaster_Defaults;
   signal Spectrum_Cmd_s   : Cmd_Spectrum_type  := Cmd_Spectrum_Defaults;
   signal CtrlPins_Cmd_s   : Cmd_CtrlPins_type  := Cmd_CtrlPins_Defaults;
-  signal Rom_Cmd_s        : Cmd_Rom_type  := Cmd_Rom_Defaults;
   signal Ula_Cmd_s        : Cmd_Ula_type  := Cmd_Ula_Defaults;
   signal Audiocap_Cmd_s   : Cmd_Audiocap_type  := Cmd_Audiocap_Defaults;
   signal QSPIRam0_Cmd_s   : Cmd_QSPIRam_type  := Cmd_QSPIRam_Defaults;
@@ -68,6 +67,7 @@ architecture sim of tb_top is
   signal Ula_Data_s       : Data_Ula_type;
   signal Audiocap_Data_s  : Data_Audiocap_type;
   signal Usbdevice_Data_s : Data_Usbdevice_type;
+  signal QSPIRam0_Data_s  : Data_QSPIRam_type;
 
   SIGNAL A_BUS_OE_s : STD_LOGIC;
   SIGNAL ASDO_s: STD_LOGIC;
@@ -88,6 +88,7 @@ architecture sim of tb_top is
   SIGNAL ESP_QWP_s  : STD_LOGIC;
   SIGNAL ESP_SCK_s : STD_LOGIC;
   SIGNAL FORCE_INT_s : STD_LOGIC;
+  SIGNAL FORCE_WAIT_s : STD_LOGIC;
   SIGNAL FORCE_RESET_s : STD_LOGIC;
   SIGNAL FORCE_ROMCS_s : STD_LOGIC;
   SIGNAL FORCE_NMI_s : STD_LOGIC;
@@ -113,6 +114,7 @@ architecture sim of tb_top is
   SIGNAL XRD_s : STD_LOGIC := '1';
   SIGNAL XRFSH_s : STD_LOGIC;
   SIGNAL XWR_s : STD_LOGIC := '1';
+  SIGNAL WAIT_s : STD_LOGIC := '1';
 
   signal ZX_A_s:  std_logic_vector(15 downto 0);
   signal ZX_D_s:  std_logic_vector(7 downto 0);
@@ -140,6 +142,7 @@ architecture sim of tb_top is
   signal audio_s      : std_logic;
   signal USB_dm_s     : std_logic;
   signal USB_dp_s     : std_logic;
+
 begin
 
    tbc: tbc_device
@@ -151,7 +154,6 @@ begin
       Spimaster_Cmd   => Spimaster_Cmd_s,
       Spectrum_Cmd    => Spectrum_Cmd_s,
       CtrlPins_Cmd    => CtrlPins_Cmd_s,
-      Rom_Cmd         => Rom_Cmd_s,
       Ula_Cmd         => Ula_Cmd_s,
       Audiocap_Cmd    => Audiocap_Cmd_s,
       QSPIRam0_Cmd    => QSPIRam0_Cmd_s,
@@ -163,7 +165,8 @@ begin
       CtrlPins_Data   => CtrlPins_Data_s,
       Ula_Data        => Ula_Data_s,
       Audiocap_Data   => Audiocap_Data_s,
-      Usbdevice_Data  => Usbdevice_Data_s
+      Usbdevice_Data  => Usbdevice_Data_s,
+      QSPIRam0_Data   => QSPIRam0_Data_s
     );
 
   sysclk_inst: entity work.bfm_clock
@@ -203,17 +206,8 @@ begin
       a_o     => XA_s,
       d_io    => XD_io,
       m1_o    => XM1_s,
+      wait_i  => WAIT_s,
       rfsh_o  => XRFSH_s
-    );
-
-  rom_inst: entity work.bfm_rom
-    port map (
-      Cmd_i   => Rom_Cmd_s,
-      A_i     => XA_s,
-      MREQn_i => XMREQ_s,
-      D_o     => XD_io,
-      RDn_i   => XRD_s,
-      OEn_i   => FORCE_ROMCS_s
     );
 
   ula_inst: entity work.bfm_ula
@@ -254,6 +248,7 @@ begin
   psram0_inst: ENTITY work.bfm_qspiram
     PORT MAP (
         Cmd_i           => QSPIRam0_Cmd_s,
+        Data_o          => QSPIRam0_Data_s,
         SCK_i           => RAMCLK_s,
         CSn_i           => RAMNCS_s,
         D_io            => RAMD_s(3 downto 0)
@@ -308,7 +303,8 @@ begin
     ESP_QHD_io => ESP_QHD_io,
     ESP_QWP_io => ESP_QWP_s,
     ESP_SCK_i => ESP_SCK_s,
-    FORCE_INT_o => FORCE_INT_s,
+    --FORCE_INT_o => FORCE_INT_s,
+    FORCE_WAIT_o => FORCE_WAIT_s,
     FORCE_RESET_o => FORCE_RESET_s,
     FORCE_ROMCS_o => FORCE_ROMCS_s,
     FORCE_NMI_o   => FORCE_NMI_s,
@@ -346,6 +342,6 @@ begin
     XWR_i => XWR_s
 	);
 
-
+  WAIT_s <= '0' when FORCE_WAIT_s='1' else '1';
   
 end sim;

@@ -1,4 +1,6 @@
 use work.tbc_device_p.all;
+use work.logger.all;
+use work.zxinterfacepkg.all;
 
 architecture t002 of tbc_device is
 
@@ -11,7 +13,7 @@ begin
   process
     variable depth: natural := 0;
   begin
-    report "T002: Check depth of command FIFO";
+    logger_start("T002","Check depth of command FIFO");
 
     Spimaster_Cmd <= Cmd_Spimaster_Defaults;
 
@@ -32,7 +34,7 @@ begin
 
     dcalc: for i in 0 to 64 loop
 
-      Spectrum_Cmd.Address <= x"0007";
+      Spectrum_Cmd.Address <= x"00" & SPECT_PORT_CMD_FIFO_STATUS;
       Spectrum_Cmd.Cmd     <= READIO;
       wait for 0 ps;
       wait until Spectrum_Data.Busy = false;
@@ -41,7 +43,7 @@ begin
         exit dcalc;
       end if;
 
-      Spectrum_Cmd.Address  <= x"0009";
+      Spectrum_Cmd.Address  <= x"00" & SPECT_PORT_CMD_FIFO_DATA;
       Spectrum_Cmd.Data     <= std_logic_vector(fifodata);
       Spectrum_Cmd.Cmd      <= WRITEIO;
       wait for 0 ps;
@@ -83,20 +85,20 @@ begin
 
 
       -- Inject more data.
-      Spectrum_Cmd.Address <= x"0007";
+      Spectrum_Cmd.Address <= x"00" & SPECT_PORT_CMD_FIFO_STATUS;
       Spectrum_Cmd.Cmd     <= READIO;
       wait until Spectrum_Data.Busy = false;
       Spectrum_Cmd.Cmd     <= NONE;
       
       Check("FIFO not full", Spectrum_Data.Data(0) = '0');
 
-      Spectrum_Cmd.Address  <= x"0009";
+      Spectrum_Cmd.Address  <=  x"00" & SPECT_PORT_CMD_FIFO_DATA;
       Spectrum_Cmd.Data     <= std_logic_vector(fifodata);
       Spectrum_Cmd.Cmd      <= WRITEIO;
       wait until Spectrum_Data.Busy = false;
       Spectrum_Cmd.Cmd      <= NONE;
 
-      Spectrum_Cmd.Address <= x"0007";
+      Spectrum_Cmd.Address <=  x"00" & SPECT_PORT_CMD_FIFO_STATUS;
       Spectrum_Cmd.Cmd     <= READIO;
       wait until Spectrum_Data.Busy = false;
       Spectrum_Cmd.Cmd     <= NONE;
@@ -158,7 +160,7 @@ begin
 
     -- Test FIFO reset
 
-    Spectrum_Cmd.Address  <= x"0009";
+    Spectrum_Cmd.Address  <=  x"00" & SPECT_PORT_CMD_FIFO_DATA; 
     Spectrum_Cmd.Data     <= std_logic_vector(fifodata);
     Spectrum_Cmd.Cmd      <= WRITEIO;
     wait until Spectrum_Data.Busy = false;
@@ -194,6 +196,7 @@ begin
       SysClk_Cmd,
       SpectClk_Cmd
     );
+    logger_end;
 
   end process;
 

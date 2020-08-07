@@ -10,7 +10,7 @@ use work.txt_util.all;
 entity bfm_qspiram is
   port (
     Cmd_i   : in Cmd_QSPIRam_type;
-    --Data_o  : out Data_QSPIRam_type;
+    Data_o  : out Data_QSPIRam_type;
     SCK_i   : in std_logic;
     D_io    : inout std_logic_vector(3 downto 0);
     CSn_i   : in std_logic
@@ -20,7 +20,7 @@ end entity bfm_qspiram;
 architecture sim of bfm_qspiram is
 
   subtype memword_type is std_logic_vector(7 downto 0);
-  type mem_type is array(0 to 65535) of memword_type;
+  type mem_type is array(0 to 838867) of memword_type;
   shared variable qspiram: mem_type := (others => (others => '0'));
   signal data_out_s :  std_logic_vector(3 downto 0);
   signal oe_s       :  std_logic_vector(3 downto 0) := (others => '0');
@@ -60,6 +60,10 @@ begin
       qspiram( Cmd_i.Address )(3 downto 0) := Cmd_i.Data(7 downto 4);
       qspiram( Cmd_i.Address )(7 downto 4) := Cmd_i.Data(3 downto 0);
       report "QSPI: internal write " & str(Cmd_i.Address) & " data 0x"  & hstr(Cmd_i.Data);
+    end if;
+    if Cmd_i.Cmd=READMEM then
+      Data_o.Data(7 downto 4) <= qspiram( Cmd_i.Address )(3 downto 0);
+      Data_o.Data(3 downto 0) <= qspiram( Cmd_i.Address )(7 downto 4);
     end if;
   end process;
 
@@ -163,7 +167,7 @@ begin
               when WRITE2 =>
                 write_v := wdata_r & D_io;
                 report "  > " &hstr(address_v) & " Data " & hstr(write_v);
-                qspiram( to_integer( unsigned(address_v(15 downto 0))  ) ) := write_v;
+                qspiram( to_integer( unsigned(address_v(23 downto 0))  ) ) := write_v;
                 state <= WRITE1;
               when READ1 | READ2 =>
                 oe_s <= "1111";
@@ -178,7 +182,7 @@ begin
             when READ1 =>
               if qpi_r='1' then
 
-                  rval_v := qspiram( to_integer( unsigned(address_v(15 downto 0))  ) );
+                  rval_v := qspiram( to_integer( unsigned(address_v(23 downto 0))  ) );
                 if rindex_r=3 then
 
                   report "  < " &hstr(address_v) & " Data " & hstr(rval_v);
@@ -213,26 +217,34 @@ begin
   process
     variable lastclk: time;
     variable lastsel: time;
+    variable lastdesel: time;
     variable delta: time;
   begin
+    lastdesel := now;
     wait on SCK_i, CSn_i;
     if rising_edge(SCK_i) then
       lastclk := now;
 
       delta := now - lastsel;
       if delta < 2.5 ns then
-        report "TIMING VIOLATION: tCSP<2.5ns failed, tCSP=" & time'image(delta) severity failure;
+        report "TIMING VIOLATION: tCSP>2.5ns failed, tCSP=" & time'image(delta) severity failure;
       end if;
 
     end if;
     if rising_edge(CSn_i) then
       delta := now - lastclk;
       if delta < 20 ns then
-        report "TIMING VIOLATION: tCHD<20ns failed, tCHD=" & time'image(delta);-- severity failure;
+        report "TIMING VIOLATION: tCHD>20ns failed, tCHD=" & time'image(delta);-- severity failure;
       end if;
+      lastdesel := now;
     end if;
     if falling_edge(CSn_i) then
       lastsel := now;
+      delta := now - lastdesel;
+      if delta < 50 ns then
+        report "TIMING VIOLATION: tCPH>50ns failed, tCHD=" & time'image(delta) severity failure;
+      end if;
+
     end if;
   end process;
 

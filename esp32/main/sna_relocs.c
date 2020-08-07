@@ -52,7 +52,7 @@ static const struct relocentry *findreloc(const char *name)
     return NULL;
 }
 
-// Offset shall be 0x0080 for the "old" method, and 0x3F00 for the in-main-rom method
+// Offset shall be 0x0080 for the "old" method, and 0x1F00 for the in-main-rom method
 
 static int apply_single_reloc(const char *name, const uint8_t *src, sna_writefun fun, void *userdata, uint16_t offset)
 {

@@ -315,7 +315,7 @@ int sna__save_from_extram(const char *file)
 #define SNA_EXTRAM_ADDRESS 0x010000
 
 #undef LOCAL_CHUNK_SIZE
-#define LOCAL_CHUNK_SIZE 512
+#define LOCAL_CHUNK_SIZE 64
 
 int sna__load_sna_extram(const char *file)
 {
@@ -323,6 +323,9 @@ int sna__load_sna_extram(const char *file)
     uint8_t chunk[LOCAL_CHUNK_SIZE];
 
     uint8_t header[SNA_HEADER_SIZE];
+
+    unsigned togo = 0xC000; // 48KB
+    unsigned extram_address = SNA_EXTRAM_ADDRESS;
 
     fullpath(file, fullfile, sizeof(fullfile)-1);
 
@@ -343,8 +346,8 @@ int sna__load_sna_extram(const char *file)
 
     // Now, load rest of file to memory
 
-    unsigned togo = 0xC000; // 48KB
-    unsigned extram_address = SNA_EXTRAM_ADDRESS;
+
+    extram_address = SNA_EXTRAM_ADDRESS;
 
     while (togo) {
         int chunksize = togo>LOCAL_CHUNK_SIZE?LOCAL_CHUNK_SIZE:togo;
@@ -357,6 +360,7 @@ int sna__load_sna_extram(const char *file)
 #ifdef TEST_WRITES
         uint8_t rdc[LOCAL_CHUNK_SIZE];
         memcpy(rdc, chunk, chunksize);
+        // RDC now stores original data.
 #endif
         if (fpga__write_extram_block(extram_address, chunk, chunksize)<0) {
             ESP_LOGE(TAG, "Error writing to external FPGA RAM");
@@ -371,25 +375,15 @@ int sna__load_sna_extram(const char *file)
         }
         if (memcmp(rdc,chunk,chunksize)!=0) {
 
-            ESP_LOGE(TAG, "ERROR comparing data!!! address:%08x", extram_address);
-            dump__buffer(rdc, 64);
-            dump__buffer(chunk, 64);
+            ESP_LOGE(TAG, "ERROR comparing data!!! address:%08x len=%d", extram_address, chunksize);
+            dump__buffer(rdc, chunksize);
+            dump__buffer(chunk, chunksize);
             memcpy(chunk, rdc, sizeof(chunk) );
             if (fpga__write_extram_block(extram_address, chunk, chunksize)<0) {
                 ESP_LOGE(TAG, "Error writing to external FPGA RAM");
                 close(fd);
                 return -1;
             }
-
-
-
-            if (fpga__read_extram_block(extram_address, chunk, chunksize)<0) {
-                ESP_LOGE(TAG, "Error reading from external FPGA RAM");
-                close(fd);
-                return -1;
-            }
-            dump__buffer(chunk, 64);
-
             return -1;
         }
 #endif

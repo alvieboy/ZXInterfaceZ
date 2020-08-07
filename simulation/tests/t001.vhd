@@ -1,4 +1,5 @@
 use work.tbc_device_p.all;
+use work.logger.all;
 
 architecture t001 of tbc_device is
 
@@ -9,7 +10,7 @@ begin
 
   process
   begin
-    report "T001: Read FPGA ID";
+    logger_start("T001","Read FPGA ID");
 
     Spimaster_Cmd <= Cmd_Spimaster_Defaults;
 
@@ -50,6 +51,8 @@ begin
       SysClk_Cmd,
       SpectClk_Cmd
     );
+
+    logger_end;
 
   end process;
 

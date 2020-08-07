@@ -22,7 +22,12 @@ package zxinterfacepkg is
   --constant FPGAID3: std_logic_vector(7 downto 0) := x"00";
 
   constant C_ENABLE_VGA: boolean := true;
+  constant C_CAPTURE_ENABLED: boolean := true;
 
+
+  constant C_MEM_READ_DELAY_PULSE   : natural := 33;  -- This is used to capture signals.
+  constant C_MEM_READ_FILTER_DELAY  : natural := 1;
+  constant C_IO_READ_DELAY_PULSE    : natural := 15;
 
   -- 0 x 1 x x x 1 1
 
@@ -36,7 +41,7 @@ package zxinterfacepkg is
   constant SPECT_PORT_RAM_ADDR_HIGH         : std_logic_vector(7 downto 0) := "00111111";   -- x"3F"
   constant SPECT_PORT_RAM_DATA              : std_logic_vector(7 downto 0) := "01100011";   -- x"63"
   constant SPECT_PORT_CMD_FIFO_DATA         : std_logic_vector(7 downto 0) := "01100111";   -- x"67"
-  -- UNUSED: "01101011";
+  constant SPECT_PORT_MEMSEL                : std_logic_vector(7 downto 0) := "01101011";   -- x"6B";
   -- UNUSED: "01101111";
   -- UNUSED: "01110011";
   -- UNUSED: "01110111";

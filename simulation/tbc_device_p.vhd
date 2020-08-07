@@ -4,6 +4,7 @@ LIBRARY work;
 use work.txt_util.all;
 use work.bfm_reset_p.all;
 use work.bfm_clock_p.all;
+use work.logger.all;
 
 package tbc_device_p is
 
@@ -92,9 +93,9 @@ package body tbc_device_p is
     SpectClk_Cmd_o.Enabled  <= false;
 
     if errorCounter=0 then
-      report "Overall test status: PASS";
+      log("Overall test status: PASS");
     else
-      report "Overall test status: ** FAIL ** (" &str(errorCounter)&" errors)";
+      log("Overall test status: ** FAIL ** (" &str(errorCounter)&" errors)");
     end if;
     wait;
   end procedure;
@@ -104,9 +105,12 @@ package body tbc_device_p is
     what: in string;
     actual: in std_logic_vector;
     expected: in std_logic_vector) is
+    variable e: std_logic_vector(expected'high downto expected'low);
   begin
-    if (actual /= expected) then
-      report "CHECK FAILED: "&what&": expected " & hstr(expected)& ", got " &hstr(actual);
+    e:=expected;
+    log("Check '" & what & "' expected " & hstr(e)& ", got " &hstr(actual));
+    if (actual /= e) then
+      error("CHECK FAILED: "&what&": expected " & hstr(e)& ", got " &hstr(actual));
       errorCounter := errorCounter + 1;
     end if;
   end procedure;
@@ -116,8 +120,9 @@ package body tbc_device_p is
     actual: in std_logic;
     expected: in std_logic) is
   begin
+    log("Check '" & what & "' expected " & str(expected)& ", got " &str(actual));
     if (actual /= expected) then
-      report "CHECK FAILED: "&what&": expected " & str(expected)& ", got " &str(actual);
+      error("CHECK FAILED: "&what&": expected " & str(expected)& ", got " &str(actual));
       errorCounter := errorCounter + 1;
     end if;
   end procedure;
@@ -126,8 +131,10 @@ package body tbc_device_p is
     what: in string;
     b: in boolean) is
   begin
+    log("Check '" & what &"'");
+
     if (not b) then
-      report "CHECK FAILED: " & what & " is FALSE";
+      error("CHECK FAILED: " & what & " is FALSE");
       errorCounter := errorCounter + 1;
     end if;
   end procedure;

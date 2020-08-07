@@ -310,7 +310,7 @@ BEGIN
 
   phy_txactive_s <= not noe_s;
 
-  process(usbclk_i, ausbrst_i, r, Phy_Linestate, wr_sync_s, write_address_s, write_data_s, statusreg_s, intpendreg_s,
+  mainp: process(usbclk_i, ausbrst_i, r, Phy_Linestate, wr_sync_s, write_address_s, write_data_s, statusreg_s, intpendreg_s,
     usb_rst_phy, trans_status_s, trans_dsize_read_s, pwrflt_i)
     variable w  : regs_type;
     variable ch : channel_type;
@@ -525,13 +525,16 @@ BEGIN
 
     case r.host_state is
       when DETACHED =>
-        if Phy_Linestate="01" or Phy_Linestate="10" then
+        if not is_x(Phy_Linestate) and ( Phy_Linestate="01" or Phy_Linestate="10" ) then
           if r.sr.poweron='1' then
           if r.attach_count=0 then
             w.sr.fulllowspeed   := Phy_Linestate(0); -- Set speed according to USB+ pullup
             w.speed := Phy_Linestate(0); -- Set speed according to USB+ pullup
             w.host_state        := ATTACHED;
             --w.sr.connectdetect  :='1';
+            -- synthesis translate_off
+            report "DEVICE ATTACHED";-- severity failure;
+            -- synthesis translate_on
             w.sr.connected      :='1';
             if r.intconfr.connectdetect='1' then
               w.intpendr.connectdetect:='1';
@@ -875,6 +878,7 @@ BEGIN
       r.frame             <= (others => '0');
       r.sof_count         <= C_SOF_TIMEOUT - 1;
       r.attach_count      <= C_ATTACH_DELAY - 1;
+      r.channel           <= 0;
       r.sr.poweron        <= '0';
       r.sr.overcurrent    <= '0';
       r.sr.fulllowspeed   <= '0';
@@ -1039,7 +1043,7 @@ BEGIN
   deb: block
     signal fs: std_logic;
   begin
-  process(usbclk_i,ausbrst_i)
+  debug: process(usbclk_i,ausbrst_i)
   begin
     if ausbrst_i='1' then
       dbg_o <= (others => '0');

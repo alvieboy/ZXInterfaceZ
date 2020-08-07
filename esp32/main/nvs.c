@@ -54,11 +54,11 @@ int nvs__fetch_u32(const char *key, uint32_t *value, uint32_t def)
 
     err = nvs_get_u32(nvsh, key, value);
     if ((err==ESP_ERR_NVS_NOT_FOUND)) {
-        printf("FLOAT DEF\n");
+        //printf("FLOAT DEF\n");
         *value = def;
         return 0;
     }
-    printf("FLOAT OK %d err %d\n", *value, err);
+    //printf("FLOAT OK %d err %d\n", *value, err);
 
 
     if (err != ESP_OK) {
@@ -96,7 +96,7 @@ int nvs__fetch_float(const char *key, float *value, float def)
 
     int r = nvs__fetch_u32(key, &v.u, d.u);
     if (r==0) {
-        printf("FLOAT Conv %f\n", v.f);
+        //printf("FLOAT Conv %f\n", v.f);
 
         *value = v.f;
     }
@@ -121,7 +121,7 @@ float nvs__float(const char *key, float def)
 {
     float ret;
     ESP_ERROR_CHECK(nvs__fetch_float(key, &ret, def));
-    printf("FLOAT %f\n", ret);
+    //printf("FLOAT %f\n", ret);
 
     return ret;
 }

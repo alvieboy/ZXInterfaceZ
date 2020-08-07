@@ -13,6 +13,8 @@
 #include "byteops.h"
 
 static spi_device_handle_t spi0_fpga;
+//static spi_device_handle_t spi0_fpga_10m; // Slow 10Mhz for extram read/writes
+
 static fpga_flags_t latched_flags = 0;
 static uint32_t config1_latch = 0;
 
@@ -55,7 +57,9 @@ static const uint8_t bitRevTable[256] =
 
 static void fpga__init_spi()
 {
-    spi__init_device(&spi0_fpga, 20000000, PIN_NUM_CS);
+    spi__init_device(&spi0_fpga, 8000000, PIN_NUM_CS);
+    //spi__init_device(&spi0_fpga_10m, 10000000, PIN_NUM_CS)<0)
+    //    return -1;
 }
 
 unsigned fpga__read_id()
@@ -267,7 +271,9 @@ int fpga__get_captures(uint8_t *target)
 
 int fpga__upload_rom_chunk(uint16_t offset, uint8_t *buffer_sub3, unsigned len)
 {
+#if 0
     // Upload chunk
+    buffer_sub3[0] = 0xE1;
     buffer_sub3[0] = 0xE1;
     buffer_sub3[1] = (offset>>8) & 0xFF;
     buffer_sub3[2] = offset & 0xFF;
@@ -277,6 +283,12 @@ int fpga__upload_rom_chunk(uint16_t offset, uint8_t *buffer_sub3, unsigned len)
     }
 
     spi__transceive(spi0_fpga, buffer_sub3, 3 + len);
+#else
+    if (fpga__write_extram_block((uint32_t)offset, &buffer_sub3[3], len)<0) {
+        ESP_LOGE(TAG, "Cannot write ROM block");
+        return -1;
+    }
+#endif
 
     return len;
 }
@@ -361,13 +373,16 @@ int fpga__load_resource_fifo(const uint8_t *data, unsigned len, int timeout)
 
 int fpga__write_rom(unsigned offset, uint8_t val)
 {
-    uint8_t tbuf[4];
+    /*uint8_t tbuf[4];
     tbuf[0] = 0xE1;
     tbuf[1] = (offset>>8) & 0xFF;
     tbuf[2] = offset & 0xFF;
     tbuf[3] = val;
 
     return spi__transceive(spi0_fpga, tbuf, 4);
+    */
+    ESP_LOGI(TAG,"Patching rom @ 0x%08x: 0x%02x\n", offset, val);
+    return fpga__write_extram(offset, val);
 }
 
 int fpga__upload_rom(const uint8_t *buffer, unsigned len)
@@ -383,7 +398,34 @@ int fpga__upload_rom(const uint8_t *buffer, unsigned len)
 
         int llen = len>64?64:len;
         memcpy(&tbuf[3], buffer, llen);
+#if 0
         spi__transceive(spi0_fpga, tbuf, llen+3);
+#else
+        if (fpga__write_extram_block((uint32_t)offset, &tbuf[3], llen)<0)
+            return -1;
+
+        memset(tbuf, 0, sizeof(tbuf));
+
+        if (fpga__read_extram_block((uint32_t)offset, &tbuf[3], llen)<0)
+            return -1;
+
+        if (memcmp(&tbuf[3], buffer, llen)!=0) {
+            ESP_LOGE(TAG,"ERROR comparing ROM contents\n");
+            dump__buffer(buffer, llen);
+            dump__buffer(&tbuf[3], llen);
+
+            memset(tbuf, 0, sizeof(tbuf));
+
+            if (fpga__read_extram_block((uint32_t)offset, &tbuf[3], llen)<0)
+                return -1;
+
+            dump__buffer(&tbuf[3], llen);
+
+            return -1;
+        }
+
+        ESP_LOGI(TAG, "Chunk %d at 0x%08x", llen, (uint32_t)offset);
+#endif
         buffer+=llen;
         len-=llen;
         offset+=llen;
@@ -544,6 +586,7 @@ int fpga__load_tap_fifo_command(const uint8_t *data, unsigned len, int timeout)
 
 int fpga__read_extram(uint32_t address)
 {
+#if 0
     uint8_t buf[6];
     buf[0] = 0x50;
     buf[1] = (address>>16) & 0xff;
@@ -552,14 +595,27 @@ int fpga__read_extram(uint32_t address)
     buf[4] = 0x00; // Dummy
     buf[5] = 0x00;
 
-    if (spi__transceive(spi0_fpga, buf, 6)<0)
+    if (spi__transceive(spi0_fpga_10m, buf, 6)<0)
         return -1;
 
     return buf[5];
+#else
+    uint8_t buf[1];
+
+    if (spi__transceive_cmd8_addr32(spi0_fpga,
+                                    0x50,
+                                    address<<8,
+                                    buf, 1)<0)
+        return -1;
+
+    return buf[0];
+
+#endif
 }
 
 int fpga__write_extram(uint32_t address, uint8_t val)
 {
+#if 0
     uint8_t buf[6];
     buf[0] = 0x51;
     buf[1] = (address>>16) & 0xff;
@@ -570,6 +626,12 @@ int fpga__write_extram(uint32_t address, uint8_t val)
     if (spi__transceive(spi0_fpga, buf, 5)<0)
         return -1;
     return 0;
+#else
+    return  spi__transceive_cmd8_addr24(spi0_fpga,
+                                        0x51,
+                                        address,
+                                        &val, 1);
+#endif
 }
 
 int fpga__read_extram_block(uint32_t address, uint8_t *dest, int size)
@@ -582,14 +644,14 @@ int fpga__read_extram_block(uint32_t address, uint8_t *dest, int size)
 
 int fpga__write_extram_block(uint32_t address, uint8_t *buffer, int size)
 {
-    //ESP_LOGI(TAG, "Write RAM address 0x%06x", address);
+    ESP_LOGI(TAG, "Write RAM address 0x%06x len %d", address, size);
 
     //dump__buffer(buffer, 64);
 
     // Workaround for weird first-byte corruption
-    if (fpga__write_extram(address, buffer[0])<0)
+ /*   if (fpga__write_extram(address, buffer[0])<0)
         return -1;
-
+   */
     return spi__transceive_cmd8_addr24(spi0_fpga,
                                        0x51,
                                        address,

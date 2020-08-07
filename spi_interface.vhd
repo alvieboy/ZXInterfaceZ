@@ -7,9 +7,11 @@ use work.zxinterfacepkg.all;
 
 entity spi_interface is
   port (
-    SCK_i                 : in std_logic;
-    CSN_i                 : in std_logic;
+    clk_i                 : in std_logic;
     arst_i                : in std_logic;
+
+    SCKx_i                : in std_logic;
+    CSNx_i                : in std_logic;
 
     MOSI_i                : in std_logic;
     MISO_o                : out std_logic;
@@ -23,24 +25,6 @@ entity spi_interface is
     vidmem_en_o           : out std_logic;
     vidmem_adr_o          : out std_logic_vector(12 downto 0);
     vidmem_data_i         : in std_logic_vector(7 downto 0);
-
-    capmem_en_o           : out std_logic;
-    capmem_adr_o          : out std_logic_vector(CAPTURE_MEMWIDTH_BITS-1 downto 0);
-    capmem_data_i         : in std_logic_vector(35 downto 0);
-
-    -- Synchronous to SCK_i
-    capture_run_o         : out std_logic;
-    capture_clr_o         : out std_logic;
-    capture_cmp_o         : out std_logic;
-    capture_len_i         : in std_logic_vector(CAPTURE_MEMWIDTH_BITS-1 downto 0);
-    capture_trig_i        : in std_logic;
-    capture_trig_mask_o   : out std_logic_vector(31 downto 0);
-    capture_trig_val_o    : out std_logic_vector(31 downto 0);
-
-    rom_en_o              : out std_logic;
-    rom_we_o              : out std_logic;
-    rom_di_o              : out std_logic_vector(7 downto 0);
-    rom_addr_o            : out std_logic_vector(13 downto 0);
 
     rstfifo_o             : out std_logic;
     rstspect_o            : out std_logic;
@@ -85,16 +69,24 @@ entity spi_interface is
     extram_dat_o          : out std_logic_vector(31 downto 0);
     extram_req_o          : out std_logic;
     extram_we_o           : out std_logic;
+    --extram_rd_o           : out std_logic;
     extram_valid_i        : in std_logic;
+
+    -- Generic address/data
+    generic_addr_o        : out std_logic_vector(10 downto 0);
+    generic_dat_o         : out std_logic_vector(7 downto 0);
 
     -- USB access
 
     usb_rd_o              : out std_logic;
     usb_wr_o              : out std_logic;
-    usb_addr_o            : out std_logic_vector(10 downto 0);
-    usb_dat_o             : out std_logic_vector(7 downto 0);
     usb_dat_i             : in std_logic_vector(7 downto 0);
     usb_int_i             : in std_logic; -- USB interrupt
+
+    -- Capture access
+    capture_rd_o          : out std_logic;
+    capture_wr_o          : out std_logic;
+    capture_dat_i         : in std_logic_vector(7 downto 0);
 
     -- Keyboard manipulation
     kbd_en_o              : out std_logic;
@@ -133,7 +125,7 @@ architecture beh of spi_interface is
   subtype reg32_type is std_logic_vector(31 downto 0);
   type regs32_type is array(0 to NUMREGS32-1) of reg32_type;
 
-  signal regs32_r       : regs32_type;
+  signal regs32_r       : regs32_type := (others => (others => '0'));
   signal tempreg_r      : std_logic_vector(23 downto 0);
   signal current_reg_r  : natural range 0 to NUMREGS32-1;
   signal pc_latch_r     : std_logic_vector(7 downto 0);
@@ -169,10 +161,10 @@ architecture beh of spi_interface is
     EXTRAMADDR2,
     EXTRAMADDR3,
     EXTRAMDATA,
-    USBADDR1,
-    USBADDR2,
-    USBREADDATA,
-    USBWRITEDATA
+    GENERICADDR1,
+    GENERICADDR2,
+    GENERICREADDATA,
+    GENERICWRITEDATA
   );
 
   signal state_r      : state_type;
@@ -192,31 +184,44 @@ architecture beh of spi_interface is
   signal extram_we_r    : std_logic := '0';
   signal extram_wdata_r : std_logic_vector(7 downto 0);
 
-  --signal usb_addr_r     : std_logic_vector(15 downto 0);
-  signal usb_addr_wr_r  : std_logic_vector(15 downto 0);
+  signal generic_addr_wr_r  : std_logic_vector(15 downto 0);
+  signal generic_is_write_r : std_logic;
+
   signal usb_rd_r       : std_logic := '0'; -- FIxme: needs areset
---  signal usb_wr_r       : std_logic := '0'; -- FIxme: needs areset
-  signal usb_is_write_r : std_logic;
+  signal capture_rd_r   : std_logic := '0'; -- FIxme: needs areset
   signal tapcmd_r       : std_logic;
 
+  type generic_access_type is (
+    GENERIC_USB,
+    GENERIC_CAPTURE
+  );
+  signal generic_access_r: generic_access_type;
+
+  signal sck_fall_s   : std_logic;
+  signal sck_rise_s   : std_logic;
+  signal csn_s        : std_logic;
+  signal cmdfifo_read_issued_r: std_logic;
 begin
 
-  len_sync: entity work.syncv generic map (RESET => '0', WIDTH => CAPTURE_MEMWIDTH_BITS )
-      port map ( clk_i => SCK_i, arst_i => arst_i, din_i => capture_len_i, dout_o => capture_len_sync_s );
-  trig_sync: entity work.sync generic map (RESET => '0')
-      port map ( clk_i => SCK_i, arst_i => arst_i, din_i => capture_trig_i, dout_o => capture_trig_sync_s );
+  --len_sync: entity work.syncv generic map (RESET => '0', WIDTH => CAPTURE_MEMWIDTH_BITS )
+--      port map ( clk_i => SCK_i, arst_i => arst_i, din_i => capture_len_i, dout_o => capture_len_sync_s );
+--  trig_sync: entity work.sync generic map (RESET => '0')
+--      port map ( clk_i => SCK_i, arst_i => arst_i, din_i => capture_trig_i, dout_o => capture_trig_sync_s );
 
 
   vidmem_adr_o <= std_logic_vector(vid_addr_r);
-  capmem_adr_o <= std_logic_vector(capmem_adr_r);
-  capture_trig_val_o  <= regs32_r(1);
-  capture_trig_mask_o <= regs32_r(0);
+  --capmem_adr_o <= std_logic_vector(capmem_adr_r);
+  --capture_trig_val_o  <= regs32_r(1);
+  --capture_trig_mask_o <= regs32_r(0);
   frameend_o <= frame_end_r;
 
-  spi_inst: entity work.qspi_slave
+  spi_inst: entity work.qspi_slave_resync
   port map (
-    SCK_i         => SCK_i,
-    CSN_i         => CSN_i,
+    clk_i         => clk_i,
+    arst_i        => arst_i,
+
+    SCK_i         => SCKx_i,
+    CSN_i         => CSNx_i,
     --D_io          => D_io,
     MOSI_i        => MOSI_i,
     MISO_o        => MISO_o,
@@ -227,10 +232,13 @@ begin
     qen_i         => '0',
 
     dat_o         => dat_s,
-    dat_valid_o   => dat_valid_s
+    dat_valid_o   => dat_valid_s,
+    sck_rise_o    => sck_rise_s,
+    sck_fall_o    => sck_fall_s,
+    csn_o         => csn_s
   );
 
-  process(SCK_i, arst_i)
+  process(clk_i, arst_i)
   begin
     if arst_i='1' then
 
@@ -243,7 +251,7 @@ begin
       forcenmi_trig_off_o   <= '0';
       cmdfifo_intack_o      <= '0';
       cmdfifo_reset_o       <= '0';
-    elsif rising_edge(SCK_i) then
+    elsif rising_edge(clk_i) then
 
       resfifo_reset_o       <= '0';
       forceromonretn_trig_o <= '0';
@@ -281,9 +289,9 @@ begin
 
   rstfifo_o     <= flags_r(0);
   rstspect_o    <= flags_r(1);
-  capture_clr_o <= flags_r(2);
-  capture_run_o <= flags_r(3);
-  capture_cmp_o <= flags_r(4); -- Compress
+  --capture_clr_o <= flags_r(2);
+  --capture_run_o <= flags_r(3);
+  --capture_cmp_o <= flags_r(4); -- Compress
   intenable_o   <= flags_r(5); -- Interrupt enable
   capsyncen_o   <= flags_r(6); -- Capture sync
 
@@ -297,10 +305,10 @@ begin
   --forceromcs_o  <= flags_r(7);
 
 
-  rom_en_o <= '1' when state_r=WRITEROM else '0';
-  rom_we_o <= dat_valid_s;
-  rom_di_o <= dat_s;
-  rom_addr_o <= std_logic_vector(rom_addr_r);
+  --rom_en_o <= '1' when state_r=WRITEROM else '0';
+  --rom_we_o <= dat_valid_s;
+  --rom_di_o <= dat_s;
+  --rom_addr_o <= std_logic_vector(rom_addr_r);
 
   resfifo_wr_o      <= '1' when state_r=WRRESFIFO and dat_valid_s='1' else '0';
   resfifo_write_o   <= dat_s;
@@ -309,17 +317,18 @@ begin
   tapfifo_write_o(7 downto 0)   <= dat_s;
   tapfifo_write_o(8) <= tapcmd_r;
 
-  usb_rd_o          <= usb_rd_r;--'1' when state_r=USBREADDATA and dat_valid_s='1' else '0';
+  usb_rd_o          <= usb_rd_r;
 
-  usb_wr_o          <= '1' when state_r=USBWRITEDATA and dat_valid_s='1' else '0';
+  usb_wr_o          <= '1' when state_r=GENERICWRITEDATA and dat_valid_s='1' and generic_access_r=GENERIC_USB else '0';
+  capture_wr_o      <= '1' when state_r=GENERICWRITEDATA and dat_valid_s='1' and generic_access_r=GENERIC_CAPTURE else '0';
 
 
-  usb_dat_o         <= dat_s;
+  generic_dat_o         <= dat_s;
 
-  process(SCK_i, CSN_i, arst_i)
+  process(clk_i, csn_s)
     variable caplen_v:  std_logic_vector(31 downto 0);
   begin
-    if CSN_i='1' then
+    if csn_s='1' then
       state_r       <= IDLE;
       txden_s       <= '0';
       txload_s      <= '0';
@@ -330,15 +339,19 @@ begin
       capmem_adr_r  <= (others=>'0');
       wreg_en_r     <= '0';
       usb_rd_r      <= '0';
+      capture_rd_r  <= '0';
       --usb_wr_r      <= '0';
+      cmdfifo_read_issued_r <= '0';
 
-    elsif rising_edge(SCK_i) then
+    elsif rising_edge(clk_i) then
 
       fifo_rd_o     <= '0';
       cmdfifo_rd_o  <= '0';
-      capmem_en_o   <= '0';
       usb_rd_r      <= '0';
---      usb_wr_r      <= '0';
+      capture_rd_r  <= '0';
+      extram_req_r  <= '0';
+
+      if sck_rise_s='1' then
 
       case state_r is
         when IDLE =>
@@ -383,41 +396,37 @@ begin
                 txden_s <= '1';
                 txload_s <= '1';
                 txdat_s <= "00000000";
-                usb_is_write_r <= '0';
-                state_r <= USBADDR1;
+                generic_is_write_r <= '0';
+                generic_access_r <= GENERIC_USB;
+                state_r <= GENERICADDR1;
 
               when x"61" => -- USB write
                 txden_s <= '1';
                 txload_s <= '1';
                 txdat_s <= "00000000";
-                usb_is_write_r <= '1';
-                state_r <= USBADDR1;
+                generic_is_write_r <= '1';
+                generic_access_r <= GENERIC_USB;
+                state_r <= GENERICADDR1;
 
+              when x"70" => -- Capture read
+                if C_CAPTURE_ENABLED then
+                  txden_s <= '1';
+                  txload_s <= '1';
+                  txdat_s <= "00000000";
+                  generic_is_write_r <= '0';
+                  generic_access_r <= GENERIC_CAPTURE;
+                  state_r <= GENERICADDR1;
+                end if;
 
-              when x"E0" => -- Read capture memory
-                txden_s <= '1';
-                txload_s <= '1';
-                txdat_s <= "00000000";
-                capmem_en_o <= '1'; -- Address should be zero.
-                wordindex2_r <= "000";
-                --capmem_adr_r <= capmem_adr_r + 1;
-                state_r <= READCAPTURE;
-
-              when x"E2" => -- Read capture status
-                txden_s <= '1';
-                txload_s <= '1';
-                txdat_s <= "00000000";
-                wordindex_r <= "00";
-                state_r <= READCAPSTATUS;
-
-              when x"E1" => -- Write ROM contents
-                txden_s <= '1';
-                txload_s <= '1';
-                txdat_s <= "00000000";
-                --capmem_en_o <= '1'; -- Address should be zero.
-                --wordindex2_r <= "000";
-                rom_addr_r <= (others => '0');
-                state_r <= WRITEROM1;
+              when x"71" => -- Capture write
+                if C_CAPTURE_ENABLED then
+                  txden_s <= '1';
+                  txload_s <= '1';
+                  txdat_s <= "00000000";
+                  generic_is_write_r <= '1';
+                  generic_access_r <= GENERIC_CAPTURE;
+                  state_r <= GENERICADDR1;
+                end if;
 
               when x"E3" => -- Write Resource FIFO contents
                 txden_s <= '1';
@@ -482,11 +491,14 @@ begin
                 txden_s     <= '1';
                 txload_s    <= '1';
                 wordindex_r <= "00";
+                cmdfifo_read_issued_r <= '0';
+
                 if cmdfifo_empty_i='1' then
                   txdat_s   <= x"FF";
                   state_r   <= UNKNOWN;
                 else
                   txdat_s   <= x"FE";
+
                   state_r   <= READFIFOCMDDATA;
                 end if;
 
@@ -671,58 +683,12 @@ begin
           txden_s   <= '1';
           txdat_s   <= cmdfifo_read_i;
 
-          if dat_valid_s ='1' then -- TBD: shall we use dat_valid_s?
+          if dat_valid_s ='1' then
+            cmdfifo_read_issued_r<='1';
+          end if;
+
+          if dat_valid_s ='1' and cmdfifo_read_issued_r='1' then -- TBD: shall we use dat_valid_s?
             cmdfifo_rd_o <= '1';
-          end if;
-
-        when READCAPSTATUS =>
-          txload_s <= '1';
-          txden_s <= '1';
-          if dat_valid_s='1' then
-            wordindex_r <= wordindex_r + 1;
-          end if;
-
-          caplen_v(31) := capture_trig_sync_s;
-          caplen_v(30 downto CAPTURE_MEMWIDTH_BITS) := (others => '0');
-          caplen_v(CAPTURE_MEMWIDTH_BITS-1 downto 0)  := capture_len_sync_s;
-
-          case wordindex_r is
-            when "11" => txdat_s <= caplen_v(7 downto 0);
-            when "10" => txdat_s <= caplen_v(15 downto 8);
-            when "01" => txdat_s <= caplen_v(23 downto 16);
-            when "00" => txdat_s <= caplen_v(31 downto 24);
-            when others =>
-          end case;
-
-          if wordindex_r="11" and txready_s='1' then
-            fifo_rd_o <= '1';
-          end if;
-
-        when READCAPTURE =>
-          txload_s <= '1';
-          txden_s <= '1';
-          capmem_en_o <= '0';
-
-          if dat_valid_s='1' then
-            if wordindex2_r = "100" then
-              wordindex2_r <= "000";
-            else
-              wordindex2_r <= wordindex2_r + 1;
-            end if;
-          end if;
-          case wordindex2_r is
-            when "100" => txdat_s <= capmem_data_i(7 downto 0);
-            when "011" => txdat_s <= capmem_data_i(15 downto 8);
-            when "010" => txdat_s <= capmem_data_i(23 downto 16);
-            when "001" => txdat_s <= capmem_data_i(31 downto 24);
-            when "000" => txdat_s <= "0000" & capmem_data_i(35 downto 32);
-
-            when others =>
-          end case;
-
-          if wordindex2_r="100" and dat_valid_s='1' then
-            capmem_en_o <= '1';
-            capmem_adr_r <= capmem_adr_r + 1;
           end if;
 
         when READID =>
@@ -768,7 +734,7 @@ begin
             extram_addr_r(7 downto 0) <= dat_s;
             -- Request
             if extram_we_r='0' then
-              extram_req_r <= not extram_req_r;
+              extram_req_r <= '1';
             end if;
             state_r <= EXTRAMDATA;
           end if;
@@ -783,56 +749,73 @@ begin
             --extram_addr_r(7 downto 0) <= dat_i;
             extram_wdata_r <= dat_s;
             -- Request
-            extram_req_r <= not extram_req_r;
+            extram_req_r <= '1';
             state_r <= EXTRAMDATA;
           end if;
           if extram_valid_i='1' then
-            extram_addr_r <= std_logic_vector(unsigned(extram_addr_r) + 1);
+            --extram_addr_r <= std_logic_vector(unsigned(extram_addr_r) + 1);
           end if;
 
-        when USBADDR1 =>
+        when GENERICADDR1 =>
           txload_s <= '1';
           txden_s <= '1';
           if dat_valid_s='1' then
-            --usb_addr_r(15 downto 8) <= dat_s;
-            usb_addr_wr_r(15 downto 8) <= dat_s;--usb_addr_r(15 downto 8);
-            state_r <= USBADDR2;
+            generic_addr_wr_r(15 downto 8) <= dat_s;
+            state_r <= GENERICADDR2;
           end if;
 
-        when USBADDR2 =>
+        when GENERICADDR2 =>
           txload_s <= '1';
           txden_s <= '1';
           if dat_valid_s='1' then
-            --usb_addr_r(7 downto 0) <= dat_s;
-            --usb_addr_wr_r(8 downto 8) <= dat_s; --usb_addr_r(15 downto 8);
-            usb_addr_wr_r(7 downto 0) <= dat_s;
-            if usb_is_write_r='1' then
-              state_r <= USBWRITEDATA;
+            generic_addr_wr_r(7 downto 0) <= dat_s;
+            if generic_is_write_r='1' then
+              state_r <= GENERICWRITEDATA;
             else
-              state_r <= USBREADDATA;
-              usb_rd_r <= '1';
+              state_r <= GENERICREADDATA;
+              --
+              if generic_access_r=GENERIC_USB then
+                usb_rd_r      <= '1';
+              end if;
+              if generic_access_r=GENERIC_CAPTURE then
+                capture_rd_r  <= '1';
+              end if;
             end if;
           end if;
 
-        when USBREADDATA =>
+        when GENERICREADDATA =>
           txload_s <= '1';
           txden_s   <= '1';
-          txdat_s   <= usb_dat_i;
+          case generic_access_r is
+            when GENERIC_USB =>
+              txdat_s   <= usb_dat_i;
+            when GENERIC_CAPTURE =>
+              txdat_s   <= capture_dat_i;
+          end case;
+
           if dat_valid_s='1' then
-            usb_rd_r <= '1';
-            state_r <= USBREADDATA;
-            --usb_addr_r <= usb_addr_wr_r;
-            usb_addr_wr_r <= std_logic_vector(unsigned(usb_addr_wr_r) +1);
+            case generic_access_r is
+              when GENERIC_USB =>
+                usb_rd_r <= '1';
+              when GENERIC_CAPTURE =>
+                capture_rd_r <= '1';
+            end case;
+            state_r <= GENERICREADDATA;
+            generic_addr_wr_r <= std_logic_vector(unsigned(generic_addr_wr_r) +1);
           end if;
 
-        when USBWRITEDATA =>
+        when GENERICWRITEDATA =>
           txload_s <= '1';
           txden_s   <= '1';
-          txdat_s   <= usb_dat_i;
+          case generic_access_r is
+            when GENERIC_USB =>
+              txdat_s   <= usb_dat_i;
+            when GENERIC_CAPTURE =>
+              txdat_s   <= capture_dat_i;
+          end case;
+
           if dat_valid_s='1' then
-            --usb_wr_r <= '1';
-            --usb_addr_r <= usb_addr_wr_r;
-            usb_addr_wr_r <= std_logic_vector(unsigned(usb_addr_wr_r) +1);
+            --generic_addr_wr_r <= std_logic_vector(unsigned(generic_addr_wr_r) +1);
           end if;
 
         when UNKNOWN =>
@@ -842,8 +825,30 @@ begin
           txload_s <= '0';
           txden_s <= '0';
       end case;
+      end if;
+
+
+
+
+      -- Not dependant on sck_rise_s
+
+      case state_r is
+        when EXTRAMDATA =>
+          if extram_valid_i='1' then
+            extram_addr_r <= std_logic_vector(unsigned(extram_addr_r) + 1);
+          end if;
+        when GENERICREADDATA =>
+          if dat_valid_s='1' then
+            generic_addr_wr_r <= std_logic_vector(unsigned(generic_addr_wr_r) +1);
+          end if;
+        when others =>
+      end case;
+
     end if;
   end process;
+
+
+
 
   extram_addr_o(23 downto 0) <= extram_addr_r;
   extram_addr_o(31 downto 24) <= (others => '0');
@@ -852,8 +857,9 @@ begin
   extram_dat_o(31 downto 8)          <= (others => '0');
   extram_we_o           <= extram_we_r;
 
-  usb_addr_o            <= usb_addr_wr_r(10 downto 0);
-
+  generic_addr_o            <= generic_addr_wr_r(10 downto 0);
+  --capture_addr_o        <= generic_addr_wr_r(10 downto 0);
+  capture_rd_o          <= capture_rd_r;
 
   kbd_en_o              <= regs32_r(2)(0);
   joy_en_o              <= regs32_r(2)(1);

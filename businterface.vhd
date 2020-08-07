@@ -51,7 +51,9 @@ entity businterface is
     mem_wr_p_o    : out std_logic; -- Memory write pulse
     mem_rd_p_dly_o: out std_logic; -- Memory read pulse (delayed)
     mem_active_o  : out std_logic; -- Mem active. Stays high until RD/WR is released
-    opcode_rd_p_o : out std_logic -- Opcode(M1) read pulse
+    opcode_rd_p_o : out std_logic; -- Opcode(M1) read pulse
+    clk_rise_o    : out std_logic; -- Clock rise event
+    clk_fall_o    : out std_logic  -- Clock fall event
   );
 
 end entity businterface;
@@ -76,8 +78,10 @@ architecture beh of businterface is
 
   signal rd_glitch_s        : std_logic;
   signal wr_glitch_s        : std_logic;
+  signal clk_glitch_s       : std_logic;
   signal rd_dly_s           : std_logic;
   signal wr_dly_s           : std_logic;
+  signal clk_dly_s          : std_logic;
 
   signal memrd_s            : std_logic; -- Memory read request
   signal memrd_latch_s      : std_logic;
@@ -94,14 +98,19 @@ architecture beh of businterface is
   signal intr_s             : std_logic;
   signal intr_latch_s       : std_logic;
   signal intr_p_s           : std_logic;
-  signal mem_rd_p_dly_s     : std_logic;
+  --signal mem_rd_p_dly_s     : std_logic;
 
   signal a_r                : std_logic_vector(15 downto 0);
   signal d_r                : std_logic_vector(7 downto 0);
 
   -- MemRD delayed for capture.
-  signal memrd_dly_q        : std_logic_vector(7 downto 0);
-  signal iord_dly_q         : std_logic_vector(15 downto 0); -- TODO: check if we can merge these two
+  signal memrd_dly_q        : std_logic_vector(C_MEM_READ_DELAY_PULSE downto 0);
+  signal iord_dly_q         : std_logic_vector(C_IO_READ_DELAY_PULSE downto 0); -- TODO: check if we can merge these two
+
+  -- Clock Event detection. Used primarly to generate WAIT states.
+  signal ck_r               : std_logic;
+  signal ck_rise_event_s    : std_logic;
+  signal ck_fall_event_s    : std_logic;
 
 begin
 
@@ -155,11 +164,36 @@ begin
       o_o     => wr_glitch_s
     );
 
+  clk_glitch_filter_inst: entity work.glitch_filter
+    generic map (
+      RESET => '1'
+    )
+    port map (
+      clk_i   => clk_i,
+      arst_i  => arst_i,
+      i_i     => XCK_sync_s,
+      o_o     => clk_glitch_s
+    );
+
+  clk_delay_filter_inst: entity work.delay_filter
+    generic map (
+      RESET => '1',
+      DELAY => C_MEM_READ_FILTER_DELAY
+    )
+    port map (
+      clk_i   => clk_i,
+      arst_i  => arst_i,
+      i_i     => clk_glitch_s,
+      o_o     => clk_dly_s
+    );
+
+
   -- Delay detectors for RD/WR
 
   rd_delay_filter_inst: entity work.delay_filter
     generic map (
-      RESET => '1'
+      RESET => '1',
+      DELAY => C_MEM_READ_FILTER_DELAY
     )
     port map (
       clk_i   => clk_i,
@@ -170,7 +204,8 @@ begin
 
   wr_delay_filter_inst: entity work.delay_filter
     generic map (
-      RESET => '1'
+      RESET => '1',
+      DELAY => C_MEM_READ_FILTER_DELAY
     )
     port map (
       clk_i   => clk_i,
@@ -237,6 +272,8 @@ begin
   process(clk_i, arst_i)
   begin
     if arst_i='1' then
+      a_r <= (others => 'X');
+      d_r <= (others => 'X');
     elsif rising_edge(clk_i) then
       if memrd_latch_s='1' or memwr_latch_s='1' or iord_latch_s='1' or iowr_latch_s='1' then
         a_r <= XA_sync_s;
@@ -252,10 +289,21 @@ begin
       memrd_dly_q   <= (others => '0');
       iord_dly_q   <= (others => '0');
     elsif rising_edge(clk_i) then
-      memrd_dly_q(7 downto 1) <= memrd_dly_q(6 downto 0);
+      memrd_dly_q(C_MEM_READ_DELAY_PULSE downto 1) <= memrd_dly_q(C_MEM_READ_DELAY_PULSE-1 downto 0);
       memrd_dly_q(0) <= memrd_p_s;
-      iord_dly_q(15 downto 1) <= iord_dly_q(14 downto 0);
+      iord_dly_q(C_IO_READ_DELAY_PULSE downto 1) <= iord_dly_q(C_IO_READ_DELAY_PULSE-1 downto 0);
       iord_dly_q(0) <= iord_p_s;
+    end if;
+  end process;
+
+  process(clk_i, arst_i)
+  begin
+    if arst_i='1' then
+      ck_r <= '1';
+    elsif rising_edge(clk_i) then
+      ck_r            <= clk_dly_s;
+      ck_rise_event_s <= clk_dly_s and not ck_r;
+      ck_fall_event_s <= not clk_dly_s and ck_r;
     end if;
   end process;
 
@@ -272,8 +320,9 @@ begin
   m1_o          <= XM1_sync_s;
   intr_p_o      <= intr_p_s;
   bus_idle_o    <= XRD_sync_s AND XWR_sync_s AND XMREQ_sync_s AND XIORQ_sync_s;
-  mem_rd_p_dly_o <= memrd_dly_q(7);
-  io_rd_p_dly_o <= iord_dly_q(15);
-
+  mem_rd_p_dly_o <= memrd_dly_q(C_MEM_READ_DELAY_PULSE);
+  io_rd_p_dly_o <= iord_dly_q(C_IO_READ_DELAY_PULSE);
+  clk_rise_o    <= ck_rise_event_s;
+  clk_fall_o    <= ck_fall_event_s;
 
 end beh;

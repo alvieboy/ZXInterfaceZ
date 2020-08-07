@@ -100,6 +100,9 @@ begin
     );
 
   req_inst: entity work.ahbreq
+    generic map (
+      MODE => "TOGGLE"
+    )
     port map (
       clk_i   => mclk_i,
       arst_i  => marst_i,
