@@ -23,6 +23,8 @@ begin
       SpectClk_Cmd
     );
 
+
+    Usbdevice_Cmd.FullSpeed <= true;
     Usbdevice_Cmd.Enabled <= true;
 
     wait for 2 us;
@@ -41,7 +43,7 @@ begin
     spiPayload_in_s(0) <= x"61"; -- USB write
     spiPayload_in_s(1) <= x"00";
     spiPayload_in_s(2) <= x"00"; -- Address
-    spiPayload_in_s(3) <= x"01"; -- Power ON
+    spiPayload_in_s(3) <= x"20"; -- Power ON
     spiPayload_in_s(4) <= x"00"; -- n/a
     spiPayload_in_s(5) <= x"FF"; -- All interrupts enabled.
     spiPayload_in_s(6) <= x"00"; --

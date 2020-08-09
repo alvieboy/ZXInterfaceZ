@@ -264,6 +264,8 @@ set_global_assignment -name EDA_TEST_BENCH_FILE simulation/tests/t001.vhd -secti
 set_location_assignment PIN_99 -to USB_SUSPEND_o
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to RAMCLK_o
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to RAMD_IO[*]
+set_global_assignment -name VHDL_FILE swfifo.vhd
+set_global_assignment -name VHDL_FILE spi_slave_fifo.vhd
 set_global_assignment -name VHDL_FILE command_fifo_single.vhd
 set_global_assignment -name VHDL_FILE scope.vhd
 set_global_assignment -name VHDL_FILE qspi_slave_resync.vhd

@@ -42,7 +42,7 @@ begin
         idle_p <= 'H';
         idle_m <= 'Z';
         report "Using FS pullups";
-      else
+      elsif SPEED_i='0' then
         idle_p <= 'Z';
         idle_m <= 'H';
         report "Using LS pullups";

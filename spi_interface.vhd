@@ -107,12 +107,8 @@ end entity spi_interface;
 architecture beh of spi_interface is
 
   signal txdat_s      : std_logic_vector(7 downto 0);
-  signal txload_s     : std_logic;
-  signal txready_s    : std_logic;
-  signal txden_s      : std_logic;
-  
   signal dat_s        : std_logic_vector(7 downto 0);
-  signal dat_valid_s  : std_logic;
+  signal first_dat_s  : std_logic;
   signal wordindex_r  : unsigned(1 downto 0);
   signal wordindex2_r : unsigned(2 downto 0);
 
@@ -155,6 +151,7 @@ architecture beh of spi_interface is
     WRRESFIFO,
     WRTAPFIFO,
     RDTAPFIFOUSAGE,
+    READFIFOCMD1,
     READFIFOCMDDATA,
     RDPC1,
     EXTRAMADDR1,
@@ -197,25 +194,32 @@ architecture beh of spi_interface is
   );
   signal generic_access_r: generic_access_type;
 
-  signal sck_fall_s   : std_logic;
-  signal sck_rise_s   : std_logic;
-  signal csn_s        : std_logic;
+  --signal sck_fall_s   : std_logic;
+  --signal sck_rise_s   : std_logic;
+  --signal csn_s        : std_logic;
   signal cmdfifo_read_issued_r: std_logic;
+
+
+  signal txload_s     : std_logic;
+  --signal txready_s    : std_logic;
+  signal txden_s      : std_logic;
+  signal rx_rd_s      : std_logic;
+  signal tx_full_s    : std_logic;
+  signal rx_empty_s   : std_logic;
+
+  signal dat_valid_s  : std_logic;
+
+  signal csn_s        : std_logic;
 begin
 
-  --len_sync: entity work.syncv generic map (RESET => '0', WIDTH => CAPTURE_MEMWIDTH_BITS )
---      port map ( clk_i => SCK_i, arst_i => arst_i, din_i => capture_len_i, dout_o => capture_len_sync_s );
---  trig_sync: entity work.sync generic map (RESET => '0')
---      port map ( clk_i => SCK_i, arst_i => arst_i, din_i => capture_trig_i, dout_o => capture_trig_sync_s );
-
-
   vidmem_adr_o <= std_logic_vector(vid_addr_r);
-  --capmem_adr_o <= std_logic_vector(capmem_adr_r);
-  --capture_trig_val_o  <= regs32_r(1);
-  --capture_trig_mask_o <= regs32_r(0);
   frameend_o <= frame_end_r;
 
-  spi_inst: entity work.qspi_slave_resync
+  -- FORCIBLY read all from RX fifo. We don't stall (yet)
+  rx_rd_s     <= not rx_empty_s;
+  dat_valid_s <= not rx_empty_s;
+
+  spi_inst: entity work.spi_slave_fifo
   port map (
     clk_i         => clk_i,
     arst_i        => arst_i,
@@ -225,16 +229,16 @@ begin
     --D_io          => D_io,
     MOSI_i        => MOSI_i,
     MISO_o        => MISO_o,
-    txdat_i       => txdat_s,
-    txload_i      => txload_s,
-    txready_o     => txready_s,
-    txden_i       => txden_s,
-    qen_i         => '0',
 
-    dat_o         => dat_s,
-    dat_valid_o   => dat_valid_s,
-    sck_rise_o    => sck_rise_s,
-    sck_fall_o    => sck_fall_s,
+    -- TX fifo
+    tx_we_i       => txload_s,
+    tx_wdata_i    => txdat_s,
+    tx_full_o     => tx_full_s,
+    -- RX fifo
+    rx_rd_i       => rx_rd_s,
+    rx_rdata_o(8)   => first_dat_s,
+    rx_rdata_o(7 downto 0)    => dat_s,
+    rx_empty_o    => rx_empty_s,
     csn_o         => csn_s
   );
 
@@ -325,10 +329,10 @@ begin
 
   generic_dat_o         <= dat_s;
 
-  process(clk_i, csn_s)
+  process(clk_i, arst_i)
     variable caplen_v:  std_logic_vector(31 downto 0);
   begin
-    if csn_s='1' then
+    if arst_i='1' or csn_s='1' then
       state_r       <= IDLE;
       txden_s       <= '0';
       txload_s      <= '0';
@@ -350,174 +354,164 @@ begin
       usb_rd_r      <= '0';
       capture_rd_r  <= '0';
       extram_req_r  <= '0';
+      txload_s <= '0';
 
-      if sck_rise_s='1' then
+      if rx_empty_s='0' and first_dat_s='1' then
+        -- Forcibly handle commands.
+        capmem_adr_r <= (others => '0');
 
+        case dat_s is
+          when x"DE" => -- Read status
+            txload_s  <= '1';
+            txdat_s   <= "00" & cmdfifo_empty_i & resfifo_full_i & fifo_empty_i;
+            state_r   <= READSTATUS;
+
+          when x"DF" => -- Read video memory
+            txload_s <= '1';
+            txdat_s <= "00000000";
+            state_r <= RDVIDMEM1;
+
+          when x"40" => -- Read last PC
+            pc_latch_r <= pc_i(7 downto 0);
+            txload_s <= '1';
+            txdat_s <= pc_i(15 downto 8);
+            state_r <= RDPC1;
+
+          when x"50" => -- Read external RAM
+            txload_s <= '1';
+            txdat_s <= "00000000";
+            extram_we_r <= '0';
+            state_r <= EXTRAMADDR1;
+
+          when x"51" => -- Write external RAM
+            txload_s <= '1';
+            txdat_s <= "00000000";
+            extram_we_r <= '1';
+            state_r <= EXTRAMADDR1;
+
+          when x"60" => -- USB read
+            txload_s <= '1';
+            txdat_s <= "00000000";
+            generic_is_write_r <= '0';
+            generic_access_r <= GENERIC_USB;
+            state_r <= GENERICADDR1;
+
+          when x"61" => -- USB write
+            txload_s <= '1';
+            txdat_s <= "00000000";
+            generic_is_write_r <= '1';
+            generic_access_r <= GENERIC_USB;
+            state_r <= GENERICADDR1;
+
+          when x"70" => -- Capture read
+            if C_CAPTURE_ENABLED then
+              txload_s <= '1';
+              txdat_s <= "00000000";
+              generic_is_write_r <= '0';
+              generic_access_r <= GENERIC_CAPTURE;
+              state_r <= GENERICADDR1;
+            end if;
+
+          when x"71" => -- Capture write
+            if C_CAPTURE_ENABLED then
+              txload_s <= '1';
+              txdat_s <= "00000000";
+              generic_is_write_r <= '1';
+              generic_access_r <= GENERIC_CAPTURE;
+              state_r <= GENERICADDR1;
+            end if;
+
+          when x"E3" => -- Write Resource FIFO contents
+            txload_s <= '1';
+            txdat_s <= "00000000";
+            state_r <= WRRESFIFO;
+
+          when x"E4" => -- Write TAP FIFO contents
+            txload_s <= '1';
+            txdat_s <= "00000000";
+            state_r <= WRTAPFIFO;
+            tapcmd_r <= '0';
+
+          when x"E6" => -- Write TAP command FIFO contents
+            txload_s <= '1';
+            txdat_s <= "00000000";
+            state_r <= WRTAPFIFO;
+            tapcmd_r <= '1';
+
+          when x"E5" => -- Get TAP FIFO usage
+            txload_s <= '1';
+            txdat_s <= tapfifo_full_i & "00000" & tapfifo_used_i(9 downto 8);
+            txdat_s <= "000000" & tapfifo_used_i(9 downto 8);
+            tapfifo_used_lsb_r <= tapfifo_used_i(7 downto 0);
+            state_r <= RDTAPFIFOUSAGE;
+
+          when x"EC" => -- Set flags
+            txden_s <= '1';
+            txload_s <= '1';
+            txdat_s <= "00000000";
+            state_r <= SETFLAGS1;
+
+          when x"ED" | x"EE" => -- Set/get regs 32
+            txden_s <= '1';
+            txload_s <= '1';
+            txdat_s <= "00000000";
+            wreg_en_r <= dat_s(0);
+            state_r <= SETREG32_INDEX;
+
+          when x"EF" => -- Mark end of frame
+            txden_s <= '1';
+            txload_s <= '1';
+            txdat_s <= "00000000";
+            frame_end_r <= '1';
+
+          when x"FC" => -- Read data
+            txden_s <= '1';
+            txload_s <= '1';
+            wordindex_r <= "00";
+            if fifo_empty_i='1' then
+              txdat_s <= x"FF";
+              state_r <= UNKNOWN;
+            else
+              txdat_s <= x"FE";
+              state_r <= READDATA;
+            end if;
+
+          when x"FB" => -- Read FIFO command data
+            txden_s     <= '1';
+            txload_s    <= '1';
+            wordindex_r <= "00";
+            cmdfifo_read_issued_r <= '0';
+
+            if cmdfifo_empty_i='1' then
+              txdat_s   <= x"FF";
+              state_r   <= UNKNOWN;
+            else
+              txdat_s   <= x"FE";
+
+              state_r   <= READFIFOCMD1;
+            end if;
+
+          when x"9E" | x"9F" => -- Read ID
+            txden_s <= '1';
+            txload_s <= '1';
+            wordindex_r <= "00";
+            txdat_s <= FPGAID0;
+            state_r <= READID;
+            
+          when others =>
+            -- Unknown command
+            state_r <= UNKNOWN;
+        end case;
+      end if;
+
+
+      -- Non command data
       case state_r is
         when IDLE =>
-          capmem_adr_r <= (others => '0');
-
-          if dat_valid_s='1' then
-            case dat_s is
-              when x"DE" => -- Read status
-                txden_s <= '1';
-                txload_s <= '1';
-                txdat_s <= "00" & cmdfifo_empty_i & resfifo_full_i & fifo_empty_i;
-                state_r <= READSTATUS;
-
-              when x"DF" => -- Read video memory
-                txden_s <= '1';
-                txload_s <= '1';
-                txdat_s <= "00000000";
-                state_r <= RDVIDMEM1;
-
-              when x"40" => -- Read last PC
-                pc_latch_r <= pc_i(7 downto 0);
-                txden_s <= '1';
-                txload_s <= '1';
-                txdat_s <= pc_i(15 downto 8);
-                state_r <= RDPC1;
-
-              when x"50" => -- Read external RAM
-                txden_s <= '1';
-                txload_s <= '1';
-                txdat_s <= "00000000";
-                extram_we_r <= '0';
-                state_r <= EXTRAMADDR1;
-
-              when x"51" => -- Write external RAM
-                txden_s <= '1';
-                txload_s <= '1';
-                txdat_s <= "00000000";
-                extram_we_r <= '1';
-                state_r <= EXTRAMADDR1;
-
-              when x"60" => -- USB read
-                txden_s <= '1';
-                txload_s <= '1';
-                txdat_s <= "00000000";
-                generic_is_write_r <= '0';
-                generic_access_r <= GENERIC_USB;
-                state_r <= GENERICADDR1;
-
-              when x"61" => -- USB write
-                txden_s <= '1';
-                txload_s <= '1';
-                txdat_s <= "00000000";
-                generic_is_write_r <= '1';
-                generic_access_r <= GENERIC_USB;
-                state_r <= GENERICADDR1;
-
-              when x"70" => -- Capture read
-                if C_CAPTURE_ENABLED then
-                  txden_s <= '1';
-                  txload_s <= '1';
-                  txdat_s <= "00000000";
-                  generic_is_write_r <= '0';
-                  generic_access_r <= GENERIC_CAPTURE;
-                  state_r <= GENERICADDR1;
-                end if;
-
-              when x"71" => -- Capture write
-                if C_CAPTURE_ENABLED then
-                  txden_s <= '1';
-                  txload_s <= '1';
-                  txdat_s <= "00000000";
-                  generic_is_write_r <= '1';
-                  generic_access_r <= GENERIC_CAPTURE;
-                  state_r <= GENERICADDR1;
-                end if;
-
-              when x"E3" => -- Write Resource FIFO contents
-                txden_s <= '1';
-                txload_s <= '1';
-                txdat_s <= "00000000";
-                state_r <= WRRESFIFO;
-
-              when x"E4" => -- Write TAP FIFO contents
-                txden_s <= '1';
-                txload_s <= '1';
-                txdat_s <= "00000000";
-                state_r <= WRTAPFIFO;
-                tapcmd_r <= '0';
-
-              when x"E6" => -- Write TAP command FIFO contents
-                txden_s <= '1';
-                txload_s <= '1';
-                txdat_s <= "00000000";
-                state_r <= WRTAPFIFO;
-                tapcmd_r <= '1';
-
-              when x"E5" => -- Get TAP FIFO usage
-                txden_s <= '1';
-                txload_s <= '1';
-                txdat_s <= tapfifo_full_i & "00000" & tapfifo_used_i(9 downto 8);
-                txdat_s <= "000000" & tapfifo_used_i(9 downto 8);
-                tapfifo_used_lsb_r <= tapfifo_used_i(7 downto 0);
-                state_r <= RDTAPFIFOUSAGE;
-
-              when x"EC" => -- Set flags
-                txden_s <= '1';
-                txload_s <= '1';
-                txdat_s <= "00000000";
-                state_r <= SETFLAGS1;
-
-              when x"ED" | x"EE" => -- Set/get regs 32
-                txden_s <= '1';
-                txload_s <= '1';
-                txdat_s <= "00000000";
-                wreg_en_r <= dat_s(0);
-                state_r <= SETREG32_INDEX;
-
-              when x"EF" => -- Mark end of frame
-                txden_s <= '1';
-                txload_s <= '1';
-                txdat_s <= "00000000";
-                frame_end_r <= '1';
-
-              when x"FC" => -- Read data
-                txden_s <= '1';
-                txload_s <= '1';
-                wordindex_r <= "00";
-                if fifo_empty_i='1' then
-                  txdat_s <= x"FF";
-                  state_r <= UNKNOWN;
-                else
-                  txdat_s <= x"FE";
-                  state_r <= READDATA;
-                end if;
-
-              when x"FB" => -- Read FIFO command data
-                txden_s     <= '1';
-                txload_s    <= '1';
-                wordindex_r <= "00";
-                cmdfifo_read_issued_r <= '0';
-
-                if cmdfifo_empty_i='1' then
-                  txdat_s   <= x"FF";
-                  state_r   <= UNKNOWN;
-                else
-                  txdat_s   <= x"FE";
-
-                  state_r   <= READFIFOCMDDATA;
-                end if;
-
-              when x"9E" | x"9F" => -- Read ID
-                txden_s <= '1';
-                txload_s <= '1';
-                wordindex_r <= "00";
-                txdat_s <= x"A5";
-                state_r <= READID;
-                
-              when others =>
-                -- Unknown command
-                state_r <= UNKNOWN;
-            end case;
-          end if;
 
         when RDPC1 =>
-          txden_s <= '1';
-          txload_s <= '1';
+
+          txload_s <= dat_valid_s;
           txdat_s <= pc_latch_r;
           if dat_valid_s='1' then
             state_r <= UNKNOWN;
@@ -525,7 +519,7 @@ begin
 
         when RDTAPFIFOUSAGE =>
           txden_s <= '1';
-          txload_s <= '1';
+          txload_s <= dat_valid_s;
           txdat_s <= tapfifo_used_lsb_r;
           if dat_valid_s='1' then
             state_r <= UNKNOWN;
@@ -533,14 +527,14 @@ begin
 
         when SETREG32_INDEX =>
           txload_s <= '1';
-          txden_s <= '1';
+          txload_s <= dat_valid_s;
           if dat_valid_s='1' then
             current_reg_r <= to_integer(unsigned(dat_s));
             state_r <= SETREG32_1;
           end if;
 
         when SETREG32_1 =>
-          txload_s <= '1';
+          txload_s <= dat_valid_s;
           txden_s <= '1';
           txdat_s <= regs32_r(current_reg_r)(31 downto 24);
           if dat_valid_s='1' then
@@ -552,7 +546,7 @@ begin
           end if;
 
         when SETREG32_2 =>
-          txload_s <= '1';
+          txload_s <= dat_valid_s;
           txden_s <= '1';
           txdat_s <= regs32_r(current_reg_r)(23 downto 16);
           if dat_valid_s='1' then
@@ -564,7 +558,7 @@ begin
           end if;
 
         when SETREG32_3 =>
-          txload_s <= '1';
+          txload_s <= dat_valid_s;
           txden_s <= '1';
           txdat_s <= regs32_r(current_reg_r)(15 downto 8);
           if dat_valid_s='1' then
@@ -575,7 +569,7 @@ begin
           end if;
 
         when SETREG32_4 =>
-          txload_s <= '1';
+          txload_s <= dat_valid_s;
           txden_s <= '1';
           txdat_s <= regs32_r(current_reg_r)(7 downto 0);
           if dat_valid_s='1' then
@@ -585,34 +579,11 @@ begin
             state_r <= UNKNOWN;
           end if;
 
-        when WRITEROM1 =>
-          txload_s <= '1';
-          txden_s <= '1';
-          if dat_valid_s='1' then
-            rom_addr_r(13 downto 8) <= unsigned(dat_s(5 downto 0));
-            state_r <= WRITEROM2;
-          end if;
-
-        when WRITEROM2 =>
-          txload_s <= '1';
-          txden_s <= '1';
-          if dat_valid_s='1' then
-            rom_addr_r(7 downto 0) <= unsigned(dat_s);
-            state_r <= WRITEROM;
-          end if;
-
-        when WRITEROM =>
-          txload_s <= '1';
-          txden_s <= '1';
-          if dat_valid_s='1' then
-            rom_addr_r <= rom_addr_r + 1;
-          end if;
-
         when WRRESFIFO =>
         when WRTAPFIFO =>
           
         when READSTATUS =>
-          txload_s <= '1';
+          txload_s <= dat_valid_s;
           txden_s <= '1';
 
         when RDVIDMEM1 =>
@@ -629,10 +600,10 @@ begin
           end if;
 
         when RDVIDMEM =>
+          txload_s <= dat_valid_s;
 
           if dat_valid_s='1' then
             txden_s <= '1';
-            txload_s <= '1';
             txdat_s <= vidmem_data_i;
             vid_addr_r <= vid_addr_r + 1;
             --if vid_addr_r=x"1B00" then
@@ -661,7 +632,8 @@ begin
 
 
         when READDATA =>
-          txload_s <= '1';
+          --txload_s <= '1';
+          txload_s <= dat_valid_s;
           txden_s <= '1';
           if dat_valid_s='1' then
             wordindex_r <= wordindex_r + 1;
@@ -674,13 +646,23 @@ begin
             when others =>
           end case;
 
-          if wordindex_r="11" and txready_s='1' then
+          if wordindex_r="11" and dat_valid_s='1' then
             fifo_rd_o <= '1';
           end if;
 
+        when READFIFOCMD1 =>
+          --txload_s  <= '1';
+          txload_s <= dat_valid_s;
+          txdat_s   <= cmdfifo_read_i;
+
+          if dat_valid_s ='1' then
+            state_r <= READFIFOCMDDATA;
+          end if;
+
         when READFIFOCMDDATA =>
-          txload_s  <= '1';
-          txden_s   <= '1';
+          --txload_s  <= '1';
+          --txden_s   <= '1';
+          txload_s <= dat_valid_s;
           txdat_s   <= cmdfifo_read_i;
 
           if dat_valid_s ='1' then
@@ -692,16 +674,18 @@ begin
           end if;
 
         when READID =>
-          txload_s <= '1';
+          --txload_s <= '1';
+          txload_s <= dat_valid_s;
+
           txden_s <= '1';
-          if txready_s='1' then
+          if dat_valid_s='1' then
             wordindex_r <= wordindex_r + 1;
           end if;
           case wordindex_r is
-            when "00" => txdat_s <= FPGAID0;
-            when "01" => txdat_s <= FPGAID1;
-            when "10" => txdat_s <= FPGAID2;
-            when "11" =>
+            --when "00" => txdat_s <= FPGAID0;
+            when "00" => txdat_s <= FPGAID1;
+            when "01" => txdat_s <= FPGAID2;
+            when "10" =>
               txdat_s <= (others => '0');
 
               if SCREENCAP_ENABLED  then txdat_s(0) <= '1'; end if;
@@ -744,14 +728,16 @@ begin
           txden_s <= '1';
           txdat_s <= extram_dat_i(7 downto 0);
 
-
-          if dat_valid_s='1' then
-            --extram_addr_r(7 downto 0) <= dat_i;
-            extram_wdata_r <= dat_s;
-            -- Request
-            extram_req_r <= '1';
-            state_r <= EXTRAMDATA;
-          end if;
+          --if extram_we_r='1' then
+            if dat_valid_s='1' then
+              --extram_addr_r(7 downto 0) <= dat_i;
+              extram_wdata_r <= dat_s;
+              -- Request
+              extram_req_r <= '1';
+            end if;
+          --else
+          --  extram_req_r <= extram_valid_i; -- Load FIFO immediatly
+          --end if;
           if extram_valid_i='1' then
             --extram_addr_r <= std_logic_vector(unsigned(extram_addr_r) + 1);
           end if;
@@ -801,7 +787,7 @@ begin
                 capture_rd_r <= '1';
             end case;
             state_r <= GENERICREADDATA;
-            generic_addr_wr_r <= std_logic_vector(unsigned(generic_addr_wr_r) +1);
+            --generic_addr_wr_r <= std_logic_vector(unsigned(generic_addr_wr_r) +1);
           end if;
 
         when GENERICWRITEDATA =>
@@ -825,8 +811,8 @@ begin
           txload_s <= '0';
           txden_s <= '0';
       end case;
-      end if;
 
+    --end if;
 
 
 
@@ -837,14 +823,14 @@ begin
           if extram_valid_i='1' then
             extram_addr_r <= std_logic_vector(unsigned(extram_addr_r) + 1);
           end if;
-        when GENERICREADDATA =>
+        when GENERICREADDATA | GENERICWRITEDATA =>
           if dat_valid_s='1' then
             generic_addr_wr_r <= std_logic_vector(unsigned(generic_addr_wr_r) +1);
           end if;
         when others =>
       end case;
 
-    end if;
+    end if; -- rising_edge
   end process;
 
 

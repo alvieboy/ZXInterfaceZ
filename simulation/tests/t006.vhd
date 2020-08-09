@@ -1,4 +1,6 @@
 use work.tbc_device_p.all;
+use work.logger.all;
+
 library ieee;
 use ieee.math_real.all;
 
@@ -12,7 +14,7 @@ begin
   process
     variable data: std_logic_vector(7 downto 0);
   begin
-    report "T006: TAP play";
+    logger_start("T006","TAP play");
 
     Spimaster_Cmd <= Cmd_Spimaster_Defaults;
 
@@ -84,6 +86,8 @@ begin
       SysClk_Cmd,
       SpectClk_Cmd
     );
+
+    logger_end;
 
   end process;
 

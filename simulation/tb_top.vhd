@@ -135,7 +135,7 @@ architecture sim of tb_top is
   signal USB_VPO_s     : std_logic;
   signal USB_RCV_s     : std_logic := '0';
   -- USB power control
-  signal USB_FLT_s     : std_logic := '0';
+  signal USB_FLT_s     : std_logic := '1';
   signal USB_PWREN_s   : std_logic;
   -- Extension connector
   signal EXT_s        : std_logic_vector(13 downto 0);
@@ -272,7 +272,7 @@ begin
       VM_o      => USB_VM_s,
       RCV_o     => USB_RCV_s,
       OE_i      => USB_OE_s,
-      SOFTCON_i => USB_SOFTCON_s,
+      SOFTCON_i => '0',--USB_SOFTCON_s,
       SPEED_i   => USB_SPEED_s,
       VMO_i     => USB_VMO_s,
       VPO_i     => USB_VPO_s

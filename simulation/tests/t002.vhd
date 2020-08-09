@@ -73,10 +73,11 @@ begin
       spiPayload_in_s(0) <= x"FB";
       spiPayload_in_s(1) <= x"00";
       spiPayload_in_s(2) <= x"00";
-      Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 3, spiPayload_in_s, spiPayload_out_s);
+      spiPayload_in_s(3) <= x"00";
+      Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 4, spiPayload_in_s, spiPayload_out_s);
 
-      Check( "FIFO report not empty", spiPayload_out_s(1), x"FE");
-      Check( "FIFO data consistent",  spiPayload_out_s(2), std_logic_vector(expected_fifodata));
+      Check( "FIFO report not empty", spiPayload_out_s(2), x"FE");
+      Check( "FIFO data consistent",  spiPayload_out_s(3), std_logic_vector(expected_fifodata));
 
       expected_fifodata <= expected_fifodata + 1;
 
@@ -128,11 +129,11 @@ begin
     l3: for i in 0 to depth-1 loop
       spiPayload_in_s(0) <= x"FB";
       spiPayload_in_s(1) <= x"00";
-      Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 3, spiPayload_in_s, spiPayload_out_s);
+      Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 4, spiPayload_in_s, spiPayload_out_s);
 
-      Check( "FIFO report not empty", spiPayload_out_s(1), x"FE");
+      Check( "FIFO report not empty", spiPayload_out_s(2), x"FE");
 
-      Check( "FIFO data consistent", spiPayload_out_s(2), std_logic_vector(expected_fifodata));
+      Check( "FIFO data consistent", spiPayload_out_s(3), std_logic_vector(expected_fifodata));
       expected_fifodata <= expected_fifodata + 1;
 
       Check( "5: CtrlPins27 is 1", CtrlPins_Data.IO27 , '0');
@@ -141,9 +142,9 @@ begin
 
     spiPayload_in_s(0) <= x"FB";
     spiPayload_in_s(1) <= x"00";
-    Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 3, spiPayload_in_s, spiPayload_out_s);
+    Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 4, spiPayload_in_s, spiPayload_out_s);
 
-    Check( "FIFO report empty", spiPayload_out_s(1), x"FF");
+    Check( "FIFO report empty", spiPayload_out_s(2), x"FF");
 
     Check( "6: CtrlPins27 is 1", CtrlPins_Data.IO27 , '0');
 
@@ -188,9 +189,9 @@ begin
 
     spiPayload_in_s(0) <= x"FB";
     spiPayload_in_s(1) <= x"00";
-    Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 3, spiPayload_in_s, spiPayload_out_s);
+    Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 4, spiPayload_in_s, spiPayload_out_s);
 
-    Check( "FIFO report empty", spiPayload_out_s(1), x"FF");
+    Check( "FIFO report empty", spiPayload_out_s(2), x"FF");
 
     FinishTest(
       SysClk_Cmd,

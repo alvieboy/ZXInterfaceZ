@@ -2,6 +2,8 @@ LIBRARY ieee;
 USE ieee.std_logic_1164.all;
 LIBRARY work;
 use work.txt_util.all;
+use work.logger.all;
+USE std.textio.all;
 
 package bfm_spimaster_p is
 
@@ -17,6 +19,7 @@ package bfm_spimaster_p is
   type Cmd_Spimaster_type is record
     Cmd       : SPICmd_Type;
     Period    : time;
+    Verbose   : boolean;
     Data      : std_logic_vector(7 downto 0);
   end record;
 
@@ -25,7 +28,7 @@ package bfm_spimaster_p is
     Data      : std_logic_vector(7 downto 0);
   end record;
 
-  constant Cmd_Spimaster_Defaults: Cmd_Spimaster_type := ( None, 100 ns, x"00" );
+  constant Cmd_Spimaster_Defaults: Cmd_Spimaster_type := ( None, 100 ns, false, x"00" );
 
   component bfm_spimaster is
     port (
@@ -64,21 +67,35 @@ package body bfm_spimaster_p is
       signal din  : in spiPayload_type;
       signal dout : out spiPayload_type
     ) is
+    variable txl: line;
+    variable rxl: line;
   begin
     Cmd.Cmd <= SELECT_DEVICE;
     wait for 0 ps;
     wait until Data.Busy = false;
+
+    write(txl, string'("TX:"));
+    write(rxl, string'("RX:"));
+
     l1: for i in 1 to len loop
       Cmd.Data  <= din(i-1);
+      write(txl, " " & hstr(din(i-1)));
       Cmd.Cmd   <= TRANSCEIVE;
       wait for 0 ps;
       --report "Sent "& str(i);
       wait until Data.Busy = false;
       dout(i-1) <= Data.Data;
+      write(rxl, " " & hstr(Data.Data));
       --report "Dat "& str(i);
       Cmd.Cmd   <= NONE;
       wait for 0 ps;
     end loop;
+    if (true) then
+      log(string'("SPI Transaction:"));
+      log(txl);
+      log(rxl);
+    end if;
+
     Cmd.Cmd <= DESELECT_DEVICE;
     wait for 0 ps;
     wait until Data.Busy = false;
