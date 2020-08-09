@@ -91,7 +91,7 @@ static int netcmd__send_captures(command_t *cmdt, int argc, char **argv)
 #endif
     return -1;
 }
-
+    /*
 static int netcmd__scap(command_t *cmdt, int argc, char **argv)
 {
     if (argc>0) {
@@ -121,7 +121,7 @@ static int netcmd__scap(command_t *cmdt, int argc, char **argv)
         fpga__clear_flags(FPGA_FLAG_RSTSPECT);
     }
     return 0;
-}
+}     */
 
 static int upload_rom_data(command_t *cmdt)
 {
@@ -236,7 +236,7 @@ static int do_reset_spectrum(command_t *cmdt, int argc, char **argv, bool forcer
         ESP_LOGI(TAG, "Resetting spectrum (to internal ROM)");
 
 
-    if (has_mask) {
+    /*if (has_mask) {
         ESP_LOGI(TAG, "Enabling capture mask 0x%08x", mask);
         fpga__set_capture_mask(mask);
     }
@@ -244,7 +244,7 @@ static int do_reset_spectrum(command_t *cmdt, int argc, char **argv, bool forcer
     if (has_value) {
         ESP_LOGI(TAG, "Enabling capture value 0x%08x", value);
         fpga__set_capture_value(value);
-    }
+    } */
     if (do_cap) {
 
         fpga__set_flags(FPGA_FLAG_RSTSPECT | FPGA_FLAG_CAPCLR );
@@ -307,7 +307,7 @@ struct commandhandler_t hand[] = {
     { CMD("stream"), &netcmd__start_stream },
     { CMD("uploadrom"), &netcmd__upload_rom },
     { CMD("reset"), &netcmd__reset_spectrum },
-    { CMD("scap"), &netcmd__scap },
+//    { CMD("scap"), &netcmd__scap },
     { CMD("resettocustom"), &netcmd__reset_custom_spectrum },
     { CMD("ota"), &ota__performota_cmd },
     { CMD("fpgaota"), &fpga_ota__performota },
