@@ -16,12 +16,20 @@ typedef uint8_t fpga_status_t;
 #define FPGA_SPI_CMD_WRITE_RESOURCEFIFO (0xE3)
 #define FPGA_SPI_CMD_WRITE_TAPFIFO (0xE4)
 #define FPGA_SPI_CMD_READ_TAPFIFO_USAGE (0xE5)
+#define FPGA_SPI_CMD_WRITE_TAPCMD (0xE6)
 #define FPGA_SPI_CMD_WRITE_FLAGS (0xEC)
-#define FPGA_SPI_CMD_WRITE_REG32 (0xEE)
-#define FPGA_SPI_CMD_READ_REG32 (0xED)
+#define FPGA_SPI_CMD_READ_REG32 (0xEE)
+#define FPGA_SPI_CMD_WRITE_REG32 (0xED)
 #define FPGA_SPI_CMD_SETEOF (0xEF)
 #define FPGA_SPI_CMD_READ_DATAFIFO (0xFC)
+#define FPGA_SPI_CMD_READ_CMDFIFO (0xFB)
 #define FPGA_SPI_CMD_READ_ID (0x9E)
+#define FPGA_SPI_CMD_READ_PC (0x40)
+#define FPGA_SPI_CMD_READ_EXTRAM (0x50)
+#define FPGA_SPI_CMD_WRITE_EXTRAM (0x51)
+#define FPGA_SPI_CMD_READ_USB (0x60)
+#define FPGA_SPI_CMD_WRITE_USB (0x61)
+
 /* Status bits */
 #define FPGA_STATUS_DATAFIFO_EMPTY (1<<0)
 #define FPGA_STATUS_RESFIFO_FULL   (1<<1)
@@ -128,7 +136,7 @@ int fpga__write_rom(unsigned offset, uint8_t val);
 int fpga__read_extram(uint32_t address);
 int fpga__read_extram_block(uint32_t address, uint8_t *dest, int size);
 int fpga__write_extram(uint32_t address, uint8_t val);
-int fpga__write_extram_block(uint32_t address, uint8_t *buffer, int size);
+int fpga__write_extram_block(uint32_t address, const uint8_t *buffer, int size);
 
 
 int fpga__read_usb(uint16_t address);

@@ -13,7 +13,6 @@
 #include "byteops.h"
 
 static spi_device_handle_t spi0_fpga;
-//static spi_device_handle_t spi0_fpga_10m; // Slow 10Mhz for extram read/writes
 
 static fpga_flags_t latched_flags = 0;
 static uint32_t config1_latch = 0;
@@ -58,21 +57,48 @@ static const uint8_t bitRevTable[256] =
 static void fpga__init_spi()
 {
     spi__init_device(&spi0_fpga, 10000000, PIN_NUM_CS);
-    //spi__init_device(&spi0_fpga_10m, 10000000, PIN_NUM_CS)<0)
-    //    return -1;
+}
+
+static int fpga__issue_read(uint8_t cmd, uint8_t *buf, unsigned size)
+{
+    return spi__transceive_cmd8_addr8(spi0_fpga, cmd, 0xFF, buf, size);
+}
+
+static int fpga__issue_read_addr8(uint8_t cmd, uint8_t addr, uint8_t *buf, unsigned size)
+{
+    return spi__transceive_cmd8_addr16(spi0_fpga, cmd, (uint16_t)addr<<8, buf, size);
+}
+
+static int fpga__issue_read_addr16(uint8_t cmd, uint16_t addr, uint8_t *buf, unsigned size)
+{
+    return spi__transceive_cmd8_addr24(spi0_fpga, cmd, (uint32_t)addr<<8, buf, size);
+}
+
+static int fpga__issue_read_addr24(uint8_t cmd, uint32_t addr, uint8_t *buf, unsigned size)
+{
+    return spi__transceive_cmd8_addr32(spi0_fpga, cmd, (uint32_t)addr<<8, buf, size);
+}
+
+static int fpga__issue_write(uint8_t cmd, const uint8_t *buf, unsigned size)
+{
+    return spi__transmit_cmd8(spi0_fpga, cmd, buf, size);
+}
+
+static int fpga__issue_write_addr24(uint8_t cmd, uint32_t address, const uint8_t *buf, unsigned size)
+{
+    return spi__transmit_cmd8_addr24(spi0_fpga, cmd, address, buf, size);
+}
+
+static int fpga__issue_write_addr16(uint8_t cmd, uint16_t address, const uint8_t *buf, unsigned size)
+{
+    return spi__transmit_cmd8_addr16(spi0_fpga, cmd, address, buf, size);
 }
 
 unsigned fpga__read_id()
 {
     uint8_t idbuf[4];
 
-    idbuf[0] = 0xAA;
-    idbuf[1] = 0x55;
-    idbuf[2] = 0xAA;
-    idbuf[3] = 0x55;
-
-
-    int r = spi__transceive_cmd8(spi0_fpga, 0x9F, idbuf, 4);
+    int r = fpga__issue_read(FPGA_SPI_CMD_READ_ID, idbuf, 4);
 
     if (r<0) {
         ESP_LOGE(TAG, "SPI transceive: error %d", r);
@@ -150,146 +176,81 @@ int fpga__init()
 
 uint8_t fpga__get_status()
 {
-    uint8_t buf[2];
-    buf[0] = 0xDE;
-    buf[1] = 0x00;
-    spi__transceive(spi0_fpga, buf, sizeof(buf));
-    return buf[1];
+    uint8_t buf[1];
+
+    ESP_ERROR_CHECK(fpga__issue_read(FPGA_SPI_CMD_READ_STATUS, buf, 1));
+
+    return buf[0];
 }
 
 uint16_t fpga__get_spectrum_pc()
 {
-    uint8_t buf[3];
-    buf[0] = 0x40;
-    buf[1] = 0x00;
-    buf[2] = 0x00;
+    uint8_t buf[2];
     spi__transceive(spi0_fpga, buf, sizeof(buf));
-    return extractbe16(&buf[1]);
+    ESP_ERROR_CHECK(fpga__issue_read(FPGA_SPI_CMD_READ_PC, buf, 2));
+    return extractbe16(&buf[2]);
 }
 
 void fpga__set_clear_flags(fpga_flags_t enable, fpga_flags_t disable)
 {
+    uint8_t buf[3];
     fpga_flags_t newflags = (latched_flags & ~disable) | enable;
-    uint8_t buf[4];
-    buf[0] = 0xEC;
-    buf[1] = newflags&0xff;
-    buf[2] = 0x00;
-    buf[3] = newflags>>8;
-    spi__transceive(spi0_fpga, buf, sizeof(buf));
+
+    buf[0] = newflags&0xff;
+    buf[1] = 0x00;
+    buf[2] = newflags>>8;
+
+    ESP_ERROR_CHECK(fpga__issue_write(FPGA_SPI_CMD_WRITE_FLAGS, buf, sizeof(buf)));
+
     latched_flags = newflags;
 }
 
+
 void fpga__set_trigger(uint8_t trig)
 {
-    uint8_t buf[4];
-    buf[0] = 0xEC;
-    buf[1] = latched_flags & 0xff;
-    buf[2] = trig;
-    buf[3] = latched_flags >> 8;
-    spi__transceive(spi0_fpga, buf, sizeof(buf));
+    uint8_t buf[3];
+    buf[0] = latched_flags & 0xff;
+    buf[1] = trig;
+    buf[2] = latched_flags >> 8;
+
+    ESP_ERROR_CHECK(fpga__issue_write(FPGA_SPI_CMD_WRITE_FLAGS, buf, sizeof(buf)));
 }
 
 void fpga__get_framebuffer(uint8_t *target)
 {
-    target[0] = 0xDF;
-    target[1] = 0x00;
-    target[2] = 0x00;
-    target[3] = 0x00;
-    int nlen = 4 + SPECTRUM_FRAME_SIZE;
-//    int len = -1;
-
-    spi__transceive(spi0_fpga, target, nlen);
+    uint8_t dummy[1] = { 0x00 };
+    ESP_ERROR_CHECK(fpga__issue_read_addr16(FPGA_SPI_CMD_READ_VIDEOMEM, 0x0000, target, SPECTRUM_FRAME_SIZE));
     // Notify frame grabbed.
-    target[0] = 0xEF;
-    target[1] = 0x00;
-    spi__transceive(spi0_fpga, target, 2);
-
+    ESP_ERROR_CHECK(fpga__issue_write(FPGA_SPI_CMD_SETEOF, dummy, sizeof(dummy)));
 }
 
 void fpga__set_register(uint8_t reg, uint32_t value)
 {
-    uint8_t buf[6];
-    buf[0] = 0xED;
-    buf[1] = reg;
-    buf[2] = (value >> 24)& 0xff;
-    buf[3] = (value >> 16)& 0xff;
-    buf[4] = (value >> 8)& 0xff;
-    buf[5] = (value)& 0xff;
+    uint8_t buf[5];
+    buf[0] = reg;
+    buf[1] = (value >> 24)& 0xff;
+    buf[2] = (value >> 16)& 0xff;
+    buf[3] = (value >> 8)& 0xff;
+    buf[4] = (value)& 0xff;
 
-    spi__transceive(spi0_fpga, buf, sizeof(buf));
+    ESP_ERROR_CHECK(fpga__issue_write(FPGA_SPI_CMD_WRITE_REG32, buf, sizeof(buf)));
 }
 
 uint32_t fpga__get_register(uint8_t reg)
 {
-    uint8_t buf[6];
-    buf[0] = 0xEE;
-    buf[1] = reg;
-    buf[2] = 0xAA;
-    buf[3] = 0xAA;
-    buf[4] = 0xAA;
-    buf[5] = 0xAA;
+    uint8_t buf[4];
 
-    spi__transceive(spi0_fpga, buf, sizeof(buf));
+    ESP_ERROR_CHECK(fpga__issue_read_addr8(FPGA_SPI_CMD_READ_REG32, reg, buf, sizeof(buf)));
 
-    return extractbe32(&buf[2]);
-}
-
-void fpga__set_capture_mask(uint32_t mask)
-{
-    fpga__set_register(REG_CAPTURE_MASK, mask);
-}
-
-void fpga__set_capture_value(uint32_t value)
-{
-    fpga__set_register(REG_CAPTURE_VAL, value);
-}
-
-uint32_t fpga__get_capture_status()
-{
-    uint8_t buf[6];
-    buf[0] = 0xE2;
-    buf[1] = 0x00;
-    buf[2] = 0x00;
-    buf[3] = 0x00;
-    buf[4] = 0x00;
-    buf[5] = 0x00;
-
-    spi__transceive(spi0_fpga, buf, sizeof(buf));
-    uint32_t ret = extractbe32( &buf[2] );
-    return ret;
-}
-
-int fpga__get_captures(uint8_t *target)
-{
-    target[0] = 0xE0;
-    target[1] = 0x00;
-    int nlen = 2+ (5 * 2048);
-    //int len = -1;
-    spi__transceive(spi0_fpga, target, nlen);
-    return nlen;
+    return extractbe32(&buf[0]);
 }
 
 int fpga__upload_rom_chunk(uint16_t offset, uint8_t *buffer_sub3, unsigned len)
 {
-#if 0
-    // Upload chunk
-    buffer_sub3[0] = 0xE1;
-    buffer_sub3[0] = 0xE1;
-    buffer_sub3[1] = (offset>>8) & 0xFF;
-    buffer_sub3[2] = offset & 0xFF;
-
-    {
-        dump__buffer(buffer_sub3, 8);
-    }
-
-    spi__transceive(spi0_fpga, buffer_sub3, 3 + len);
-#else
     if (fpga__write_extram_block((uint32_t)offset, &buffer_sub3[3], len)<0) {
         ESP_LOGE(TAG, "Cannot write ROM block");
         return -1;
     }
-#endif
-
     return len;
 }
 
@@ -314,14 +275,9 @@ int fpga__reset_to_custom_rom(bool activate_retn_hook)
 
 int fpga__load_resource_fifo(const uint8_t *data, unsigned len, int timeout)
 {
-#if 0
-    printf("Load res: ");
-    dump__buffer(data,len);
-    printf("\n");
-#endif
 
 #define LOCAL_CHUNK_SIZE 512
-    uint8_t txbuf[LOCAL_CHUNK_SIZE+1];
+//    uint8_t txbuf[LOCAL_CHUNK_SIZE+1];
 
     do {
         uint8_t stat = fpga__get_status();
@@ -350,10 +306,10 @@ int fpga__load_resource_fifo(const uint8_t *data, unsigned len, int timeout)
 
         // Upload chunk to resource fifo.
         if (maxsize>0) {
-            txbuf[0] = 0xE3;
-            memcpy(&txbuf[1], data, maxsize);
-            spi__transceive(spi0_fpga, txbuf, maxsize+1);
-
+            //txbuf[0] = 0xE3;
+            //memcpy(&txbuf[1], data, maxsize);
+            //spi__transceive(spi0_fpga, txbuf, maxsize+1);
+            fpga__issue_write(FPGA_SPI_CMD_WRITE_RESOURCEFIFO, data, maxsize);
             data+=maxsize;
             len-=maxsize;
 
@@ -373,14 +329,6 @@ int fpga__load_resource_fifo(const uint8_t *data, unsigned len, int timeout)
 
 int fpga__write_rom(unsigned offset, uint8_t val)
 {
-    /*uint8_t tbuf[4];
-    tbuf[0] = 0xE1;
-    tbuf[1] = (offset>>8) & 0xFF;
-    tbuf[2] = offset & 0xFF;
-    tbuf[3] = val;
-
-    return spi__transceive(spi0_fpga, tbuf, 4);
-    */
     ESP_LOGI(TAG,"Patching rom @ 0x%08x: 0x%02x\n", offset, val);
     return fpga__write_extram(offset, val);
 }
@@ -391,35 +339,25 @@ int fpga__upload_rom(const uint8_t *buffer, unsigned len)
     uint8_t tbuf[67];
     ESP_LOGI(TAG, "Uploading ROM, %d bytes", len);
     do {
-        // Upload chunk
-        tbuf[0] = 0xE1;
-        tbuf[1] = (offset>>8) & 0xFF;
-        tbuf[2] = offset & 0xFF;
-
         int llen = len>64?64:len;
-        memcpy(&tbuf[3], buffer, llen);
-#if 0
-        spi__transceive(spi0_fpga, tbuf, llen+3);
-#else
-        if (fpga__write_extram_block((uint32_t)offset, &tbuf[3], llen)<0)
+
+        if (fpga__write_extram_block((uint32_t)offset, buffer, llen)<0)
+            return -1;
+#if 1
+        if (fpga__read_extram_block((uint32_t)offset, tbuf, llen)<0)
             return -1;
 
-        memset(tbuf, 0, sizeof(tbuf));
-
-        if (fpga__read_extram_block((uint32_t)offset, &tbuf[3], llen)<0)
-            return -1;
-
-        if (memcmp(&tbuf[3], buffer, llen)!=0) {
+        if (memcmp(tbuf, buffer, llen)!=0) {
             ESP_LOGE(TAG,"ERROR comparing ROM contents\n");
             dump__buffer(buffer, llen);
-            dump__buffer(&tbuf[3], llen);
+            dump__buffer(tbuf, llen);
 
             memset(tbuf, 0, sizeof(tbuf));
 
-            if (fpga__read_extram_block((uint32_t)offset, &tbuf[3], llen)<0)
+            if (fpga__read_extram_block((uint32_t)offset, tbuf, llen)<0)
                 return -1;
 
-            dump__buffer(&tbuf[3], llen);
+            dump__buffer(tbuf, llen);
 
             return -1;
         }
@@ -481,32 +419,30 @@ int fpga__passiveserialconfigure(const uint8_t *data, unsigned len)
 
 int fpga__read_command_fifo()
 {
-    uint8_t buf[3];
-    buf[0] = 0xFB;
-    buf[1] = 0x00;
-    buf[2] = 0x00;
-    spi__transceive(spi0_fpga, buf, 3);
-#if 0
-    printf("Cmd fifo state: ");
-    dump__buffer(buf, 3);
-    printf("\n");
-#endif
-    if (buf[1]==0xff) {
+    uint8_t buf[2];
+
+    int r = fpga__issue_read(FPGA_SPI_CMD_READ_CMDFIFO, buf, sizeof(buf));
+
+    if (r<0)
+        return r;
+
+    if (buf[0]==0xff) {
         return -1;
     }
+
     ESP_LOGI(TAG, "Command ");
-    dump__buffer(buf,3);
-    return buf[2];
+
+    dump__buffer(buf,2);
+
+    return buf[1];
 }
 
 uint16_t fpga__get_tap_fifo_usage()
 {
-    uint8_t buf[3];
-    buf[0] = 0xE5;
-    buf[1] = 0x00;
-    buf[2] = 0x00;
-    spi__transceive(spi0_fpga, buf, 3);
-    return extractbe16(&buf[1]);
+    uint8_t buf[2];
+    ESP_ERROR_CHECK(fpga__issue_read(FPGA_SPI_CMD_READ_TAPFIFO_USAGE, buf, sizeof(buf)));
+
+    return extractbe16(&buf[0]);
 }
 
 
@@ -526,7 +462,6 @@ bool fpga__tap_fifo_empty()
 int fpga__load_tap_fifo(const uint8_t *data, unsigned len, int timeout)
 {
 #define TAP_LOCAL_CHUNK_SIZE 256
-    uint8_t txbuf[TAP_LOCAL_CHUNK_SIZE+1];
 
     uint16_t stat = fpga__get_tap_fifo_usage();
 //    ESP_LOGI(TAG, "TAP stat %04x\n", stat);
@@ -545,9 +480,8 @@ int fpga__load_tap_fifo(const uint8_t *data, unsigned len, int timeout)
 
     // Upload chunk
     if (maxsize>0) {
-        txbuf[0] = 0xE4;
-        memcpy(&txbuf[1], data, maxsize);
-        spi__transceive(spi0_fpga, txbuf, maxsize+1);
+        if (fpga__issue_write(FPGA_SPI_CMD_WRITE_TAPFIFO, data, maxsize)<0)
+            return -1;
     }
 
     return maxsize;
@@ -556,7 +490,6 @@ int fpga__load_tap_fifo(const uint8_t *data, unsigned len, int timeout)
 int fpga__load_tap_fifo_command(const uint8_t *data, unsigned len, int timeout)
 {
 #define TAP_LOCAL_CHUNK_SIZE 256
-    uint8_t txbuf[TAP_LOCAL_CHUNK_SIZE+1];
 
     uint16_t stat = fpga__get_tap_fifo_usage();
     //ESP_LOGI(TAG, "TAP stat %04x\n", stat);
@@ -575,9 +508,8 @@ int fpga__load_tap_fifo_command(const uint8_t *data, unsigned len, int timeout)
 
     // Upload chunk
     if (maxsize>0) {
-        txbuf[0] = 0xE6;
-        memcpy(&txbuf[1], data, maxsize);
-        spi__transceive(spi0_fpga, txbuf, maxsize+1);
+        if (fpga__issue_write(FPGA_SPI_CMD_WRITE_TAPCMD, data, maxsize)<0)
+            return -1;
     }
 
     return maxsize;
@@ -602,10 +534,7 @@ int fpga__read_extram(uint32_t address)
 #else
     uint8_t buf[1];
 
-    if (spi__transceive_cmd8_addr32(spi0_fpga,
-                                    0x50,
-                                    address<<8,
-                                    buf, 1)<0)
+    if (fpga__issue_read_addr24(FPGA_SPI_CMD_READ_EXTRAM, address, buf, 1)<0)
         return -1;
 
     return buf[0];
@@ -642,7 +571,7 @@ int fpga__read_extram_block(uint32_t address, uint8_t *dest, int size)
                                        dest, size);
 }
 
-int fpga__write_extram_block(uint32_t address, uint8_t *buffer, int size)
+int fpga__write_extram_block(uint32_t address, const uint8_t *buffer, int size)
 {
     ESP_LOGI(TAG, "Write RAM address 0x%06x len %d", address, size);
 
@@ -652,11 +581,10 @@ int fpga__write_extram_block(uint32_t address, uint8_t *buffer, int size)
  /*   if (fpga__write_extram(address, buffer[0])<0)
         return -1;
    */
-    return spi__transceive_cmd8_addr24(spi0_fpga,
-                                       0x51,
-                                       address,
-                                       buffer,
-                                       size);
+    return fpga__issue_write_addr24(FPGA_SPI_CMD_WRITE_EXTRAM,
+                                    address,
+                                    buffer,
+                                    size);
 }
 
 
@@ -672,12 +600,12 @@ int fpga__read_usb(uint16_t address)
 
 int fpga__read_usb_block(uint16_t address, uint8_t *dest, int size)
 {
-    return spi__transceive_cmd8_addr24(spi0_fpga,
-                                       0x60,
-                                       (address<<8), // Room for dummy
-                                       dest,
-                                       size);
+    return fpga__issue_read_addr16(FPGA_SPI_CMD_READ_USB,
+                                   address,
+                                   dest,
+                                   size);
 }
+
 int fpga__write_usb(uint16_t address, uint8_t val)
 {
     uint8_t v = val;
@@ -686,12 +614,10 @@ int fpga__write_usb(uint16_t address, uint8_t val)
 
 int fpga__write_usb_block(uint16_t address, const uint8_t *buffer, int size)
 {
-    int r = spi__transmit_cmd8_addr16(spi0_fpga,
-                                      0x61,
-                                      address,
-                                      buffer,
-                                      size);
-    return r;
+    return fpga__issue_write_addr16(FPGA_SPI_CMD_WRITE_USB,
+                                   address,
+                                   buffer,
+                                   size);
 }
 
 void fpga__set_config1_bits(uint32_t bits)
