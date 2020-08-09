@@ -262,7 +262,7 @@ begin
   ESP_IO27_o     <= spec_nreq_s;
 
   FLED_o(0)     <= dbg_s(8);
-  FLED_o(1)     <= '1';
+  FLED_o(1)     <= not FORCE_IORQULA_s;
   FLED_o(2)     <= not FORCE_ROMCS_s;
   LED2_o        <= '1';
 

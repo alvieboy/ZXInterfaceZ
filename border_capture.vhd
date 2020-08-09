@@ -37,7 +37,7 @@ architecture beh of border_capture is
   type mem_type is array(0 to (2*CAPTURE_SLOTS_32)-1) of std_logic_vector(31 downto 0);
   shared variable mem: mem_type;
 
-  constant TICK_DELAY: natural := ((CLK_KHZ*1000)/(50*CAPTURE_SLOTS_32*8));
+  constant TICK_DELAY: natural := ((C_CLK_KHZ*1000)/(50*CAPTURE_SLOTS_32*8));
 
   signal tick_r       : natural range 0 to TICK_DELAY-1;
   signal start_delay_r: unsigned(7 downto 0);

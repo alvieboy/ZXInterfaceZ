@@ -21,6 +21,9 @@ entity interfacez_io is
     active_i  : in std_logic;
     ulahack_i : in std_logic;
 
+    -- NMI reason
+    nmireason_i: in std_logic_vector(7 downto 0);
+
     adr_i     : in std_logic_vector(15 downto 0);
     dat_i     : in std_logic_vector(7 downto 0);
     dat_o     : out std_logic_vector(7 downto 0);
@@ -247,6 +250,8 @@ begin
           when SPECT_PORT_RAM_DATA => -- RAM read
             ram_rd_r <= '1';
             --dataread_r <= (others => 'X');
+          when SPECT_PORT_NMIREASON =>
+            dataread_r <= nmireason_i;
 
           when others =>
             dataread_r <= (others => '1');

@@ -17,10 +17,6 @@ entity spi_interface is
     MISO_o                : out std_logic;
 
     pc_i                  : in std_logic_vector(15 downto 0);
-  
-    fifo_empty_i          : in std_logic;
-    fifo_rd_o             : out std_logic;
-    fifo_data_i           : in std_logic_vector(31 downto 0);
 
     vidmem_en_o           : out std_logic;
     vidmem_adr_o          : out std_logic_vector(12 downto 0);
@@ -40,6 +36,7 @@ entity spi_interface is
     forceromonretn_trig_o : out std_logic; -- single tick, SPI sck
     forcenmi_trig_on_o    : out std_logic; -- single tick, SPI sck
     forcenmi_trig_off_o   : out std_logic; -- single tick, SPI sck
+    nmireason_o           : out std_logic_vector(7 downto 0);
     -- Resource FIFO
 
     resfifo_reset_o       : out std_logic;
@@ -110,11 +107,10 @@ architecture beh of spi_interface is
   signal dat_s        : std_logic_vector(7 downto 0);
   signal first_dat_s  : std_logic;
   signal wordindex_r  : unsigned(1 downto 0);
-  signal wordindex2_r : unsigned(2 downto 0);
 
   signal vid_addr_r   : unsigned(12 downto 0);
   signal flags_r      : std_logic_vector(15 downto 0);
-  signal capmem_adr_r : unsigned(CAPTURE_MEMWIDTH_BITS-1 downto 0);
+  --signal capmem_adr_r : unsigned(CAPTURE_MEMWIDTH_BITS-1 downto 0);
 
   constant NUMREGS32  : natural := 8;
 
@@ -131,7 +127,6 @@ architecture beh of spi_interface is
     UNKNOWN,
     READID,
     READSTATUS,
-    READDATA,
     RDVIDMEM1,
     RDVIDMEM2,
     RDVIDMEM,
@@ -145,9 +140,6 @@ architecture beh of spi_interface is
     SETREG32_2,
     SETREG32_3,
     SETREG32_4,
-    WRITEROM1,
-    WRITEROM2,
-    WRITEROM,
     WRRESFIFO,
     WRTAPFIFO,
     RDTAPFIFOUSAGE,
@@ -170,8 +162,8 @@ architecture beh of spi_interface is
   signal rom_addr_r    : unsigned(13 downto 0);
 
 
-  signal capture_len_sync_s   : std_logic_vector(CAPTURE_MEMWIDTH_BITS-1 downto 0);
-  signal capture_trig_sync_s  : std_logic;
+  --signal capture_len_sync_s   : std_logic_vector(CAPTURE_MEMWIDTH_BITS-1 downto 0);
+  --signal capture_trig_sync_s  : std_logic;
 
   signal wreg_en_r        : std_logic;
   signal tapfifo_used_lsb_r : std_logic_vector(7 downto 0);
@@ -194,14 +186,9 @@ architecture beh of spi_interface is
   );
   signal generic_access_r: generic_access_type;
 
-  --signal sck_fall_s   : std_logic;
-  --signal sck_rise_s   : std_logic;
-  --signal csn_s        : std_logic;
   signal cmdfifo_read_issued_r: std_logic;
 
-
   signal txload_s     : std_logic;
-  --signal txready_s    : std_logic;
   signal txden_s      : std_logic;
   signal rx_rd_s      : std_logic;
   signal tx_full_s    : std_logic;
@@ -226,7 +213,6 @@ begin
 
     SCK_i         => SCKx_i,
     CSN_i         => CSNx_i,
-    --D_io          => D_io,
     MOSI_i        => MOSI_i,
     MISO_o        => MISO_o,
 
@@ -291,43 +277,6 @@ begin
     end if;
   end process;
 
-  rstfifo_o     <= flags_r(0);
-  rstspect_o    <= flags_r(1);
-  --capture_clr_o <= flags_r(2);
-  --capture_run_o <= flags_r(3);
-  --capture_cmp_o <= flags_r(4); -- Compress
-  intenable_o   <= flags_r(5); -- Interrupt enable
-  capsyncen_o   <= flags_r(6); -- Capture sync
-
-  ulahack_o     <= flags_r(8); --
-  tapfifo_reset_o<=flags_r(9); --
-  tap_enable_o  <= flags_r(10); --
-
-  vidmode_o(0)     <= flags_r(11); --
-  vidmode_o(1)     <= flags_r(12); --
-
-  --forceromcs_o  <= flags_r(7);
-
-
-  --rom_en_o <= '1' when state_r=WRITEROM else '0';
-  --rom_we_o <= dat_valid_s;
-  --rom_di_o <= dat_s;
-  --rom_addr_o <= std_logic_vector(rom_addr_r);
-
-  resfifo_wr_o      <= '1' when state_r=WRRESFIFO and dat_valid_s='1' else '0';
-  resfifo_write_o   <= dat_s;
-
-  tapfifo_wr_o      <= '1' when state_r=WRTAPFIFO and dat_valid_s='1' else '0';
-  tapfifo_write_o(7 downto 0)   <= dat_s;
-  tapfifo_write_o(8) <= tapcmd_r;
-
-  usb_rd_o          <= usb_rd_r;
-
-  usb_wr_o          <= '1' when state_r=GENERICWRITEDATA and dat_valid_s='1' and generic_access_r=GENERIC_USB else '0';
-  capture_wr_o      <= '1' when state_r=GENERICWRITEDATA and dat_valid_s='1' and generic_access_r=GENERIC_CAPTURE else '0';
-
-
-  generic_dat_o         <= dat_s;
 
   process(clk_i, arst_i)
     variable caplen_v:  std_logic_vector(31 downto 0);
@@ -336,11 +285,10 @@ begin
       state_r       <= IDLE;
       txden_s       <= '0';
       txload_s      <= '0';
-      fifo_rd_o     <= '0';
       cmdfifo_rd_o  <= '0';
       vidmem_en_o   <= '0';
       frame_end_r   <= '0';
-      capmem_adr_r  <= (others=>'0');
+      --capmem_adr_r  <= (others=>'0');
       wreg_en_r     <= '0';
       usb_rd_r      <= '0';
       capture_rd_r  <= '0';
@@ -349,7 +297,6 @@ begin
 
     elsif rising_edge(clk_i) then
 
-      fifo_rd_o     <= '0';
       cmdfifo_rd_o  <= '0';
       usb_rd_r      <= '0';
       capture_rd_r  <= '0';
@@ -358,12 +305,12 @@ begin
 
       if rx_empty_s='0' and first_dat_s='1' then
         -- Forcibly handle commands.
-        capmem_adr_r <= (others => '0');
+        --capmem_adr_r <= (others => '0');
 
         case dat_s is
           when x"DE" => -- Read status
             txload_s  <= '1';
-            txdat_s   <= "00" & cmdfifo_empty_i & resfifo_full_i & fifo_empty_i;
+            txdat_s   <= "00" & cmdfifo_empty_i & resfifo_full_i & '0';--fifo_empty_i;
             state_r   <= READSTATUS;
 
           when x"DF" => -- Read video memory
@@ -464,18 +411,6 @@ begin
             txdat_s <= "00000000";
             frame_end_r <= '1';
 
-          when x"FC" => -- Read data
-            txden_s <= '1';
-            txload_s <= '1';
-            wordindex_r <= "00";
-            if fifo_empty_i='1' then
-              txdat_s <= x"FF";
-              state_r <= UNKNOWN;
-            else
-              txdat_s <= x"FE";
-              state_r <= READDATA;
-            end if;
-
           when x"FB" => -- Read FIFO command data
             txden_s     <= '1';
             txload_s    <= '1';
@@ -495,7 +430,7 @@ begin
             txden_s <= '1';
             txload_s <= '1';
             wordindex_r <= "00";
-            txdat_s <= FPGAID0;
+            txdat_s <= C_FPGAID0;
             state_r <= READID;
             
           when others =>
@@ -606,10 +541,6 @@ begin
             txden_s <= '1';
             txdat_s <= vidmem_data_i;
             vid_addr_r <= vid_addr_r + 1;
-            --if vid_addr_r=x"1B00" then
-              -- Mark end of framebuffer.
-            --  framecmplt_r <= '1';
-            --end if;
           end if;
 
         when SETFLAGS1 =>
@@ -628,26 +559,6 @@ begin
           
           if dat_valid_s='1' then
             state_r <= UNKNOWN;
-          end if;
-
-
-        when READDATA =>
-          --txload_s <= '1';
-          txload_s <= dat_valid_s;
-          txden_s <= '1';
-          if dat_valid_s='1' then
-            wordindex_r <= wordindex_r + 1;
-          end if;
-          case wordindex_r is
-            when "11" => txdat_s <= fifo_data_i(7 downto 0);
-            when "10" => txdat_s <= fifo_data_i(15 downto 8);
-            when "01" => txdat_s <= fifo_data_i(23 downto 16);
-            when "00" => txdat_s <= fifo_empty_i & fifo_data_i(30 downto 24);
-            when others =>
-          end case;
-
-          if wordindex_r="11" and dat_valid_s='1' then
-            fifo_rd_o <= '1';
           end if;
 
         when READFIFOCMD1 =>
@@ -669,7 +580,7 @@ begin
             cmdfifo_read_issued_r<='1';
           end if;
 
-          if dat_valid_s ='1' and cmdfifo_read_issued_r='1' then -- TBD: shall we use dat_valid_s?
+          if dat_valid_s ='1' and cmdfifo_read_issued_r='1' then
             cmdfifo_rd_o <= '1';
           end if;
 
@@ -682,15 +593,14 @@ begin
             wordindex_r <= wordindex_r + 1;
           end if;
           case wordindex_r is
-            --when "00" => txdat_s <= FPGAID0;
-            when "00" => txdat_s <= FPGAID1;
-            when "01" => txdat_s <= FPGAID2;
+            when "00" => txdat_s <= C_FPGAID1;
+            when "01" => txdat_s <= C_FPGAID2;
             when "10" =>
               txdat_s <= (others => '0');
 
-              if SCREENCAP_ENABLED  then txdat_s(0) <= '1'; end if;
-              if ROM_ENABLED        then txdat_s(1) <= '1'; end if;
-              if CAPTURE_ENABLED    then txdat_s(2) <= '1'; end if;
+              if C_SCREENCAP_ENABLED  then txdat_s(0) <= '1'; end if;
+              txdat_s(1) <= '1';
+              if C_CAPTURE_ENABLED    then txdat_s(2) <= '1'; end if;
 
             when others =>
           end case;
@@ -728,18 +638,9 @@ begin
           txden_s <= '1';
           txdat_s <= extram_dat_i(7 downto 0);
 
-          --if extram_we_r='1' then
-            if dat_valid_s='1' then
-              --extram_addr_r(7 downto 0) <= dat_i;
-              extram_wdata_r <= dat_s;
-              -- Request
-              extram_req_r <= '1';
-            end if;
-          --else
-          --  extram_req_r <= extram_valid_i; -- Load FIFO immediatly
-          --end if;
-          if extram_valid_i='1' then
-            --extram_addr_r <= std_logic_vector(unsigned(extram_addr_r) + 1);
+          if dat_valid_s='1' then
+            extram_wdata_r <= dat_s;
+            extram_req_r <= '1';
           end if;
 
         when GENERICADDR1 =>
@@ -787,7 +688,6 @@ begin
                 capture_rd_r <= '1';
             end case;
             state_r <= GENERICREADDATA;
-            --generic_addr_wr_r <= std_logic_vector(unsigned(generic_addr_wr_r) +1);
           end if;
 
         when GENERICWRITEDATA =>
@@ -800,10 +700,6 @@ begin
               txdat_s   <= capture_dat_i;
           end case;
 
-          if dat_valid_s='1' then
-            --generic_addr_wr_r <= std_logic_vector(unsigned(generic_addr_wr_r) +1);
-          end if;
-
         when UNKNOWN =>
           -- Leave TXDEN.
 
@@ -811,12 +707,6 @@ begin
           txload_s <= '0';
           txden_s <= '0';
       end case;
-
-    --end if;
-
-
-
-      -- Not dependant on sck_rise_s
 
       case state_r is
         when EXTRAMDATA =>
@@ -835,16 +725,35 @@ begin
 
 
 
+  rstfifo_o             <= flags_r(0);
+  rstspect_o            <= flags_r(1);
+  intenable_o           <= flags_r(5); -- Interrupt enable
+  capsyncen_o           <= flags_r(6); -- Capture sync
 
-  extram_addr_o(23 downto 0) <= extram_addr_r;
-  extram_addr_o(31 downto 24) <= (others => '0');
+  ulahack_o             <= flags_r(8); --
+  tapfifo_reset_o       <= flags_r(9); --
+  tap_enable_o          <= flags_r(10); --
+
+  vidmode_o(0)          <= flags_r(11); --
+  vidmode_o(1)          <= flags_r(12); --
+
+  resfifo_wr_o          <= '1' when state_r=WRRESFIFO and dat_valid_s='1' else '0';
+  resfifo_write_o       <= dat_s;
+
+  tapfifo_wr_o          <= '1' when state_r=WRTAPFIFO and dat_valid_s='1' else '0';
+  tapfifo_write_o       <= tapcmd_r & dat_s;
+  usb_rd_o              <= usb_rd_r;
+
+  usb_wr_o              <= '1' when state_r=GENERICWRITEDATA and dat_valid_s='1' and generic_access_r=GENERIC_USB else '0';
+  capture_wr_o          <= '1' when state_r=GENERICWRITEDATA and dat_valid_s='1' and generic_access_r=GENERIC_CAPTURE else '0';
+  generic_dat_o         <= dat_s;
+
+  extram_addr_o         <= x"00" & extram_addr_r;
   extram_req_o          <= extram_req_r;
-  extram_dat_o(7 downto 0)           <= extram_wdata_r;
-  extram_dat_o(31 downto 8)          <= (others => '0');
+  extram_dat_o          <= x"000000" & extram_wdata_r;
   extram_we_o           <= extram_we_r;
 
-  generic_addr_o            <= generic_addr_wr_r(10 downto 0);
-  --capture_addr_o        <= generic_addr_wr_r(10 downto 0);
+  generic_addr_o        <= generic_addr_wr_r(10 downto 0);
   capture_rd_o          <= capture_rd_r;
 
   kbd_en_o              <= regs32_r(2)(0);
@@ -862,5 +771,7 @@ begin
 
   -- Volumes
   volume_o              <= regs32_r(7) & regs32_r(6);
+  -- NMI
+  nmireason_o           <= regs32_r(0)(7 downto 0);
 
 end beh;

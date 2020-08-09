@@ -4,25 +4,16 @@ use IEEE.numeric_std.all;
 
 package zxinterfacepkg is
 
+  constant C_CLK_KHZ                : natural := 96000;
 
-  constant COMPRESS_BITS: natural := 7;
+  constant C_SCREENCAP_ENABLED      : boolean := true;
 
-  constant CLK_KHZ: natural := 96000;
+  constant C_FPGAID0                : std_logic_vector(7 downto 0) := x"A5";
+  constant C_FPGAID1                : std_logic_vector(7 downto 0) := x"10";
+  constant C_FPGAID2                : std_logic_vector(7 downto 0) := x"03";
 
-  constant CAPTURE_MEMWIDTH_BITS: natural := 11;
-  constant SCREENCAP_ENABLED: boolean := true;
-  constant ROM_ENABLED: boolean := true;
-  constant CAPTURE_ENABLED: boolean := false;
-  constant SIGTAP_ENABLED: boolean := false;
-
-
-  constant FPGAID0: std_logic_vector(7 downto 0) := x"A5";
-  constant FPGAID1: std_logic_vector(7 downto 0) := x"10";
-  constant FPGAID2: std_logic_vector(7 downto 0) := x"03";
-  --constant FPGAID3: std_logic_vector(7 downto 0) := x"00";
-
-  constant C_ENABLE_VGA: boolean := true;
-  constant C_CAPTURE_ENABLED: boolean := true;
+  constant C_ENABLE_VGA             : boolean := true;
+  constant C_CAPTURE_ENABLED        : boolean := true;
 
 
   constant C_MEM_READ_DELAY_PULSE   : natural := 33;  -- This is used to capture signals.
@@ -42,7 +33,7 @@ package zxinterfacepkg is
   constant SPECT_PORT_RAM_DATA              : std_logic_vector(7 downto 0) := "01100011";   -- x"63"
   constant SPECT_PORT_CMD_FIFO_DATA         : std_logic_vector(7 downto 0) := "01100111";   -- x"67"
   constant SPECT_PORT_MEMSEL                : std_logic_vector(7 downto 0) := "01101011";   -- x"6B";
-  -- UNUSED: "01101111";
+  constant SPECT_PORT_NMIREASON             : std_logic_vector(7 downto 0) := "01101111";   -- x"6F";
   -- UNUSED: "01110011";
   -- UNUSED: "01110111";
   -- UNUSED: "01111011";

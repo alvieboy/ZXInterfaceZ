@@ -39,7 +39,16 @@ entity businterface is
     d_unlatched_o : out std_logic_vector(7 downto 0);  -- Data from spectrum (unlatched)
     a_o           : out std_logic_vector(15 downto 0);  -- Address from spectrum
 
-    m1_o          : out std_logic;
+    -- Resynchronized signals from ZX Spectrum
+    XCK_sync_o         : out std_logic;
+    XINT_sync_o        : out std_logic;
+    XMREQ_sync_o       : out std_logic;
+    XIORQ_sync_o       : out std_logic;
+    XRD_sync_o         : out std_logic;
+    XWR_sync_o         : out std_logic;
+    XM1_sync_o         : out std_logic;
+    XRFSH_sync_o       : out std_logic;
+
     intr_p_o      : out std_logic;
     bus_idle_o    : out std_logic;
 
@@ -317,12 +326,20 @@ begin
   mem_wr_p_o    <= memwr_p_s;
   mem_active_o  <= memrd_s OR memwr_s;
   opcode_rd_p_o <= '0';
-  m1_o          <= XM1_sync_s;
   intr_p_o      <= intr_p_s;
   bus_idle_o    <= XRD_sync_s AND XWR_sync_s AND XMREQ_sync_s AND XIORQ_sync_s;
   mem_rd_p_dly_o <= memrd_dly_q(C_MEM_READ_DELAY_PULSE);
   io_rd_p_dly_o <= iord_dly_q(C_IO_READ_DELAY_PULSE);
   clk_rise_o    <= ck_rise_event_s;
   clk_fall_o    <= ck_fall_event_s;
+
+  XCK_sync_o    <= XCK_sync_s;
+  XINT_sync_o   <= XINT_sync_s;
+  XMREQ_sync_o  <= XMREQ_sync_s;
+  XIORQ_sync_o  <= XIORQ_sync_s;
+  XRD_sync_o    <= XRD_sync_s;
+  XWR_sync_o    <= XWR_sync_s;
+  XM1_sync_o    <= XM1_sync_s;
+  XRFSH_sync_o  <= XRFSH_sync_s;
 
 end beh;

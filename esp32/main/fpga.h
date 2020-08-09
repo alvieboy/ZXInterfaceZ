@@ -31,7 +31,6 @@ typedef uint8_t fpga_status_t;
 #define FPGA_SPI_CMD_WRITE_USB (0x61)
 
 /* Status bits */
-#define FPGA_STATUS_DATAFIFO_EMPTY (1<<0)
 #define FPGA_STATUS_RESFIFO_FULL   (1<<1)
 #define FPGA_STATUS_RESFIFO_QFULL  (1<<2)
 #define FPGA_STATUS_RESFIFO_HFULL  (1<<3)
@@ -67,8 +66,7 @@ typedef uint8_t fpga_status_t;
 
 /* Registers */
 
-#define REG_CAPTURE_MASK 0x00
-#define REG_CAPTURE_VAL 0x01
+#define REG_NMIREASON    0x00
 #define REG_CONFIG1      0x02
 # define CONFIG1_KBD_ENABLE (1<<0)
 # define CONFIG1_JOY_ENABLE (1<<1)
