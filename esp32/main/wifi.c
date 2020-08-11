@@ -204,6 +204,12 @@ void wifi__init_softap()
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
     ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_AP, &wifi_config));
     ESP_ERROR_CHECK(esp_wifi_start());
+
+    ESP_LOGI(TAG, "Configured WiFi in AP mode");
+    ESP_LOGI(TAG, " SSID    : %s", wifi_config.ap.ssid);
+    ESP_LOGI(TAG, " Password: %s", wifi_config.ap.password);
+    ESP_LOGI(TAG, " Channel : %d", wifi_config.ap.channel);
+    ESP_LOGI(TAG, " Max conn: %d", wifi_config.ap.max_connection);
 }
 
 static void wifi__init_core()
@@ -250,7 +256,8 @@ void wifi__init_wpa2()
     //esp_wifi_set_ps (WIFI_PS_NONE);
 //    ESP_ERROR_CHECK( esp_wifi_set_bandwidth(ESP_IF_WIFI_STA, WIFI_BW_HT20) );
 
-
+    ESP_LOGI(TAG, "Configured WiFi in STA mode");
+    ESP_LOGI(TAG, " SSID    : %s", wifi_config.sta.ssid);
 
     ESP_ERROR_CHECK(esp_wifi_start());
 }
