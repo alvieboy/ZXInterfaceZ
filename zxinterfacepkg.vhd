@@ -10,7 +10,7 @@ package zxinterfacepkg is
 
   constant C_FPGAID0                : std_logic_vector(7 downto 0) := x"A5";
   constant C_FPGAID1                : std_logic_vector(7 downto 0) := x"10";
-  constant C_FPGAID2                : std_logic_vector(7 downto 0) := x"03";
+  constant C_FPGAID2                : std_logic_vector(7 downto 0) := x"04";
 
   constant C_ENABLE_VGA             : boolean := true;
   constant C_CAPTURE_ENABLED        : boolean := true;
