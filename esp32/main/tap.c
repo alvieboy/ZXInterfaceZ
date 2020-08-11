@@ -1,12 +1,10 @@
 #include "tap.h"
 #include "byteops.h"
 #include "esp_log.h"
+#include "minmax.h"
 
 #define TAG "TAP"
 
-#ifndef MIN
-#define MIN(a,b) ((a) < (b) ? (a) : (b))
-#endif
 
 #define TAP_STANDARD_GAP 1000
 

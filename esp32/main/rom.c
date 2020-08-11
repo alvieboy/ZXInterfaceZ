@@ -5,6 +5,9 @@
 #include "rom.h"
 #include "fpga.h"
 #include "memlayout.h"
+#include <sys/stat.h>
+#include "fileaccess.h"
+#include "fcntl.h"
 
 #ifndef __linux__
 
@@ -61,3 +64,29 @@ int rom__load_from_flash(void)
 }
 
 #endif
+
+
+int rom__load_custom_from_file(const char *file)
+{
+    struct stat st;
+
+    int fd = __open(file,O_RDONLY);
+    if (fd<0)
+        return -1;
+
+    if (fstat(fd, &st)<0) {
+        ESP_LOGE(TAG,"Cannot stat file");
+        close(fd);
+        return -1;
+    }
+    if (st.st_size > MEMLAYOUT_ROM2_SIZE) {
+        ESP_LOGE(TAG,"File too large");
+        close(fd);
+        return -1;
+    }
+    int r = fpga__write_extram_block_from_file(MEMLAYOUT_ROM2_BASEADDRESS, fd, st.st_size, false);
+
+    close(fd);
+
+    return r;
+}

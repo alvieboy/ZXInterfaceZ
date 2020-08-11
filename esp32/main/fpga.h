@@ -136,6 +136,7 @@ int fpga__read_extram(uint32_t address);
 int fpga__read_extram_block(uint32_t address, uint8_t *dest, int size);
 int fpga__write_extram(uint32_t address, uint8_t val);
 int fpga__write_extram_block(uint32_t address, const uint8_t *buffer, int size);
+int fpga__write_extram_block_from_file(uint32_t address, int fd, int size, bool verify);
 
 
 int fpga__read_usb(uint16_t address);

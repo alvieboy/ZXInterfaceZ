@@ -11,6 +11,10 @@
 #include "esp_spi_flash.h"
 #include <alloca.h>
 #include "byteops.h"
+#include "minmax.h"
+#include "fileaccess.h"
+#include "string.h"
+#include "errno.h"
 
 static spi_device_handle_t spi0_fpga;
 
@@ -645,6 +649,26 @@ int fpga__set_ram(uint8_t ram)
 
 int fpga__set_rom(uint8_t rom)
 {
-    // Lower 2 bits set ROM number, MSB cleared
+    // Lower 2 bits set ROM number, MSB cleared.
+    // Note that NMI ROM is always ROM 0.
     return fpga__set_romram(rom & 0x3);
+}
+
+int fpga__write_extram_block_from_file(uint32_t address, int fd, int size, bool verify)
+{
+    uint8_t chunk[128];
+
+    while (size) {
+        int chunksize = MIN(size, sizeof(chunk));
+
+        int r = read(fd, chunk, chunksize);
+        if (r!=chunksize) {
+            ESP_LOGE(TAG, "Short read from file: %s", strerror(errno));
+            close(fd);
+            return -1;
+        }
+        address += chunksize;
+        size -= chunksize;
+    }
+    return 0;
 }

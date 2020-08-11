@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include "tzx.h"
 #include "byteops.h"
+#include "minmax.h"
 
 #ifdef __linux__
 
@@ -22,10 +23,6 @@
 
 #else
 #include "esp_log.h"
-#endif
-
-#ifndef MIN
-#define MIN(a,b) ((a) < (b) ? (a) : (b))
 #endif
 
 #define TAG "TZX"

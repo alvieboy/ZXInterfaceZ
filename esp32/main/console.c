@@ -8,6 +8,7 @@
 #include "usbh.h"
 #include "fpga.h"
 #include "wifi.h"
+#include "rom.h"
 
 char cmd[256];
 uint8_t cmdptr = 0;
@@ -136,6 +137,25 @@ static int console__wifi(int argc, char **argv)
 }
 
 
+static int console__loadrom(int argc, char **argv)
+{
+    if (argc<1) {
+        ESP_LOGE(CTAG, "Too few arguments");
+        return -1;
+    }
+    int f = rom__load_custom_from_file(argv[0]);
+    if (f<0) {
+        ESP_LOGE(CTAG, "Cannot load ROM '%s'", argv[0]);
+        return -1;
+    }
+
+    if (fpga__reset_to_custom_rom(false)<0) {
+        ESP_LOGE(CTAG, "Cannot reset");
+        return -1;
+    }
+    return 0;
+}
+
 
 
 static struct {
@@ -146,6 +166,7 @@ static struct {
     { "usb", &console__usb },
     { "ulahack", &console__ulahack },
     { "wifi", &console__wifi },
+    { "loadrom", &console__loadrom },
 };
 
 static int console__parse_string(char *cmd);
