@@ -79,6 +79,12 @@ entity interfacez_io is
     romsel_o              : out std_logic_vector(1 downto 0);
     memsel_o              : out std_logic_vector(2 downto 0);
 
+    -- Paging override
+    romsel_i              : in std_logic_vector(1 downto 0);
+    memsel_i              : in std_logic_vector(2 downto 0);
+    romsel_we_i           : in std_logic;
+    memsel_we_i           : in std_logic;
+
     dbg_o                 : out std_logic_vector(7 downto 0)
   );
 
@@ -305,6 +311,13 @@ begin
         ram_addr_r <= ram_addr_r + 1;
       end if;
 
+      if romsel_we_i='1' then
+        romsel_r <= romsel_i;
+      end if;
+
+      if memsel_we_i='1' then
+        memsel_r <= memsel_i;
+      end if;
     end if;
   end process;
 

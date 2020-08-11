@@ -287,37 +287,42 @@ architecture beh of zxinterface is
 
   signal keyb_trigger_s         : std_logic;
 
-  signal kbd_en_s              : std_logic;
-  signal kbd_force_press_s     : std_logic_vector(39 downto 0); -- 40 keys.
-  signal joy_en_s              : std_logic;
-  signal joy_data_s            : std_logic_vector(4 downto 0);
-  signal mouse_en_s            : std_logic;
-  signal mouse_x_s             : std_logic_vector(7 downto 0);
-  signal mouse_y_s             : std_logic_vector(7 downto 0);
-  signal mouse_buttons_s       : std_logic_vector(1 downto 0);
+  signal kbd_en_s               : std_logic;
+  signal kbd_force_press_s      : std_logic_vector(39 downto 0); -- 40 keys.
+  signal joy_en_s               : std_logic;
+  signal joy_data_s             : std_logic_vector(4 downto 0);
+  signal mouse_en_s             : std_logic;
+  signal mouse_x_s              : std_logic_vector(7 downto 0);
+  signal mouse_y_s              : std_logic_vector(7 downto 0);
+  signal mouse_buttons_s        : std_logic_vector(1 downto 0);
 
-  signal audio_left_s               : std_logic;
-  signal audio_right_s              : std_logic;
-  signal ear_s                      : std_logic;
-  signal mic_s                      : std_logic;
+  signal audio_left_s           : std_logic;
+  signal audio_right_s          : std_logic;
+  signal ear_s                  : std_logic;
+  signal mic_s                  : std_logic;
 
-  signal ay_we_s                    : std_logic;
-  signal ay_din_s                   : std_logic_vector(7 downto 0);
-  signal ay_adr_s                   : std_logic_vector(3 downto 0);
-  signal ay_dout_s                  : std_logic_vector(7 downto 0);
+  signal ay_we_s                : std_logic;
+  signal ay_din_s               : std_logic_vector(7 downto 0);
+  signal ay_adr_s               : std_logic_vector(3 downto 0);
+  signal ay_dout_s              : std_logic_vector(7 downto 0);
 
-  signal volume_s                   : std_logic_vector(63 downto 0);
+  signal volume_s               : std_logic_vector(63 downto 0);
 
-  signal romsel_s                   : std_logic_vector(1 downto 0);
-  signal memsel_s                   : std_logic_vector(2 downto 0);
+  signal romsel_s               : std_logic_vector(1 downto 0);
+  signal current_rom_s          : std_logic_vector(1 downto 0);
+  signal memsel_s               : std_logic_vector(2 downto 0);
 
-  signal spect_clk_rise_s           : std_logic;
-  signal spect_clk_fall_s           : std_logic;
+  signal spect_clk_rise_s       : std_logic;
+  signal spect_clk_fall_s       : std_logic;
 
 
-  signal capture_rd_s          : std_logic;
-  signal capture_wr_s          : std_logic;
-  signal capture_dat_s         : std_logic_vector(7 downto 0);
+  signal capture_rd_s           : std_logic;
+  signal capture_wr_s           : std_logic;
+  signal capture_dat_s          : std_logic_vector(7 downto 0);
+
+  signal memromsel_s            : std_logic_vector(2 downto 0);
+  signal memsel_we_s            : std_logic;
+  signal romsel_we_s            : std_logic;
 
   function genvolume(vol: in std_logic_vector(7 downto 0)) return std_logic_vector is
   begin
@@ -478,6 +483,12 @@ begin
 
       romsel_o        => romsel_s,
       memsel_o        => memsel_s,
+
+      romsel_i        => memromsel_s(1 downto 0),
+      memsel_i        => memromsel_s(2 downto 0),
+      memsel_we_i     => memsel_we_s,
+      romsel_we_i     => romsel_we_s,
+
 
       dbg_o           => dbg_o(15 downto 8)
   );
@@ -649,7 +660,10 @@ begin
     mouse_x_o             => mouse_x_s,
     mouse_y_o             => mouse_y_s,
     mouse_buttons_o       => mouse_buttons_s,
-    volume_o              => volume_s
+    volume_o              => volume_s,
+    memromsel_o           => memromsel_s,
+    memsel_we_o           => memsel_we_s,
+    romsel_we_o           => romsel_we_s
   );
 
   -- Interrupt generation for command FIFO
@@ -756,7 +770,9 @@ begin
       end if;
 
       if nmi_access_s='1' then -- Entered NMI.
-        in_nmi_rom_r <= nmi_r;
+        in_nmi_rom_r    <= nmi_r;
+        -- Force ROM to index 0. This allows us to use NMI in other ROMs
+        --nmi_saved_rom   <= romsel_s;
         nmi_r <= '0';
       end if;
 
@@ -885,10 +901,12 @@ begin
       -- Ticks
       spect_mem_rd_p_i => mem_rd_p_s,
       spect_mem_wr_p_i => mem_wr_p_s,
-      romsel_i        => romsel_s,
+      romsel_i        => current_rom_s,
       memsel_i        => memsel_s
   );
 
+
+  current_rom_s <= romsel_s when in_nmi_rom_r='0' else "00"; -- Force ROM0 with NMI
 
   psram_hp_ahb_m2s    <= ahb_spect_m2s;
   ahb_spect_s2m       <= psram_hp_ahb_s2m;

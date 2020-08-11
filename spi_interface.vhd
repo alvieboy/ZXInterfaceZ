@@ -96,7 +96,10 @@ entity spi_interface is
     mouse_x_o             : out std_logic_vector(7 downto 0);
     mouse_y_o             : out std_logic_vector(7 downto 0);
     mouse_buttons_o       : out std_logic_vector(1 downto 0);
-    volume_o              : out std_logic_vector(63 downto 0)
+    volume_o              : out std_logic_vector(63 downto 0);
+    memromsel_o           : out std_logic_vector(2 downto 0);
+    memsel_we_o           : out std_logic;
+    romsel_we_o           : out std_logic
   );
 
 end entity spi_interface;
@@ -135,6 +138,7 @@ architecture beh of spi_interface is
     SETFLAGS1,
     SETFLAGS2,
     SETFLAGS3,
+    SETMEMROM,
     SETREG32_INDEX,
     SETREG32_1,
     SETREG32_2,
@@ -179,6 +183,10 @@ architecture beh of spi_interface is
   signal usb_rd_r       : std_logic := '0'; -- FIxme: needs areset
   signal capture_rd_r   : std_logic := '0'; -- FIxme: needs areset
   signal tapcmd_r       : std_logic;
+
+  signal memsel_we_r    : std_logic;
+  signal romsel_we_r    : std_logic;
+  signal memromsel_r    : std_logic_vector(2 downto 0);
 
   type generic_access_type is (
     GENERIC_USB,
@@ -293,7 +301,11 @@ begin
       usb_rd_r      <= '0';
       capture_rd_r  <= '0';
       --usb_wr_r      <= '0';
+      memsel_we_r   <= '0';
+      romsel_we_r   <= '0';
       cmdfifo_read_issued_r <= '0';
+
+      memromsel_r   <= (others => 'X');
 
     elsif rising_edge(clk_i) then
 
@@ -301,7 +313,11 @@ begin
       usb_rd_r      <= '0';
       capture_rd_r  <= '0';
       extram_req_r  <= '0';
-      txload_s <= '0';
+      memsel_we_r   <= '0';
+      romsel_we_r   <= '0';
+      memromsel_r   <= (others => 'X');
+
+      txload_s      <= '0';
 
       if rx_empty_s='0' and first_dat_s='1' then
         -- Forcibly handle commands.
@@ -391,6 +407,12 @@ begin
             txdat_s <= "000000" & tapfifo_used_i(9 downto 8);
             tapfifo_used_lsb_r <= tapfifo_used_i(7 downto 0);
             state_r <= RDTAPFIFOUSAGE;
+
+          when x"EB" => -- Set mem/rom
+            txden_s <= '1';
+            txload_s <= '1';
+            txdat_s <= "00000000";
+            state_r <= SETMEMROM;
 
           when x"EC" => -- Set flags
             txden_s <= '1';
@@ -513,6 +535,16 @@ begin
             end if;
             state_r <= UNKNOWN;
           end if;
+
+        when SETMEMROM =>
+          memromsel_r <= dat_s(2 downto 0);
+
+          if dat_valid_s='1' then
+            memsel_we_r <= dat_s(7);
+            romsel_we_r <= not dat_s(7);
+            state_r <= UNKNOWN;
+          end if;
+
 
         when WRRESFIFO =>
         when WRTAPFIFO =>
@@ -773,5 +805,10 @@ begin
   volume_o              <= regs32_r(7) & regs32_r(6);
   -- NMI
   nmireason_o           <= regs32_r(0)(7 downto 0);
+
+  memromsel_o           <= memromsel_r;
+  memsel_we_o           <= memsel_we_r;
+  romsel_we_o           <= romsel_we_r;
+
 
 end beh;
