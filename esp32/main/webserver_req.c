@@ -15,6 +15,7 @@
 #include "wifi.h"
 #include <errno.h>
 #include "firmware.h"
+#include "minmax.h"
 
 struct webserver_req_entry {
     const char *path;
@@ -305,7 +306,7 @@ static esp_err_t webserver_req__post_file(httpd_req_t *req, const char *querystr
     }
 
     while (total_len>0) {
-        received = httpd_req_recv(req, buf, total_len > sizeof(buf)?sizeof(buf):total_len);
+        received = httpd_req_recv(req, buf, MIN(total_len,sizeof(buf)));
         if (received <= 0) {
             /* Respond with 500 Internal Server Error */
             httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to post control value");

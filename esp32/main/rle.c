@@ -2,6 +2,7 @@
 #include <sys/types.h>
 #include "rle.h"
 #include "esp_log.h"
+#include "minmax.h"
 
 #define TAG "RLE"
 
@@ -31,7 +32,7 @@ static int rle_copy_block(int size, int (*reader)(void*user, uint8_t*buf,size_t)
     int r;
 
     while (size>0) {
-        chunk = size > sizeof(buffer)? sizeof(buffer):size;
+        chunk = MIN(size,sizeof(buffer));
         ESP_LOGI(TAG,"Read chunk %d", chunk);
         r = reader(read_user, buffer, chunk);
         if (r!=chunk) {
