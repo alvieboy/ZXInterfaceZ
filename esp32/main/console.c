@@ -156,7 +156,11 @@ static int console__loadrom(int argc, char **argv)
     return 0;
 }
 
-
+static int console__reset(int argc, char **argv)
+{
+    fpga__reset_spectrum();
+    return 0;
+}
 
 static struct {
     const char *cmd;
@@ -167,6 +171,7 @@ static struct {
     { "ulahack", &console__ulahack },
     { "wifi", &console__wifi },
     { "loadrom", &console__loadrom },
+    { "reset", &console__reset },
 };
 
 static int console__parse_string(char *cmd);

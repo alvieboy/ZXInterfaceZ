@@ -264,11 +264,28 @@ int fpga__reset_to_custom_rom(bool activate_retn_hook)
 
     fpga__set_flags(FPGA_FLAG_RSTSPECT | FPGA_FLAG_CAPCLR);
 
+    fpga__set_rom(2);
+
     fpga__set_trigger(FPGA_FLAG_TRIG_FORCEROMCS_ON);
 
     if (activate_retn_hook) {
         fpga__set_trigger(FPGA_FLAG_TRIG_FORCEROMONRETN);
     }
+
+    vTaskDelay(2 / portTICK_RATE_MS);
+    fpga__clear_flags(FPGA_FLAG_RSTSPECT);
+
+    ESP_LOGI(TAG, "Reset completed");
+    return 0;
+}
+
+int fpga__reset_spectrum()
+{
+    ESP_LOGI(TAG, "Resetting spectrum");
+
+    fpga__set_flags(FPGA_FLAG_RSTSPECT);
+
+    fpga__set_trigger(FPGA_FLAG_TRIG_FORCEROMCS_OFF);
 
     vTaskDelay(2 / portTICK_RATE_MS);
     fpga__clear_flags(FPGA_FLAG_RSTSPECT);
@@ -340,10 +357,10 @@ int fpga__write_rom(unsigned offset, uint8_t val)
 int fpga__upload_rom(uint32_t baseaddress, const uint8_t *buffer, unsigned len)
 {
     uint16_t offset = 0;
-    uint8_t tbuf[67];
+    uint8_t tbuf[64];
     ESP_LOGI(TAG, "Uploading ROM, %d bytes", len);
     do {
-        int llen = len>64?64:len;
+        int llen = MIN(len,sizeof(tbuf));
 
         if (fpga__write_extram_block(baseaddress+(uint32_t)offset, buffer, llen)<0)
             return -1;
@@ -366,7 +383,7 @@ int fpga__upload_rom(uint32_t baseaddress, const uint8_t *buffer, unsigned len)
             return -1;
         }
 
-        ESP_LOGI(TAG, "Chunk %d at 0x%08x", llen, (uint32_t)offset);
+        //ESP_LOGI(TAG, "Chunk %d at 0x%08x", llen, (uint32_t)offset);
 #endif
         buffer+=llen;
         len-=llen;
@@ -394,7 +411,7 @@ int fpga__passiveserialconfigure(const uint8_t *data, unsigned len)
     }
 
     while (len) {
-        int chunk = len > sizeof(txrxbuf)?sizeof(txrxbuf):len;
+        int chunk = MIN(len,sizeof(txrxbuf));
         int i;
         for (i=0;i<chunk;i++) {
             txrxbuf[i] = bitRevTable[ *data++ ];
@@ -577,14 +594,8 @@ int fpga__read_extram_block(uint32_t address, uint8_t *dest, int size)
 
 int fpga__write_extram_block(uint32_t address, const uint8_t *buffer, int size)
 {
-    ESP_LOGI(TAG, "Write RAM address 0x%06x len %d", address, size);
+    //ESP_LOGI(TAG, "Write RAM address 0x%06x len %d", address, size);
 
-    //dump__buffer(buffer, 64);
-
-    // Workaround for weird first-byte corruption
- /*   if (fpga__write_extram(address, buffer[0])<0)
-        return -1;
-   */
     return fpga__issue_write_addr24(FPGA_SPI_CMD_WRITE_EXTRAM,
                                     address,
                                     buffer,
@@ -664,6 +675,11 @@ int fpga__write_extram_block_from_file(uint32_t address, int fd, int size, bool 
         int r = read(fd, chunk, chunksize);
         if (r!=chunksize) {
             ESP_LOGE(TAG, "Short read from file: %s", strerror(errno));
+            close(fd);
+            return -1;
+        }
+        if (fpga__write_extram_block(address, chunk, chunksize)<0) {
+            ESP_LOGE(TAG, "Error writing address 0x%06x", address);
             close(fd);
             return -1;
         }

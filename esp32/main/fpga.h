@@ -148,6 +148,7 @@ void fpga__set_config1_bits(uint32_t bits);
 void fpga__clear_config1_bits(uint32_t bits);
 int fpga__set_rom(uint8_t rom);
 int fpga__set_ram(uint8_t ram);
+int fpga__reset_spectrum();
 
 
 #endif
