@@ -5,7 +5,12 @@ ESP_IDF=$(IDF_PATH)
 FREERTOS:=./FreeRTOS
 FREERTOSKERNEL:=$(FREERTOS)/Source/
 
-CFLAGS=-O2 -g -Wall -Wextra -DIDF_VER=\"0.1\" \
+GITVER=$(shell git describe --tags --dirty)
+BUILDDATE=$(shell date --utc)
+
+CFLAGS= -DGITVER=\"$(GITVER)\" \
+	-DBUILDDATE='"$(BUILDDATE)"' \
+	-O2 -g -Wall -Wextra -DIDF_VER=\"0.1\" \
 	$(shell pkg-config --cflags glib-2.0) \
 	-I$(FREERTOSKERNEL)/include \
        -I$(FREERTOSKERNEL)/portable/GCC/Linux \
@@ -143,7 +148,6 @@ OBJS:=$(FREERTOS_OBJS) $(OBJ) \
 	$(ESP_IDF)/components/esp_http_server/src/httpd_main.o  \
 	$(ESP_IDF)/components/esp_http_server/src/util/ctrl_sock.o  \
 	$(ESP_IDF)/components/nghttp/nghttp2/third-party/http-parser/http_parser.o
-
 
 interfacez: $(OBJS)
 	$(CC) $(CFLAGS) -o interfacez $(OBJS) -lpthread -lm $(shell pkg-config --libs glib-2.0)
