@@ -29,6 +29,7 @@ typedef uint8_t fpga_status_t;
 #define FPGA_SPI_CMD_WRITE_EXTRAM (0x51)
 #define FPGA_SPI_CMD_READ_USB (0x60)
 #define FPGA_SPI_CMD_WRITE_USB (0x61)
+#define FPGA_SPI_CMD_SET_ROMRAM (0xEB)
 
 /* Status bits */
 #define FPGA_STATUS_RESFIFO_FULL   (1<<1)
@@ -93,8 +94,8 @@ uint32_t fpga__read_id(void);
 void fpga__set_capture_mask(uint32_t mask);
 void fpga__set_capture_value(uint32_t value);
 int fpga__get_captures(uint8_t *target);
-int fpga__upload_rom_chunk(uint16_t offset, uint8_t *buffer_sub3, unsigned len);
-int fpga__upload_rom(const uint8_t *buffer, unsigned len);
+int fpga__upload_rom_chunk(const uint32_t baseaddress, uint16_t offset, uint8_t *buffer_sub3, unsigned len);
+int fpga__upload_rom(const uint32_t baseaddress, const uint8_t *buffer, unsigned len);
 
 
 int fpga__reset_to_custom_rom(bool activate_retn_hook);
@@ -144,5 +145,8 @@ int fpga__write_usb_block(uint16_t address, const uint8_t *buffer, int size);
 
 void fpga__set_config1_bits(uint32_t bits);
 void fpga__clear_config1_bits(uint32_t bits);
+int fpga__set_rom(uint8_t rom);
+int fpga__set_ram(uint8_t ram);
+
 
 #endif

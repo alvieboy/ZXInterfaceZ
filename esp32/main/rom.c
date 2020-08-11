@@ -4,6 +4,7 @@
 #include "defs.h"
 #include "rom.h"
 #include "fpga.h"
+#include "memlayout.h"
 
 #ifndef __linux__
 
@@ -32,8 +33,9 @@ int rom__load_from_flash(void)
     }
     esp_partition_iterator_release(i);
 
+    //ASSERT(ROM_SIZE == NMI_ROM_SIZE);
 
-    int r = fpga__upload_rom(rom_ptr, ROM_SIZE);
+    int r = fpga__upload_rom(NMI_ROM_BASEADDRESS, rom_ptr, ROM_SIZE);
 
     spi_flash_munmap(mmap_handle);
     return r;

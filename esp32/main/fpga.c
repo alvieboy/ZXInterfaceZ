@@ -245,9 +245,9 @@ uint32_t fpga__get_register(uint8_t reg)
     return extractbe32(&buf[0]);
 }
 
-int fpga__upload_rom_chunk(uint16_t offset, uint8_t *buffer_sub3, unsigned len)
+int fpga__upload_rom_chunk(uint32_t baseaddress, uint16_t offset, uint8_t *buffer_sub3, unsigned len)
 {
-    if (fpga__write_extram_block((uint32_t)offset, &buffer_sub3[3], len)<0) {
+    if (fpga__write_extram_block(baseaddress + (uint32_t)offset, &buffer_sub3[3], len)<0) {
         ESP_LOGE(TAG, "Cannot write ROM block");
         return -1;
     }
@@ -333,7 +333,7 @@ int fpga__write_rom(unsigned offset, uint8_t val)
     return fpga__write_extram(offset, val);
 }
 
-int fpga__upload_rom(const uint8_t *buffer, unsigned len)
+int fpga__upload_rom(uint32_t baseaddress, const uint8_t *buffer, unsigned len)
 {
     uint16_t offset = 0;
     uint8_t tbuf[67];
@@ -341,10 +341,10 @@ int fpga__upload_rom(const uint8_t *buffer, unsigned len)
     do {
         int llen = len>64?64:len;
 
-        if (fpga__write_extram_block((uint32_t)offset, buffer, llen)<0)
+        if (fpga__write_extram_block(baseaddress+(uint32_t)offset, buffer, llen)<0)
             return -1;
 #if 1
-        if (fpga__read_extram_block((uint32_t)offset, tbuf, llen)<0)
+        if (fpga__read_extram_block(baseaddress+(uint32_t)offset, tbuf, llen)<0)
             return -1;
 
         if (memcmp(tbuf, buffer, llen)!=0) {
@@ -354,7 +354,7 @@ int fpga__upload_rom(const uint8_t *buffer, unsigned len)
 
             memset(tbuf, 0, sizeof(tbuf));
 
-            if (fpga__read_extram_block((uint32_t)offset, tbuf, llen)<0)
+            if (fpga__read_extram_block(baseaddress+(uint32_t)offset, tbuf, llen)<0)
                 return -1;
 
             dump__buffer(tbuf, llen);
@@ -632,3 +632,19 @@ void fpga__clear_config1_bits(uint32_t bits)
     fpga__set_register(REG_CONFIG1, config1_latch);
 }
 
+static int fpga__set_romram(uint8_t romram)
+{
+    return fpga__issue_write(FPGA_SPI_CMD_SET_ROMRAM, &romram, 1);
+}
+
+int fpga__set_ram(uint8_t ram)
+{
+    // Lower 3 bits set ram number, MSB sets RAM
+    return fpga__set_romram(((ram & 0x7) | 0x80));
+}
+
+int fpga__set_rom(uint8_t rom)
+{
+    // Lower 2 bits set ROM number, MSB cleared
+    return fpga__set_romram(rom & 0x3);
+}

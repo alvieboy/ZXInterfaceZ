@@ -20,7 +20,7 @@
 #include "ota.h"
 #include "sna.h"
 #include "fpga_ota.h"
-
+#include "memlayout.h"
 
 
 #ifdef __linux__
@@ -135,7 +135,7 @@ static int upload_rom_data(command_t *cmdt)
 
     ESP_LOGI(TAG, "ROM: offset %d before uploading %d bytes", cmdt->romoffset, cmdt->len);
 
-    cmdt->romoffset += fpga__upload_rom_chunk(cmdt->romoffset, &cmdt->tx_prebuffer[1], cmdt->len);
+    cmdt->romoffset += fpga__upload_rom_chunk(MEMLAYOUT_ROM2_BASEADDRESS, cmdt->romoffset, &cmdt->tx_prebuffer[1], cmdt->len);
 
     /*
     // Upload chunk

@@ -165,27 +165,6 @@ void console__char(char c)
     } else {
         cmd[cmdptr++] = c;
     }
-
-#if 0
-    if (c=='p') {
-        ESP_LOGI(TAG, "Powering ON USB");
-        usb_ll__set_power(1);
-    } else if (c=='o') {
-        ESP_LOGI(TAG, "Powering OFF USB");
-        usb_ll__set_power(0);
-    } else if (c=='f') {
-        ESP_LOGI(TAG, "Dumping information");
-        usbh__dump_info(0);
-    } else if (c=='d') {
-        loglevel = 0xffffffff;
-    } else if (c=='h') {
-        ESP_LOGI(TAG, "Disable ULAHACK");
-        fpga__clear_flags(FPGA_FLAG_ULAHACK);
-    } else if (c=='H') {
-        ESP_LOGI(TAG, "Enable ULAHACK");
-        fpga__set_flags(FPGA_FLAG_ULAHACK);
-    }
-#endif
 }
 
 static int console__parse_string(char *cmd)

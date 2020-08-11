@@ -69,6 +69,7 @@ static void sna__prepare()
 
 static int sna__chunk(command_t *cmdt)
 {
+#if 0
     unsigned remain = cmdt->romsize - cmdt->romoffset;
 
     if (remain<cmdt->len) {
@@ -128,6 +129,8 @@ static int sna__chunk(command_t *cmdt)
     }
 
     return COMMAND_CONTINUE;
+#endif
+    return COMMAND_CLOSE_ERROR;
 }
 
 static char sna_error[31] = {0};
