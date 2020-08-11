@@ -59,7 +59,7 @@ int rom__load_from_flash(void)
     read(fd, rom, sizeof(rom));
     close(fd);
 
-    int r = fpga__upload_rom(rom, sizeof(rom));
+    int r = fpga__upload_rom(MEMLAYOUT_ROM0_BASEADDRESS, rom, sizeof(rom));
     return r;
 }
 
