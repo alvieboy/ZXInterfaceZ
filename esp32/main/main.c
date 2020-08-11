@@ -32,6 +32,7 @@
 #include "devmap.h"
 #include "audio.h"
 #include "console.h"
+#include "version.h"
 
 static int8_t videomode = 0;
 
@@ -86,7 +87,6 @@ uint32_t loglevel;
 void app_main()
 {
     int lstatus = 0;
-   // int lastsw = 1;
     int do_restart = 0;
 
     gpio__init();
@@ -138,6 +138,9 @@ void app_main()
     keyboard__init();
     audio__init();
     webserver__init();
+
+    ESP_LOGI(TAG, "InterfaceZ version: %s %s", version, gitversion);
+    ESP_LOGI(TAG, "  built %s", builddate);
 
     // Start capture
     //start_capture();

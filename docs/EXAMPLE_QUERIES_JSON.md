@@ -16,7 +16,9 @@ GET /req/version
   "esp_cores": 2,
   "esp_flash": "Unknown",
   "software_version": "v1.0 2020/03/30",
-  "fpga_version": "a5.10 r3"
+  "fpga_version": "a5.10 r3",
+  "git_version": "TAG_V01-286-g461b41e-dirty",
+  "build_date": "Tue 11 Aug 09:38:31 UTC 2020"
 }
 ```
 # SD card operation

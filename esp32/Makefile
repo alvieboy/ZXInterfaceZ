@@ -2,6 +2,10 @@ PROJECT_NAME := esp32_interfacez
 
 IDF_PATH ?=/home/alvieboy/Temp/esp-idf
 
+GITVER=$(shell git describe --tags --dirty)
+BUILDDATE=$(shell date --utc)
+EXTRA_CFLAGS+=-DGITVER=\"$(GITVER)\" -DBUILDDATE='"$(BUILDDATE)"'
+
 
 include $(IDF_PATH)/make/project.mk
 
@@ -18,4 +22,9 @@ $(eval $(call spiffs_create_partition_image,resources,spiffs))
 
 ESPTOOL_ALL_FLASH_ARGS+=0x310000 fpga.bin 0x36A000 intz.rom
 
-.PHONY: build/main/version.o
+
+all: GENVERSION
+.PHONY: GENVERSION
+
+GENVERSION:
+	$(shell touch main/version.c)

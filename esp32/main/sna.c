@@ -15,6 +15,7 @@
 #include "sna_defs.h"
 #include <stdlib.h>
 #include "fileaccess.h"
+#include "minmax.h"
 
 #define TEST_WRITES
 
@@ -202,7 +203,7 @@ static int sna__writefromextramblock(int fh, uint32_t address, int len)
     uint8_t data[LOCAL_CHUNK_SIZE];
 
     while (len>0) {
-        int chunklen = len > LOCAL_CHUNK_SIZE ? LOCAL_CHUNK_SIZE :  len;
+        int chunklen = MIN(len, LOCAL_CHUNK_SIZE);
 
         int r = fpga__read_extram_block(address, data, chunklen);
 
@@ -353,7 +354,7 @@ int sna__load_sna_extram(const char *file)
     extram_address = SNA_EXTRAM_ADDRESS;
 
     while (togo) {
-        int chunksize = togo>LOCAL_CHUNK_SIZE?LOCAL_CHUNK_SIZE:togo;
+        int chunksize = MIN(togo, LOCAL_CHUNK_SIZE);
         int r = read(fd, chunk, chunksize);
         if (r!=chunksize) {
             ESP_LOGE(TAG, "Short read from file: %s", strerror(errno));

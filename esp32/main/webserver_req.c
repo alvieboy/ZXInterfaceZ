@@ -66,7 +66,8 @@ static esp_err_t webserver_req__version(httpd_req_t *req, const char *querystrin
 
     cJSON_AddStringToObject(root, "software_version", version);
     cJSON_AddStringToObject(root, "fpga_version", versionstring);
-
+    cJSON_AddStringToObject(root, "git_version", gitversion);
+    cJSON_AddStringToObject(root, "build_date", builddate);
     webserver_req__send_and_free_json(req, root);
     return ESP_OK;
 }
