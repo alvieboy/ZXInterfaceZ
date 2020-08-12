@@ -68,6 +68,28 @@ void request_restart()
     restart_requested = 1;
 }
 
+static void io0_long_press()
+{
+    char romname[128];
+
+    if (nvs__fetch_str("io0rom", romname, sizeof(romname), "/spiffs/DiagROMv47.rom")<0) {
+        ESP_LOGE(TAG, "Cannot fetch rom for IO0");
+        return ;
+    }
+    ESP_LOGI(TAG, "Loading ROM %s", romname);
+
+    int f = rom__load_custom_from_file(romname);
+    if (f<0) {
+        ESP_LOGE(TAG, "Cannot load ROM %s", romname);
+        return;
+    }
+
+    ESP_LOGI(TAG, "Resetting to custom ROM");
+    if (fpga__reset_to_custom_rom(false)<0) {
+        ESP_LOGE(TAG, "Cannot reset");
+    }
+}
+
 static void event_button_switch(button_event_type_e type)
 {
     if (type==BUTTON_RELEASED || type==BUTTON_LONG_RELEASED) {
@@ -86,6 +108,7 @@ static void event_button_io0(button_event_type_e type)
     }
     if (type==BUTTON_LONG_PRESSED) {
         ESP_LOGI(TAG, "IO0 long pressed");
+        io0_long_press();
     }
 }
 

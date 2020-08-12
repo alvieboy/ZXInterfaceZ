@@ -84,6 +84,9 @@ int rom__load_custom_from_file(const char *file)
         close(fd);
         return -1;
     }
+
+    ESP_LOGI(TAG, "ROM: loading %ld bytes", st.st_size);
+
     int r = fpga__write_extram_block_from_file(MEMLAYOUT_ROM2_BASEADDRESS, fd, st.st_size, false);
 
     close(fd);

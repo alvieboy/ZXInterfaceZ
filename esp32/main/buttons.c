@@ -7,6 +7,7 @@
 #include "driver/gpio.h"
 #include "buttons.h"
 #include "defs.h"
+#include "gpio.h"
 
 #define BUTTON_TIMER TIMER_0
 
@@ -31,7 +32,9 @@ static inline void IRAM_ATTR button__check(int index, uint32_t gpio_num)
     event.button = index;
     event.type = BUTTON_IDLE;
 
-    int v = gpio_get_level(gpio_num);
+    // ALL CALLS need to be on IRAM, because we might be accessing the flash.
+
+    int v = gpio__read(gpio_num);
     if (v==0) {
         if (debounce[index]>0)
             debounce[index]--;
@@ -74,12 +77,12 @@ static inline void IRAM_ATTR button__check(int index, uint32_t gpio_num)
 
 void IRAM_ATTR button_check_isr(void *para)
 {
-    timer_spinlock_take(TIMER_GROUP_0);
+//    timer_spinlock_take(TIMER_GROUP_0);
     button__check(0, PIN_NUM_SWITCH);
     button__check(1, PIN_NUM_IO0);
     timer_group_clr_intr_status_in_isr(TIMER_GROUP_0, BUTTON_TIMER);
     timer_group_enable_alarm_in_isr(TIMER_GROUP_0, BUTTON_TIMER);
-    timer_spinlock_give(TIMER_GROUP_0);
+//    timer_spinlock_give(TIMER_GROUP_0);
 }
 
 /*
