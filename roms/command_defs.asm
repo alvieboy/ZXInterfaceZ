@@ -14,4 +14,4 @@ CMD_RECORD_TAPE	equ $09
 CMD_STOP_TAPE	equ $0A
 CMD_CHDIR	equ $0B
 CMD_SETVIDEOMODE       equ $0C
-
+CMD_RESET       equ $0D

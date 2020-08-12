@@ -24,10 +24,11 @@ NMIENTRY5HANDLER:
         RET
         
 NMIENTRY6HANDLER:
-	DI
-        LD	DE, 0
-        PUSH	DE
-        RETN
+        ; Request RESET from FPGA
+        DI
+        LD   	A, CMD_RESET
+        CALL 	WRITECMDFIFO
+_L1:    JR	_L1
 
 NMIENTRY7HANDLER:
         LD	A,1
