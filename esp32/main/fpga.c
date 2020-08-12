@@ -285,7 +285,7 @@ int fpga__reset_spectrum()
 
     fpga__set_flags(FPGA_FLAG_RSTSPECT);
 
-    fpga__set_trigger(FPGA_FLAG_TRIG_FORCEROMCS_OFF);
+    fpga__set_trigger(FPGA_FLAG_TRIG_FORCEROMCS_OFF | FPGA_FLAG_TRIG_FORCENMI_OFF);
 
     vTaskDelay(2 / portTICK_RATE_MS);
     fpga__clear_flags(FPGA_FLAG_RSTSPECT);
