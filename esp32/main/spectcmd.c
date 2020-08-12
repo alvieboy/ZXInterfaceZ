@@ -276,6 +276,10 @@ static int spectcmd__setwifi(const uint8_t *cmdbuf, unsigned len)
     return 0;
 }
 
+static int spectcmd__reset(const uint8_t *cmdbuf, unsigned len)
+{
+    return fpga__reset_spectrum();
+}
 
 static const spectcmd_handler_t spectcmd_handlers[] = {
     &spectcmd__load_resource, // 00 SPECTCMD_CMD_GETRESOURCE
@@ -291,6 +295,7 @@ static const spectcmd_handler_t spectcmd_handlers[] = {
     NULL,                     // 0A SPECTCMD_CMD_STOPTAPE
     &spectcmd__enterdir,      // 0B SPECTCMD_CMD_ENTERDIR
     &spectcmd__setvideomode,  // 0C SPECTCMD_CMD_SETVIDEOMODE
+    &spectcmd__reset,         // 0D SPECTCMD_CMD_RESET
     // FOPEN
     // FCLOSE
     // FREAD

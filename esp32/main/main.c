@@ -33,8 +33,11 @@
 #include "audio.h"
 #include "console.h"
 #include "version.h"
+#include "buttons.h"
 
 static int8_t videomode = 0;
+
+uint32_t loglevel;
 
 volatile int restart_requested = 0;
 
@@ -65,24 +68,40 @@ void request_restart()
     restart_requested = 1;
 }
 
-void gpio__press_event(gpio_num_t gpio)
+static void event_button_switch(button_event_type_e type)
 {
-    if (gpio==PIN_NUM_SWITCH) {
-        //fpga__clear_flags(FPGA_FLAG_ULAHACK);
-
+    if (type==BUTTON_RELEASED || type==BUTTON_LONG_RELEASED) {
         ESP_LOGI(TAG, "Requesting NMI!");
         fpga__set_trigger(FPGA_FLAG_TRIG_FORCENMI_ON);
-
-        if (gpio==PIN_NUM_SWITCH) {
-            uint16_t pc = fpga__get_spectrum_pc();
-            ESP_LOGI(TAG, "Spectrum PC: 0x%04x",pc);
-        }
-    }
-    if (gpio==PIN_NUM_IO0) {
     }
 }
 
-uint32_t loglevel;
+static void event_button_io0(button_event_type_e type)
+{
+    if (type==BUTTON_RELEASED || type==BUTTON_LONG_RELEASED) {
+        ESP_LOGI(TAG, "IO0 released");
+    }
+    if (type==BUTTON_PRESSED) {
+        ESP_LOGI(TAG, "IO0 pressed");
+    }
+    if (type==BUTTON_LONG_PRESSED) {
+        ESP_LOGI(TAG, "IO0 long pressed");
+    }
+}
+
+static void process_buttons()
+{
+    button_event_t event;
+    if (buttons__getevent(&event, false)==0) {
+        switch (event.button) {
+        case BUTTON_SWITCH:
+            event_button_switch(event.type);
+            break;
+        case BUTTON_IO0:
+            event_button_io0(event.type);
+        }
+    }
+}
 
 void app_main()
 {
@@ -139,6 +158,8 @@ void app_main()
     audio__init();
     webserver__init();
 
+    buttons__init();
+
     ESP_LOGI(TAG, "InterfaceZ version: %s %s", version, gitversion);
     ESP_LOGI(TAG, "  built %s", builddate);
 
@@ -185,6 +206,7 @@ void app_main()
                 console__char(c);
             }
         } while (s==OK);
-
+        // Process buttons
+        process_buttons();
     }
 }

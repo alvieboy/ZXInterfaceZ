@@ -135,6 +135,7 @@ OBJS:=$(FREERTOS_OBJS) $(OBJ) \
 	partition.o \
 	ota.o \
 	strlcpy.o \
+	buttons.o \
 	cjson/cJSON.o \
 	cjson/cJSON_Utils.o \
 	esplayer/nvs_flash.o \

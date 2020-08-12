@@ -12,6 +12,7 @@
 #define SPECTCMD_CMD_STOPTAPE   (0x0A)
 #define SPECTCMD_CMD_ENTERDIR   (0x0B)
 #define SPECTCMD_CMD_SETVIDEOMODE (0x0C)
+#define SPECTCMD_CMD_RESET (0x0D)
 
 
 // System calls

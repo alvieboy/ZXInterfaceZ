@@ -6,6 +6,4 @@
 void gpio__init();
 int gpio__waitpin(gpio_num_t pin, uint8_t value, int timeout);
 
-void gpio__press_event(gpio_num_t gpio);
-
 #endif
