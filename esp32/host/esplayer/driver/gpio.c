@@ -1,5 +1,6 @@
 #include "driver/gpio.h"
 #include <malloc.h>
+#include "hal/gpio_ll.h"
 
 struct gpioh {
     struct gpioh *next;
@@ -44,7 +45,7 @@ esp_err_t gpio_set_level(gpio_num_t gpio_num, uint32_t level)
 
 int gpio_get_level(gpio_num_t gpio_num)
 {
-    return 0;
+    return gpio_ll_get_level(0, gpio_num);
 }
 
 void gpio_isr_do_trigger(gpio_num_t num)
