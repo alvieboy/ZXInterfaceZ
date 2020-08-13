@@ -9,7 +9,7 @@ EXTRA_CFLAGS+=-DGITVER=\"$(GITVER)\" -DBUILDDATE='"$(BUILDDATE)"'
 
 include $(IDF_PATH)/make/project.mk
 
-flash: resource.bin fpga.bin
+flash: fpga.bin
 
 fpga.bin: ../output_files/interfacez.rbf
 	@echo GEN fpga.bin
