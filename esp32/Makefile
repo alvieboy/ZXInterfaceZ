@@ -11,7 +11,11 @@ include $(IDF_PATH)/make/project.mk
 
 flash: fpga.bin
 
-fpga.bin: ../output_files/interfacez.rbf
+filesize: filesize.c
+	$(HOSTCC) -O2 filesize.c -o filesize
+
+
+fpga.bin: ../output_files/interfacez.rbf filesize
 	@echo GEN fpga.bin
 	./filesize ../output_files/interfacez.rbf fpga.bin
 
