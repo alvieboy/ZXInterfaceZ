@@ -33,7 +33,6 @@ jobs:
         name: spectrum-roms
         path: |
           roms/*.rom
-          roms/*.ROM
 
   esp32:
     runs-on: ubuntu-latest
