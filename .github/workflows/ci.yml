@@ -12,7 +12,29 @@ on:
 jobs:
 
 # vhdl:
-# roms:
+  roms:
+    runs-on: ubuntu-latest
+    container:
+      image: rickardvonessen/pasmo:0.6.0.20070113.0-1
+
+    steps:
+    # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+    - name: Checkout the code
+      uses: actions/checkout@v2
+
+    - name: Build ZX Spectrum ROM
+      run: |
+        apt-get update
+        apt-get install -y make xxd gcc
+        make -C roms all
+    - name: Archive built ROMs
+      uses: actions/upload-artifact@v2
+      with:
+        name: spectrum-roms
+        path: |
+          roms/*.rom
+          roms/*.ROM
+
   esp32:
     runs-on: ubuntu-latest
     container:
@@ -29,8 +51,20 @@ jobs:
         apt-get install -y libglib2.0-dev
         . $IDF_PATH/export.sh
         make -C esp32/host
+    - name: Archive built host-mode firmware
+      uses: actions/upload-artifact@v2
+      with:
+        name: host-mode-fw
+        path: |
+          esp32/host/interfacez
 
     - name: Build esp32 main firmware
       run: |
         . $IDF_PATH/export.sh
         make -C esp32
+    - name: Archive built main firmware
+      uses: actions/upload-artifact@v2
+      with:
+        name: main-fw
+        path: |
+          esp32/build/**/*.bin
