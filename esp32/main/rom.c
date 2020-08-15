@@ -49,17 +49,31 @@ int rom__load_from_flash(void)
 
 int rom__load_from_flash(void)
 {
-    uint8_t rom[16384];
+    uint8_t *rom;
+    struct stat st;
     int fd;
+    printf("Loading intz.rom\n");
     fd = open("intz.rom", O_RDONLY);
-    if (!fd) {
+    if (fd<0) {
         printf("Cannot open rom intz.rom: %s\n", strerror(errno));
         return -1;
     }
-    read(fd, rom, sizeof(rom));
+    if (fstat(fd, &st)<0) {
+        perror("stat");
+        return -1;
+    }
+    rom = malloc(st.st_size);
+
+    if (rom==NULL) {
+        perror("malloc");
+        return -1;
+    }
+
+    read(fd, rom, st.st_size);
     close(fd);
 
-    int r = fpga__upload_rom(MEMLAYOUT_ROM0_BASEADDRESS, rom, sizeof(rom));
+    int r = fpga__upload_rom(MEMLAYOUT_ROM0_BASEADDRESS, rom, st.st_size);
+
     return r;
 }
 
