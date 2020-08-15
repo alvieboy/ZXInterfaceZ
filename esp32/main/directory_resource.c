@@ -23,6 +23,9 @@ static bool filter_match(struct directory_resource *res, struct dirent *e)
         case FILE_FILTER_SNAPSHOTS:
             return ext_match(ext, "sna");
             break;
+        case FILE_FILTER_ROMS:
+            return ext_match(ext, "rom");
+            break;
         case FILE_FILTER_TAPES:
             return ext_match(ext, "tap") || ext_match(ext,"tzx");
             break;
