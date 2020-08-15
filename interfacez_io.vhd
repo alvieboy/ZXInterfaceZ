@@ -267,7 +267,7 @@ begin
           if joy_en_i='1' then
             dataread_r <= "000" & joy_data_i;
           else
-            dataread_r <= x"00";
+            dataread_r <= x"FF";
           end if;
         end if;
 
@@ -275,7 +275,7 @@ begin
           if mouse_en_i='1' then
             dataread_r <= mouse_x_i;
           else
-            dataread_r <= x"00";
+            dataread_r <= x"FF";
           end if;
         end if;
 
@@ -283,7 +283,7 @@ begin
           if mouse_en_i='1' then
             dataread_r <= mouse_y_i;
           else
-            dataread_r <= x"00";
+            dataread_r <= x"FF";
           end if;
         end if;
 
