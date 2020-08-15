@@ -1,13 +1,13 @@
-all: snaloader.rom INTZ.ROM loadscr.rom
+all: snaloader.rom intz.rom loadscr.rom
 
 snaloader.rom: snaloader-rom.asm
 	pasmo -d $+ $@ > $@.out
 	xxd -i $@ > snaloader_rom.c
 	#./pad $@ 16384
 
-INTZ.ROM: menu.asm pad
+intz.rom: menu.asm pad
 
-INTZ.ROM: interfacez-rom.asm keyboard.asm sdcardmenu.asm textinput.asm textmessage.asm wifimenu.asm string.asm \
+intz.rom: interfacez-rom.asm keyboard.asm sdcardmenu.asm textinput.asm textmessage.asm wifimenu.asm string.asm \
 		mainmenu.asm nmihandler.asm nmimenu.asm snaram.asm snarestore.asm resource.asm videomode.asm \
 		port_defs.asm
 	pasmo -d --alocal interfacez-rom.asm $@ > $@.out

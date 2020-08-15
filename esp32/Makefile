@@ -24,7 +24,7 @@ SPIFFS_IMAGE_DEPENDS :=
 
 $(eval $(call spiffs_create_partition_image,resources,spiffs))
 
-ESPTOOL_ALL_FLASH_ARGS+=0x310000 fpga.bin 0x36A000 intz.rom
+ESPTOOL_ALL_FLASH_ARGS+=0x310000 fpga.bin 0x36A000 ../roms/intz.rom
 
 
 all: GENVERSION
