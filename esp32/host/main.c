@@ -8,6 +8,8 @@
 #include <string.h>
 #include "esp_wifi.h"
 
+uint64_t pinstate = 0xFFFFFFFFFFFFFFFF;
+
 void vAssertCalled( unsigned long ulLine, const char * const pcFileName )
 {
     printf("ASSERT: %s : %d\n", pcFileName, (int)ulLine);

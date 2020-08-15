@@ -25,6 +25,7 @@ static unsigned writebufptr = 0;
 static unsigned hdlcrxlen = 0;
 
 static int emulator_socket = -1;
+extern uint64_t pinstate;
 
 void hdlc_writer(void *userdata, const uint8_t c)
 {
@@ -117,6 +118,20 @@ void hdlc_data(void *user, const uint8_t *data, unsigned datalen)
         payload.len = datalen - 1;
 
         xQueueSendFromISR(fpga_spi_queue, &payload, NULL);
+
+        break;
+    case 0x02:
+        // Raw pin data
+        pinstate =
+            ((uint64_t)data[1] << 56) |
+            ((uint64_t)data[2] << 48) |
+            ((uint64_t)data[3] << 40) |
+            ((uint64_t)data[4] << 32) |
+            ((uint64_t)data[5] << 24) |
+            ((uint64_t)data[6] << 16) |
+            ((uint64_t)data[7] << 8) |
+            ((uint64_t)data[8] << 0);
+        printf("**** GPIO update %016lx ****\n", pinstate);
 
         break;
     }
