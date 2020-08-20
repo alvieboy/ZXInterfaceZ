@@ -126,7 +126,7 @@ char startupdir[512] = {0};
 
 extern int partition_init();
 
-int main(int argc, char **argv)
+int interfacez_main(int argc, char **argv)
 {
     TaskHandle_t h;
     getcwd(startupdir, sizeof(startupdir));

@@ -48,6 +48,11 @@ struct spi_payload
 
 static void fpga_rxthread(void *arg);
 
+int fpga_set_comms_socket(int socket)
+{
+    emulator_socket = socket;
+}
+
 int fpga_init()
 {
     struct sockaddr_in sockaddr;
@@ -55,26 +60,26 @@ int fpga_init()
 
     fpga_spi_queue = xQueueCreate(4, sizeof(struct spi_payload));
 
+    if (emulator_socket <0) {
+        emulator_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP );
+        if (emulator_socket<0)
+            return -1;
 
-    emulator_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP );
-    if (emulator_socket<0)
-        return -1;
+        bzero(&sockaddr, sizeof(struct sockaddr_in));
+        sockaddr.sin_family = AF_INET;
+        sockaddr.sin_port = htons(8007);
 
-    bzero(&sockaddr, sizeof(struct sockaddr_in));
-    sockaddr.sin_family = AF_INET;
-    sockaddr.sin_port = htons(8007);
+        setsockopt(emulator_socket, IPPROTO_TCP, TCP_NODELAY, &yes, sizeof(yes));
 
-    setsockopt(emulator_socket, IPPROTO_TCP, TCP_NODELAY, &yes, sizeof(yes));
-
-    if (connect(emulator_socket, (struct sockaddr*)&sockaddr,
-                sizeof(struct sockaddr_in))<0) {
-        printf("Cannot connect to ZX Spectrum emulator (QtSpecem), using "
-               "dummy FPGA emulation\n");
-        close(emulator_socket);
-        emulator_socket = -1;
-        return 0;
+        if (connect(emulator_socket, (struct sockaddr*)&sockaddr,
+                    sizeof(struct sockaddr_in))<0) {
+            printf("Cannot connect to ZX Spectrum emulator (QtSpecem), using "
+                   "dummy FPGA emulation\n");
+            close(emulator_socket);
+            emulator_socket = -1;
+            return 0;
+        }
     }
-
     hdlc_decoder__init(&hdlc_decoder,
                        hdlcbuf,
                        sizeof(hdlcbuf),

@@ -357,7 +357,11 @@ int fpga__write_rom(unsigned offset, uint8_t val)
 int fpga__upload_rom(uint32_t baseaddress, const uint8_t *buffer, unsigned len)
 {
     uint16_t offset = 0;
+#ifdef __linux
+    uint8_t tbuf[4096];
+#else
     uint8_t tbuf[64];
+#endif
     ESP_LOGI(TAG, "Uploading ROM, %d bytes", len);
     do {
         int llen = MIN(len,sizeof(tbuf));

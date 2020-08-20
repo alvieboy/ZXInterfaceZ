@@ -4,11 +4,9 @@
 #include <inttypes.h>
 #include <stdio.h>
 
-#define do_log(m, tag,x...) do { \
-    printf("%s %s ", m,tag); \
-    printf(x);\
-    printf("\n"); \
-} while (0)
+void do_log(const char *type, const char *tag, char *fmt, ...);
+
+void set_logger(void (*)(const char *type, const char *tag, char *fmt, va_list ap));
 
 #define ESP_LOGI(tag,x...) do_log("I", tag, x)
 #define ESP_LOGE(tag,x...) do_log("E", tag, x)

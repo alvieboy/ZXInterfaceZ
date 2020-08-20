@@ -43,11 +43,12 @@ jobs:
     # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
     - name: Checkout the code
       uses: actions/checkout@v2
-
+      with:
+        submodules: true
     - name: Build esp32 host-mode firmware
       run: |
         apt-get update
-        apt-get install -y libglib2.0-dev
+        apt-get install -y libglib2.0-dev qtbase5-dev qtbase5-dev-tools
         . $IDF_PATH/export.sh
         make -C esp32/host
     - name: Archive built host-mode firmware

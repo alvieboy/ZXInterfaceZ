@@ -1,4 +1,4 @@
-all: interfacez
+all: interfacez gui/interfacez_gui
 
 ESP_IDF=$(IDF_PATH)
 
@@ -8,7 +8,8 @@ FREERTOSKERNEL:=$(FREERTOS)/Source/
 GITVER=$(shell git describe --tags --dirty)
 BUILDDATE=$(shell date --utc)
 
-CFLAGS= -DGITVER=\"$(GITVER)\" \
+CFLAGS= -fpic -DPIC \
+	-DGITVER=\"$(GITVER)\" \
 	-DBUILDDATE='"$(BUILDDATE)"' \
 	-O2 -g -Wall -Wextra -DIDF_VER=\"0.1\" \
 	$(shell pkg-config --cflags glib-2.0) \
@@ -139,6 +140,7 @@ OBJS:=$(FREERTOS_OBJS) $(OBJ) \
 	cjson/cJSON.o \
 	cjson/cJSON_Utils.o \
 	esplayer/nvs_flash.o \
+	esplayer/esp_log.o \
 	esplayer/driver/gpio.o \
 	esplayer/driver/spi_master.o \
 	$(ESP_IDF)/components/esp_http_server/src/httpd_parse.o \
@@ -150,9 +152,24 @@ OBJS:=$(FREERTOS_OBJS) $(OBJ) \
 	$(ESP_IDF)/components/esp_http_server/src/util/ctrl_sock.o  \
 	$(ESP_IDF)/components/nghttp/nghttp2/third-party/http-parser/http_parser.o
 
-interfacez: $(OBJS)
-	$(CC) $(CFLAGS) -o interfacez $(OBJS) -lpthread -lm $(shell pkg-config --libs glib-2.0)
+interfacez: libinterfacez.so main_standalone.o
+	$(CC) -o interfacez main_standalone.o libinterfacez.so
+
+libinterfacez.so: $(OBJS) 
+	$(CC) $(CFLAGS) -shared -o libinterfacez.so $(OBJS) -lpthread -lm $(shell pkg-config --libs glib-2.0)
 
 clean:
 	rm -f $(OBJS)
 	
+QtSpecem/Makefile:
+	cd QtSpecem && qmake --qt=5 QtSpecem_lib.pro
+
+QtSpecem/libQtSpecem.so: QtSpecem/Makefile
+	make -C QtSpecem
+
+gui/interfacez_gui: gui/Makefile libinterfacez.so QtSpecem/libQtSpecem.so
+	rm -f gui/interfacez_gui
+	make -C gui 
+	
+gui/Makefile:
+	cd gui && qmake --qt=5 
