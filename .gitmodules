@@ -1,4 +1,4 @@
 [submodule "esp32/host/QtSpecem"]
 	path = esp32/host/QtSpecem
-	url = git@github.com:alvieboy/QtSpecem.git
+	url = https://github.com/alvieboy/QtSpecem.git
 	branch = interfacez
