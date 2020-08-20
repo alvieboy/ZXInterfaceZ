@@ -3,7 +3,6 @@
 include	"interfacez-sysvars.asm"
 include "macros.asm"
 
-
 ; Main state machine
 STATE_UNKNOWN  		EQU 0
 STATE_MAINMENU 		EQU 1
@@ -27,8 +26,8 @@ STATE_WIFICONFIGSTA 	EQU 5
 			       
 START:	DI			; disable interrupts.
 	LD	DE,$FFFF	; top of possible physical RAM.
-	;JP	ROM_CHECK	; jump forward to common code at START_NEW.
-        JP	REGTEST
+	JP	ROM_CHECK	; jump forward to common code at START_NEW.
+        ;JP	REGTEST
 
 	ORG	$0008
 		      
@@ -49,7 +48,7 @@ MASK_INT:	PUSH	AF		; save the registers.
 		PUSH	HL		; but not IY unfortunately.
 		LD	HL,(FRAMES1)	; fetch two bytes at FRAMES1.
 		INC	HL		; increment lowest two bytes of counter.
-		LD	(FRAMES1),HL	; place back in FRAMES1.
+	        LD	(FRAMES1),HL	; place back in FRAMES1.
 		LD	A,H		; test if the result
 		OR	L		; was zero.
 		JR	NZ,KEY_INT	; forward to KEY_INT if not.
@@ -108,100 +107,7 @@ RAM_READ:
 	JR	Z,RAM_READ	; back to RAM_READ if zero flag was set.
 
 RAM_DONE:
-	DEC	HL
-        DEC	HL
-        LD	SP, HL
-        
-        LD	HL, $4000
-        LD	D, $BF
-        LD	B, $FF
-
-        CALL 	SETATTRS
-	
-        ;
-        ; DEBUG ONLY
-        ;
-        ;JP 	EXTRAMTEST
-        JP 	KEYBTEST
-        
-        LD	A, $7
-        OUT	($FE),A
-
-
-	LD	HL, HEAP
-        LD	A, RESOURCE_ID_VERSION
-        CALL 	LOADRESOURCE
-        JP	Z, 0
-        
-	LD	HL, HEAP
-        LD	DE, LINE23
-        ;	Load string lenght
-        LD	A,(HL)
-        INC	HL
-        CALL 	PRINTSTRINGN
-
-
-	LD	HL, COPYRIGHT
-        LD	DE, LINE22
-        CALL 	PRINTSTRING
-
-
-	; Load image logo
-
-	LD	HL, HEAP
-        LD	A, $01
-        CALL 	LOADRESOURCE
-        CP	$FF
-        JP	Z, 0
-
-	LD	HL, HEAP
-        LD	DE, SCREEN
-        CALL	DISPLAYBITMAP
-
-        ; Attribute settins.
-        ; Lines 1 to 4 have bright.
-        
-        LD	DE, ATTR
-        LD	B, 128
-        LD	A, %01111000
-_a1:
-	LD	(DE), A
-        INC	DE
-        DJNZ    _a1
-        
-        CALL	GRAPHICS_SDOFF
-        CALL	GRAPHICS_WIFIOFF
-	
-        LD 	HL, DISCONNECTED
-        LD	A, 1
-        CALL	GRAPHICS_WIFIPRINT
-        
-        ;LD	HL,$0523	; The keyboard repeat and delay values
-	;LD	(REPDEL),HL	; are loaded to REPDEL and REPPER.
-        ;LD	A, $FF
-        ;LD	(KSTATE_0),A	; set KSTATE_0 to $FF.
-        ;LD	(KSTATE_4),A	; set KSTATE_0 to $FF.
-
-	; Setup default state.
-        LD	A, STATE_UNKNOWN
-        LD	(STATE), A ; State STATE_UNKNOWN
-
-  	IM 	1
-        LD	IY, IYBASE
-        EI  	
-        XOR 	A  	
-        LD	(STATE), A
-        LD	A, STATE_MAINMENU
-        CALL	ENTERSTATE
-        
-        
-_loop:
-	CALL	SYSTEM_STATUS
-	CALL	KEY_INPUT
         HALT
-       	JR 	_loop
-
-
 IGNORE:	
 	RET
 
@@ -273,158 +179,6 @@ _stamode:
         POP 	IX
         RET
 
-STATUSCHANGEDHANDLERTABLE:
-        DEFW	IGNORE
-	DEFW	MAINMENU__STATUSCHANGED
-        DEFW	WIFICONFIG__STATUSCHANGED
-        DEFW	SDCARDMENU__STATUSCHANGED
-        DEFW	IGNORE
-        DEFW	IGNORE
-
-HANDLEKEYANDLERTABLE:
-        DEFW	IGNORE
-	DEFW	MAINMENU__HANDLEKEY
-        DEFW    WIFICONFIG__HANDLEKEY
-        DEFW	SDCARDMENU__HANDLEKEY
-        DEFW	IGNORE
-        DEFW	IGNORE
-
-ENTERSTATEHANDLERTABLE:
-        DEFW	IGNORE
-	DEFW	ENTER_MAINMENU
-        DEFW 	ENTER_WIFICONFIGAP
-        DEFW	ENTER_SDCARD
-        DEFW	ENTER_WIFICONFIGSTA
-        DEFW	IGNORE
-
-LEAVESTATEHANDLERTABLE:
-        DEFW	IGNORE
-	DEFW	LEAVE_MAINMENU
-        DEFW 	LEAVE_WIFICONFIGAP
-        DEFW	LEAVE_SDCARD
-        DEFW	LEAVE_WIFICONFIGSTA
-        DEFW	IGNORE
-
-
-LEAVE_MAINMENU:
-        LD	HL, MENU1
-        LD	A, $38
-        JP	MENU__CLEAR
-
-LEAVE_SDCARD:
-        LD	HL, (SDMENU)
-        LD	A, $38
-        JP	MENU__CLEAR
-
-ENTER_MAINMENU:
-	CALL	MAINMENU__SETUP
-	LD	HL, MENU1
-        LD	D, 6 ; line to display menu at.
-        CALL	MENU__INIT
-	JP	MENU__DRAW
-
-ENTER_SDCARD:
-       	CALL	SDCARDMENU__SETUP	
-        LD	HL, (SDMENU)
-        LD	D, 5 ; line to display menu at.
-        CALL	MENU__INIT
-	JP	MENU__DRAW
-        
-LEAVE_WIFICONFIGAP:
-	RET
-
-ENTER_WIFICONFIGAP:
-	LD	HL, SCANNING
-	CALL 	TEXTMESSAGE__SHOW
-        LD	A, 0 
-        LD	(WIFIFLAGS), A
-        ; Request scan
-        LD	A, $02
-        JP	WRITECMDFIFO
-
-ENTER_WIFICONFIGSTA:
-	RET
-LEAVE_WIFICONFIGSTA:
-	RET
-        
-	; Enter new state in A
-ENTERSTATE:
-	; Ignore if we are already on that state.
-	PUSH 	AF
-        LD	HL, LEAVESTATEHANDLERTABLE
-        LD	A, (STATE)
-        CALL	CALLTABLE
-        POP	AF
-        
-        LD	(STATE), A ; Set up new state.
-        LD	HL, ENTERSTATEHANDLERTABLE
-        JP	CALLTABLE
-        
-SYSTEM_STATUS:
-	LD	A, $2           ; Load resource #2 (status flag)
-        LD	HL, STATUSBUF        ; Into our STATUSBUF area
-        CALL	LOADRESOURCE
-        CP 	RESOURCE_TYPE_INTEGER  ; If not valid (can this happen?) exits.
-        JP	NZ, INTERNALERROR
-        
-        LD	IX, CURRSTATUS   ; Check system status flags. Use IX for dereferencing with BIT later on
-        LD	HL, STATUSBUF        ; Into our STATUSBUF area
-        LD	A, (HL)
-        LD	(IX), A
-        LD	A, (PREVSTATUS)
-        XOR	(IX)            ; Compute differences between this status and prev. status
-        LD	(IX+1), A	; Save STATUSXOR
-        CP	0
-        CALL	NZ, PROCESSSTATUSCHANGE	; Process status change if anything changed
-
-        LD	A, (IX) 	; Store status for next check
-	LD	(PREVSTATUS), A
-        RET
-        
-LOCALSTATUSCHANGED:
-	BIT	0, (IX+1)                 	; Bit 1 is WIFI Mode flag
-        CALL	NZ, LOCALWIFIMODESTATUSCHANGED
-	BIT	1, (IX+1)                 	; Bit 1 is WIFI Connected flag
-        CALL	NZ, LOCALWIFICONNECTEDSTATUSCHANGED
-	BIT	2, (IX+1)                 	; Bit 2 is WIFI Scanning
-        CALL	NZ, LOCALWIFISCANNINGSTATUSCHANGED
-	BIT	3, (IX+1)                    ; Bit 3 is SD Card connected flag.
-        JP	NZ, LOCALSDCARDSTATUSCHANGED
-        RET
-
-LOCALWIFIMODESTATUSCHANGED: ; Wifi mode changed (STA<->AP)
-        CALL	GETSSID
-        BIT	0, (IX) ; Get WIFI mode
-        LD	HL, SSID
-        JR	Z, _stamode
-        ; AP mode
-        XOR	A
-        JP	GRAPHICS_WIFIPRINT
-_stamode:
-	LD	A, 1
-        JP	GRAPHICS_WIFIPRINT
-        
-;	RET
-
-LOCALWIFICONNECTEDSTATUSCHANGED: ; Wifi connection status changed (connected/disconnected)
-        BIT	1, (IX) ; Get WIFI connect status
-        JP	Z, GRAPHICS_WIFIOFF
-        ; On. Check WiFI mode
-        CALL	GRAPHICS_WIFION
-        BIT	0, (IX+1);  IF Wifi mode changed, ignore
-        RET	NZ
-        JP	LOCALWIFIMODESTATUSCHANGED
-	;RET
-
-LOCALWIFISCANNINGSTATUSCHANGED: ; Wifi scanning status changed (scanning/not scanning)
-        BIT	2, (IX) ; Get WIFI connect status
-	RET
-
-LOCALSDCARDSTATUSCHANGED: ; SD card status changed (present/not present)
-        BIT	3, (IX) ; Get SD
-        JP	Z, GRAPHICS_SDOFF
-        JP	GRAPHICS_SDON
-
 GETSSID:
 	LD	HL, SSID
         LD	A, $04
@@ -433,34 +187,6 @@ GETSSID:
         LD	(HL), 0 ; NULL-terminate the string.
         RET
 
-PROCESSSTATUSCHANGE:
-	PUSH	AF
-        ; Local status change.
-        CALL	LOCALSTATUSCHANGED
-        POP	AF
-	LD	HL, STATUSCHANGEDHANDLERTABLE
-	JR	CALLSTATUSFUN
-HANDLEKEY:
-	LD	HL, HANDLEKEYANDLERTABLE
-        ; Fallback
-CALLSTATUSFUN:
-	LD	B, A
-	LD	A, (STATE)
-        ADD	A, A ; a = a*2
-        ADD_HL_A
-	LD	A, (HL)
-        INC 	HL
-	LD	H, (HL)
-	LD	L, A
-        PUSH	HL
-        LD	A, B
-        RET
-	
-        
-        
-        ; Call a table entry
-        ; HL:	table 
-        ; A:	table index
 CALLTABLE:
         ADD	A, A ; a = a*2
         ADD_HL_A
@@ -471,17 +197,6 @@ CALLTABLE:
         PUSH	HL
         RET
     
-KEY_INPUT:	
-	BIT	5,(IY+(FLAGS-IYBASE))	; test FLAGS  - has a new key been pressed ?
-	RET	Z		; return if not.
-
-	LD	DE, (CURKEY)
-	LD	A, D
-	RES	5,(IY+(FLAGS-IYBASE))	; update FLAGS  - reset the new key flag.
-        DEC	A
-        RET 	Z 	; Modifier key applied, skip
-        LD	A, E
-	JR	HANDLEKEY
 
 
 SETATTRS:
@@ -526,11 +241,14 @@ _endl1: HALT
         include	"resource.asm"
         include	"graphics.asm"
 	include "nmihandler.asm"
+        include "settingsmenu.asm"
         include "videomode.asm"
         include	"print.asm"
         include	"debug.asm"
         include	"regdebug.asm"
 	include "keybtest.asm"
+        include "widget.asm"
+        include "filechooser.asm"
         
                ; 00000000001111111111222222222233
                ; 01234567890123456789012345678901

@@ -25,3 +25,13 @@ ENDM
 ENDLESS MACRO
 	_endless: JR _endless
 ENDM
+
+DEBUGSTR MACRO string
+	PUSH	HL
+	LD 	HL, _str
+        CALL 	DEBUGSTRING
+        POP	HL
+        JR	_endstr
+_str:	DB string, 0
+_endstr:
+ENDM

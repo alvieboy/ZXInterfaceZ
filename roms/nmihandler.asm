@@ -149,40 +149,18 @@ _l2:
         ; SP is "good" here.
 	POP 	AF
         RETN
-
         
 NMIPROCESS:
 	LD	A,0
         LD	(IY+(FLAGS-IYBASE)),A
-        LD	(NMIEXIT), A
-
-	CALL	NMIMENU__SETUP
-       	LD	HL, NMI_MENU
-        LD	D, 6 ; line to display menu at.
-        CALL	MENU__INIT
-        CALL	MENU__DRAW
         
-NMILOOP:
-	; Scanning loop
-	CALL	KEYBOARD
-        CALL	NMIKEY_INPUT
-        LD	A, (NMIEXIT)
-        CP	0
-        JR	Z, NMILOOP
-        JP	WAITFORNOKEY
-	;RET
+        CALL	WIDGET__INIT
+        
+        LD	HL, NMIMENU__CLASSDEF
+        CALL	WIDGET__DISPLAY
 
-NMIKEY_INPUT:	
-	BIT	5,(IY+(FLAGS-IYBASE))	; test FLAGS  - has a new key been pressed ?
-	RET	Z		; return if not.
-        ;CALL	DEBUGHEXA
-	LD	DE, (CURKEY)
-	LD	A, D
-	RES	5,(IY+(FLAGS-IYBASE))	; update FLAGS  - reset the new key flag.
-        DEC	A
-        RET 	Z 	; Modifier key applied, skip
-        LD	A, E
-	JP	NMIMENU__HANDLEKEY
+        CALL	WIDGET__LOOP
+        JP	WAITFORNOKEY
 
 SNASAVE:
 	; For SNA we need to also populate alternative registers.

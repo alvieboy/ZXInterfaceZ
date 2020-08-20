@@ -8,6 +8,7 @@ FRAME_DEFS_INCLUDED EQU 1
 ; 02  02   Screen pointer (start)
 ; 04  02   Attribute pointer (start)
 ; 06  02   Ptr to title
+; 08  01   Row location in screen
 
 FRAME_OFF_WIDTH 			EQU	$00
 FRAME_OFF_NUMBER_OF_LINES 		EQU	$01
@@ -15,6 +16,7 @@ FRAME_OFF_SCREENPTR			EQU	$02
 FRAME_OFF_ATTRPTR			EQU	$04
 FRAME_OFF_TITLEPTR			EQU	$06
 
-FRAME_OFF_MAX				EQU	$08 ; Max size of frame
+FRAME_OFF_STARTLINE			EQU	$08
+FRAME_OFF_MAX				EQU	$09 ; Max size of frame
 
 endif

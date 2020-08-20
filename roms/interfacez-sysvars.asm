@@ -1,56 +1,3 @@
-;**********************************
-;** ZX SPECTRUM SYSTEM VARIABLES **
-;**********************************
-P_RAMT		equ	$5C00  
-P_TEMP		equ	$5C02
-FRAMES1 	equ	$5C04
-; Keyboard variables
-KSTATE_0	equ	$5C05
-KSTATE_1	equ	$5C06
-KSTATE_2	equ	$5C07
-KSTATE_3	equ	$5C08
-KSTATE_4	equ	$5C09
-KSTATE_5	equ	$5C09
-KSTATE_6	equ	$5C09
-KSTATE_7	equ	$5C09
-
-REPDEL    	equ	$5C0A
-REPPER    	equ	$5C0B
-LASTK    	equ	$5C0C
-
-
-; IY-based variables.
-IYBASE		equ	$5C0D
-ERR_NR		equ	$5C0E
-FLAGS		equ	$5C0F
-TV_FLAG		equ	$5C10
-FLAGS2	        equ	$5C11
-MODE		equ	$5C12
-PREVKEY		equ     $5C13
-CURKEY		equ     $5C15
-KFLAG		equ     $5C17
-
-CURRSTATUS	equ 	$5C19 ; Current status
-CURRSTATUSXOR	equ 	$5C1A ; Current status XOR previous status
-
-WIFIFLAGS	equ 	$5C1B
-SDMENU		equ 	$5C1C ; To store SD card menu location in RAM
-WIFIAPMENU	equ 	SDMENU ; Reuse.
-STATE		equ 	$5C1E
-PREVSTATUS	equ 	$5C1F ; Previous status
-MENU1		equ	$5C20 ; 4 entries: size: 9+(4*2) = 9+16 = 25
-PASSWDENTRY     equ	$5C40
-
-TEXTMESSAGEAREA	equ	$5CA0 
-SSID		equ	$5CB0 
-
-WIFIPASSWD      equ	$5CD0 ; TODO.
-
-STATUSBUF	equ	$5CF0 
-
-
-HEAP		equ	$5E00 
-
 
 SCREEN		equ	$4000
 LINE1		equ 	$4020
@@ -63,17 +10,62 @@ LINE21		equ 	$50A0
 ATTR		equ	$5800
 SCREENSIZE	equ     $1B00
 
+DEFVAR	MACRO	name,size
+name	EQU	$
+ORG	$ + size
+ENDM
 
+ORG		$5C00
+
+DEFVAR	FRAMES1, 1
+DEFVAR	P_TEMP, 1
+
+
+; IY-based variables.
+IYBASE		EQU 	$
+DEFVAR	ERR_NR, 1
+DEFVAR	FLAGS, 1
+DEFVAR	PREVKEY, 2
+DEFVAR	CURKEY, 2
+DEFVAR	CURRSTATUS, 1
+DEFVAR	CURRSTATUSXOR, 1
+
+DEFVAR	WIFIFLAGS, 1
+;DEFVAR	SDMENU, 2
+DEFVAR	WIFIAPMENU, 2
+
+DEFVAR	STATE, 1
+DEFVAR	PREVSTATUS, 2
+
+MENU1		equ	$5C20 ; 4 entries: size: 9+(4*2) = 9+16 = 25
+DEFVAR	PASSWDENTRY, 16
+TEXTMESSAGEAREA	equ	$5CA0 
+
+; Store SSID here
+DEFVAR	SSID, 32	; Max 32 bytes
+DEFVAR	WIFIPASSWD, 16      ; Max 16 bytes
+
+DEFVAR	STATUSBUF, 8
 
 ; NMI areas.
-NMI_SCRATCH	equ 	$5D00
-NMIEXIT		equ 	$5D02
-NMI_MENU 	equ 	$5D03
-SNAFILENAME	equ	$5D40
-FILENAMEENTRYWIDGET equ	$5D50
-NMICMD_RESPONSE equ	$5D60
-VIDEOMODE_MENU 	equ 	$5D80
-NMI_SPVAL	equ 	$5FFE
+DEFVAR	NMI_SCRATCH, 2
+DEFVAR	NMI_MENU, 32
+DEFVAR	SNAFILENAME, 16
+
+DEFVAR	FILENAMEENTRYWIDGET, 16
+DEFVAR	NMICMD_RESPONSE,     32
+
+DEFVAR	VIDEOMODE_MENU, 32
+DEFVAR	SETTINGS_MENU, 32
+
+; Widget system
+DEFVAR	STACKINDEX, 1
+DEFVAR	STACKDATA, (4*8) ; Max 8 stacked widgets
+DEFVAR	HEAP, 256
+
+
+ORG		$5FFE
+DEFVAR	NMI_SPVAL, 2
 
 ; Patched ROM (on-the-fly)  - max 256 bytes
 

@@ -25,6 +25,8 @@ FRAME__INIT:
 ;	LD      L, A
 	LD      C, A    ; Save in C
 	LD      A, D
+        ; Save it
+        LD	(IX+FRAME_OFF_STARTLINE), A
 	RRCA			; multiply
 	RRCA			; by
 	RRCA			; thirty-two.
@@ -257,4 +259,17 @@ CLRATTR:
         
         RET
 
-
+FRAME__GETRECT:
+        ; Get frame  width
+	LD      A, (IX + FRAME_OFF_WIDTH)
+        LD	D, A
+        
+	SRA     A       ; Divide by 2.
+	LD      C, A   
+	LD      A, 15
+	SUB     C       ; Now A has the start column offset. 
+        LD	B, A    ; B offset
+        
+	LD      E, (IX + FRAME_OFF_NUMBER_OF_LINES)
+        LD	C, (IX + FRAME_OFF_STARTLINE)
+        RET

@@ -1,4 +1,9 @@
+
 include "command_defs.asm"
+
+ENTERSTATE:
+	HALT
+        
 
 WIFICONFIG__STATUSCHANGED:
 

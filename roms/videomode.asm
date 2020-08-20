@@ -1,26 +1,20 @@
-VIDEOMODE:
-	CALL	VIDEOMODE__SETUP
-        LD	HL, VIDEOMODE_MENU
+       
+VIDEOMODE__REDRAW:
+;        LD	HL, VIDEOMODE_MENU
         LD	D, 8
         CALL	MENU__INIT
-        CALL 	MENU__DRAW
-        ; HANDLE KEYS
-        
-_l1:    CALL	KEYBOARD
-	CALL	CHECKKEY
-        JR	Z, _l1
+        JP 	MENU__DRAW	; TAILCALL
 
-	LD	HL, VIDEOMODE_MENU
+VIDEOMODE__KEYHANDLER:
+;	LD	HL, VIDEOMODE_MENU
 	
         CP	$26 	; A key
         JR	NZ, _n1
-        CALL	MENU__CHOOSENEXT
-        JR	_l1
+        JP	MENU__CHOOSENEXT
 _n1:
         CP	$25     ; Q key
         JR	NZ, _n2
-        CALL	MENU__CHOOSEPREV
-        JR	_l1
+        JP	MENU__CHOOSEPREV
 _n2:
         CP	$21     ; ENTER key
         JR	Z, SENDSETVIDEOMODE
@@ -29,13 +23,11 @@ _n3:
        	LD	DE,(CURKEY) ; Don't think is needed.
         LD	A, D
         CP	$27
-        JR	NZ, _n4
+        RET	NZ
         LD	A, E	
         CP	$20
         JR	Z, EXITVIDEOMODE
-_n4:
-
-	JR	_l1
+	RET
         
 SENDSETVIDEOMODE:
         LD	A, CMD_SETVIDEOMODE
@@ -43,13 +35,12 @@ SENDSETVIDEOMODE:
         LD	IX, VIDEOMODE_MENU
         LD	A, (IX+MENU_OFF_SELECTED_ENTRY)
         CALL	WRITECMDFIFO
-EXITVIDEOMODE:
-	LD	HL, NMI_MENU
-        JP	MENU__DRAW
 
+EXITVIDEOMODE:
+	JP	WIDGET__CLOSE 	; TAILCALL
         
         
-VIDEOMODE__SETUP:
+VIDEOMODE__INIT:
        	LD	IX, VIDEOMODE_MENU
         LD	(IX + FRAME_OFF_WIDTH), 24 ; Menu width 24
         LD	(IX + FRAME_OFF_NUMBER_OF_LINES), 3 ; Menu visible entries
@@ -85,7 +76,19 @@ VIDEOMODE__SETUP:
         LD	(IX+MENU_OFF_FIRST_ENTRY+8), HIGH(VIDEOENTRY3)
         
         LD 	(IX+MENU_OFF_DISPLAY_OFFSET), 0
+        PUSH	IX
+        POP	HL ; Return class pointer in HL
         RET
+
+VIDEOMODE__CLASSDEF:
+	DEFW	VIDEOMODE__INIT
+        DEFW	WIDGET__IDLE
+        DEFW	VIDEOMODE__KEYHANDLER
+        DEFW	VIDEOMODE__REDRAW
+
+VIDEOMODE__SHOW:
+	LD	HL, VIDEOMODE__CLASSDEF
+        JP	WIDGET__DISPLAY		; TAILCALL
 
 VIDEOMENUTITLE:	DB	"Video mode", 0
 VIDEOENTRY1:	DB	"Expanded display"  ,0
