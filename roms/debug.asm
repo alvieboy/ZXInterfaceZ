@@ -107,3 +107,10 @@ _endprint
         POP	BC
         POP	DE
         RET
+
+DEBUG8 MACRO what
+	PUSH	AF
+        LD	A, what
+        CALL	DEBUGHEXA
+        POP	AF
+ENDM

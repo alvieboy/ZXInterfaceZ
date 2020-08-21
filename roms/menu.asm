@@ -350,7 +350,7 @@ MENU__ACTIVATE:
         PUSH	DE
         RET			; Jump to function handler. 
         
-MENU__GETRECT:
+MENU__GETBOUNDS:
 	PUSH	HL
         POP	IX
-	JP	FRAME__GETRECT	; TAILCALL	
+	JP	FRAME__GETBOUNDS	; TAILCALL	

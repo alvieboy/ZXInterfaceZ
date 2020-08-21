@@ -259,17 +259,22 @@ CLRATTR:
         
         RET
 
-FRAME__GETRECT:
+FRAME__GETBOUNDS:
         ; Get frame  width
 	LD      A, (IX + FRAME_OFF_WIDTH)
-        LD	D, A
+        LD	D, A    ; D = width
         
 	SRA     A       ; Divide by 2.
-	LD      C, A   
+	LD      C, A    
 	LD      A, 15
 	SUB     C       ; Now A has the start column offset. 
-        LD	B, A    ; B offset
+        LD	B, A    ; B = x1
+        ADD	A, D
+        LD	D, A	; D = x2
         
 	LD      E, (IX + FRAME_OFF_NUMBER_OF_LINES)
         LD	C, (IX + FRAME_OFF_STARTLINE)
+        LD	A, C
+        ADD	A, E
+	LD	E, A ; E = y2
         RET

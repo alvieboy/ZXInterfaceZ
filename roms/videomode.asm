@@ -30,9 +30,14 @@ _n3:
 	RET
         
 SENDSETVIDEOMODE:
+	; Unless BACK was selected.
+        LD	IX, VIDEOMODE_MENU
+        LD	A, (IX+MENU_OFF_SELECTED_ENTRY)
+        CP	3
+        JR	Z, EXITVIDEOMODE
+        ; Valid video mode.
         LD	A, CMD_SETVIDEOMODE
         CALL	WRITECMDFIFO
-        LD	IX, VIDEOMODE_MENU
         LD	A, (IX+MENU_OFF_SELECTED_ENTRY)
         CALL	WRITECMDFIFO
 
@@ -43,8 +48,8 @@ EXITVIDEOMODE:
 VIDEOMODE__INIT:
        	LD	IX, VIDEOMODE_MENU
         LD	(IX + FRAME_OFF_WIDTH), 24 ; Menu width 24
-        LD	(IX + FRAME_OFF_NUMBER_OF_LINES), 3 ; Menu visible entries
-        LD	(IX + MENU_OFF_DATA_ENTRIES), 3 ; Menu actual entries 
+        LD	(IX + FRAME_OFF_NUMBER_OF_LINES), 4 ; Menu visible entries
+        LD	(IX + MENU_OFF_DATA_ENTRIES), 4 ; Menu actual entries 
 
         ; get current video mode
         LD	HL, HEAP
@@ -75,6 +80,10 @@ VIDEOMODE__INIT:
         LD	(IX+MENU_OFF_FIRST_ENTRY+7), LOW(VIDEOENTRY3)
         LD	(IX+MENU_OFF_FIRST_ENTRY+8), HIGH(VIDEOENTRY3)
         
+        LD	(IX+MENU_OFF_FIRST_ENTRY+9), 0 ; Flags
+        LD	(IX+MENU_OFF_FIRST_ENTRY+10), LOW(VIDEOENTRY4)
+        LD	(IX+MENU_OFF_FIRST_ENTRY+11), HIGH(VIDEOENTRY4)
+        
         LD 	(IX+MENU_OFF_DISPLAY_OFFSET), 0
         PUSH	IX
         POP	HL ; Return class pointer in HL
@@ -85,6 +94,7 @@ VIDEOMODE__CLASSDEF:
         DEFW	WIDGET__IDLE
         DEFW	VIDEOMODE__KEYHANDLER
         DEFW	VIDEOMODE__REDRAW
+        DEFW	MENU__GETBOUNDS
 
 VIDEOMODE__SHOW:
 	LD	HL, VIDEOMODE__CLASSDEF
@@ -94,3 +104,4 @@ VIDEOMENUTITLE:	DB	"Video mode", 0
 VIDEOENTRY1:	DB	"Expanded display"  ,0
 VIDEOENTRY2:	DB	"Wide-screen display"  ,0
 VIDEOENTRY3:	DB	"Normal display"  ,0
+VIDEOENTRY4:	DB	"Back"  ,0

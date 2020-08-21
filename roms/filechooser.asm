@@ -166,4 +166,4 @@ FILECHOOSER__CLASSDEF:
         DEFW	WIDGET__IDLE	; Idle
         DEFW	FILECHOOSER__HANDLEKEY    ; Keyboard handler
         DEFW	MENU__DRAW	; Draw
-        DEFW	MENU__GETRECT	; Get rect 
+        DEFW	MENU__GETBOUNDS
