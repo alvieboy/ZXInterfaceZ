@@ -278,7 +278,9 @@ static int spectcmd__setwifi(const uint8_t *cmdbuf, unsigned len)
 
 static int spectcmd__reset(const uint8_t *cmdbuf, unsigned len)
 {
-    return fpga__reset_spectrum();
+    int r = fpga__reset_spectrum();
+    spectcmd__removedata();
+    return r;
 }
 
 static const spectcmd_handler_t spectcmd_handlers[] = {
