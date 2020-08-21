@@ -54,7 +54,6 @@ void LogEmitter::log(const char *type, const char *tag, char *fmt, va_list ap)
     //edit->moveCursor(QTextCursor::End);
 }
 
-
 static int setupgui(int sock)
 {
     SpectrumWidget *spectrumWidget = new SpectrumWidget();
@@ -63,6 +62,8 @@ static int setupgui(int sock)
 
     logemitter = new LogEmitter();
 
+    KeyCapturer *keycapture = new KeyCapturer();
+    qApp->installEventFilter(keycapture);
     //spectrumWidget->installEventFilter(mainw);
 
     QWidget *mainwidget = new QWidget();
@@ -81,7 +82,6 @@ static int setupgui(int sock)
     QPushButton *io0 = new QPushButton("IO0");
     hl->addWidget(nmi);
     hl->addWidget(io0);
-
 
     l->addLayout(hl);
     l->addWidget(spectrumWidget);
