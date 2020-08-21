@@ -56,7 +56,10 @@ jobs:
       with:
         name: host-mode-fw
         path: |
-          esp32/host/interfacez
+          esp32/host/interfacez |
+          esp32/host/libinterfacez.so |
+          esp32/host/QtSpecem/libQtSpecem.so.1 |
+          esp32/host/gui/interfacez_gui
 
     - name: Build esp32 main firmware
       run: |
