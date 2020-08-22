@@ -46,9 +46,9 @@
 ;	LD	(IX), Parent__VTABLE   ; Pseudo LD
 ;	RET
 ;    Virtual function EQU's:
-;    	Parent__firstFunction 		EQU 	0
-;    	Parent__secondFunction 		EQU 	1
-;    	Parent__thirdFunction 		EQU 	2
+;    	Parent__firstFunction_IDX 	EQU 	0
+;    	Parent__secondFunction_IDX 	EQU 	1
+;    	Parent__thirdFunction_IDX 	EQU 	2
 ;	Parent__NUM_VTABLE_ENTRIES	EQU 	3
 
 ;
@@ -61,8 +61,8 @@
 ;	RET
 ;
 ;    Virtual function EQU's:
-;    	Derived__firstFunction 		EQU 	Parent__NUM_VTABLE_ENTRIES+0
-;    	Derived__secondFunction 	EQU 	Parent__NUM_VTABLE_ENTRIES+1
+;    	Derived__firstFunction_IDX	EQU 	Parent__NUM_VTABLE_ENTRIES+0
+;    	Derived__secondFunction_IDX 	EQU 	Parent__NUM_VTABLE_ENTRIES+1
 ;	Derived__NUM_VTABLE_ENTRIES	EQU 	(Parent__NUM_VTABLE_ENTRIES+2)
 
 ;  Memory layout for a Derived class (pointed by IX):
@@ -98,7 +98,7 @@
 ;
 ;  Calling Parent__firstFunction() on either class pointer in IX:
 ;
-;	VCALL	Parent__firstFunction
+;	VCALL	Parent__firstFunction_IDX
 ;
 ;		    In case this is a Derived class, what happens with VCALL is:
 ;			- The Parent__firstFunction (which is 0) entry is loaded from the vtable:
