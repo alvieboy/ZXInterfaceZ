@@ -1,4 +1,5 @@
 include "menu_defs.asm"
+include "object.asm"
 ; 
 ;  Functions in this file
 ;
@@ -27,12 +28,28 @@ MENU__INIT:
 	XOR	A
         ;LD	(IX+MENU_OFF_SELECTED_ENTRY), A
         LD	(IX+MENU_OFF_DISPLAY_OFFSET), A
+	
+        LD	(IX+MENU_OFF_SCREENOFFSET),A
+        LD	(IX+MENU_OFF_SCREENOFFSET+1),A
+	LD	(IX+MENU_OFF_ATTROFFSET),A
+        LD	(IX+MENU_OFF_ATTROFFSET+1),A
+        
+
 
 	LD	(IX+MENU_OFF_DRAWFUNC), LOW(MENU__DRAWITEMDEFAULT)
         LD	(IX+MENU_OFF_DRAWFUNC+1), HIGH(MENU__DRAWITEMDEFAULT)
 	POP     HL
         RET
 
+MENU__SETXYOFFSET:
+	; Input: C x offset
+        ; Input: D y offset
+        PUSH	DE
+        
+        OR	A
+        SBC	HL, DE
+	RET
+        
 MENU__CLEAR:
 	PUSH  	HL
         POP	IX

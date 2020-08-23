@@ -10,7 +10,7 @@ intz.rom: menu.asm pad
 intz.rom: interfacez-rom.asm keyboard.asm sdcardmenu.asm textinput.asm textmessage.asm wifimenu.asm string.asm \
 		mainmenu.asm nmihandler.asm nmimenu.asm snaram.asm snarestore.asm resource.asm videomode.asm \
 		settingsmenu.asm widget.asm debug.asm \
-		port_defs.asm filechooser.asm \
+		port_defs.asm filechooser.asm frame.asm \
 		interfacez-sysvars.asm
 	pasmo -d --alocal interfacez-rom.asm $@ > $@.out
 	xxd -i $@ > interfacez_rom.c

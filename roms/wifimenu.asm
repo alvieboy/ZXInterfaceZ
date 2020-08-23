@@ -251,19 +251,106 @@ WIFIASKPASSWORD:
         CALL	TEXTINPUT__INIT
         LD	HL, PASSWDENTRY
 	JP	TEXTINPUT__DRAW
-
-
-        RET
-        
-        
-
-
-	;ENDLESS
 	RET
+        
+        
         
         
 WIFIAPMENUTITLE:
 	DB "Choose AP", 0
 PASSWDTITLE: 
 	DB "WiFi password", 0
+
+WIFICONFIG__KEYHANDLER:
+	RET
+
+WIFITITLE:
+	DB "WiFi configuration", 0
+       
+       
+WIFICONFIG__REDRAW:
+	PUSH	HL
+        POP	IX
+        LD	A, $78
+        CALL	FRAME__CLEAR
+        CALL	FRAME__DRAW
+        ; Show relevant information
         
+        LD	E, (IX+FRAME_OFF_SCREENPTR)       ; Screen..
+        LD	D, (IX+FRAME_OFF_SCREENPTR+1)     ; Screen..
+        INC 	DE
+        INC 	DE
+        CALL	MOVEDOWN
+        CALL	MOVEDOWN
+	CALL	PRINTAPMODE
+        
+        RET
+        
+PRINTAPMODE:
+        LD	HL, APMODESTR
+        PUSH	DE
+        CALL	PRINTSTRING
+	POP	DE
+        INC	DE
+        CALL	MOVEDOWN
+        
+        PUSH	DE
+        LD	HL, CHANNELSTR
+        CALL	PRINTSTRING
+        LD	HL, TBDSTR
+        CALL 	PRINTSTRING
+        POP 	DE
+        CALL	MOVEDOWN
+        
+        
+        PUSH	DE
+        LD	HL, SSIDSTR
+        CALL	PRINTSTRING
+        LD	HL, TBDSTR
+        CALL 	PRINTSTRING
+        POP 	DE
+        CALL	MOVEDOWN
+
+        PUSH	DE
+        LD	HL, PWDSTR
+        CALL	PRINTSTRING
+        LD	HL, TBDSTR
+        CALL 	PRINTSTRING
+        POP 	DE
+        CALL	MOVEDOWN
+        
+        RET
+        
+        
+APMODESTR:	DB 	"Access point mode",0
+CHANNELSTR:	DB	"Channel : ",0
+SSIDSTR:	DB	"SSID    : ",0
+PWDSTR:		DB	"Password: ",0
+TBDSTR:		DB	"TBD",0		    
+       
+WIFICONFIG__INIT:
+	LD	HL,WIFI_MENU
+        PUSH	HL
+        PUSH	HL
+        POP	IX
+        LD	(IX+FRAME_OFF_WIDTH), 30
+        LD      (IX+FRAME_OFF_TITLEPTR), LOW(WIFITITLE)
+        LD      (IX+FRAME_OFF_TITLEPTR+1), HIGH(WIFITITLE)
+      
+      	LD	(IX+FRAME_OFF_NUMBER_OF_LINES), 14
+        LD	D, 4
+        CALL	FRAME__INIT
+        POP	HL
+        RET
+
+WIFICONFIG__SHOW:
+	LD	HL, WIFICONFIG__CLASSDEF
+        JP	WIDGET__DISPLAY
+
+WIFICONFIG__CLASSDEF:
+	DEFW	WIFICONFIG__INIT
+        DEFW	WIDGET__IDLE
+        DEFW	WIFICONFIG__KEYHANDLER
+        DEFW	WIFICONFIG__REDRAW
+        DEFW	FRAME__GETBOUNDS
+

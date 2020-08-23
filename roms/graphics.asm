@@ -9,6 +9,55 @@ DRAWHLINE:
         DJNZ	DRAWHLINE
         RET
 
+;
+; Get screen start for XY location
+; Inputs:
+;	C: X coordinate
+;	D: Y coordinate
+; Returns:
+;       HL: Screen pointer
+
+GETXYSCREENSTART:
+        LD	A, D
+	RRCA			; multiply
+	RRCA			; by
+	RRCA			; thirty-two.
+	AND	$E0		; mask off low bits to make
+	ADD     A, C
+	LD      L,A
+	LD	A,D		; bring back the line to A.
+	AND	$18		; now $00, $08 or $10.
+        OR	$40		; add the base address of screen.
+	LD      H,  A
+        RET
+
+;
+; Get attribute start for XY location
+; Inputs:
+;	C: X coordinate
+;	D: Y coordinate
+; Returns:
+;       HL: Attribute pointer
+
+GETXYATTRSTART:
+	LD	A, D
+	LD      L, A ; L= start line
+	LD      H, 0
+	PUSH	BC
+        
+	LD      B, $58
+	
+	ADD	HL,HL		; multiply
+        ADD	HL,HL		; by
+	ADD	HL,HL		; thirty two
+	ADD	HL,HL		; to give count of attribute
+	ADD	HL,HL		; cells to end of display.
+	ADD     HL, BC
+	
+        POP	BC
+	RET
+
+
 MOVEDOWN:
 	LD	A,E
 	CP 	%11100000 	      	; 0xE0, last entry of the band	

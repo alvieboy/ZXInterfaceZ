@@ -27,34 +27,12 @@ FRAME__INIT:
 	LD      A, D
         ; Save it
         LD	(IX+FRAME_OFF_STARTLINE), A
-	RRCA			; multiply
-	RRCA			; by
-	RRCA			; thirty-two.
-	AND	$E0		; mask off low bits to make
-	ADD     A, C
-	LD      L,A
-	LD	A,D		; bring back the line to A.
-	AND	$18		; now $00, $08 or $10.
-        OR	$40		; add the base address of screen.
-	LD      H,  A
-
+        CALL	GETXYSCREENSTART
+	
         LD	(IX+FRAME_OFF_SCREENPTR), L
         LD	(IX+FRAME_OFF_SCREENPTR+1), H
 	
-	; Pick start line again. C still holds the offset.
-	LD      A, D
-	LD      L, A ; L= start line
-	LD      H, 0
-	
-	LD      B, $58
-	
-	ADD	HL,HL		; multiply
-        ADD	HL,HL		; by
-	ADD	HL,HL		; thirty two
-	ADD	HL,HL		; to give count of attribute
-	ADD	HL,HL		; cells to end of display.
-	ADD     HL, BC
-	
+	CALL	GETXYATTRSTART
         LD	(IX+FRAME_OFF_ATTRPTR), L
         LD	(IX+FRAME_OFF_ATTRPTR+1), H
 	RET
@@ -233,7 +211,7 @@ CLRLINE:
 
         LD	C, (IX+FRAME_OFF_NUMBER_OF_LINES)       ; Attribute lines to clear
         INC	C               ; Include header
-        INC	C               ; And footer
+       ; INC	C               ; And footer
         
         LD	D, A	; Save attribute in D
         
