@@ -78,7 +78,7 @@ Install these dependencies
 - Debian/Ubuntu
 
 ```bash
-sudo apt install libglib2.0-dev qt5-qmake qtchooser
+sudo apt install libglib2.0-dev qtbase5-dev qtbase5-dev-tools qtchooser
 ```
 
 - Fedora
@@ -101,4 +101,3 @@ cd $INTERFACE_Z/esp32
 host/interfacez
 ```
 To open the web interface on host mode, point your browser to http://localhost:8000
-
