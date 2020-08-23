@@ -33,6 +33,14 @@ cat $INTERFACE_Z/patches/esp-idf-patch-webserver-select.diff | patch -p1
 
 Note that anytime you need to use the IDF you need to source the "export.sh" file as above.
 
+### Get Git Submodules
+
+```bash
+cd $INTERFACE_Z
+git submodule init
+git submodule update
+```
+
 ### Building
 
 Build the esp32 code by typing "make" on the esp32 directory
@@ -70,7 +78,13 @@ Install these dependencies
 - Debian/Ubuntu
 
 ```bash
-sudo apt install libglib2.0-dev
+sudo apt install libglib2.0-dev qt5-qmake qtchooser
+```
+
+- Fedora
+
+```bash
+sudo dnf install glib2-devel qt5-qtbase-devel qtchooser
 ```
 
 ### Building host-mode
