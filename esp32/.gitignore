@@ -1,0 +1,8 @@
+fpga.bin
+filesize
+*.bin
+*.o
+build/
+host/interfacez
+host/libinterfacez.so
+host/gui/Makefile
