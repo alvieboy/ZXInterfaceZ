@@ -54,6 +54,19 @@ Default is _SSID_ `ZXInterfaceZ`, _password_ `zxspectrum`, and IP `192.168.120.1
 
 You can connect to the _ZX Interface Z_'s serial console by connecting a
 USB-cable to the _micro USB_ port and connecting with a terminal program
-at 115200 baud with 8N1. The The USB chip used is CH330.
+at `115200` baud with `8N1`. The USB serial chip used is a _CH330_.
+
+Example command to connect with `cu` on Linux:
+
+```
+cu -l /dev/ttyUSB0 -s 115200
+```
+
+Be sure to double check which device is the _ZX Interface Z_. It can be done
+with `dmesg | grep ttyUSB`.
+
+### Console Commands
+
+TODO See [console.c](https://github.com/alvieboy/ZXInterfaceZ/blob/master/esp32/main/console.c#L168)
 
 # Troubleshooting
