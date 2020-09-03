@@ -13,6 +13,10 @@ The Interface Z can be controlled through the _ZX Interface Z main menu_ which
 is brought up by pushing the **USR** button or by accessing the _Web Interface_
 if network has been set up.
 
+## Board Layout
+
+![Interface Z - Board Layout](board_overview.png "Interface Z - Board Layout")
+
 ## Navigation
 
 #### USB Joystick
