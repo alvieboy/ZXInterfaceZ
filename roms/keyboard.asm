@@ -52,6 +52,7 @@ KEY_DONE:	DEC	L		; cycles 2F>2E>2D>2C>2B>2A>29>28 for
 		LD	A,D		; now test if D is still FF ?
 		INC	A		; if it is zero we have at most 1 key
 					; range now $01-$28  (1-40d)
+
 		RET	Z		; return if one key or no key.
 
 		CP	$28		; is it capsshift (was $27) ?
@@ -75,7 +76,7 @@ KEY_DONE:	DEC	L		; cycles 2F>2E>2D>2C>2B>2A>29>28 for
 					;;;$02BF
 KEYBOARD:	CALL	KEY_SCAN	; routine KEY_SCAN
 		RET	NZ		; return if invalid combinations
-
+                
                 LD	HL,(PREVKEY)    ; Load previous key
                                         ; Compare with new key
                 OR	A		; Clear "C" flag 
@@ -86,8 +87,8 @@ KEYBOARD:	CALL	KEY_SCAN	; routine KEY_SCAN
                 LD	(PREVKEY), DE
 					; Notify key pressed
                 LD	(CURKEY), DE
-                LD	IY, IYBASE
-                SET	5, (IY+(FLAGS-IYBASE))
+                LD	HL, FLAGS
+                SET	5, (HL)
                 RET
 
 	; Input: DE

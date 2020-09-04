@@ -115,28 +115,36 @@
 ;	The 1st word at (IX) is the virtual function table.
 ; offset: Offset (number) of the virtual function 
 VCALL	MACRO offset
+	LD	BC, offset*2
+	CALL VCALL_internal
+ENDM
+VCALL_internal:
+	;PUSH	IX
+        ;LD	IX, _retloc
+        ;EX	(SP), IX   	; Return address
 	PUSH	IX
-        LD	IX, _retloc
-        EX	(SP), IX   	; Return address
-	PUSH	IX
-        PUSH	AF
-	LD	A, (IX)
-        LD	IXL, A
-        LD	A, (IX+1)
-        LD	IXH, A
+        PUSH	BC
+	LD	C, (IX)
+        LD	B, (IX+1)
+        LD	IXL, C
+        LD	IXH, B
+        POP	BC
+        ADD	IX, BC
+        DEBUGSTR " > vt "
+        DEBUGHEXIX
         ; IX now points to start of vtable
-        LD	A, (IX+(offset*2))
-        LD	IXL,A
-        LD	A, (IX+(offset*2)+1)
-        LD	IXH, A
-        POP	AF
+        LD	C, (IX)
+        LD	B, (IX+1)
+        LD	IXL, C
+        LD	IXH, B
+        DEBUGSTR " > fn "
+        DEBUGHEXIX
         ; Function in IX
         EX	(SP), IX
         RET	; Call function!
-_retloc:
-ENDM 
 
 
+Object__SIZE     	EQU     2 ; Room for VTABLE pointer
 
 
 

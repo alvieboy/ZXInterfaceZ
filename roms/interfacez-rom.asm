@@ -1,6 +1,7 @@
 ; System variables definitions
 
 include	"interfacez-sysvars.asm"
+
 include "macros.asm"
 
 ; Main state machine
@@ -34,18 +35,9 @@ START:	DI			; disable interrupts.
 RST8:	JP 	RST8
 
 	ORG	$0038
-;---------------------------
-; Maskable interrupt routine
-;---------------------------
-; This routine increments the Spectrum's three-byte FRAMES counter
-; fifty times a second (sixty times a second in the USA ).
-; Both this routine and the called KEYBOARD subroutine use 
-; the IY register to access system variables and flags so a user-written
-; program must disable interrupts to make use of the IY register.
-
 					;;;$0038
 MASK_INT:	PUSH	AF		; save the registers.
-		PUSH	HL		; but not IY unfortunately.
+		PUSH	HL		
 		LD	HL,(FRAMES1)	; fetch two bytes at FRAMES1.
 		INC	HL		; increment lowest two bytes of counter.
 	        LD	(FRAMES1),HL	; place back in FRAMES1.
@@ -53,10 +45,8 @@ MASK_INT:	PUSH	AF		; save the registers.
 		OR	L		; was zero.
 		JR	NZ,KEY_INT	; forward to KEY_INT if not.
 
-		;INC	(IY+$40)	; otherwise increment FRAMES3 the third byte.
-
-					; now save the rest of the main registers and read and decode the keyboard.
 					;;;$0048
+
 KEY_INT:	PUSH	BC		; save the other
 		PUSH	DE		; main registers.
 		CALL	KEYBOARD	; routine KEYBOARD executes a stage in the process of reading a key-press.
@@ -213,7 +203,7 @@ ALOOP:
         RET
 
 INTERNALERROR:
-	CALL	DEBUGHEXA
+	DEBUGHEXA
 	LD	DE, LINE23
         LD	HL, INTERNALERRORSTR
         LD	A, 32
@@ -227,29 +217,39 @@ _endl1: HALT
 
 	include "snaram.asm"
 	include "menu_defs.asm"
-        include "menu.asm"
         include "frame.asm"
         include "textinput.asm"
         include "textmessage.asm"
         include "string.asm"
-        include "mainmenu.asm"
-        include "wifimenu.asm"
-        include "sdcardmenu.asm"
-        include "nmimenu.asm"
+        ;include "mainmenu.asm"
+        ;include "wifimenu.asm"
+        ;include "sdcardmenu.asm"
+        ;include "nmimenu.asm"
         include "keyboard.asm"
 	include	"charmap.asm"
         include	"resource.asm"
         include	"graphics.asm"
-	include "nmihandler.asm"
-        include "settingsmenu.asm"
-        include "videomode.asm"
+        ;include "videomode.asm"
         include	"print.asm"
         include	"debug.asm"
         include	"regdebug.asm"
 	include "keybtest.asm"
-        include "widget.asm"
-        include "filechooser.asm"
-        
+        ;include "widget.asm"
+        include "object.asm"
+        include "widget_class.asm"
+        include "widgetgroup.asm"
+        include "bin.asm"
+        include "menu.asm"
+        include "callbackmenu.asm"
+        include "window.asm"
+        include "menuwindow.asm"
+        include "screen.asm"
+
+	include "nmihandler.asm"
+        include "settingsmenu.asm"
+
+       ; include "filechooser.asm"
+       
                ; 00000000001111111111222222222233
                ; 01234567890123456789012345678901
 INTERNALERRORSTR: DB "Internal ERROR, aborting" ; Fallback to EMPTYSYRING

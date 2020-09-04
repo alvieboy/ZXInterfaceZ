@@ -1,5 +1,35 @@
-include "menu_defs.asm"
-include "object.asm"
+
+Menu__drawFunc_OFFSET		EQU	Widget__SIZE+0   ; 2
+Menu__displayOffset_OFFSET 	EQU	Widget__SIZE+2   ; 1
+Menu__selectedEntry_OFFSET 	EQU	Widget__SIZE+3   ; 1
+Menu__dataEntries_OFFSET 	EQU	Widget__SIZE+4   ; 1
+Menu__data_OFFSET 		EQU	Widget__SIZE+5   ; 2
+Menu__SIZE			EQU	Widget__SIZE+7
+
+; VTABLE
+
+Menu__activateEntry		EQU	Widget__NUM_VTABLE_ENTRIES	; Pure virtual
+Menu__NUM_VTABLE_ENTRIES	EQU	Widget__NUM_VTABLE_ENTRIES+1
+
+Menu__handleEvent:
+	; Check if keyboard event
+        CP	0
+        RET	NZ	; No, not keyboard event
+        DEBUGSTR "Menu KBD event\n"
+        LD	A, E
+        CP	$26 	; A key
+        JP	Z, Menu__chooseNext
+        CP	$25     ; Q key
+        JP	Z, Menu__choosePrev
+        CP	$21     ; ENTER key
+        JR	NZ, _n3
+        VCALL	Menu__activateEntry
+_n3:
+	RET
+
+Menu_V__activateEntry:
+	RET
+
 ; 
 ;  Functions in this file
 ;
@@ -18,59 +48,43 @@ include "object.asm"
 ;       None
 ;   Clobbers: IX, DE, BC, A
 
-MENU__INIT:
-        PUSH	HL
-	PUSH	HL
-        POP	IX
-        
-        CALL	FRAME__INIT
-        ; Add some default settings.
-	XOR	A
-        ;LD	(IX+MENU_OFF_SELECTED_ENTRY), A
-        LD	(IX+MENU_OFF_DISPLAY_OFFSET), A
-	
-        LD	(IX+MENU_OFF_SCREENOFFSET),A
-        LD	(IX+MENU_OFF_SCREENOFFSET+1),A
-	LD	(IX+MENU_OFF_ATTROFFSET),A
-        LD	(IX+MENU_OFF_ATTROFFSET+1),A
-        
+Menu_P__CTOR:
+	CALL	Widget__CTOR
 
-
-	LD	(IX+MENU_OFF_DRAWFUNC), LOW(MENU__DRAWITEMDEFAULT)
-        LD	(IX+MENU_OFF_DRAWFUNC+1), HIGH(MENU__DRAWITEMDEFAULT)
-	POP     HL
+	LD	(IX+Menu__drawFunc_OFFSET), LOW(MENU__DRAWITEMDEFAULT)
+        LD	(IX+Menu__drawFunc_OFFSET+1), HIGH(MENU__DRAWITEMDEFAULT)
+        LD	(IX+Menu__displayOffset_OFFSET), 0
+        LD	(IX+Menu__selectedEntry_OFFSET), 0
+        DEBUGSTR "Menu created "
+        DEBUGHEXIX
+        
         RET
 
-MENU__SETXYOFFSET:
-	; Input: C x offset
-        ; Input: D y offset
-        PUSH	DE
-        
-        OR	A
-        SBC	HL, DE
-	RET
-        
-MENU__CLEAR:
-	PUSH  	HL
-        POP	IX
-	JP  	FRAME__CLEAR
+;
+; A:  Number of entries
+; HL: Pointer to entry table
 
+Menu__setEntries:
+	LD	(IX+Menu__dataEntries_OFFSET), A
+        LD	(IX+Menu__data_OFFSET), L
+        LD	(IX+Menu__data_OFFSET+1), H
+        RET
 
-MENU__DRAW:
-	PUSH  	HL
-        POP	IX
-	CALL	FRAME__DRAW
+Menu__clear:
+	;JP  	FRAME__CLEAR
+
+Menu__drawImpl:
+	DEBUGSTR	"Redrawing menu\n"
         CALL 	MENU__UPDATESELECTION
         ; Draw contents
-        LD	E, (IX+FRAME_OFF_SCREENPTR)
-        LD	D, (IX+FRAME_OFF_SCREENPTR+1)
-        INC	DE
+        LD	E, (IX+Widget__screenptr_OFFSET)
+        LD	D, (IX+Widget__screenptr_OFFSET+1)
         JP	MENU__DRAWCONTENTS
 
 FILLSLINE:     
 	PUSH	BC
 	PUSH	DE
-        LD	B, (IX+FRAME_OFF_WIDTH)  	; Load width of menu
+        LD	B, (IX+Widget__width_OFFSET)  	; Load width of menu
         INC	B               ; Add +2 for extra borders.
         INC	B
 LP1:    LD	(DE), A
@@ -85,25 +99,26 @@ MENU__UPDATESELECTION:
 	PUSH	BC
         PUSH	DE
         
-        PUSH	IX
-        POP	HL
+        ; Get pointer to Nth entry, where Nth=display Offset.
         
-        ; This sucks. Can we make this faster ?
-        ; HL = HL + (MENU_OFF_FIRST_ENTRY + (MENU_OFF_DISPLAY_OFFSET*3)
-        LD	A, (IX+MENU_OFF_DISPLAY_OFFSET)
-        ADD_HL_A
-        LD	A, (IX+MENU_OFF_DISPLAY_OFFSET)
-        ADD_HL_A
-        LD	A, (IX+MENU_OFF_DISPLAY_OFFSET)
-        ADD_HL_A ; 3 times.
-        LD	A, MENU_OFF_FIRST_ENTRY
-        ADD_HL_A
-                
-        LD	E, (IX+FRAME_OFF_ATTRPTR)
-        LD	D, (IX+FRAME_OFF_ATTRPTR+1)
+	LD	L, (IX+Menu__data_OFFSET)
+        LD	H, (IX+Menu__data_OFFSET+1)
+        LD	C, (IX+Menu__displayOffset_OFFSET)
+        LD	B, 0
+        ADD	HL, BC
+        ADD	HL, BC
+        ADD	HL, BC
         
-        LD	B, (IX+FRAME_OFF_NUMBER_OF_LINES) 	; Number of entries
-        LD	C, (IX+MENU_OFF_DISPLAY_OFFSET)         ; Compare against this number
+        LD	E, (IX+Widget__attrptr_OFFSET)
+        LD	D, (IX+Widget__attrptr_OFFSET+1)
+        
+        LD	B, (IX+Widget__height_OFFSET) 	; Number of entries
+
+	DEBUGSTR " > Menu lines: "
+        DEBUGHEXB
+
+
+        LD	C, (IX+Menu__displayOffset_OFFSET)         ; Compare against this number
 
 L6:
         LD	A, E            ; Move to next attribute line
@@ -111,14 +126,13 @@ L6:
         LD	E, A
         JR	NC, L7
         INC	D
-L7:     
-        
-	LD	A, (IX+MENU_OFF_SELECTED_ENTRY)	; Get active entry
+L7:                           	
+	LD	A, (IX+Menu__selectedEntry_OFFSET)	; Get active entry
         CP	C		; Compare
         JR	NZ,  L5
         
         ; load item flags.
-        BIT 	0, (HL);IY+MENU_OFF_FIRST_ENTRY); TODO: Do NOT use IY!
+        BIT 	0, (HL);IY+Menu__firstEntry_OFFSET); TODO: Do NOT use IY!
         JR	NZ, L9 ; Disabled
         LD	A, MENU_COLOR_SELECTED ; Cyan, for selected
 	JR	L8
@@ -137,6 +151,7 @@ L8:
         ;POP	IY
 	POP	DE
         POP 	BC
+        DEBUGSTR "Update sel done\n"
         RET
 
 
@@ -145,33 +160,40 @@ L8:
 ;   		DE : 	Ptr to screen header location
 
 MENU__DRAWCONTENTS_NO_DE:
-	LD	E, (IX+FRAME_OFF_SCREENPTR)
-        LD	D, (IX+FRAME_OFF_SCREENPTR+1)
+	LD	E, (IX+Widget__screenptr_OFFSET)
+        LD	D, (IX+Widget__screenptr_OFFSET+1)
         INC	DE
 MENU__DRAWCONTENTS:   	; Call this instead if you already have DE pointing to the correct place.
-	LD	A, (IX+MENU_OFF_DATA_ENTRIES) ; Get number of entries
-        LD	B, (IX+FRAME_OFF_NUMBER_OF_LINES) ; Get number of lines
+
+
+	DEBUGSTR "Drawing menu contents ";
+        DEBUGHEXIX
+        
+	LD	A, (IX+Menu__dataEntries_OFFSET) ; Get number of entries
+        LD	B, (IX+Widget__height_OFFSET) ; Get number of lines
 	CP	B
         JR	NC, _s
         LD	B, A
 _s:     
-        PUSH	IX  	;
-        POP	HL      ; Move IX (menu structure) into HL
+	DEBUGSTR " > will draw lines="
+        DEBUGHEXB
         
-        ; Move HL pointer to correct offset of first entry ()
-        LD	A, L
-        ADD	A, MENU_OFF_FIRST_ENTRY
-        LD	L, A
-        JR	NC, MD1
-        INC	H
-MD1:    ; HL now contains the first entry.
+        LD	L, (IX+Menu__data_OFFSET)
+        LD	H, (IX+Menu__data_OFFSET+1)
+        
+	; HL now contains the first entry.
         ; Move past offset if we have one. This is used for scrolling.
-        LD	A, (IX+MENU_OFF_DISPLAY_OFFSET)
+        PUSH	BC
+        LD	A, (IX+Menu__displayOffset_OFFSET)
         LD	C, A
-        ADD	A, C ; Multiply by 2.
-        ADD	A, C ; Multiply by 3.
-        ADD_HL_A  ; Add to HL offset
+        LD	B, 0
+        ADD	HL, BC
+        ADD	HL, BC
+        ADD	HL, BC
+        POP	BC
         
+	DEBUGSTR " > first ptr "
+        DEBUGHEXHL
 
 MD2:
         PUSH	BC
@@ -185,15 +207,18 @@ MD2:
         LD	BC, RETFROMDRAW
         PUSH	BC ; Will be return address.
         
-        LD	C, (IX+MENU_OFF_DRAWFUNC)
-        LD	B, (IX+MENU_OFF_DRAWFUNC+1)
+        LD	C, (IX+Menu__drawFunc_OFFSET)
+        LD	B, (IX+Menu__drawFunc_OFFSET+1)
         PUSH	BC ; Function to call
+        
         
         LD	C, (HL) ; Load entry..
         INC	HL
         LD	B, (HL) ; pointer
         INC	HL
-        
+	DEBUGSTR "Entry @"
+        DEBUGHEXBC
+
         RET	; THIS IS A CALL!
         
 RETFROMDRAW:       
@@ -204,8 +229,8 @@ RETFROMDRAW:
         DJNZ	MD2
         
         ; We may need empty entries if we are short.
-	LD	B, (IX+MENU_OFF_DATA_ENTRIES) ; Get number of entries
-        LD	A, (IX+FRAME_OFF_NUMBER_OF_LINES) ; Get number of lines
+	LD	B, (IX+Menu__dataEntries_OFFSET) ; Get number of entries
+        LD	A, (IX+Widget__height_OFFSET) ; Get number of lines
 	SUB	B      ; Example: 2 entries, 14 lines. result: 12
 
         
@@ -222,7 +247,7 @@ _fillempty:
         CALL	MOVEDOWN
 	PUSH	DE
         LD	HL, EMPTYSTRING
-        LD	A, (IX+FRAME_OFF_WIDTH)
+        LD	A, (IX+Widget__width_OFFSET)
         CALL 	PRINTSTRINGPAD
         POP	DE
         POP	BC
@@ -232,19 +257,23 @@ _fillempty:
         
 _noempty:
 
+
+
+        RET; TEMPORARY!!!!!
+
 ;	Check if we need up/down arrows.
 
-	LD	A, (IX+FRAME_OFF_SCREENPTR)
-        LD	D, (IX+FRAME_OFF_SCREENPTR+1)
+	LD	A, (IX+Widget__screenptr_OFFSET)
+        LD	D, (IX+Widget__screenptr_OFFSET+1)
         INC	A
-        ADD	A, (IX+FRAME_OFF_WIDTH)
+        ADD	A, (IX+Widget__width_OFFSET)
         LD	E,A
         
         CALL	MOVEDOWN
 
         ; Up arrow needed if offset is not zero
         XOR	A
-        CP	(IX+MENU_OFF_DISPLAY_OFFSET)
+        CP	(IX+Menu__displayOffset_OFFSET)
         JR	Z, nouparrow
         LD	HL, UPARROW
         JR	f1
@@ -255,17 +284,25 @@ f1:
         DEC	DE
 
 
-
         ; Draw down arrow
-        LD	B, (IX+FRAME_OFF_NUMBER_OF_LINES)
+        LD	B, (IX+Widget__height_OFFSET)
         DEC	B
 POSITION_DOWN_ARROW:
         CALL	MOVEDOWN
         DJNZ	POSITION_DOWN_ARROW
 
-	LD	A, (IX+MENU_OFF_DISPLAY_OFFSET)
-        ADD 	A, (IX+FRAME_OFF_NUMBER_OF_LINES)
-        CP	(IX+MENU_OFF_DATA_ENTRIES)
+	LD	A, (IX+Menu__displayOffset_OFFSET)
+        DEBUGSTR "displayOffset "
+        DEBUGHEXA
+        
+        ADD 	A, (IX+Widget__height_OFFSET)
+        DEBUGSTR " + height "
+        DEBUGHEXA
+                              
+        DEBUGSTR "data entries "
+        DEBUG8 (IX+Menu__dataEntries_OFFSET)
+
+        CP	(IX+Menu__dataEntries_OFFSET)
         JR	NC, nodownarrow
         LD	HL, DOWNARROW
 	JR 	f2
@@ -281,93 +318,82 @@ MENU__DRAWITEMDEFAULT:
         PUSH	HL
         PUSH	BC
         POP	HL
-        LD	A, (IX+FRAME_OFF_WIDTH)
+        LD	A, (IX+Widget__width_OFFSET)
         CALL 	PRINTSTRINGPAD
         POP	HL
         RET
 
 
-MENU__CHOOSENEXT:
-        PUSH	HL
-        POP	IX
-	LD	A, (IX+MENU_OFF_SELECTED_ENTRY)
+Menu__chooseNext:
+	LD	A, (IX+Menu__selectedEntry_OFFSET)
         INC	A
-        CP	(IX+MENU_OFF_DATA_ENTRIES)
+        CP	(IX+Menu__dataEntries_OFFSET)
         RET	Z
-	LD	(IX+MENU_OFF_SELECTED_ENTRY), A
+	LD	(IX+Menu__selectedEntry_OFFSET), A
         ; Check if we need to scroll
 
-        LD	A, (IX+FRAME_OFF_NUMBER_OF_LINES)
-        ADD	A, (IX+MENU_OFF_DISPLAY_OFFSET)
+        LD	A, (IX+Widget__height_OFFSET)
+        ADD	A, (IX+Menu__displayOffset_OFFSET)
         ; Example:
         ;	- Max visible entries is 4
         ;       - Current display offset is 0
         ;	- Selected entry is 4
-        CP	(IX+MENU_OFF_SELECTED_ENTRY)
+        CP	(IX+Menu__selectedEntry_OFFSET)
 
         JR	NZ, NOSCROLL2
         ;	
-        INC	(IX+MENU_OFF_DISPLAY_OFFSET)
+        INC	(IX+Menu__displayOffset_OFFSET)
         CALL	MENU__DRAWCONTENTS_NO_DE
-        
-
-;	endless2: jr endless2
-	;
 NOSCROLL2:
-
 	JP   	MENU__UPDATESELECTION
 
-MENU__CHOOSEPREV:
-        PUSH	HL
-        POP	IX
-	LD	A, (IX+MENU_OFF_SELECTED_ENTRY)
+Menu__choosePrev:
+	LD	A, (IX+Menu__selectedEntry_OFFSET)
         SUB	1
         RET	C
-	LD	(IX+MENU_OFF_SELECTED_ENTRY), A
+	LD	(IX+Menu__selectedEntry_OFFSET), A
         ; If we are moving before offset, decrement offset
 
-        CP	(IX+MENU_OFF_DISPLAY_OFFSET)
+        CP	(IX+Menu__displayOffset_OFFSET)
 	JR	NC, NOSCROLL1
-        DEC     (IX+MENU_OFF_DISPLAY_OFFSET)
+        DEC     (IX+Menu__displayOffset_OFFSET)
         ; Redraw contents
         CALL	MENU__DRAWCONTENTS_NO_DE
 NOSCROLL1:
 	JP   	MENU__UPDATESELECTION
 
 	; A: menu index to check.
-        ; IX: pointer to menu structure
-        ; Clobbers: C
+        ; IX: 
+        ; Clobbers: C flags
 MENU__ISDISABLED:
         LD	C, A
-        ADD	A, C ; Multiply by 2.
-        ADD	A, C ; Multiply by 3.
-        PUSH	IX
-        ADD_IX_A  ; Add to HL offset
-        BIT	0, (IX+MENU_OFF_FIRST_ENTRY)
-	POP	IX
+        LD	B, 0
+        PUSH	HL
+        LD	L, (IX+Menu__data_OFFSET)
+        LD	H, (IX+Menu__data_OFFSET+1)
+        ADD	HL, BC
+        ADD	HL, BC
+        ADD	HL, BC
+        BIT	0, (HL)
+	POP	HL
         RET
 
-MENU__ACTIVATE:
-	PUSH	HL
-        POP	IX
-        LD	A, (IX+MENU_OFF_SELECTED_ENTRY)
-        CALL	MENU__ISDISABLED
-        RET	NZ
-        ; Load active entry
-        LD	A, (IX+MENU_OFF_SELECTED_ENTRY)
-        
-        ADD	A, A ; Multiply by 2
-        ; Load HL with base callback pointer
-        LD	L, (IX+MENU_OFF_CALLBACKPTR)
-        LD	H, (IX+MENU_OFF_CALLBACKPTR+1)
-        ADD_HL_A
-        LD	E, (HL)
-        INC 	HL
-        LD	D, (HL)
-        PUSH	DE
-        RET			; Jump to function handler. 
-        
-MENU__GETBOUNDS:
-	PUSH	HL
-        POP	IX
-	JP	FRAME__GETBOUNDS	; TAILCALL	
+;MENU__ACTIVATE:
+;	PUSH	HL
+;        POP	IX
+;        LD	A, (IX+Menu__selectedEntry_OFFSET)
+;        CALL	MENU__ISDISABLED
+;        RET	NZ
+;        ; Load active entry
+;        LD	A, (IX+Menu__selectedEntry_OFFSET)
+;        
+;        ADD	A, A ; Multiply by 2
+;        ; Load HL with base callback pointer
+;        LD	L, (IX+MENU_OFF_CALLBACKPTR)
+;        LD	H, (IX+MENU_OFF_CALLBACKPTR+1)
+;        ADD_HL_A
+;        LD	E, (HL)
+;        INC 	HL
+;        LD	D, (HL)
+;        PUSH	DE
+;        RET			; Jump to function handler. 
