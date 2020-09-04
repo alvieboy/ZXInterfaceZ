@@ -26,12 +26,15 @@ ENDLESS MACRO
 	_endless: JR _endless
 ENDM
 
-DEBUGSTR MACRO string
-	PUSH	HL
-	LD 	HL, _str
-        CALL 	DEBUGSTRING
-        POP	HL
-        JR	_endstr
-_str:	DB string, 0
-_endstr:
+SWAP_IX_HL MACRO
+	PUSH	IX
+        EX	(SP), HL
+        POP	IX 
 ENDM
+
+SWAP_IX_DE MACRO
+	PUSH	DE
+        EX	(SP), IX
+        POP	DE
+ENDM
+

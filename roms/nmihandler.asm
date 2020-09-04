@@ -1,4 +1,5 @@
 include "port_defs.asm"
+include "command_defs.asm"
 
 NMIHANDLER:
 	; Upon entry we already have AF on the stack.
@@ -80,11 +81,6 @@ lone:
         IN	A, (PORT_ULA)
         OUT	(C), A	   	; Ram: 0x4011
 
-        ; We are good to go.
-
-        LD	IY, IYBASE
-
-
         CALL	NMIPROCESS
 
 NMIRESTORE:
@@ -152,15 +148,50 @@ _l2:
         
 NMIPROCESS:
 	LD	A,0
-        LD	(IY+(FLAGS-IYBASE)),A
+        LD	(FLAGS),A
         
-        CALL	WIDGET__INIT
-        
-        LD	HL, NMIMENU__CLASSDEF
-        CALL	WIDGET__DISPLAY
+        ; Create menu window
 
-        CALL	WIDGET__LOOP
+
+        LD	HL, Screen_INST ; Need to set up parent pointer in advance
+        
+        
+        LD	IX, MainWindow_INST
+        LD	DE, $1C09 ; width=28, height=8
+        CALL	Menuwindow__CTOR
+        
+        LD	HL, MAINWINDOWTITLE
+        CALL	Window__setTitle
+        
+        ; Set menu entries
+        LD	A,  7
+        LD	HL, MAINMENU_ENTRIES
+        CALL	Menuwindow__setEntries
+        
+        LD	HL, NMIMENU_CALLBACK_TABLE
+        CALL	Menuwindow__setCallbackTable
+        
+        PUSH	IX
+        POP	HL
+        
+        ; Instantiate main screen @Screen_INST
+        LD	IX, Screen_INST
+        CALL	Screen__CTOR
+        ; Add window to screen (window in HL), centered.
+        CALL 	Screen__addWindowCentered
+
+        LD	IX, MainWindow_INST
+        VCALL	Widget__show
+        
+        LD	IX, Screen_INST
+        CALL	Screen__redraw
+        
+        CALL	Screen__eventLoop
+        
         JP	WAITFORNOKEY
+
+
+
 
 SNASAVE:
 	; For SNA we need to also populate alternative registers.
@@ -243,7 +274,7 @@ _leave:
         LD	A, $38
         CALL 	TEXTMESSAGE__CLEAR
         LD	HL, NMI_MENU
-        CALL	MENU__DRAW
+        ; TBD WIDGET ; CALL	MENU__DRAW
         RET
         ;RET
 _showdefault:
@@ -282,11 +313,12 @@ _l3:
 
 ; Returns NZ if we have a key
 CHECKKEY:
-	BIT	5,(IY+(FLAGS-IYBASE))	; test FLAGS  - has a new key been pressed ?
+        LD	HL, FLAGS
+	BIT	5,(HL)
 	RET	Z
 	LD	DE, (CURKEY)
 	LD	A, D
-	RES	5,(IY+(FLAGS-IYBASE))	; update FLAGS  - reset the new key flag.
+	RES	5,(HL)
         DEC	A
         RET	Z
         LD	A, E
@@ -294,11 +326,12 @@ CHECKKEY:
         
 WAITFORENTER:
 	CALL	KEYBOARD
-	BIT	5,(IY+(FLAGS-IYBASE))	; test FLAGS  - has a new key been pressed ?
+        LD	HL, FLAGS
+	BIT	5,(HL)
 	JR	Z, WAITFORENTER
 	LD	DE, (CURKEY)
 	LD	A, D
-	RES	5,(IY+(FLAGS-IYBASE))	; update FLAGS  - reset the new key flag.
+	RES	5,(HL)
         DEC	A
         JR	Z, WAITFORENTER ; Modifier key applied, skip
         LD	A, E
@@ -339,7 +372,7 @@ _waitfilename:
 
         ; Redraw menu
        	LD	HL, NMI_MENU
-        JP	MENU__DRAW
+        ; TBD WIDGET ; JP	MENU__DRAW
 
 SETUPASKFILENAME:
 	LD	IX, FILENAMEENTRYWIDGET
@@ -386,3 +419,49 @@ _r1:
 
 UNSPECIFIEDMSG: DB "Unspecified error", 0
 FILENAMETITLE:  DB "Save name", 0
+
+MAINWINDOWTITLE:
+	DB 	"ZX Interface Z", 0
+
+
+NMIENTRY1: DB	"Load snapshot..", 0
+NMIENTRY2: DB	"Save snapshot..", 0
+NMIENTRY3: DB	"Play tape...", 0
+NMIENTRY4: DB	"Poke...",0
+NMIENTRY5: DB	"Settings...", 0
+NMIENTRY6: DB	"Reset", 0
+NMIENTRY7: DB	"Exit", 0
+
+MAINMENU_ENTRIES:
+	DB	0
+        DW	NMIENTRY1
+	DB	0
+        DW	NMIENTRY2
+	DB	0
+        DW	NMIENTRY3
+	DB	0
+        DW	NMIENTRY4
+	DB	0
+        DW	NMIENTRY5
+	DB	0
+        DW	NMIENTRY6
+	DB	0
+        DW	NMIENTRY7
+
+LOADSNAPSHOT:
+;ASKFILENAME:
+LOADTAPE:
+NMIENTRY4HANDLER:
+NMIENTRY6HANDLER:
+Wrap_close_mainwindow:
+	DEBUGSTR "Called!!"
+	RET
+
+NMIMENU_CALLBACK_TABLE:
+	DEFW LOADSNAPSHOT       ; Load snapshot
+        DEFW ASKFILENAME        ; Save snapshot
+        DEFW LOADTAPE           ; Play tape
+        DEFW NMIENTRY4HANDLER	; Poke
+        DEFW Settings__show	; Settings
+        DEFW NMIENTRY6HANDLER	; Reset
+        DEFW Widget__destroyParent

@@ -1,3 +1,5 @@
+
+
 NMIMENU__HANDLEKEY:
 	LD	HL, NMI_MENU	
         CP	$26 	; A key
@@ -73,12 +75,6 @@ NMIMENU__SETUP:
         LD 	(IX+MENU_OFF_SELECTED_ENTRY), 0
         RET
 
-MOVE_HL_PAST_NULL:
-	LD	A,(HL)
-        OR	A
-        INC	HL
-        JR	NZ, MOVE_HL_PAST_NULL
-        RET
 
 LOADSNAPSHOT:
         LD	A, FILE_FILTER_SNAPSHOTS

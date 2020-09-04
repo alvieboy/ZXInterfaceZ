@@ -11,6 +11,11 @@ intz.rom: interfacez-rom.asm keyboard.asm sdcardmenu.asm textinput.asm textmessa
 		mainmenu.asm nmihandler.asm nmimenu.asm snaram.asm snarestore.asm resource.asm videomode.asm \
 		settingsmenu.asm widget.asm debug.asm \
 		port_defs.asm filechooser.asm frame.asm \
+		object.asm screen.asm widget_class.asm \
+		widgetcontainer.asm window.asm \
+		menuwindow.asm \
+		callbackmenu.asm \
+		bin.asm \
 		interfacez-sysvars.asm
 	pasmo -d --alocal interfacez-rom.asm $@ > $@.out
 	xxd -i $@ > interfacez_rom.c

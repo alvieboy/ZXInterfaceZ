@@ -60,16 +60,16 @@ _l1:
         LD	A, 30
         LD	(IX+FRAME_OFF_WIDTH), A
         LD	(IX+FRAME_OFF_NUMBER_OF_LINES), C 	; Max visible entries
-        LD	(IX+MENU_OFF_DATA_ENTRIES), B 		; Total number of entries
+        ; TBD LD	(IX+MENU_OFF_DATA_ENTRIES), B 		; Total number of entries
         LD	(IX+FRAME_OFF_TITLEPTR), LOW(WIFIAPMENUTITLE)
         LD	(IX+FRAME_OFF_TITLEPTR+1), HIGH(WIFIAPMENUTITLE)
 
 _l4:
 	INC	HL ;Move past entry flags for now
         LD	A, 0 ; Entry attribute
-        LD	(IX+MENU_OFF_FIRST_ENTRY), A
-	LD	(IX+MENU_OFF_FIRST_ENTRY+1), L
-        LD	(IX+MENU_OFF_FIRST_ENTRY+2), H
+        ; TBD WIDGET LD	(IX+MENU_OFF_FIRST_ENTRY), A
+	; TBD WIDGET LD	(IX+MENU_OFF_FIRST_ENTRY+1), L
+        ; TBD WIDGET LD	(IX+MENU_OFF_FIRST_ENTRY+2), H
         INC	IX
         INC	IX
         INC	IX
@@ -83,8 +83,8 @@ _l2:    LD	A, (HL)
         ; Show menu
         LD	HL, (WIFIAPMENU)
         LD	D, 5 ; line to display menu at.
-        CALL	MENU__INIT
-        CALL	MENU__DRAW
+        ; TBD WIDGET CALL	MENU__INIT
+        ; TBD WIDGET CALL	MENU__DRAW
         
         RET
         
@@ -144,7 +144,7 @@ _n3:
         ; TBD: this should be handled by state machine
         LD	A, $38
         LD	HL, (WIFIAPMENU)
-        CALL	MENU__CLEAR
+        ; TBD WIDGET CALL	MENU__CLEAR
         
         LD	A, STATE_MAINMENU
         JP	ENTERSTATE
@@ -158,7 +158,7 @@ PASSWDCANCEL:
         LD	(WIFIFLAGS), A
         
         LD	HL, (WIFIAPMENU)
-        JP 	MENU__DRAW
+        ; TBD WIDGET JP 	MENU__DRAW
 
 PASSWDFINISHED:
 
@@ -170,7 +170,7 @@ WIFIACTIVATE:
 	; Now, we need to iterate and find the entry "flags", which is one-byte before the 
         ; AP name.
         LD	IX,(WIFIAPMENU)
-        LD	A, (IX+MENU_OFF_SELECTED_ENTRY)
+        ; TBD WIDGET LD	A, (IX+MENU_OFF_SELECTED_ENTRY)
         LD	C, A
         ; Mul by 3
         ADD	A, A
@@ -179,8 +179,8 @@ WIFIACTIVATE:
         ADD_IX_A
         ; Ix is now offsetted.
         ; Load string pointer
-        LD	L, (IX+MENU_OFF_FIRST_ENTRY+1)
-        LD	H, (IX+MENU_OFF_FIRST_ENTRY+2)
+        ; TBD WIDGET LD	L, (IX+MENU_OFF_FIRST_ENTRY+1)
+        ; TBD WIDGET LD	H, (IX+MENU_OFF_FIRST_ENTRY+2)
 
         ; Go back one byte
         DEC	HL
@@ -216,7 +216,7 @@ WIFISENDCONFIG:
 	; Go back to main menu
         LD	HL, (WIFIAPMENU)
         LD	A, $38
-        CALL	MENU__CLEAR
+        ; TBD WIDGET CALL	MENU__CLEAR
         
         LD	A, STATE_MAINMENU
 	JP	ENTERSTATE
@@ -226,7 +226,7 @@ WIFIASKPASSWORD:
 	; Close menu.
         LD	HL, (WIFIAPMENU)
         LD	A, $38
-        CALL	MENU__CLEAR
+        ; TBD WIDGET CALL	MENU__CLEAR
 	; Create password input.
         LD	A, 2 
         LD	(WIFIFLAGS), A ; 2 - password entry
