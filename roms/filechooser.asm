@@ -1,24 +1,49 @@
 ; CLASS FileDialog
 
-FileDialog__SIZE 	EQU	Window__SIZE + CallbackMenu__SIZE
+DEFCLASS MACRO name, parent
+        ;name ## __SIZE	;EQU 1;parent ## __SIZE
+ENDM
+
+ENDCLASS MACRO
+ENDM
+
+DEFCLASS FileDialog Window
+
+ENDCLASS
+
+FileDialog__directoryList_OFFSET	EQU Window__SIZE
+FileDialog__menuinstance_OFFSET		EQU Window__SIZE+2
+FileDialog__SIZE 	EQU	(Window__SIZE + StringMenu__SIZE)
 
 
-include "filechooser_defs.asm"
+FileDialog__allocateDirectory:
+	JP	MALLOC
 
-FILECHOOSER__INIT:
-	LD	HL, HEAP
+FileDialog__CTOR:
+	; Init Window
+        
+        CALL	Window__CTOR
+
+	PUSH 	IX
+        ; Initialise menu
+        LD	BC, FileDialog__menuinstance_OFFSET
+        ADD	IX, BC
+        PUSH	IX
+        CALL	StringMenu__CTOR
+        POP	HL ; HL contains now the Menu pointer
+        POP	IX
+        CALL	Bin__setChild	; TAILCALL
+        POP	IX	; Get back our own pointer
+
         ; Load directory
 	LD	A, RESOURCE_ID_DIRECTORY
-        CALL	LOADRESOURCE
+        LD	HL, FileDialog__allocateDirectory
+        
+        CALL	LOADRESOURCE_ALLOCFUN
         JP	Z, INTERNALERROR
 	; HL points to "free" area after listing resource. 
         ; Use it to set up menu
-        PUSH	HL
-        POP	IX
-        
-        PUSH	HL ; Save for later
-        
-        LD	HL, HEAP
+
         ; Use at most 16 entries.
         LD	A, (HL) 	; Get number of dir. entries
         LD	B, A		; Save for later

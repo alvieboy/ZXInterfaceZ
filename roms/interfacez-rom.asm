@@ -215,6 +215,7 @@ INTERNALERROR:
 _endl1: HALT
 	JR _endl1
 
+        include	"debug.asm"
 	include "snaram.asm"
 	include "menu_defs.asm"
         include "frame.asm"
@@ -232,7 +233,6 @@ _endl1: HALT
         include	"graphics.asm"
         ;include "videomode.asm"
         include	"print.asm"
-        include	"debug.asm"
         include	"regdebug.asm"
 	include "keybtest.asm"
         ;include "widget.asm"
@@ -245,7 +245,10 @@ _endl1: HALT
         include "window.asm"
         include "menuwindow.asm"
         include "screen.asm"
-
+        include "utils.asm"
+        include "stringmenu.asm"
+        include "filechooser.asm"
+        
 	include "nmihandler.asm"
         include "settingsmenu.asm"
 
