@@ -1,1 +1,4 @@
 output_files/*.rbf
+*.o
+*~
+*.bak
