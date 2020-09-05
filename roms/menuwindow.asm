@@ -12,7 +12,7 @@ Menuwindow__CTOR:
 	
         CALL	Window__CTOR
 
-        CALL	Window__showScreenPtr
+        ;CALL	Window__showScreenPtr
 
         PUSH	IX
         
