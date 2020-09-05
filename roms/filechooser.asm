@@ -1,3 +1,8 @@
+; CLASS FileDialog
+
+FileDialog__SIZE 	EQU	Window__SIZE + CallbackMenu__SIZE
+
+
 include "filechooser_defs.asm"
 
 FILECHOOSER__INIT:

@@ -16,6 +16,7 @@ intz.rom: interfacez-rom.asm keyboard.asm sdcardmenu.asm textinput.asm textmessa
 		menuwindow.asm \
 		callbackmenu.asm \
 		bin.asm \
+		alloc.asm \
 		interfacez-sysvars.asm
 	pasmo -d --alocal interfacez-rom.asm $@ > $@.out
 	xxd -i $@ > interfacez_rom.c

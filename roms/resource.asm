@@ -21,6 +21,47 @@ WAITFIFO1:
         LD	A, C
         OUT	(PORT_CMD_FIFO_DATA), A
 	RET
+;
+; Inputs: 	A:  Resource ID
+;         	HL: Allocation function. This function will be called
+;		    after fetching the resource size in DE, should return
+;		    in HL the memory area to load the resource.
+; Returns:
+;		A:  Resource type, or $FF if not found
+;		DE: Resource size
+;		Z:  Zero if resource is invalid.
+;		HL points past last item received.
+
+; Corrupts:	HL, BC, F
+
+LOADRESOURCE_ALLOCFUN:
+
+	LD	B, A
+        XOR	A ; A=0
+        CALL 	WRITECMDFIFO	; Send "REQUEST_RESOURCE" command
+	LD	A, B		; Resource ID
+        CALL 	WRITECMDFIFO	
+        CALL	READRESFIFO
+        CP	$FF
+        RET	Z	; If invalid, return immediatly
+        
+        LD	C, A ; Save resource type in C
+
+        CALL	READRESFIFO        
+        LD	E, A 	; Resource size LSB
+
+        CALL	READRESFIFO
+        LD	D, A 	; Resource size MSB
+
+	PUSH	DE
+        
+        ; Call the alloc function. Need to set up return address first
+        PUSH	HL
+        LD	HL, WAITFIFO3
+        EX	(SP), HL
+        JP	(HL)
+        ; Continues in WAITFIFO3
+
 
 ;
 ; Inputs: 	A:  Resource ID
