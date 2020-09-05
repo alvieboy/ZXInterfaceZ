@@ -221,6 +221,7 @@ _endl1: HALT
         include "textinput.asm"
         include "textmessage.asm"
         include "string.asm"
+        include "alloc.asm"
         ;include "mainmenu.asm"
         ;include "wifimenu.asm"
         ;include "sdcardmenu.asm"
