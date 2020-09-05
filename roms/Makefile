@@ -24,3 +24,6 @@ loadscr.rom: loadscr-rom.asm pad
 	
 pad: pad.c
 	$(CC) -O2 pad.c -o pad
+
+clean:
+	@rm pad *.out interfacez_rom.c
