@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="197.37033mm"
+   height="23.634279mm"
+   viewBox="0 0 197.37033 23.634279"
+   version="1.1"
+   id="svg8"
+   inkscape:version="1.0 (4035a4fb49, 2020-05-01)"
+   sodipodi:docname="logo.svg">
+  <defs
+     id="defs2" />
+  <sodipodi:namedview
+     fit-margin-bottom="0"
+     fit-margin-right="0"
+     fit-margin-left="0"
+     fit-margin-top="0"
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="0.61720965"
+     inkscape:cx="826.21279"
+     inkscape:cy="165.44538"
+     inkscape:document-units="mm"
+     inkscape:current-layer="layer1"
+     inkscape:document-rotation="0"
+     showgrid="false"
+     inkscape:window-width="1920"
+     inkscape:window-height="1025"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1" />
+  <metadata
+     id="metadata5">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     transform="translate(-5.2744271,-9.5740311)"
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <g
+       aria-label="z"
+       id="text843"
+       style="font-size:10.5833px;line-height:1.25;font-family:SBCarbon-Regular;-inkscape-font-specification:SBCarbon-Regular;letter-spacing:0px;word-spacing:0px;stroke-width:0.264583"
+       transform="matrix(3.0510992,0,0,3.0510992,-85.886359,-165.81876)">
+      <path
+         d="m 84.829651,64.296021 h 9.736636 v -1.269996 h -8.46664 v -0.846664 l 8.46664,-1.058333 v -2.328323 h -9.736636 v 1.269996 h 8.46664 v 0.317497 l -8.46664,1.058334 z"
+         style="stroke-width:0.264583"
+         id="path845"
+         sodipodi:nodetypes="ccccccccccccc" />
+    </g>
+    <text
+       xml:space="preserve"
+       style="font-size:32.2907px;line-height:1.25;font-family:SBCarbon-Regular;-inkscape-font-specification:SBCarbon-Regular;letter-spacing:0px;word-spacing:0px;stroke-width:0.807269"
+       x="3.2852557"
+       y="23.701212"
+       id="text850"><tspan
+         sodipodi:role="line"
+         id="tspan848"
+         x="3.2852557"
+         y="23.701212"
+         style="font-style:normal;font-variant:normal;font-weight:500;font-stretch:normal;font-family:SirClive;-inkscape-font-specification:'SirClive Medium';stroke-width:0.807269">Interface</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:32.2907px;line-height:1.25;font-family:SBCarbon-Regular;-inkscape-font-specification:SBCarbon-Regular;letter-spacing:0px;word-spacing:0px;stroke-width:0.807269"
+       x="4.4671583"
+       y="31.593773"
+       id="text854"><tspan
+         sodipodi:role="line"
+         id="tspan852"
+         x="4.4671583"
+         y="31.593773"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12.9163px;font-family:SirClive;-inkscape-font-specification:SirClive;stroke-width:0.807269">for ZX Spectrum</tspan></text>
+  </g>
+</svg>
