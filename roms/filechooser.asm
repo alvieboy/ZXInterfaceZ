@@ -1,23 +1,19 @@
-; CLASS FileDialog
 
-DEFCLASS MACRO name, parent
-        ;name ## __SIZE	;EQU 1;parent ## __SIZE
-ENDM
 
-ENDCLASS MACRO
-ENDM
 
-DEFCLASS FileDialog Window
-
-ENDCLASS
-
-FileDialog__directoryList_OFFSET	EQU Window__SIZE
-FileDialog__menuinstance_OFFSET		EQU Window__SIZE+2
-FileDialog__SIZE 	EQU	(Window__SIZE + StringMenu__SIZE)
+FileDialog__directoryList_OFFSET	EQU Window__SIZE 	; Pointer
+FileDialog__menuEntries_OFFSET		EQU Window__SIZE+2 	; Pointer
+FileDialog__menuinstance_OFFSET		EQU Window__SIZE+4      ; StringMenu object
+FileDialog__SIZE 			EQU (Window__SIZE + StringMenu__SIZE + 4)
 
 
 FileDialog__allocateDirectory:
-	JP	MALLOC
+	CALL	MALLOC
+        ; Store pointer
+        LD (IX+FileDialog__directoryList_OFFSET), L
+        LD (IX+FileDialog__directoryList_OFFSET+1), H
+
+        RET
 
 FileDialog__CTOR:
 	; Init Window
@@ -33,6 +29,7 @@ FileDialog__CTOR:
         POP	HL ; HL contains now the Menu pointer
         POP	IX
         CALL	Bin__setChild	; TAILCALL
+
         POP	IX	; Get back our own pointer
 
         ; Load directory
@@ -40,41 +37,63 @@ FileDialog__CTOR:
         LD	HL, FileDialog__allocateDirectory
         
         CALL	LOADRESOURCE_ALLOCFUN
+        
         JP	Z, INTERNALERROR
-	; HL points to "free" area after listing resource. 
-        ; Use it to set up menu
-
-        ; Use at most 16 entries.
+	
+        LD	L, (IX+FileDialog__directoryList_OFFSET)
+        LD	H, (IX+FileDialog__directoryList_OFFSET+1)
         LD	A, (HL) 	; Get number of dir. entries
-        LD	B, A		; Save for later
+        LD	B, A
+        PUSH	BC		; Sabe entries in stack
         
-        LD	C, 15
         
-        INC	HL
-
-        ; 	Starts with directory. Use it for title
-        LD	(IX+FRAME_OFF_TITLEPTR), L
-        LD	(IX+FRAME_OFF_TITLEPTR+1), H
+        INC	HL		; HL now points to directory name
+        ; Set window title
+        CALL 	Window__setTitle
+        
         CALL	MOVE_HL_PAST_NULL ; 	Move until we get the null
 
-	XOR 	A
-        LD	(IX+MENU_OFF_SELECTED_ENTRY), A
-
-        ; Now, setup menu at IX
-        LD	A, 24
-        LD	(IX+FRAME_OFF_WIDTH), A
-        LD	(IX+FRAME_OFF_NUMBER_OF_LINES), C 	; Max visible entries
-        LD	(IX+MENU_OFF_DATA_ENTRIES), B 		; Total number of entries
+	POP	BC
+        PUSH	BC
+        
+        ; Each entry is 3 bytes. 
+        PUSH	HL	; Save entries pointer
+        LD	E, B
+        LD	D, 0
+        LD	HL, 0
+        ADD	HL, DE
+        ADD	HL, DE
+        ADD	HL, DE ; * 3
+        EX	DE, HL
+        ; DE now contains the memory we need for entries.
+        ; Allocate memory
+        CALL	MALLOC
+        ; Store the pointer 
+        LD	(IX+FileDialog__menuEntries_OFFSET), L
+        LD	(IX+FileDialog__menuEntries_OFFSET+1), H
+        ; Save it in DE
+        EX	DE, HL
+        POP	HL	; Get back the directory entries
+        
+        POP	BC	; Restore number of entries
+        PUSH	BC	; Keep it in stack, though
+        
         ; HL points to 1st entry.
 _l4:
-	INC	HL ;Move past entry flags for now
-        LD	A, 0 ; Entry attribute
-        LD	(IX+MENU_OFF_FIRST_ENTRY), A
-	LD	(IX+MENU_OFF_FIRST_ENTRY+1), L
-        LD	(IX+MENU_OFF_FIRST_ENTRY+2), H
-        INC	IX
-        INC	IX
-        INC	IX
+	LD	A, (HL)
+        INC	HL 
+        ; Setup attribute in bits 7-1. Bit 0 reserved for "active"
+        SLA	A
+        
+        LD	(DE), A
+	INC 	DE
+        LD	A, L
+        LD	(DE), A
+        INC	DE
+        LD	A, H
+	LD 	(DE), A
+        INC 	DE
+        
         ; Now, scan for NULL termination
 _l2:    LD	A, (HL)
         OR	A
@@ -84,30 +103,41 @@ _l2:    LD	A, (HL)
 
         DJNZ	_l4
 
-	POP	HL	; Restore menu pointer
+	POP	BC
+        
+	; We now correcly set up the menu entries
+        ; Set up menu accordingly
+        LD	A, B	; Number of entries
+        LD	L, (IX+FileDialog__menuEntries_OFFSET)
+        LD	H, (IX+FileDialog__menuEntries_OFFSET+1)
+        
+        PUSH	IX
+        LD	BC, FileDialog__menuinstance_OFFSET
+        ADD	IX, BC
+	CALL	Menu__setEntries
+        POP	IX
 
-        LD	D, 5 ; line to display menu at.
-        JP	MENU__INIT	; TAILCALL
-
-
-FILECHOOSER__HANDLEKEY:
-        CP	$26 	; A key
-        JP	Z, MENU__CHOOSENEXT
-        CP	$25     ; Q key
-        JP	Z, MENU__CHOOSEPREV
-        CP	$21     ; ENTER key
-        JR	Z, FILECHOOSER__FILESELECTED
-	; Check for cancel
-       	LD	DE,(CURKEY) ; Don't think is needed.
-        LD	A, D
-        CP	$27
-        RET	NZ
-        LD	A, E
-        CP	$20
-        RET	NZ
-        ; Cancel choosen.
-        JP	WIDGET__CLOSE
-
+        RET
+        
+        
+FileDialog__destroy:
+	; Delete the computed memory area
+        LD	L, (IX+FileDialog__menuEntries_OFFSET)
+        LD	H, (IX+FileDialog__menuEntries_OFFSET+1)
+        CALL	FREE
+        ; Delete the allocated memory for directory
+        LD	L, (IX+FileDialog__directoryList_OFFSET)
+        LD	H, (IX+FileDialog__directoryList_OFFSET+1)
+        CALL	FREE
+	RET
+        
+FileDialog__setFunctionHandler:
+        PUSH	IX
+        LD	BC, FileDialog__menuinstance_OFFSET
+        ADD	IX, BC
+	CALL	StringMenu__setFunctionHandler
+        POP	IX
+        RET
 
 FILECHOOSER__FILESELECTED:
 	PUSH	HL

@@ -28,6 +28,7 @@ Menuwindow__CTOR:
 
 	RET
         
+        ; SetEntries: A - number of entries, HL: pointer to entries
 Menuwindow__setEntries:
         PUSH	IX
         LD	BC, Menuwindow__menuinstance_OFFSET
