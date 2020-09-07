@@ -61,14 +61,30 @@ bool wifi__issta()
 }
 
 static uint32_t wifi__config_get_ip() { return nvs__u32("ip", U32_IP_ADDR(192, 168, 120, 1)); }
-static uint32_t wifi__config_get_gw() { return nvs__u32("gw", U32_IP_ADDR(192, 168, 120, 1)); }
+static uint32_t wifi__config_get_gw() { return nvs__u32("gw", U32_IP_ADDR(0,0,0,0)); }
 static uint32_t wifi__config_get_netmask() { return nvs__u32("mask", U32_IP_ADDR(255,255,255,0)); }
+
+static void setup_mdns()
+{
+    char hostname[64];
+
+    ESP_ERROR_CHECK(mdns_init());
+    nvs__str("hostname",hostname,sizeof(hostname),"interfacez.local");
+    ESP_ERROR_CHECK(mdns_instance_name_set("ZX InterfaceZ"));
+
+    ESP_ERROR_CHECK(mdns_hostname_set("interfacez"));
+
+    ESP_ERROR_CHECK(mdns_service_add(NULL, "_http", "_tcp", 80, NULL, 0));
+    ESP_ERROR_CHECK(mdns_service_instance_name_set("_http", "_tcp", "XZ InterfaceZ Web Interface"));
+
+    ESP_ERROR_CHECK(mdns_service_add(NULL, "_zxictrl", "_tcp", BUFFER_PORT, NULL, 0));
+    ESP_ERROR_CHECK(mdns_service_instance_name_set("_zxictrl", "_tcp", "XZ InterfaceZ Control Interface"));
+}
 
 static void ip_event_handler(void* arg, esp_event_base_t event_base,
                              int32_t event_id, void* event_data)
 
 {
-    char hostname[64];
     ip_event_got_ip_t* event;
 
     switch (event_id) {
@@ -78,10 +94,7 @@ static void ip_event_handler(void* arg, esp_event_base_t event_base,
         xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
         led__set(LED2, 1);
 
-        ESP_ERROR_CHECK(mdns_init());
-        nvs__str("hostname",hostname,sizeof(hostname),"interfacez.local");
-        ESP_ERROR_CHECK(mdns_instance_name_set("ZX InterfaceZ"));
-
+        setup_mdns();
 
         break;
     default:
@@ -95,7 +108,6 @@ static void wifi__parse_scan();
 static void wifi_event_handler(void* arg, esp_event_base_t event_base,
                                int32_t event_id, void* event_data)
 {
-    char hostname[64];
     if (event_base != WIFI_EVENT)
         return;
 
@@ -131,9 +143,7 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,
         break;
     case WIFI_EVENT_AP_START:
         ESP_LOGI(TAG,"WiFi AP started");
-        ESP_ERROR_CHECK(mdns_init());
-        nvs__str("hostname",hostname,sizeof(hostname),"interfacez.local");
-        ESP_ERROR_CHECK(mdns_instance_name_set(hostname));
+        setup_mdns();
         break;
     default:
         ESP_LOGW(TAG,"Unhandled WIFI event %d", event_id);
