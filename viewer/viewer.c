@@ -8,7 +8,7 @@
 #include <errno.h>
 #include <assert.h>
 
-#if 1 //def __arm__
+#ifdef __arm__
 #define FULLSCREEN
 #endif
 #define MAX_FRAME_PAYLOAD 2048
@@ -604,6 +604,8 @@ int request_data(const char *ip)
 
 }
 
+char *ip_address;
+
 void run(int w, int h, int zoom)
 {
     open_window(w,h, zoom);
@@ -621,7 +623,8 @@ void run(int w, int h, int zoom)
         exit -1;
     }
 
-    request_data("192.168.1.194");
+    request_data(ip_address);
+
     while (1) {
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
@@ -762,6 +765,10 @@ int main(int argc, char **argv)
 {
     SDL_DisplayMode current;
     struct SDL_SysWMinfo wminfo;
+
+    if (argc<2)
+        return -1;
+    ip_address = argv[1];
 
     SDL_Init(SDL_INIT_VIDEO);
 
