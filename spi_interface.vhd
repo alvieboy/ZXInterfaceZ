@@ -205,6 +205,8 @@ architecture beh of spi_interface is
   signal dat_valid_s  : std_logic;
 
   signal csn_s        : std_logic;
+  signal vidmem_en_r  : std_logic;
+  signal vidmem_data_r: std_logic_vector(7 downto 0);
 begin
 
   vidmem_adr_o <= std_logic_vector(vid_addr_r);
@@ -316,6 +318,7 @@ begin
       memsel_we_r   <= '0';
       romsel_we_r   <= '0';
       memromsel_r   <= (others => 'X');
+      vidmem_en_r   <= '0';
 
       txload_s      <= '0';
 
@@ -554,12 +557,14 @@ begin
           txden_s <= '1';
 
         when RDVIDMEM1 =>
+          txload_s <= dat_valid_s;
           if dat_valid_s='1' then
             vid_addr_r(12 downto 8) <= unsigned(dat_s(4 downto 0));
             state_r <= RDVIDMEM2;
           end if;
 
         when RDVIDMEM2 =>
+          txload_s <= dat_valid_s;
           if dat_valid_s='1' then
             vid_addr_r(7 downto 0) <= unsigned(dat_s);
             state_r <= RDVIDMEM;
@@ -567,12 +572,14 @@ begin
           end if;
 
         when RDVIDMEM =>
-          txload_s <= dat_valid_s;
+          txload_s <= '1';
+          txden_s <= '1';
+          txdat_s <= vidmem_data_i;
+
 
           if dat_valid_s='1' then
-            txden_s <= '1';
-            txdat_s <= vidmem_data_i;
-            vid_addr_r <= vid_addr_r + 1;
+            vidmem_en_r <= '1';
+            --vid_addr_r <= vid_addr_r + 1;
           end if;
 
         when SETFLAGS1 =>
@@ -751,6 +758,11 @@ begin
           end if;
         when others =>
       end case;
+
+      if vidmem_en_r='1' then
+        --vidmem_data_r <= vidmem_data_i;
+        vid_addr_r <= vid_addr_r + 1;
+      end if;
 
     end if; -- rising_edge
   end process;
