@@ -195,8 +195,10 @@ static void videostreamer__server_task(void *pvParameters)
                     memcpy(fb_prev, fb, sizeof(fb_prev));
                     fpga__get_framebuffer(fb);
                     if (client_socket>0) {
-                        ESP_LOGI(TAG, "Sending frames seq %d", seqno);
-                        int r = fill_and_send_frames( client_socket, seqno, &fb[4], &fb_prev[4]);
+                        if ((seqno & 0x3F)==0x00) {
+                            ESP_LOGI(TAG, "Sending frames seq %d", seqno);
+                        }
+                        int r = fill_and_send_frames( client_socket, seqno, fb, fb_prev);
                         if (r<0) {
                             error_counter++;
                         } else {
@@ -235,6 +237,10 @@ int videostreamer__start_stream(struct in_addr addr, uint16_t port)//command_t *
     int r = -1;
 
     do {
+        if (client_socket>0)
+            close(client_socket);
+        client_socket = -1;
+
         // create socket.
         int tsock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 
