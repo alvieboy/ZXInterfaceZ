@@ -475,7 +475,7 @@ static void netcmd__server_task(void *pvParameters)
         }
         ESP_LOGI(TAG, "Socket bound, port %d", CMD_PORT);
 
-        err = listen(listen_sock, 1);
+        err = listen(listen_sock, 4);
         if (err != 0) {
             ESP_LOGE(TAG, "Error occurred during listen: errno %d", errno);
             break;
@@ -518,6 +518,7 @@ static void netcmd__server_task(void *pvParameters)
 
             shutdown(sock,3);
             close(sock);
+            ESP_LOGI(TAG, "Socket closed");
             sock = -1;
         }
     }
