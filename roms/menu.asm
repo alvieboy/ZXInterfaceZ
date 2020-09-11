@@ -23,6 +23,8 @@ Menu__handleEvent:
         JP	Z, Menu__choosePrev
         CP	$21     ; ENTER key
         JR	NZ, _n3
+        DEBUGSTR "Activate entry\n"
+        LD	A, (IX+Menu__selectedEntry_OFFSET)
         VCALL	Menu__activateEntry
 _n3:
 	RET
@@ -76,10 +78,7 @@ Menu__clear:
 Menu__drawImpl:
 	DEBUGSTR	"Redrawing menu\n"
         CALL 	MENU__UPDATESELECTION
-        ; Draw contents
-        LD	E, (IX+Widget__screenptr_OFFSET)
-        LD	D, (IX+Widget__screenptr_OFFSET+1)
-        JP	MENU__DRAWCONTENTS
+        JP	MENU__DRAWCONTENTS_NO_DE
 
 FILLSLINE:     
 	PUSH	BC
@@ -162,8 +161,8 @@ L8:
 MENU__DRAWCONTENTS_NO_DE:
 	LD	E, (IX+Widget__screenptr_OFFSET)
         LD	D, (IX+Widget__screenptr_OFFSET+1)
-        INC	DE
-MENU__DRAWCONTENTS:   	; Call this instead if you already have DE pointing to the correct place.
+        ;INC	DE
+;MENU__DRAWCONTENTS:   	; Call this instead if you already have DE pointing to the correct place.
 
 
 	DEBUGSTR "Drawing menu contents ";
@@ -194,6 +193,8 @@ _s:
         
 	DEBUGSTR " > first ptr "
         DEBUGHEXHL
+	DEBUGSTR " > DE "
+        DEBUGHEXDE
 
 MD2:
         PUSH	BC
@@ -201,6 +202,9 @@ MD2:
 	PUSH	DE
         ; Load entry attributes - TBD
         LD	A, (HL)
+        DEBUGSTR " > Attr "
+        DEBUGHEXA
+        
         INC 	HL
         ; We only have BC available here. Use it to load
         ; function pointer
@@ -222,10 +226,12 @@ MD2:
         RET	; THIS IS A CALL!
         
 RETFROMDRAW:       
-
+        DEBUGSTR "Entry redrawn\n"
         POP	DE
         POP	BC
-
+        DEBUGSTR "Loop to go "
+        DEBUGHEXB
+        
         DJNZ	MD2
         
         ; We may need empty entries if we are short.

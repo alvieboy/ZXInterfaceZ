@@ -216,11 +216,10 @@ _endl1: HALT
 	JR _endl1
 
         include	"debug.asm"
-	include "snaram.asm"
 	include "menu_defs.asm"
-        include "frame.asm"
-        include "textinput.asm"
-        include "textmessage.asm"
+        ;include "frame.asm"
+        ;include "textinput.asm"
+        ;include "textmessage.asm"
         include "string.asm"
         include "alloc.asm"
         ;include "mainmenu.asm"
@@ -246,12 +245,12 @@ _endl1: HALT
         include "menuwindow.asm"
         include "screen.asm"
         include "utils.asm"
-        include "stringmenu.asm"
+        include "indexedmenu.asm"
         include "filechooser.asm"
         
 	include "nmihandler.asm"
         include "settingsmenu.asm"
-
+	include "snaram.asm"
        ; include "filechooser.asm"
        
                ; 00000000001111111111222222222233
