@@ -17,8 +17,8 @@ StringMenu__SIZE 		EQU	Menu__SIZE+2
 
 
 StringMenu_V__activateEntry:
-	UNIMPLEMENTED
-	RET        
+       ; UNIMPLEMENTED
+	RET
         
 StringMenu__CTOR:
 	;LD 	(IX+StringMenu__cbtable_OFFSET),  0

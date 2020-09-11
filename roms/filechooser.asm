@@ -3,35 +3,49 @@
 
 FileDialog__directoryList_OFFSET	EQU Window__SIZE 	; Pointer
 FileDialog__menuEntries_OFFSET		EQU Window__SIZE+2 	; Pointer
-FileDialog__menuinstance_OFFSET		EQU Window__SIZE+4      ; StringMenu object
-FileDialog__SIZE 			EQU (Window__SIZE + StringMenu__SIZE + 4)
+FileDialog__menuinstance_OFFSET		EQU Window__SIZE+4      ; IndexedMenu object
+FileDialog__SIZE 			EQU (Window__SIZE + IndexedMenu__SIZE + 4)
 
 
 FileDialog__allocateDirectory:
+
 	CALL	MALLOC
         ; Store pointer
         LD (IX+FileDialog__directoryList_OFFSET), L
         LD (IX+FileDialog__directoryList_OFFSET+1), H
-
+	DEBUGSTR "Allocated bytes at "
+        DEBUGHEXHL
         RET
 
 FileDialog__CTOR:
 	; Init Window
+        DEBUGSTR "Enter FileChooser__CTOR "
+        DEBUGHEXSP
         
         CALL	Window__CTOR
 
 	PUSH 	IX
-        ; Initialise menu
-        LD	BC, FileDialog__menuinstance_OFFSET
-        ADD	IX, BC
-        PUSH	IX
-        CALL	StringMenu__CTOR
-        POP	HL ; HL contains now the Menu pointer
+        ; Save in DE, needed for setFunctionHandler
+        POP	DE
+        PUSH	DE
+        
+         ; Initialise menu
+         LD	BC, FileDialog__menuinstance_OFFSET
+         ADD	IX, BC
+         PUSH	IX
+          CALL	IndexedMenu__CTOR
+          LD	HL, FileDialog__entrySelectedWrapper
+          ; original IX in DE
+          CALL	IndexedMenu__setFunctionHandler
+
+
+         POP	HL ; HL contains now the Menu pointer
         POP	IX
         CALL	Bin__setChild	; TAILCALL
 
-        POP	IX	; Get back our own pointer
+        ;POP	IX	; Get back our own pointer
 
+FileDialog__loadDirectory_LABEL:
         ; Load directory
 	LD	A, RESOURCE_ID_DIRECTORY
         LD	HL, FileDialog__allocateDirectory
@@ -42,14 +56,20 @@ FileDialog__CTOR:
 	
         LD	L, (IX+FileDialog__directoryList_OFFSET)
         LD	H, (IX+FileDialog__directoryList_OFFSET+1)
+        DEBUGSTR "Number of entries "
         LD	A, (HL) 	; Get number of dir. entries
+
+	DEBUGHEXA
+        
         LD	B, A
         PUSH	BC		; Sabe entries in stack
         
         
         INC	HL		; HL now points to directory name
         ; Set window title
+        PUSH	HL
         CALL 	Window__setTitle
+        POP	HL
         
         CALL	MOVE_HL_PAST_NULL ; 	Move until we get the null
 
@@ -78,6 +98,8 @@ FileDialog__CTOR:
         POP	BC	; Restore number of entries
         PUSH	BC	; Keep it in stack, though
         
+
+
         ; HL points to 1st entry.
 _l4:
 	LD	A, (HL)
@@ -93,6 +115,9 @@ _l4:
         LD	A, H
 	LD 	(DE), A
         INC 	DE
+
+	DEBUGSTR "Entry "
+        DEBUGHEXHL
         
         ; Now, scan for NULL termination
 _l2:    LD	A, (HL)
@@ -104,7 +129,7 @@ _l2:    LD	A, (HL)
         DJNZ	_l4
 
 	POP	BC
-        
+        DEBUGSTR	"Adding entries\n"
 	; We now correcly set up the menu entries
         ; Set up menu accordingly
         LD	A, B	; Number of entries
@@ -117,10 +142,15 @@ _l2:    LD	A, (HL)
 	CALL	Menu__setEntries
         POP	IX
 
+        DEBUGSTR	"FileChooser__CTOR done "
+        DEBUGHEXSP
+        
         RET
         
         
 FileDialog__destroy:
+	; Fallback 
+FileDialog__freeAreas:
 	; Delete the computed memory area
         LD	L, (IX+FileDialog__menuEntries_OFFSET)
         LD	H, (IX+FileDialog__menuEntries_OFFSET+1)
@@ -135,84 +165,81 @@ FileDialog__setFunctionHandler:
         PUSH	IX
         LD	BC, FileDialog__menuinstance_OFFSET
         ADD	IX, BC
-	CALL	StringMenu__setFunctionHandler
+	CALL	IndexedMenu__setFunctionHandler
         POP	IX
         RET
 
-FILECHOOSER__FILESELECTED:
+FileDialog__entrySelectedWrapper:
+	DEBUGSTR "entrySelectedWrapper "
+        DEBUGHEXIX
 	PUSH	HL
         POP	IX
+        JR	FileDialog__fileSelected
+
+FileDialog__fileSelected:
+	; IX is dialog!
+        
         ; 	Find entry.
-        LD	B, (IX+MENU_OFF_SELECTED_ENTRY)
-        LD	HL, HEAP
-        ; 	Move past number of entries
-        INC	HL
-        ;	Move past title
-        CALL	MOVE_HL_PAST_NULL ; 	Move until we get the null
-_scanentry:
-	XOR	A
-        OR	B
-	JR	Z, _entryfound
-        DEC	B
-        INC	HL ; Move past entry flags
-        CALL	MOVE_HL_PAST_NULL ; 	Move until we get the null
-        JR	_scanentry
+        ;LD	A, (IX+Menu__selectedEntry_OFFSET)
+        DEBUGSTR "Entry "
+        DEBUGHEXA
+        ADD	A, A
+        LD	B, A
+        LD	C, 0
+        
+        ;	Get entry from the directory list.
+        LD	L, (IX+FileDialog__menuEntries_OFFSET)
+        LD	H, (IX+FileDialog__menuEntries_OFFSET+1)
+        ADD	HL, BC
+        DEBUGSTR "Check entry "
+        DEBUGHEXHL
+        
+	; 	Load this entry flags
+        LD	A, (HL)
+        DEBUGHEXA
+	SRL	A	; Get flags (shift right)
         
 _entryfound:
 	; See if it is a directory or a file. 01: dir, 00: file
-        LD	A,(HL)
         INC	HL ; Move to entry name
-        OR	A
         JR	Z, _entryisfile
         ; Entry is a directory.
-        ; Send CHDIR command
+
+	; Free up space for the menu entries
+        PUSH	HL
+        CALL	FileDialog__freeAreas
+	POP	HL
+        
+        ; HL is a pointer.
+
+	LD	A,(HL)
+        INC	HL
+        LD	H,(HL)
+        LD	L, A
+        
+	DEBUGSTR "Chdir to "
+        DEBUGHEXHL
+        DEBUGSTRHL
+        
         LD	A, CMD_CHDIR
         CALL	WRITECMDFIFO
         CALL	WRITECMDSTRING
-        
-        ; Re-init widget. Note that this might call the idle function
+
+        ; Re-init listing widget. Note that this might call the idle function
         ; with a wrong instance pointer.
 
-        ; Save local callback function
-        LD	E, (IX+FILECHOOSER_OFF_SELECTCB)
-        LD	D, (IX+FILECHOOSER_OFF_SELECTCB+1)
         
-        ;        
-        CALL	WIDGET__CLOSENOREDRAW
-        ;
-        LD	HL, FILECHOOSER__CLASSDEF
-        PUSH	DE
-        CALL	WIDGET__DISPLAY
-        
-        CALL	WIDGET__GETCURRENTINSTANCE
-
-        POP	DE
-        PUSH	HL
-        POP	IX
-
-        LD	(IX+FILECHOOSER_OFF_SELECTCB),E
-        LD	(IX+FILECHOOSER_OFF_SELECTCB+1),D
+	CALL	FileDialog__loadDirectory_LABEL
+        ; Force redraw
+        VCALL	Widget__draw
         RET
         
 _entryisfile:
-	; Original filename in HL
-        LD	E, (IX+FILECHOOSER_OFF_SELECTCB)
-        LD	D, (IX+FILECHOOSER_OFF_SELECTCB+1)
-        PUSH	DE
+	ENDLESS
         RET		; JP (DE)
 
-FILECHOOSER__SETSELECTCALLBACK:
-	; in DE
-        PUSH	HL
-        POP	IX
-        
-        LD	(IX+FILECHOOSER_OFF_SELECTCB), E
-        LD	(IX+FILECHOOSER_OFF_SELECTCB+1), D
 
-        RET	
-        
-
-FILECHOOSER__SETFILTER:
+FileChooser__setFilter:
         PUSH	AF
 	LD	A, CMD_SET_FILE_FILTER
         CALL	WRITECMDFIFO
@@ -220,10 +247,3 @@ FILECHOOSER__SETFILTER:
         JP	WRITECMDFIFO	; TAILCALL
 
 
-
-FILECHOOSER__CLASSDEF:
-	DEFW	FILECHOOSER__INIT	; Init
-        DEFW	WIDGET__IDLE	; Idle
-        DEFW	FILECHOOSER__HANDLEKEY    ; Keyboard handler
-        DEFW	MENU__DRAW	; Draw
-        DEFW	MENU__GETBOUNDS

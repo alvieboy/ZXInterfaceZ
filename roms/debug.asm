@@ -236,3 +236,11 @@ _str:	DB string, 0
 _endstr:
 ENDIF
 ENDM
+
+DEBUGSTRHL MACRO string
+IF DEBUGENABLED
+	PUSH	HL
+        CALL 	DEBUGSTRING
+        POP	HL
+ENDIF
+ENDM

@@ -66,6 +66,7 @@ DEFVAR  Screen_INST, 	Screen__SIZE
 
 DEFVAR  MainWindow_INST, Menuwindow__SIZE
 DEFVAR  SettingsWindow_INST, Menuwindow__SIZE
+DEFVAR  FileWindow_INST, FileDialog__SIZE
 
 DEFVAR  ALLOC_ENDPTR, 2
 

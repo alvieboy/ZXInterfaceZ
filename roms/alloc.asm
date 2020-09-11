@@ -5,9 +5,12 @@ ALLOC__INIT:
         OUT	(C), A
 
 	LD	HL, HEAP
-        LD	(HL), LOW(ALLOC_ENDPTR)
-        INC	HL
-        LD	(HL), HIGH(ALLOC_ENDPTR)
+        ;LD	(HL), LOW(ALLOC_ENDPTR)
+        ;INC	HL
+        ;LD	(HL), HIGH(ALLOC_ENDPTR)
+        LD	(ALLOC_ENDPTR), HL
+        DEBUGSTR "Alloc init "
+        DEBUGHEXHL
         RET
 
 
@@ -18,6 +21,8 @@ ALLOC__INIT:
 MALLOC:
        	; Check for space. TBD
         LD	HL, (ALLOC_ENDPTR)
+        DEBUGSTR "Alloc end "
+        DEBUGHEXHL
         ; Store size 
         LD	(HL), E
         INC	HL

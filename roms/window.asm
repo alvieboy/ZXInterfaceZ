@@ -22,6 +22,7 @@ Window__VTABLE:
         DEFW	Bin__handleEvent     	; Widget::handleEvent
         DEFW	Bin__removeChild	; WidgetGroup::removeChild
         DEFW	Window__resizeEvent     ; Bin::resizeEvent
+
 ; Constructor
 Window__CTOR:
         ; Save screen pointer.
