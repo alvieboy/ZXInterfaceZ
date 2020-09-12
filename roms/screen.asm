@@ -134,12 +134,30 @@ _drawnext:
         POP	BC
         POP	IX
         RET
+
+Screen__hasKbdEvent:
+	CALL	KEYBOARD
+                  
+	LD	HL, FLAGS
+
+	BIT	5, (HL)   ; test FLAGS  - has a new key been pressed ?
+	RET	Z
+                
+	LD	DE, (CURKEY)
+	LD	A, D
+        LD	HL, FLAGS
+	RES	5, (HL)	; update FLAGS  - reset the new key flag.
+        DEC	A
+        RET	Z 	; Modifier key applied, skip
+        LD	A, E
+        RET ; NZ
         
 Screen__eventLoop:
 
         LD	A, (IX+Screen__numwindows_OFFSET)
 	CP	0
         RET	Z	       	; No more widgets
+        
         ; Keyboard scan
         
 	CALL	KEYBOARD
@@ -158,7 +176,6 @@ Screen__eventLoop:
         LD	A, E
 
 	PUSH 	IX
-        
         PUSH	BC
         LD	BC, Screen__windows_OFFSET
         LD	A, (IX+Screen__numwindows_OFFSET)

@@ -5,7 +5,7 @@
 IndexedMenu__VTABLE:
 	DEFW	Widget_V__DTOR
 	DEFW	Widget_V__draw
-        DEFW	Widget_V__show
+        DEFW	Widget_V__setVisible
         DEFW	Widget_PV__resize
         DEFW	Menu__drawImpl
         DEFW	Menu__handleEvent     	; Widget::handleEvent
