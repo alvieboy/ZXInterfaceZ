@@ -246,6 +246,7 @@ _endl1: HALT
         include "screen.asm"
         include "utils.asm"
         include "indexedmenu.asm"
+        include "dialog.asm"
         include "filechooser.asm"
         
 	include "nmihandler.asm"

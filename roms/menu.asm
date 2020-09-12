@@ -26,7 +26,18 @@ Menu__handleEvent:
         DEBUGSTR "Activate entry\n"
         LD	A, (IX+Menu__selectedEntry_OFFSET)
         VCALL	Menu__activateEntry
-_n3:
+_n3:    
+	LD	DE,(CURKEY) ; Don't think is needed.
+        LD	A, D
+        CP	$27
+        RET	NZ
+        LD	A, E	
+        CP	$20
+        RET	NZ
+        ; Cancel pressed.
+        LD	A, $FF
+        VCALL	Menu__activateEntry
+        
 	RET
 
 Menu_V__activateEntry:

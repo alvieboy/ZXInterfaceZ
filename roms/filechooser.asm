@@ -1,11 +1,34 @@
 
 
 
-FileDialog__directoryList_OFFSET	EQU Window__SIZE 	; Pointer
-FileDialog__menuEntries_OFFSET		EQU Window__SIZE+2 	; Pointer
-FileDialog__menuinstance_OFFSET		EQU Window__SIZE+4      ; IndexedMenu object
-FileDialog__SIZE 			EQU (Window__SIZE + IndexedMenu__SIZE + 4)
+FileDialog__directoryList_OFFSET	EQU Dialog__SIZE 	; Pointer
+FileDialog__menuEntries_OFFSET		EQU Dialog__SIZE+2 	; Pointer
+FileDialog__menuinstance_OFFSET		EQU Dialog__SIZE+4      ; IndexedMenu object
+FileDialog__SIZE 			EQU (Dialog__SIZE + IndexedMenu__SIZE + 4)
 
+FileDialog__getSelectionString:
+        
+        LD	B, 0
+        LD	C, (IX+FileDialog__menuinstance_OFFSET + Menu__selectedEntry_OFFSET)
+        
+        ;	Get entry from the directory list.
+        LD	L, (IX+FileDialog__menuEntries_OFFSET)
+        LD	H, (IX+FileDialog__menuEntries_OFFSET+1)
+        ADD	HL, BC
+        ADD	HL, BC
+        ADD	HL, BC   
+        
+        DEBUGSTR "Entry HL "
+        DEBUGHEXHL
+        
+        INC	HL
+        LD	A, (HL)
+        INC	HL
+        LD	H, (HL)
+        LD	L, A
+        DEBUGSTR "STR HL "
+        DEBUGHEXHL
+        RET
 
 FileDialog__allocateDirectory:
 
@@ -171,10 +194,22 @@ FileDialog__setFunctionHandler:
 
 FileDialog__entrySelectedWrapper:
 	DEBUGSTR "entrySelectedWrapper "
-        DEBUGHEXIX
+        DEBUGHEXA
 	PUSH	HL
         POP	IX
+        ; If $FF, then we "canceled"
+        CP	$FF
+        JR	Z, FileDialog__cancel
         JR	FileDialog__fileSelected
+
+; User canceled load.
+FileDialog__cancel:
+	LD	A, $FF
+	LD	(IX+Dialog__result_OFFSET), A
+        LD	A, 0
+        VCALL	Widget__setVisible
+        RET
+        
 
 FileDialog__fileSelected:
 	; IX is dialog!
@@ -183,13 +218,15 @@ FileDialog__fileSelected:
         ;LD	A, (IX+Menu__selectedEntry_OFFSET)
         DEBUGSTR "Entry "
         DEBUGHEXA
-        ADD	A, A
-        LD	B, A
-        LD	C, 0
+        
+        LD	B, 0
+        LD	C, A
         
         ;	Get entry from the directory list.
         LD	L, (IX+FileDialog__menuEntries_OFFSET)
         LD	H, (IX+FileDialog__menuEntries_OFFSET+1)
+        ADD	HL, BC
+        ADD	HL, BC
         ADD	HL, BC
         DEBUGSTR "Check entry "
         DEBUGHEXHL
@@ -235,15 +272,26 @@ _entryfound:
         RET
         
 _entryisfile:
-	ENDLESS
+        ; Hide
+        LD	A, 0
+	LD	(IX+Dialog__result_OFFSET), A
+        ; A used here as 0 too
+        VCALL	Widget__setVisible
+        DEBUGSTR "Dialog hidden\n"
         RET		; JP (DE)
 
 
-FileChooser__setFilter:
+FileDialog__setFilter:
         PUSH	AF
 	LD	A, CMD_SET_FILE_FILTER
         CALL	WRITECMDFIFO
         POP	AF
         JP	WRITECMDFIFO	; TAILCALL
 
+FileDialog__DTOR:
+	DEBUGSTR "Filedialog__DTOR "
+        DEBUGHEXIX
+        
+	CALL	FileDialog__destroy
+        JP	Window__DTOR
 
