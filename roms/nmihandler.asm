@@ -186,7 +186,7 @@ NMIPROCESS:
         VCALL	Widget__setVisible
         
         LD	IX, Screen_INST
-        CALL	Screen__redraw
+        ;CALL	Screen__redraw
         
         CALL	Screen__eventLoop
         
@@ -290,29 +290,102 @@ MAINMENU_ENTRIES:
 	DB	0
         DW	NMIENTRY7
 
+
 LOADSNAPSHOT:
 	PUSH	IX
+        LD	HL, REQUEST_SNAPSHOT
+        LD	A, FILE_FILTER_SNAPSHOTS
+        CALL	LOADFILE
+        POP	IX
+        RET
+
+LOADTAPE:
+	PUSH	IX
+        LD	HL, REQUEST_TAPE
+        LD	A, FILE_FILTER_TAPES
+        CALL	LOADFILE
+        POP	IX
+        RET
+        
+REQUEST_TAPE:
+        LD 	A, CMD_PLAY_TAPE
+        CALL	WRITECMDFIFO
+        ; String still in HL
+        CALL	WRITECMDSTRING
+        ; Close all widgets and return
+        LD	IX, Screen_INST
+        JP	Screen__closeAll
+        
+LOADFILE:
+	PUSH	HL
+        PUSH	AF
+        
         LD	IX, FileWindow_INST
         LD	DE, $1C0F ; width=28, height=8
+        LD	HL, Screen_INST
 
         CALL	FileDialog__CTOR
         
 	LD	HL, FileWindow_INST
         LD	IX, Screen_INST
-        DEBUGSTR "Adding file window\n"
-        
         CALL 	Screen__addWindowCentered
 	
         
         LD	IX, FileWindow_INST
         LD	A, 1
         VCALL	Widget__setVisible
+	POP	AF
+	; A comes from parameter        
+	CALL	FileDialog__setFilter
 
-        POP	IX
-	RET
+        LD	IX, FileWindow_INST
+	CALL	Dialog__exec
+        JR	NZ, _canceled
+        
+        LD	IX, FileWindow_INST
+        CALL	FileDialog__getSelectionString
+        PUSH	HL
+        CALL	FileDialog__DTOR
+        POP	HL
+        
+        RET 	; JP	(HL)
+_canceled:
+	POP	HL
+        JP	FileDialog__DTOR
+
+        
+REQUEST_SNAPSHOT:
+	; Request load snapshot
+        LD 	A, CMD_LOAD_SNA
+        CALL	WRITECMDFIFO
+        ; String still in HL
+        CALL	WRITECMDSTRING
+        ;
+        ; Wait for completion
+_wait:
+        LD	HL, NMICMD_RESPONSE
+	LD	A, RESOURCE_ID_OPERATION_STATUS
+        CALL	LOADRESOURCE
+        JR	Z, _error1
+        ; Get operation status
+        LD	A, (NMICMD_RESPONSE)
+        CP      STATUS_INPROGRESS
+        JR	Z, _wait
+        CP	STATUS_OK
+        JP	Z, SNARAM
+        
+        LD	HL, NMICMD_RESPONSE
+        INC	HL	
+        ;JP	SHOWOPERRORMSG
+        ENDLESS
+_error1:
+	JP	INTERNALERROR
+	ENDLESS
+
+        
+        
 ;ASKFILENAME:
 TBD:
-LOADTAPE:
 NMIENTRY4HANDLER:
 NMIENTRY6HANDLER:
 Wrap_close_mainwindow:

@@ -135,7 +135,7 @@ _drawnext:
         POP	IX
         RET
 
-Screen__hasKbdEvent:
+Screen_SP__hasKbdEvent:
 	CALL	KEYBOARD
                   
 	LD	HL, FLAGS
@@ -151,32 +151,8 @@ Screen__hasKbdEvent:
         RET	Z 	; Modifier key applied, skip
         LD	A, E
         RET ; NZ
-        
-Screen__eventLoop:
 
-        LD	A, (IX+Screen__numwindows_OFFSET)
-	CP	0
-        RET	Z	       	; No more widgets
-        
-        ; Keyboard scan
-        
-	CALL	KEYBOARD
-                  
-	LD	HL, FLAGS
-
-	BIT	5, (HL)   ; test FLAGS  - has a new key been pressed ?
-	JR	Z, Screen__eventLoop
-                
-	LD	DE, (CURKEY)
-	LD	A, D
-        LD	HL, FLAGS
-	RES	5, (HL)	; update FLAGS  - reset the new key flag.
-        DEC	A
-        JR	Z, Screen__eventLoop 	; Modifier key applied, skip
-        LD	A, E
-
-	PUSH 	IX
-        PUSH	BC
+Screen_P__loadIXWithTopWindow:
         LD	BC, Screen__windows_OFFSET
         LD	A, (IX+Screen__numwindows_OFFSET)
         DEC	A
@@ -191,18 +167,38 @@ _noinc:
         LD	A, (IX+1)
         LD	IXL, B
         LD	IXH, A
+	RET        
+Screen__eventLoop:
+        LD	A, (IX+Screen__numwindows_OFFSET)
+	CP	0
+        RET	Z	       	; No more widgets
         
-        ;SWAP_IX_HL
+	PUSH 	IX
+        PUSH	BC
+        CALL	Screen_P__loadIXWithTopWindow
+        
+        ; If wiget is not visible, then we should exit main loop
+        BIT    	WIDGET_FLAGS_VISIBLE_BIT, (IX+Widget__flags_OFFSET)
+        JR	Z, _nowidget
+        
+        CALL	Screen_SP__hasKbdEvent
+        JR	Z, _noevent
         
 	LD	HL, (CURKEY)
         XOR	A
         VCALL	Widget__handleEvent
-        ;SWAP_IX_HL
-        
+
+_noevent:
         POP	BC
         POP	IX
-
-        JP	Screen__eventLoop
+        JR	Screen__eventLoop
+_nowidget:
+	DEBUGSTR "Not visible "
+        DEBUGHEXIX
+        
+	POP	BC
+        POP	IX
+        RET
 
 Screen__removeWindow:
 	
@@ -225,11 +221,12 @@ Screen__removeWindow:
 
 
 ; Check if coordinates in IX widget (WA) are fully contained (enclosed) in IY widget (WB)
+; IY should be the parent widget (on back of IX)
 ;
 ; if (WA.x() < WB.x())
 ;	return false;
 ;
-; if (WA.y() > WB.y())
+; if (WA.y() < WB.y())
 ;	return false;
 ;
 ; if (WA.x2() > WB.x2())
@@ -239,29 +236,48 @@ Screen__removeWindow:
 ; 
 
 Screen__checkIXIYenclosed:
+	DEBUGSTR "Enclosed:\n"
 	LD	A, (IX+Widget__x_OFFSET)
+        DEBUGSTR " IX x:"
+        DEBUGHEXA
+        DEBUGSTR " IY x:"
+        DEBUG8 (IY+Widget__x_OFFSET)
         SUB	(IY+Widget__x_OFFSET)
         RET	C
-	LD	A, (IY+Widget__y_OFFSET)    
-        SUB	(IX+Widget__x_OFFSET)       
+        
+        
+	LD	A, (IX+Widget__y_OFFSET)
+        DEBUGSTR " IX y:"
+        DEBUGHEXA
+        DEBUGSTR " IY y:"
+        DEBUG8 (IY+Widget__y_OFFSET)
+        SUB	(IY+Widget__y_OFFSET)
         RET	C
 
         ; Compute x2
+
+
 	LD	A, (IX+Widget__x_OFFSET)
         ADD	A, (IX+Widget__width_OFFSET)
 	LD	C, A ; B holds WA x2
         LD	A, (IY+Widget__x_OFFSET)
         ADD	A, (IY+Widget__width_OFFSET)
         ; A holds WB x2
+
+        DEBUGSTR " IY x2:"
+        DEBUGHEXA
+        DEBUGSTR " IX x2:"
+        DEBUGHEXC
+
         SUB	C
         RET	C
 
         ; Compute x2
-	LD	A, (IY+Widget__x_OFFSET)
-        ADD	A, (IY+Widget__width_OFFSET)
+	LD	A, (IY+Widget__y_OFFSET)
+        ADD	A, (IY+Widget__height_OFFSET)
 	LD	C, A ; B holds WA x2
-        LD	A, (IX+Widget__x_OFFSET)
-        ADD	A, (IX+Widget__width_OFFSET)
+        LD	A, (IX+Widget__y_OFFSET)
+        ADD	A, (IX+Widget__height_OFFSET)
         ; A holds WB x2
         SUB	C
         RET	
@@ -382,4 +398,14 @@ _redrawone:
         
         RET
 
-
+Screen__closeAll:
+	;LD	A, (IX+Screen__numwindows_OFFSET)
+        ;CP	0
+        ;RET	Z
+        
+        ;PUSH 	IX
+        ;CALL	Screen_P__loadIXWithTopWindow
+	LD	(IX+Screen__numwindows_OFFSET), 0
+        
+        
+        RET

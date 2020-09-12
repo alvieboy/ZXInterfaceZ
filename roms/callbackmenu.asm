@@ -15,8 +15,11 @@ CallbackMenu__SIZE 		EQU	Menu__SIZE+2
 
 
 CallbackMenu_V__activateEntry:
+	CP	$FF
+        RET	Z
+        
 	DEBUGSTR "ACTIVATE\n"
-        LD	A, (IX+Menu__selectedEntry_OFFSET)
+;        LD	A, (IX+Menu__selectedEntry_OFFSET)
         ADD	A, A ; *2
         LD	C, A
         LD	B, 0
