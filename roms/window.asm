@@ -16,7 +16,7 @@ Window__SIZE			EQU	Bin__SIZE+4
 Window__VTABLE:
 	DEFW	Window__DTOR
         DEFW    Bin__draw             	; Widget::draw
-        DEFW	Widget_V__show
+        DEFW	Widget_V__setVisible
         DEFW 	Bin__resize
         DEFW	Window__drawImpl	; Widget::drawImpl
         DEFW	Bin__handleEvent     	; Widget::handleEvent
@@ -204,7 +204,7 @@ _noover:
 
 Window__show:
 
-	CALL	Widget_V__show
+	CALL	Widget_V__setVisible
         ; Show child
         LD	A, (IX+Bin__mainwidget_OFFSET)
         OR	(IX+Bin__mainwidget_OFFSET+1)
@@ -212,7 +212,7 @@ Window__show:
         LD	L, (IX+Bin__mainwidget_OFFSET)
         LD	H, (IX+Bin__mainwidget_OFFSET+1)
         SWAP_IX_HL
-        VCALL	Widget__show
+        VCALL	Widget__setVisible
         SWAP_IX_HL
 
         RET

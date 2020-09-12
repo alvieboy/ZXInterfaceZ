@@ -38,7 +38,7 @@
 ; Widget VTABLE
 ;	DEFW	DTOR		/* Widget::~Widget() */
 ;	DEFW	draw		/* Widget::draw() */
-;	DEFW	Widget_V__show			/* Widget::show() */
+;	DEFW	Widget_V__setVisible			/* Widget::setVisible() */
 ;	DEFW	Widget_PV__resize		/* Widget::resize() */
 ;	DEFW	drawImpl	/* Widget::drawImpl() */
 ;	DEFW	handleEvent	/* Widget::handleEvent() */
@@ -60,7 +60,7 @@ Widget__SIZE			EQU	Object__SIZE+11
 
 Widget__DTOR			EQU	0
 Widget__draw			EQU	1
-Widget__show			EQU	2
+Widget__setVisible		EQU	2
 Widget__resize			EQU     3
 Widget__drawImpl		EQU	4
 Widget__handleEvent		EQU	5
@@ -125,8 +125,15 @@ Widget__setParent:
         LD 	(IX+Widget__parent_OFFSET+1), H
         RET
 
-Widget_V__show:
+Widget_V__setVisible:
+	CP	$00
+        JR	Z, _hide
 	SET 	WIDGET_FLAGS_VISIBLE_BIT, (IX+Widget__flags_OFFSET)
+        VCALL	Widget__draw
+        RET
+_hide:
+	RES 	WIDGET_FLAGS_VISIBLE_BIT, (IX+Widget__flags_OFFSET)
+        ; TBD: we need to redraw other widgets
 	RET
 
 Widget_V__draw:

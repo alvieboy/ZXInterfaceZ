@@ -182,7 +182,8 @@ NMIPROCESS:
         CALL 	Screen__addWindowCentered
 
         LD	IX, MainWindow_INST
-        VCALL	Widget__show
+        LD	A, 1
+        VCALL	Widget__setVisible
         
         LD	IX, Screen_INST
         CALL	Screen__redraw
@@ -304,7 +305,8 @@ LOADSNAPSHOT:
 	
         
         LD	IX, FileWindow_INST
-        VCALL	Widget__draw
+        LD	A, 1
+        VCALL	Widget__setVisible
 
         POP	IX
 	RET
