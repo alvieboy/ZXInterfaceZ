@@ -91,9 +91,6 @@ Widget__CTOR:
 ; }
 
 Widget_PV__resize:
-        DEBUGSTR "Resizing "
-	DEBUGHEXIX
-
 	LD	A, E
         CP	$FF
         JR	Z, _nowidthheight
@@ -105,22 +102,10 @@ _nowidthheight:
         RET	Z 	; No xy updated
  	LD	(IX+Widget__x_OFFSET), H
         LD	(IX+Widget__y_OFFSET), L
-        DEBUGSTR "Recompute pointers "
-        DEBUGSTR " XY="
-        DEBUGHEXHL
-        DEBUGSTR " WH="
-        DEBUGHEXDE
-        
-        
         JP	Widget_P__recalculateScreenPointers
         RET
 
 Widget__setParent:
-	DEBUGSTR "Set parent to "
-        DEBUGHEXHL
-        DEBUGSTR " > we are "
-        DEBUGHEXIX
-
         LD	(IX+Widget__parent_OFFSET), L
         LD 	(IX+Widget__parent_OFFSET+1), H
         RET
@@ -167,9 +152,6 @@ Widget_PV__handleEvent:
 	RET
 
 Widget__showParent
-	DEBUGSTR "THIS="
-        DEBUGHEXIX
-        DEBUGSTR " > parent"
         LD	L, (IX+Widget__parent_OFFSET)
         LD	H, (IX+Widget__parent_OFFSET+1)
         DEBUGHEXHL
@@ -202,4 +184,8 @@ Widget__destroyParent:
         ; <CAST>
         VCALL	Widget__DTOR
 	RET
+
+Widget__close:
+	VCALL	Widget__DTOR
+        RET
 

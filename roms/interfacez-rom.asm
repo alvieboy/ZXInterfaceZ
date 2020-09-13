@@ -251,6 +251,8 @@ _endl1: HALT
         
 	include "nmihandler.asm"
         include "settingsmenu.asm"
+        include "menuwindowindexed.asm"
+        include "videomode.asm"
 	include "snaram.asm"
        ; include "filechooser.asm"
        

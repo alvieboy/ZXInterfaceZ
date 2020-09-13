@@ -23,8 +23,9 @@ Menu__handleEvent:
         JP	Z, Menu__choosePrev
         CP	$21     ; ENTER key
         JR	NZ, _n3
-        DEBUGSTR "Activate entry\n"
         LD	A, (IX+Menu__selectedEntry_OFFSET)
+        DEBUGSTR "Activate entry "
+        DEBUGHEXA
         VCALL	Menu__activateEntry
 _n3:    
 	LD	DE,(CURKEY) ; Don't think is needed.
