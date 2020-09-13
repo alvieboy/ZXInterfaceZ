@@ -20,7 +20,8 @@ Settings__show:
         CALL 	Screen__addWindowCentered
         SWAP_IX_HL
         
-        VCALL	Widget__draw
+        LD	A, 1
+        VCALL	Widget__setVisible
 
         RET
 
@@ -28,7 +29,7 @@ SETTINGS_CALLBACK_TABLE:
 	DEFW Widget__destroyParent  ; Wifi
         DEFW Widget__destroyParent  ; Bluetooth
         DEFW Widget__destroyParent  ; USB
-        DEFW Widget__destroyParent  ; Video mode
+        DEFW Videomode__show
         DEFW Widget__destroyParent 
 
 SETTINGS_TITLE:

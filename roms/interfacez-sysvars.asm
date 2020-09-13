@@ -65,6 +65,7 @@ DEFVAR	STACKDATA, (4*8) ; Max 8 stacked widgets
 DEFVAR  Screen_INST, 	Screen__SIZE
 
 DEFVAR  MainWindow_INST, Menuwindow__SIZE
+DEFVAR  VideomodeWindow_INST, MenuwindowIndexed__SIZE
 DEFVAR  SettingsWindow_INST, Menuwindow__SIZE
 DEFVAR  FileWindow_INST, FileDialog__SIZE
 

@@ -389,8 +389,8 @@ TBD:
 NMIENTRY4HANDLER:
 NMIENTRY6HANDLER:
 Wrap_close_mainwindow:
-	DEBUGSTR "Called!!"
-	RET
+	LD	IX, Screen_INST
+        JP	Screen__closeAll
 
 NMIMENU_CALLBACK_TABLE:
 	DEFW LOADSNAPSHOT       ; Load snapshot
@@ -399,4 +399,4 @@ NMIMENU_CALLBACK_TABLE:
         DEFW NMIENTRY4HANDLER	; Poke
         DEFW Settings__show	; Settings
         DEFW NMIENTRY6HANDLER	; Reset
-        DEFW Widget__destroyParent
+        DEFW Wrap_close_mainwindow

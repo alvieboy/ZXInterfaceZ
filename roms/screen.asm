@@ -1,8 +1,6 @@
 Screen__MAXWINDOWS		EQU	8
 
 Screen__CTOR:
-	DEBUGSTR "Screen CTOR "
-        DEBUGHEXIX
         LD	(IX+Screen__numwindows_OFFSET), 0
 	RET
 
@@ -24,23 +22,14 @@ Screen__addWindow:
         ; BC now holds offset
         ADD	IX, BC
         
-        DEBUGSTR "addWindow off "
-        DEBUGHEXIX
-        
         LD	(IX), L
         LD	(IX+1), H ; Store window pointer.
         POP	IX
         
-        DEBUGSTR "Addind window "
-        DEBUGHEXHL
-
         ; Move window into place
         SWAP_IX_HL
         EX	DE, HL
 
-        DEBUGSTR "Window base 1 "
-        DEBUGHEXIX
-        
         PUSH	DE
         LD	E, $FF	; Do not change width/height
         VCALL	Widget__resize
@@ -49,12 +38,7 @@ Screen__addWindow:
         EX	DE, HL
         SWAP_IX_HL
         
-        DEBUGSTR "Window moved\n"
 	; Increment number of windows
-
-
-        DEBUGSTR "Screen base"
-        DEBUGHEXIX
         
         INC	(IX+Screen__numwindows_OFFSET)
 
@@ -83,16 +67,9 @@ Screen__addWindowCentered:
         ADD	A, E
         NEG
         LD	E, A
-        DEBUGHEXA
         POP	HL
         SWAP_IX_HL
 
-        DEBUGSTR "WinC Width "
-        DEBUGHEXD
-        DEBUGSTR "WinC Height"
-        DEBUGHEXE
-        
-        
 	JP 	Screen__addWindow ; TAILCALL
         
 
@@ -106,12 +83,7 @@ Screen__redraw:
         LD	BC, Screen__windows_OFFSET
         ADD	IX, BC
         
-        DEBUGSTR "Windows pointer "
-        DEBUGHEXIX
-        
 	LD	B, (IX+Screen__numwindows_OFFSET-Screen__windows_OFFSET)
-        DEBUGSTR "Num windows "
-        DEBUGHEXB
 _drawnext:
         LD	L, (IX)
         LD	H, (IX+1)
@@ -119,18 +91,13 @@ _drawnext:
         
         SWAP_IX_HL
         
-        DEBUGSTR "Call redraw "
-        DEBUGHEXIX
-
         VCALL	Widget__draw
         SWAP_IX_HL
         POP	BC
         
         INC	IX
         INC	IX
-        DEBUGSTR "Redraw done\n";
         DJNZ	_drawnext
-        DEBUGSTR "All widgets redrawn\n"
         POP	BC
         POP	IX
         RET
@@ -152,22 +119,6 @@ Screen_SP__hasKbdEvent:
         LD	A, E
         RET ; NZ
 
-Screen_P__loadIXWithTopWindow:
-        LD	BC, Screen__windows_OFFSET
-        LD	A, (IX+Screen__numwindows_OFFSET)
-        DEC	A
-        ADD	A, A ; * 2
-        ADD	A, C
-        JR	NC, _noinc
-        INC	B
-_noinc:
-	LD	C, A
-        ADD	IX, BC
-       	LD	B, (IX)
-        LD	A, (IX+1)
-        LD	IXL, B
-        LD	IXH, A
-	RET        
 Screen__eventLoop:
         LD	A, (IX+Screen__numwindows_OFFSET)
 	CP	0
@@ -186,6 +137,9 @@ Screen__eventLoop:
         
 	LD	HL, (CURKEY)
         XOR	A
+        DEBUGSTR "sendin handleEvent to "
+        DEBUGHEXIX
+        
         VCALL	Widget__handleEvent
 
 _noevent:
@@ -193,23 +147,15 @@ _noevent:
         POP	IX
         JR	Screen__eventLoop
 _nowidget:
-	DEBUGSTR "Not visible "
-        DEBUGHEXIX
-        
 	POP	BC
         POP	IX
         RET
 
 Screen__removeWindow:
 	
-        DEBUGSTR "Removing window "
-        DEBUGHEXHL
 	; TODO: check if correct window is being removed.
 
-	DEBUGSTR "Current windows "
         LD	A, (IX+Screen__numwindows_OFFSET)
-        DEBUGHEXA
-
 	DEC 	(IX+Screen__numwindows_OFFSET)
 
         PUSH	HL
@@ -281,7 +227,39 @@ Screen__checkIXIYenclosed:
         ; A holds WB x2
         SUB	C
         RET	
-        
+
+
+Screen_P__getWindowPointer:
+	; Returns IX + Screen__windows + (2* (A) )
+        LD	L, A
+        LD	H, 0
+        ADD	HL, HL
+        LD	BC, Screen__windows_OFFSET
+        ADD	HL, BC
+        PUSH	IX
+        POP	BC
+        ADD	HL, BC
+        OR	A 	; Clear carry
+        RET
+
+Screen_P__getActiveWindowPointer:
+	; Returns IX + Screen__windows + (2* (Screen__numwindows-1) )
+	LD	A, (IX+Screen__numwindows_OFFSET)
+        DEC	A
+        RET	C
+        JP	Screen_P__getWindowPointer
+
+Screen_P__loadIXWithTopWindow:
+        CALL	Screen_P__getActiveWindowPointer
+       	LD	B, (HL)
+        INC	HL
+        LD	A, (HL)
+        DEC	HL
+        LD	IXL, B
+        LD	IXH, A
+	RET
+
+
 
 ; Apply damage by widget @HL
 Screen__DAMAGE:
@@ -291,31 +269,16 @@ Screen__DAMAGE:
 	PUSH	IX
         PUSH 	HL
         
-	LD	A, (IX+Screen__numwindows_OFFSET)
-        ; Save in B
-        DEC	A
-        LD	B, A        
+        CALL	Screen_P__getActiveWindowPointer
         JR	C, _redrawscreen ; No windows, redraw whole screen.
-        
-        
-        PUSH	BC
-        LD	BC, Screen__windows_OFFSET
-        ADD	A, C
-;        JR	NC, _noinc
-;        INC	B
-;_noinc:
-	LD	C, A
-
-        PUSH	IX
-        POP	HL
-        ADD	HL, BC
-        POP	BC
-        
         
         
         DEBUGSTR "HL pointer "
         DEBUGHEXHL
         
+        ; B should contain number of windows
+	LD	B, (IX+Screen__numwindows_OFFSET)
+        DEC	B
         
         POP	IX	; IX now holds the "damaging" widget.
 _checkdamage:
@@ -355,18 +318,10 @@ _enclosed:
         
         LD	A, B
         
-        CP 	(IX+Screen__numwindows_OFFSET)
-        RET	Z ; Nothing to do
-
-        ADD	A, A ; *2
-        LD	DE, Screen__windows_OFFSET
-        ADD	A, E
-        LD	E, A
-        ; TBD: overflow
+        PUSH	BC	; Save counter.
+        CALL	Screen_P__getWindowPointer ; into HL
+        POP	BC
         
-        PUSH	IX
-        POP	HL
-        ADD	HL, DE 	; Get pointer to widget
 _redrawone:
         LD	E, (HL)
 	INC	HL
@@ -378,7 +333,9 @@ _redrawone:
         SWAP_IX_DE
         PUSH	BC
         PUSH	DE
+        PUSH	HL
         VCALL	Widget__draw
+        POP	HL
         POP	DE
         POP	BC
         SWAP_IX_DE
