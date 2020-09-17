@@ -122,7 +122,8 @@ json.c                \
 audio.c               \
 console.c             \
 firmware.c            \
-rle.c
+rle.c                 \
+vga.c
 
 
 _OBJ:=$(SRC:.c=.o)

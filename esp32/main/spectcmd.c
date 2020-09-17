@@ -12,6 +12,7 @@
 #include "sna.h"
 #include "tapeplayer.h"
 #include "wifi.h"
+#include "vga.h"
 
 #define COMMAND_BUFFER_MAX 128
 
@@ -203,32 +204,13 @@ static int spectcmd__playtape(const uint8_t *cmdbuf, unsigned len)
 
 static int spectcmd__setvideomode(const uint8_t *cmdbuf, unsigned len)
 {
-    int ret = 0;
-
     NEED(1);
 
     uint8_t mode = cmdbuf[0];
 
-    if (mode>3)
-        mode = 0;
-
     spectcmd__removedata();
 
-    switch (mode) {
-    case 0:
-        fpga__clear_flags(FPGA_FLAG_VIDMODE0 | FPGA_FLAG_VIDMODE1);
-        break;
-    case 1:
-        fpga__set_clear_flags(FPGA_FLAG_VIDMODE0, FPGA_FLAG_VIDMODE1);
-        break;
-    case 2:
-        fpga__set_clear_flags(FPGA_FLAG_VIDMODE1, FPGA_FLAG_VIDMODE0);
-        break;
-    case 3:
-        fpga__set_flags(FPGA_FLAG_VIDMODE0 | FPGA_FLAG_VIDMODE1);
-        break;
-    }
-    return ret;
+    return vga__setmode(mode);
 }
 
 static int spectcmd__setwifi(const uint8_t *cmdbuf, unsigned len)

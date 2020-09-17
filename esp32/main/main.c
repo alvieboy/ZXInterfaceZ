@@ -34,6 +34,7 @@
 #include "console.h"
 #include "version.h"
 #include "buttons.h"
+#include "vga.h"
 
 static int8_t videomode = 0;
 
@@ -180,7 +181,7 @@ void app_main()
     keyboard__init();
     audio__init();
     webserver__init();
-
+    vga__init();
     buttons__init();
 
     ESP_LOGI(TAG, "InterfaceZ version: %s %s", version, gitversion);
