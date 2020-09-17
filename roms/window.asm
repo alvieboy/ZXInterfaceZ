@@ -21,7 +21,7 @@ Window__VTABLE:
         DEFW	Window__drawImpl	; Widget::drawImpl
         DEFW	Bin__handleEvent     	; Widget::handleEvent
         DEFW	Bin__removeChild	; WidgetGroup::removeChild
-        DEFW	Window__resizeEvent     ; Bin::resizeEvent
+        DEFW	Window__resizeEvent     ; WidgetGroup::resizeEvent
 
 ; Constructor
 Window__CTOR:

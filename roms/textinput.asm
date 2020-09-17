@@ -1,22 +1,36 @@
 include "textinput_defs.asm"
 
-TEXTINPUT__INIT:
-	PUSH	HL
-        POP	IX
-        LD	(IX+FRAME_OFF_NUMBER_OF_LINES), 3
-        JP	FRAME__INIT
+TextInput__maxlen_OFFSET	EQU	Widget__SIZE
+TextInput__strptr_OFFSET	EQU	Widget__SIZE+1
+TextInput__callback_OFFSET	EQU	Widget__SIZE+1
+TextInput__SIZE			EQU	Widget__SIZE+5
 
-TEXTINPUT__DRAWCONTENT:
-	CALL	MOVEDOWN ; Move to next line.
-        PUSH	DE
-        LD	A, (IX+FRAME_OFF_WIDTH)
-        LD	HL, EMPTYSTRING
-        CALL	PRINTSTRINGPAD
-        POP 	DE
-        CALL	MOVEDOWN ; Move to next line.
+TextInput__VTABLE:
+	DEFW	Widget_V__DTOR
+	DEFW	Widget_V__draw
+        DEFW	Widget_V__setVisible
+        DEFW	Widget_PV__resize
+        DEFW	TextInput__drawImpl
+        DEFW	TextInput__handleEvent     	; Widget::handleEvent
+
+TextInput__CTOR:
+	; Inputs: A: max len, HL: string pointer
+        LD	(IX+TextInput__maxlen_OFFSET),A
+        LD	(IX+TextInput__strptr_OFFSET), L
+        LD	(IX+TextInput__strptr_OFFSET+1), H
+        JP	Widget__CTOR
         
-        LD	L, (IX+TEXTINPUT_OFF_STRINGPTR)
-        LD	H, (IX+TEXTINPUT_OFF_STRINGPTR+1)
+TextInput__setCallbackFunction:
+        LD	(IX+TextInput__callback_OFFSET), L
+        LD	(IX+TextInput__callback_OFFSET+1), H
+	RET
+        
+TextInput__drawImpl:
+        LD	E, (IX+Widget__screenptr_OFFSET)
+        LD	D, (IX+Widget__screenptr_OFFSET+1)
+        
+        LD	L, (IX+TextInput__strptr_OFFSET)
+        LD	H, (IX+TextInput__strptr_OFFSET+1)
         ; Print out value (and count chars)
         CALL	PRINTSTRINGCNT
         ; Print cursor
@@ -24,7 +38,7 @@ TEXTINPUT__DRAWCONTENT:
         CALL	PRINTCHAR
         ; Clear everything up to end of line
         PUSH	BC
-        LD	A, (IX+FRAME_OFF_WIDTH)
+        LD	A, (IX+TextInput__maxlen_OFFSET)
         SUB	C
         DEC	A
         DEC	A
@@ -37,13 +51,14 @@ TEXTINPUT__DRAWCONTENT:
         
         ; In "C" we still have the number of chars printed.
         ;LD	A,C
-        LD	L, (IX+FRAME_OFF_ATTRPTR)
-        LD	H, (IX+FRAME_OFF_ATTRPTR+1)
+        LD	L, (IX+Widget__attrptr_OFFSET)
+        LD	H, (IX+Widget__attrptr_OFFSET+1)
+        
         ; Fill everything regular color, except cursor.
         LD	A, 32
         ADD_HL_A ; Add A to HL
 
-	LD	B, (IX+FRAME_OFF_WIDTH)
+	LD	B, (IX+TextInput__maxlen_OFFSET)
         INC	B  ; First space
         LD	A, B
         SUB	C
@@ -91,45 +106,20 @@ _bline: LD	(HL), A
         DJNZ	_bline
         
 
-        ; Clear	last line
-
-        LD	E, (IX+FRAME_OFF_SCREENPTR)
-        LD	D, (IX+FRAME_OFF_SCREENPTR+1)
-        CALL	MOVEDOWN
-        CALL	MOVEDOWN
-        CALL	MOVEDOWN
-        LD	A, (IX+FRAME_OFF_WIDTH)
-        DEC	A
-        INC	DE
-        LD	HL, EMPTYSTRING
-        CALL	PRINTSTRINGPAD
         RET
         
-TEXTINPUT__DRAW:
-	PUSH  	HL
-        POP	IX
-	CALL	FRAME__DRAW
-        ; Draw contents
-TEXTINPUT__DRAWCONTENT_NO_DE
-        LD	E, (IX+FRAME_OFF_SCREENPTR)
-        LD	D, (IX+FRAME_OFF_SCREENPTR+1)
-        INC	DE
-        JP	TEXTINPUT__DRAWCONTENT
-
-
-TEXTINPUT__HANDLEKEY:
-	PUSH	HL
-        POP	IX
-        ;CALL	DEBUGHEXHL
+TextInput__handleEvent:
+	CP	0
+        RET	Z
+        
         LD	DE, (CURKEY)
-
         CALL	KEYTOASCII
         
         CP	$FF
         RET	Z
 
-        LD	L, (IX+TEXTINPUT_OFF_STRINGPTR)
-        LD	H, (IX+TEXTINPUT_OFF_STRINGPTR+1)
+        LD	L, (IX+TextInput__strptr_OFFSET)
+        LD	H, (IX+TextInput__strptr_OFFSET+1)
         
         CP	$08 ; Backspace
         JR	Z, _backspace
@@ -142,7 +132,7 @@ TEXTINPUT__HANDLEKEY:
         ; Append if we still have space.
         ;
         LD	D, A
-        LD	B, (IX+TEXTINPUT_OFF_MAX_LEN)
+        LD	B, (IX+TextInput__maxlen_OFFSET)
         ;PUSH	HL
         CALL	STRLEN
         ;POP	HL
@@ -154,27 +144,18 @@ TEXTINPUT__HANDLEKEY:
         XOR	A
         INC	HL
         LD	(HL), A
-; Return if not
-        ;RET	C ; Return if aleady overflown
-        
-        ;LD	A, 0
-        ;LD	(HL),A
-        ;DEC	HL
-        
-        ;POP	AF
-        ;LD	(HL),A
-        
-        ;CALL	STRAPPENDCHAR
 _update:
         ; Redraw - could be faster
-        CALL 	TEXTINPUT__DRAWCONTENT_NO_DE
-        LD	A, $FF
+        CALL 	TextInput__drawImpl
         RET
 _backspace:
         CALL	STRREMOVELASTCHAR
         JR	_update
 _enter:	LD	A, 0
-	RET
+	JR	_docallback
 _cancel:
 	LD	A, 1
-        RET
+_docallback:
+        LD	L, (IX+TextInput__callback_OFFSET)
+        LD	H, (IX+TextInput__callback_OFFSET+1)
+        JP	(HL)

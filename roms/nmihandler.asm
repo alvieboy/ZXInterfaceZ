@@ -382,6 +382,12 @@ _error1:
 	JP	INTERNALERROR
 	ENDLESS
 
+REQUESTRESET:
+	; Request RESET from FPGA
+        DI
+        LD   	A, CMD_RESET
+        CALL 	WRITECMDFIFO
+	ENDLESS
         
         
 ;ASKFILENAME:
@@ -394,9 +400,9 @@ Wrap_close_mainwindow:
 
 NMIMENU_CALLBACK_TABLE:
 	DEFW LOADSNAPSHOT       ; Load snapshot
-        DEFW TBD        ; Save snapshot
+        DEFW TBD        	; Save snapshot
         DEFW LOADTAPE           ; Play tape
         DEFW NMIENTRY4HANDLER	; Poke
         DEFW Settings__show	; Settings
-        DEFW NMIENTRY6HANDLER	; Reset
+        DEFW REQUESTRESET	; Reset
         DEFW Wrap_close_mainwindow

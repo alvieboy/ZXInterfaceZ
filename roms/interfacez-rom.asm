@@ -253,6 +253,8 @@ _endl1: HALT
         include "settingsmenu.asm"
         include "menuwindowindexed.asm"
         include "videomode.asm"
+        include "textinput.asm"
+        include "multiwidget.asm"
 	include "snaram.asm"
        ; include "filechooser.asm"
        
