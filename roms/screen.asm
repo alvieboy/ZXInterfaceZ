@@ -1,3 +1,43 @@
+;/* @ingroup Screen
+; \class Screen
+; */
+; Member functions
+;
+;   Screen__addWindow                   [public]
+;   Screen__addWindowCentered           [public]
+;   Screen__redraw                      [public]
+;   Screen__removeWindow                [public]
+;   Screen__closeAll                    [public]
+;   Screen__eventLoop                   [public]
+;
+;   Screen_P__checkIXIYenclosed         [protected]
+;   Screen_P__getWindowPointer          [protected]
+;   Screen_P__getActiveWindowPointer    [protected]
+;   Screen_P__loadIXWithTopWindow       [protected]
+;
+;   Screen_SP__DAMAGE                   [static, protected]
+;   Screen_SP__hasKbdEvent              [static,protected]
+;
+; Detailed member documentation
+;   Screen__addWindow                   [public]
+;       Adds
+;   Screen__addWindowCentered           [public]
+;   Screen__redraw                      [public]
+;   Screen__removeWindow                [public]
+;   Screen__closeAll                    [public]
+;   Screen__eventLoop                   [public]
+;
+;   Screen_P__checkIXIYenclosed         [protected]
+;   Screen_P__getWindowPointer          [protected]
+;   Screen_P__getActiveWindowPointer    [protected]
+;   Screen_P__loadIXWithTopWindow       [protected]
+;
+;   Screen_SP__DAMAGE                   [static, protected]
+;   Screen_SP__hasKbdEvent              [static,protected]
+
+
+
+
 Screen__MAXWINDOWS		EQU	8
 
 Screen__CTOR:
@@ -159,7 +199,7 @@ Screen__removeWindow:
 	DEC 	(IX+Screen__numwindows_OFFSET)
 
         PUSH	HL
-        CALL	Screen__DAMAGE
+        CALL	Screen_P__DAMAGE
 	POP	HL
 	RET
 
@@ -181,7 +221,7 @@ Screen__removeWindow:
 ; Returns carry set if false, carry clear if true
 ; 
 
-Screen__checkIXIYenclosed:
+Screen_SP__checkIXIYenclosed:
 	DEBUGSTR "Enclosed:\n"
 	LD	A, (IX+Widget__x_OFFSET)
         DEBUGSTR " IX x:"
@@ -203,28 +243,35 @@ Screen__checkIXIYenclosed:
         ; Compute x2
 
 
-	LD	A, (IX+Widget__x_OFFSET)
-        ADD	A, (IX+Widget__width_OFFSET)
-	LD	C, A ; B holds WA x2
-        LD	A, (IY+Widget__x_OFFSET)
+	LD	A, (IY+Widget__x_OFFSET)
         ADD	A, (IY+Widget__width_OFFSET)
+	LD	C, A ; B holds WA x2
+        LD	A, (IX+Widget__x_OFFSET)
+        ADD	A, (IX+Widget__width_OFFSET)
         ; A holds WB x2
 
         DEBUGSTR " IY x2:"
-        DEBUGHEXA
+        DEBUG8 C
         DEBUGSTR " IX x2:"
-        DEBUGHEXC
+        DEBUG8 A
 
         SUB	C
         RET	C
 
         ; Compute x2
-	LD	A, (IY+Widget__y_OFFSET)
-        ADD	A, (IY+Widget__height_OFFSET)
-	LD	C, A ; B holds WA x2
-        LD	A, (IX+Widget__y_OFFSET)
+	LD	A, (IX+Widget__y_OFFSET)
         ADD	A, (IX+Widget__height_OFFSET)
+	LD	C, A ; B holds WA x2
+        LD	A, (IY+Widget__y_OFFSET)
+        ADD	A, (IY+Widget__height_OFFSET)
         ; A holds WB x2
+
+        DEBUGSTR " IX y2:"
+        DEBUG8 C
+        DEBUGSTR " IY y2:"
+        DEBUG8 A
+
+
         SUB	C
         RET	
 
@@ -262,7 +309,7 @@ Screen_P__loadIXWithTopWindow:
 
 
 ; Apply damage by widget @HL
-Screen__DAMAGE:
+Screen_P__DAMAGE:
         DEBUGSTR "Damage "
         DEBUGHEXIX
 
@@ -295,7 +342,7 @@ _checkdamage:
         DEBUGSTR "IY widget "
         DEBUGHEXIY
         
-        CALL	Screen__checkIXIYenclosed
+        CALL	Screen_SP__checkIXIYenclosed
         JR	NC, _enclosed
         ; Go back to parent. See if we need to redraw screen
         DEC	B
@@ -356,12 +403,6 @@ _redrawone:
         RET
 
 Screen__closeAll:
-	;LD	A, (IX+Screen__numwindows_OFFSET)
-        ;CP	0
-        ;RET	Z
-        
-        ;PUSH 	IX
-        ;CALL	Screen_P__loadIXWithTopWindow
 	LD	(IX+Screen__numwindows_OFFSET), 0
         
         

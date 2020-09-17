@@ -118,6 +118,19 @@ VCALL	MACRO offset
 	LD	BC, offset*2
 	CALL VCALL_internal
 ENDM
+
+VCALL_C	MACRO
+	;EX	AF, AF'
+        PUSH	AF
+        LD	A, C
+        SLA	A
+        LD	C, A
+        LD	B, 0
+        ;EX	AF, AF'
+        POP	AF
+	CALL VCALL_internal
+ENDM
+
 VCALL_internal:
 	;PUSH	IX
         ;LD	IX, _retloc

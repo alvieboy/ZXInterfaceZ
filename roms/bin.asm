@@ -1,6 +1,4 @@
-Bin__resizeEvent 	EQU	WidgetGroup__NUM_VTABLE_ENTRIES
 Bin__NUM_VTABLE_ENTRIES	EQU	WidgetGroup__NUM_VTABLE_ENTRIES + 1
-
 
 Bin__mainwidget_OFFSET	EQU	WidgetGroup__SIZE+0
 Bin__SIZE		EQU	WidgetGroup__SIZE+2
@@ -10,7 +8,7 @@ Bin__CTOR:
 
 Bin__resize:
 	CALL	Widget_PV__resize
-        VCALL	Bin__resizeEvent
+        VCALL	WidgetGroup__resizeEvent
         RET
 
 Bin__setChild:
@@ -21,7 +19,7 @@ Bin__setChild:
         SWAP_IX_HL
         CALL	Widget__setParent
         SWAP_IX_HL
-        VCALL	Bin__resizeEvent
+        VCALL	WidgetGroup__resizeEvent
         RET
 
 Bin__handleEvent:
