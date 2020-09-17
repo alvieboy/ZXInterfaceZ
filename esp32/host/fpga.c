@@ -91,9 +91,9 @@ int fpga_init()
     xTaskCreate(fpga_rxthread, "fpgathread", 4096, NULL, 6, NULL);
     return 0;
 }
-#if 0
+#if 1
 
-static void dump(const char *t, const uint8_t *buffer, size_t len)
+void dump(const char *t, const uint8_t *buffer, size_t len)
 {
     printf("%s: [",t);
     while (len--) {
