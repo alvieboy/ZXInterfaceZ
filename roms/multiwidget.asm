@@ -111,39 +111,9 @@ _vloop:
         RET
 
 MultiWidget__handleEvent:
-        PUSH	AF
-        EX	DE, HL	; Event data now in DE
-	XOR	A
-        CALL	MultiWidget_P__getWidgetPointer
-	LD	B, (IX+MultiWidget__numchilds_OFFSET)
-        POP	AF
-        PUSH	IX
 
-_eventone:
-        PUSH	BC
-        PUSH	AF
-        LD	A, (HL)
-        LD	IXL, A
-	INC	HL
-        LD	A, (HL)
-        LD	IXH, A
-        INC 	HL
-        EX	DE, HL
-        POP	AF
-        
-        PUSH	DE
-        PUSH	HL
-        PUSH	AF
-        VCALL	Widget__handleEvent
-        POP	AF
-        POP	DE
-        POP	HL	; Swapped as well
-
-	POP	BC
-        DJNZ	_eventone
-
-	POP	IX
-        RET
+        LD	C, Widget__handleEvent
+        JP 	MultiWidget_P__foreachVcallC
 
 MultiWidget__draw:
         
