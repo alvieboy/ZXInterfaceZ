@@ -2,6 +2,8 @@
 
 include	"interfacez-sysvars.asm"
 
+
+
 include "macros.asm"
 
 ; Main state machine
@@ -35,32 +37,69 @@ START:	DI			; disable interrupts.
 RST8:	JP 	RST8
 
 	ORG	$0038
-					;;;$0038
-MASK_INT:	PUSH	AF		; save the registers.
-		PUSH	HL		
-		LD	HL,(FRAMES1)	; fetch two bytes at FRAMES1.
-		INC	HL		; increment lowest two bytes of counter.
-	        LD	(FRAMES1),HL	; place back in FRAMES1.
-		LD	A,H		; test if the result
-		OR	L		; was zero.
-		JR	NZ,KEY_INT	; forward to KEY_INT if not.
 
-					;;;$0048
-
-KEY_INT:	PUSH	BC		; save the other
-		PUSH	DE		; main registers.
-		CALL	KEYBOARD	; routine KEYBOARD executes a stage in the process of reading a key-press.
-		POP	DE
-		POP	BC		; restore registers.
-		POP	HL
-		POP	AF
-		EI			; enable interrupts.
-		RET			; return.
+	JR	RAMCOPY	
 
 
 	ORG	$0066
 NMIH:	PUSH 	AF
 	JP	NMIHANDLER
+
+RAMCOPY:
+	DI
+	EX	AF, AF'
+        EXX
+
+        LD	C, PORT_RAM_ADDR_0
+        IN	D, (C) ; RAM0:D 
+        LD	A, $00
+        OUT	(C), A
+
+        LD	C, PORT_RAM_ADDR_1
+        IN	E, (C) ; RAM1: E
+        OUT	(C), A
+        LD	C, PORT_RAM_ADDR_2
+        IN	L, (C) ; RAM1: C (L temporary)
+        LD	A, $02
+        OUT	(C), A
+        LD	C, L
+        LD	HL, SCREEN
+
+IF 0
+
+	;	6912 bytes. 216 blocks of 32 bytes, 108 blocks of 64 bytes, 54 blocks of 128 bytes.
+        LD	A, 54
+_loop1:
+        REPT	1                 	; T16, T2048 total
+          INI
+        ENDM
+        DEC	A     			; T4
+        JP	NZ, _loop1              ; T10   (sum 111348)
+        
+
+        LD	L, C
+        LD	C, PORT_RAM_ADDR_0
+        OUT	(C), D ; RAM0:D 
+        LD	C, PORT_RAM_ADDR_1
+        OUT	(C), E
+        LD	C, PORT_RAM_ADDR_2
+        IN	L, (C) ; RAM1: L
+
+
+        OUT	(C), L
+
+ENDIF
+
+	LD	BC, $FB6B
+        OUT	(C), A
+
+	EXX
+        EX	AF, AF'
+	;EI
+	RETI                          	; 32ms
+
+
+
 	;POP AF
         
 	;RETN
@@ -215,7 +254,7 @@ INTERNALERROR:
 _endl1: HALT
 	JR _endl1
 
-        include	"debug.asm"
+	include "debug.asm"
 	include "menu_defs.asm"
         ;include "frame.asm"
         ;include "textinput.asm"

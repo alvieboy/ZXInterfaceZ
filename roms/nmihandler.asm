@@ -80,8 +80,9 @@ lone:
         ; Save border.
         IN	A, (PORT_ULA)
         OUT	(C), A	   	; Ram: 0x4011
+ ;       DEBUGSTR "Serving NMI\n"
 
-        CALL	NMIPROCESS
+        CALL	NMIPROCESS_VIDEOONLY
 
 NMIRESTORE:
 	; Restore SP first, since we need to manipulate RAM 
@@ -389,6 +390,33 @@ REQUESTRESET:
         CALL 	WRITECMDFIFO
 	ENDLESS
         
+
+NMIPROCESS_VIDEOONLY:
+	DI
+screenloop:
+        LD	C, PORT_RAM_ADDR_0
+        LD	A, $00
+        OUT	(C), A
+        LD	C, PORT_RAM_ADDR_1
+        OUT	(C), A
+        LD	C, PORT_RAM_ADDR_2
+        LD	A, $02
+        OUT	(C), A
+        
+        LD	HL, SCREEN
+
+	;	6912 bytes. 216 blocks of 32 bytes, 108 blocks of 64 bytes, 54 blocks of 128 bytes.
+        LD	A, 48;54
+        LD	C, PORT_RAM_DATA
+_loop1:
+        REPT	128                 	; T16, T2048 total
+          INI
+        ENDM
+        DEC	A     			; T4
+        JP	NZ, _loop1              ; T10   (sum 111348)
+        
+       	JP 	screenloop
+        RET
         
 ;ASKFILENAME:
 TBD:
