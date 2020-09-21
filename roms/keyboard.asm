@@ -87,6 +87,7 @@ KEYBOARD:	CALL	KEY_SCAN	; routine KEY_SCAN
                 LD	(PREVKEY), DE
 					; Notify key pressed
                 LD	(CURKEY), DE
+                ;DEBUGHEXDE
                 LD	HL, FLAGS
                 SET	5, (HL)
                 RET

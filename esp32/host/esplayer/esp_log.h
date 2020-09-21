@@ -4,7 +4,7 @@
 #include <inttypes.h>
 #include <stdio.h>
 
-void do_log(const char *type, const char *tag, char *fmt, ...);
+void do_log(const char *type, const char *tag, const char *fmt, ...);
 
 void set_logger(void (*)(const char *type, const char *tag, char *fmt, va_list ap));
 

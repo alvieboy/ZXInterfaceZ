@@ -1,9 +1,14 @@
 #ifndef __FPGA_H__
 #define __FPGA_H__
 
+
 #include <inttypes.h>
 #include "esp_system.h"
 #include "esp_partition.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef uint16_t fpga_flags_t;
 typedef uint8_t fpga_status_t;
@@ -152,5 +157,8 @@ int fpga__set_rom(uint8_t rom);
 int fpga__set_ram(uint8_t ram);
 int fpga__reset_spectrum();
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

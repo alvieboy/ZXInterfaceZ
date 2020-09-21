@@ -7,6 +7,7 @@ GITVER=$(shell git describe --tags --dirty)
 BUILDDATE=$(shell date --utc)
 EXTRA_CFLAGS+=-DGITVER=\"$(GITVER)\" -DBUILDDATE='"$(BUILDDATE)"'
 
+EXTRA_COMPONENT_DIRS=main/wsys
 
 include $(IDF_PATH)/make/project.mk
 
@@ -21,6 +22,7 @@ spiffs/fpga0.rbf: ../output_files/interfacez.rbf
 
 SPIFFS_IMAGE_FLASH_IN_PROJECT := 1
 SPIFFS_IMAGE_DEPENDS := 
+
 
 $(eval $(call spiffs_create_partition_image,resources,spiffs))
 

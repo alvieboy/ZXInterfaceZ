@@ -11,7 +11,7 @@ BUILDDATE=$(shell date --utc)
 CFLAGS= -fpic -DPIC \
 	-DGITVER=\"$(GITVER)\" \
 	-DBUILDDATE='"$(BUILDDATE)"' \
-	-O2 -g -Wall -Wextra -DIDF_VER=\"0.1\" \
+	-O0 -g -Wall -Wextra -DIDF_VER=\"0.1\" \
 	$(shell pkg-config --cflags glib-2.0) \
 	-I$(FREERTOSKERNEL)/include \
        -I$(FREERTOSKERNEL)/portable/GCC/Linux \
@@ -55,12 +55,13 @@ FREERTOS_SRC := $(FREERTOSKERNEL)/list.c \
 		$(FREERTOSKERNEL)/timers.c \
 		$(FREERTOSKERNEL)/event_groups.c
 
+CXXFLAGS=$(CFLAGS)
 
 FREERTOS_OBJS= $(FREERTOS_SRC:.c=.o)
 
 SRCPATH:=../main
 
-SRC=aplist_resource.c \
+CSRC=aplist_resource.c \
 config.c              \
 devmap.c              \
 directory_resource.c  \
@@ -123,15 +124,32 @@ audio.c               \
 console.c             \
 firmware.c            \
 rle.c                 \
-vga.c
+vga.c                 \
+spectrum_kbd.c        \
+wsys/charmap.c
+
+CXXSRC=wsys_bridge.cpp \
+wsys/core.cpp         \
+wsys/widget.cpp       \
+wsys/screen.cpp       \
+wsys/window.cpp       \
+wsys/widgetgroup.cpp       \
+wsys/bin.cpp      \
+wsys/menu.cpp      \
+wsys/indexedmenu.cpp      \
+wsys/callbackmenu.cpp      \
+wsys/menuwindow.cpp      
 
 
-_OBJ:=$(SRC:.c=.o)
 
-OBJ:=$(patsubst %, $(SRCPATH)/%, $(_OBJ))
+_COBJ:=$(CSRC:.c=.o)
+_CXXOBJ:=$(CXXSRC:.cpp=.o)
+
+COBJ:=$(patsubst %, $(SRCPATH)/%, $(_COBJ))
+CXXOBJ:=$(patsubst %, $(SRCPATH)/%, $(_CXXOBJ))
 
 
-OBJS:=$(FREERTOS_OBJS) $(OBJ) \
+OBJS:=$(FREERTOS_OBJS) $(COBJ) $(CXXOBJ) \
 	main.o \
 	fpga.o \
 	partition.o \
@@ -154,10 +172,10 @@ OBJS:=$(FREERTOS_OBJS) $(OBJ) \
 	$(ESP_IDF)/components/nghttp/nghttp2/third-party/http-parser/http_parser.o
 
 interfacez: libinterfacez.so main_standalone.o
-	$(CC) -o interfacez main_standalone.o libinterfacez.so
+	$(CXX) -o interfacez main_standalone.o libinterfacez.so
 
 libinterfacez.so: $(OBJS) 
-	$(CC) $(CFLAGS) -shared -o libinterfacez.so $(OBJS) -lpthread -lm $(shell pkg-config --libs glib-2.0)
+	$(CXX) $(CFLAGS) -shared -o libinterfacez.so $(OBJS) -lpthread -lm $(shell pkg-config --libs glib-2.0)
 
 clean:
 	rm -f $(OBJS)
