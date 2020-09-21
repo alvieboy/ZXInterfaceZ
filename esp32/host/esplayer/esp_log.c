@@ -12,12 +12,12 @@ void set_logger(void (*l)(const char *type, const char *tag, char *fmt, va_list 
 
 
 
-void do_log(const char *type, const char *tag, char *fmt, ...)
+void do_log(const char *type, const char *tag, const char *fmt, ...)
 {
     va_list ap;
     va_start(ap, fmt);
     if (extern_logger) {
-        extern_logger(type, tag, fmt,ap);
+        extern_logger(type, tag, (char*)fmt,ap);
     } else {
         printf("%s %s ", type, tag);
         vprintf(fmt, ap);

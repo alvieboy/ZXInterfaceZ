@@ -36,6 +36,7 @@
 #include "buttons.h"
 #include "vga.h"
 #include "memlayout.h"
+#include "wsys.h"
 
 static int8_t videomode = 0;
 
@@ -96,7 +97,12 @@ static void event_button_switch(button_event_type_e type)
 {
     if (type==BUTTON_RELEASED || type==BUTTON_LONG_RELEASED) {
         ESP_LOGI(TAG, "Requesting NMI!");
+        wsys__reset();
+
         fpga__set_trigger(FPGA_FLAG_TRIG_FORCENMI_ON);
+        // TEMPORARY!
+        //wsys__nmiready();
+
     }
 }
 
@@ -127,8 +133,6 @@ static void process_buttons()
         }
     }
 }
-
-static uint8_t localfb[0x1800];
 
 void app_main()
 {
@@ -185,13 +189,11 @@ void app_main()
     webserver__init();
     vga__init();
     buttons__init();
+    wsys__init();
 
     ESP_LOGI(TAG, "InterfaceZ version: %s %s", version, gitversion);
     ESP_LOGI(TAG, "  built %s", builddate);
 
-    memset(localfb, 0x00, sizeof(localfb));
-    localfb[0] = 0xAA;
-    fpga__write_extram_block(0x020000, localfb, sizeof(localfb));
 
     // Start capture
     //start_capture();

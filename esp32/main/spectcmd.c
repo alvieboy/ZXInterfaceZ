@@ -13,6 +13,8 @@
 #include "tapeplayer.h"
 #include "wifi.h"
 #include "vga.h"
+#include "spectrum_kbd.h"
+#include "wsys.h"
 
 #define COMMAND_BUFFER_MAX 128
 
@@ -265,6 +267,35 @@ static int spectcmd__reset(const uint8_t *cmdbuf, unsigned len)
     return r;
 }
 
+static int spectcmd__kbddata(const uint8_t *cmdbuf, unsigned len)
+{
+    uint16_t key;
+
+    NEED(2);
+
+    key = *cmdbuf++;
+    key += (uint16_t)(*cmdbuf)<<8;
+
+    //ESP_LOGI(TAG, "KBD: %04x", key);
+
+    char c = spectrum_kbd__to_ascii(key);
+    //if (c >= ' ') {
+        //ESP_LOGI(TAG," > Key '%c'", c);
+    //}
+    wsys__keyboard_event(key, c);
+
+    spectcmd__removedata();
+    return 0;
+}
+
+static int spectcmd__nmiready(const uint8_t *cmdbuf, unsigned len)
+{
+    spectcmd__removedata();
+    ESP_LOGI(TAG, "NMI ready");
+    wsys__nmiready();
+    return 0;
+}
+
 static const spectcmd_handler_t spectcmd_handlers[] = {
     &spectcmd__load_resource, // 00 SPECTCMD_CMD_GETRESOURCE
     &spectcmd__setwifi,       // 01 SPECTCMD_CMD_SETWIFI
@@ -280,6 +311,8 @@ static const spectcmd_handler_t spectcmd_handlers[] = {
     &spectcmd__enterdir,      // 0B SPECTCMD_CMD_ENTERDIR
     &spectcmd__setvideomode,  // 0C SPECTCMD_CMD_SETVIDEOMODE
     &spectcmd__reset,         // 0D SPECTCMD_CMD_RESET
+    &spectcmd__kbddata,       // 0E SPECTCMD_CMD_KBDDATA
+    &spectcmd__nmiready,      // 0E SPECTCMD_CMD_NMIREADY
     // FOPEN
     // FCLOSE
     // FREAD

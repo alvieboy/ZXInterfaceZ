@@ -393,20 +393,70 @@ REQUESTRESET:
 
 NMIPROCESS_VIDEOONLY:
 	DI
+ 	LD	A, CMD_NMIREADY
+        CALL	WRITECMDFIFO
+
+        LD	C, PORT_RAM_ADDR_2
+        LD	A, $02
+        OUT	(C), A
+        
+        LD	A, 0
+        LD	(FRAMES1), A
+        
 screenloop:
+
+        ; Get sequence at 0x021B00
+        LD	C, PORT_RAM_ADDR_1
+        LD	A, $1B
+        OUT	(C), A
+        XOR	A
+        LD	C, PORT_RAM_ADDR_0
+        OUT	(C), A
+        LD	C, PORT_RAM_DATA
+	IN	A, (C)
+        BIT	7, A
+        JR 	NZ, _command
+        ; Not a command. Compare with frame seq.
+        LD	B, A
+        LD	A, (FRAMES1)
+        CP	B
+        LD	A, B
+        JR	NZ, _processvideo
+        
+
+        CALL	KEYBOARD
+        LD	HL, FLAGS
+        BIT	5, (HL)
+        JR 	Z, _l1
+        RES	5, (HL)
+;        DEBUGHEXDE
+        ; Send KBD update
+        LD	A, CMD_KBDINPUT
+        CALL	WRITECMDFIFO
+        LD	DE, (CURKEY)
+        LD	A, E
+        CALL	WRITECMDFIFO
+        LD	A, D        
+        CALL	WRITECMDFIFO
+_l1:    JR	screenloop
+_command:
+	CP	$FF
+        RET	Z
+        JR	screenloop
+
+_processvideo:
+        LD	(FRAMES1), A
+
         LD	C, PORT_RAM_ADDR_0
         LD	A, $00
         OUT	(C), A
         LD	C, PORT_RAM_ADDR_1
         OUT	(C), A
-        LD	C, PORT_RAM_ADDR_2
-        LD	A, $02
-        OUT	(C), A
         
         LD	HL, SCREEN
 
 	;	6912 bytes. 216 blocks of 32 bytes, 108 blocks of 64 bytes, 54 blocks of 128 bytes.
-        LD	A, 48;54
+        LD	A, 54
         LD	C, PORT_RAM_DATA
 _loop1:
         REPT	128                 	; T16, T2048 total
@@ -414,7 +464,6 @@ _loop1:
         ENDM
         DEC	A     			; T4
         JP	NZ, _loop1              ; T10   (sum 111348)
-        
        	JP 	screenloop
         RET
         
