@@ -11,11 +11,24 @@ Window::Window(const char *title, uint8_t w, uint8_t h): Bin(NULL)
     m_w = w;
     m_h = h;
     m_title = title;
+    m_border = 1;
+    m_helptext = NULL;
 }
 
 void Window::setTitle(const char *title)
 {
     m_title = title;
+}
+
+void Window::setBorder(uint8_t border)
+{
+    m_border = border;
+}
+
+void Window::setHelpText(const char *text)
+{
+    m_helptext = text;
+    damage(DAMAGE_WINDOW);
 }
 
 void Window::fillHeaderLine(attrptr_t attr)
@@ -33,7 +46,7 @@ void Window::drawImpl()
     attrptr_t attrptr = m_attrptr;
     screenptr_t saveptr;
 
-    setBackground(0x78);
+    setBackground();
 
     screenptr.nextcharline();
     int i;
@@ -54,6 +67,14 @@ void Window::drawImpl()
 
     screenptr.drawstring( m_title );
 
+    if (hasHelpText()) {
+        screenptr = m_screenptr;
+        screenptr.nextcharline();
+        screenptr.nextpixelline();
+        screenptr++;
+        drawthumbstring(screenptr, m_helptext);
+    }
+
     screenptr = m_screenptr;
     screenptr += m_w - 6;
     screenptr.drawchar(HH)++;
@@ -71,6 +92,14 @@ void Window::drawImpl()
     *attrptr++ = 0x68;
     *attrptr++ = 0x00;
 
+    if (hasHelpText()) {
+        int i;
+        screenptr = m_screenptr;
+        screenptr.nextcharline();
+        // Improve this.
+        for (i=0;i<7;i++) screenptr.nextpixelline();
+        screenptr.drawhline(width());
+    }
     ESP_LOGI("WSYS","Window redrawn");
 }
 
@@ -82,16 +111,31 @@ void Window::resizeEvent()
 
     ESP_LOGI("WSYS","Window -> send resize to child %p", m_child);
 
-    m_child->resize(m_x+1, m_y+2, m_w-2, m_h-3);
+    unsigned topborder = 1 + m_border;
+    if (hasHelpText())
+        topborder++;
+
+    m_child->resize(m_x+1, m_y+topborder, m_w-2, m_h-(m_border+topborder));
 }
 
-void Window::setBackground(uint8_t value)
+void Window::setBGLine(attrptr_t attrptr, uint8_t value)
+{
+    for (int i=0;i<m_w;i++) {
+            *attrptr++ = value;
+    }
+}
+
+void Window::setBackground()
 {
     int c = (m_h) * 8;
     screenptr_t screenptr = m_screenptr;
     attrptr_t attrptr = m_attrptr;
     screenptr_t save;
-    attrptr_t savea;
+    attrptr_t attrptr2;
+    const uint8_t normal_bg = 0x78;
+    const uint8_t help_bg   = 0x38;
+
+
 
     while (c--) {
         save = screenptr;
@@ -102,14 +146,20 @@ void Window::setBackground(uint8_t value)
         screenptr.nextpixelline();
     }
 
-    c = (m_h);
+    c = (m_h)-1;
+
+    // Header
+    setBGLine(attrptr, normal_bg);
+    attrptr.nextline();
+    if (hasHelpText()) {
+        c--;
+        setBGLine(attrptr, help_bg);
+        attrptr.nextline();
+
+    }
 
     while (c--) {
-        savea = attrptr;
-        for (int i=0;i<m_w;i++) {
-            *attrptr++ = value;
-        }
-        attrptr = savea;
+        setBGLine(attrptr, normal_bg);
         attrptr.nextline();
     }
 }
@@ -120,3 +170,12 @@ Window::~Window()
 }
 
 
+bool Window::needRedraw() {
+    if (m_child) {
+        if (m_child->damage())
+            return true;
+    }
+    if (damage()&DAMAGE_WINDOW)
+        return true;
+    return false;
+}

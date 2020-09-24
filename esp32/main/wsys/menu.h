@@ -29,6 +29,7 @@ public:
     Menu(Widget *parent);
     virtual void handleEvent(uint8_t type, u16_8_t code) override;
     void setEntries( const MenuEntryList *);
+    void draw(bool force=false) override;
 protected:
     void chooseNext();
     void choosePrev();

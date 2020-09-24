@@ -440,10 +440,15 @@ screenloop:
         CALL	WRITECMDFIFO
 _l1:    JR	screenloop
 _command:
+	DEBUGSTR "ROM: command "
+        DEBUGHEXA
 	CP	$FF
-        RET	Z
+        JR	Z, _leavenmi
         JR	screenloop
-
+_leavenmi:
+	LD	A, CMD_LEAVENMI
+        CALL	WRITECMDFIFO
+        RET
 _processvideo:
         LD	(FRAMES1), A
 

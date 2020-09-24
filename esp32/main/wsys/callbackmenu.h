@@ -3,7 +3,7 @@
 class CallbackMenu: public Menu
 {
 public:
-    CallbackMenu(Widget *parent): Menu(parent) {}
+    CallbackMenu(Widget *parent=NULL): Menu(parent) {}
 
     typedef void (*Function)(void);
 

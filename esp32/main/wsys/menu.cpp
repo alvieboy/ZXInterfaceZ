@@ -1,6 +1,9 @@
 #include "menu.h"
 #include "../spectrum_kbd.h"
 
+#define DAMAGE_SELECTION DAMAGE_USER1
+#define DAMAGE_CONTENTS  DAMAGE_USER2
+
 Menu::Menu(Widget *parent): Widget(parent)
 {
     m_displayOffset = 0;
@@ -25,7 +28,8 @@ void Menu::handleEvent(uint8_t type, u16_8_t code)
         choosePrev();
         break;
     case KEY_ENTER:
-        activateEntry( m_selectedEntry );
+        if (!(m_entries->entries[m_selectedEntry].flags & MENU_FLAGS_DISABLED))
+            activateEntry( m_selectedEntry );
         break;
     case KEY_BREAK:
         activateEntry( 0xff );
@@ -37,12 +41,26 @@ void Menu::handleEvent(uint8_t type, u16_8_t code)
 void Menu::setEntries(const MenuEntryList *entries)
 {
     m_entries = entries;
+    damage(DAMAGE_SELECTION|DAMAGE_CONTENTS);
+}
+
+void Menu::draw(bool force)
+{
+    if (force) {
+        damage(DAMAGE_SELECTION|DAMAGE_CONTENTS);
+    }
+    drawImpl();
 }
 
 void Menu::drawImpl()
 {
-    updateSelection();
-    drawContents();
+    if (damage() & (DAMAGE_SELECTION)) {
+        updateSelection();
+    }
+    if (damage() & (DAMAGE_CONTENTS)) {
+        drawContents();
+    }
+    clear_damage(DAMAGE_SELECTION|DAMAGE_CONTENTS);
 }
 
 void Menu::fillSline(attrptr_t attr, uint8_t value)
@@ -127,9 +145,9 @@ void Menu::chooseNext()
 
     if (sel > (m_displayOffset+height())) {
         m_displayOffset++;
-        drawContents();
+        damage(DAMAGE_CONTENTS);
     }
-    updateSelection();
+    damage(DAMAGE_SELECTION);
 }
 
 void Menu::choosePrev()
@@ -139,8 +157,8 @@ void Menu::choosePrev()
     m_selectedEntry--;
     if (m_selectedEntry<m_displayOffset) {
         m_displayOffset--;
-        drawContents();
+        damage(DAMAGE_CONTENTS);
     }
-    updateSelection();
+    damage(DAMAGE_SELECTION);
 }
 
