@@ -126,7 +126,8 @@ firmware.c            \
 rle.c                 \
 vga.c                 \
 spectrum_kbd.c        \
-wsys/charmap.c
+wsys/charmap.c        \
+wsys/tomthumb.c        
 
 CXXSRC=wsys_bridge.cpp \
 wsys/core.cpp         \
@@ -138,7 +139,13 @@ wsys/bin.cpp      \
 wsys/menu.cpp      \
 wsys/indexedmenu.cpp      \
 wsys/callbackmenu.cpp      \
-wsys/menuwindow.cpp      
+wsys/menuwindow.cpp      \
+wsys/dialog.cpp      \
+wsys/label.cpp      \
+wsys/vlayout.cpp      \
+wsys/messagebox.cpp \
+wsys/multiwidget.cpp  \
+wsys/button.cpp  \
 
 
 

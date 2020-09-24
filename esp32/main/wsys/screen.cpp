@@ -15,9 +15,6 @@ void screen__init()
 
 void screen__destroyAll()
 {
-    for (auto i: windows) {
-        delete(i);
-    }
     windows.clear();
 }
 
@@ -25,9 +22,10 @@ void screen__destroyAll()
 
 void screen__addWindow(Window*win, uint8_t x, uint8_t y)
 {
-    ESP_LOGI("WSYS", "Adding window");
+    ESP_LOGI("WSYS", "Adding screen window");
     windows.push_back(win);
     win->move(x, y);
+    win->damage(DAMAGE_WINDOW);
 }
 
 void screen__addWindowCentered(Window*win)
@@ -44,7 +42,7 @@ void screen__redraw()
     ESP_LOGI("WSYS", "Redraw windows %d", windows.size());
     for (auto i: windows) {
         ESP_LOGI("WSYS", "Redraw window %p", i);
-        i->draw();
+        i->draw(true);
     }
     wsys__send_to_fpga();
 }
@@ -57,7 +55,7 @@ void screen__keyboard_event(u16_8_t k)
     ESP_LOGI("WSYS", "KBD event");
     windows[l-1]->handleEvent(0,k);
 
-    wsys__send_to_fpga();
+    //wsys__send_to_fpga();
 }
 
 static Window * screen__getActiveWindow()
@@ -130,10 +128,14 @@ void screen__damage(Widget *source)
         wsys__get_screen_from_fpga();
     }
 
+    ESP_LOGI("WSYS", "Force window redraw");
+
     while (w != windows.end()) {
-        (*w)->draw();
+        (*w)->draw(true);
+        (*w)->clear_damage();
         w++;
     }
+    wsys__send_to_fpga();
 }
 
 void screen__removeWindow(Window*w)
@@ -141,3 +143,26 @@ void screen__removeWindow(Window*w)
     windows.pop_back();
     screen__damage(w);
 }
+
+
+
+void screen__loop(Widget *d)
+{
+    while (d->visible()) {
+        wsys__eventloop_iter();
+    }
+}
+
+void screen__check_redraw()
+{
+    Window *win = screen__getActiveWindow();
+    if (win && win->needRedraw()) {
+        ESP_LOGI("WSYS", "Check_Redraw: Redrawing window");
+        win->draw();
+        ESP_LOGI("WSYS", "Updating spectrum image");
+        wsys__send_to_fpga();
+    }
+
+
+}
+

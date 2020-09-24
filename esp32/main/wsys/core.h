@@ -54,8 +54,9 @@ static inline u16_8_t getxyscreenstart(uint8_t x, uint8_t y)
 {
     u16_8_t off;
     off.l = (y<<5) & 0xE0;
-    off.l |= x;
+    off.l += x;
     off.h = y & 0x18;
+    ESP_LOGI("WSYS", "Comp %d %d 0x%04x", x,y, off.v);
     return off;
     /*GETXYSCREENSTART:
         LD	A, D
@@ -95,6 +96,8 @@ private:
 };
 
 struct screenptr_t {
+    explicit screenptr_t(int f) { off.v=f; }
+    screenptr_t() {}
     void fromxy(uint8_t x, uint8_t y) {
         off.v = getxyscreenstart(x,y);
     }
@@ -114,9 +117,26 @@ struct screenptr_t {
         return spectrum_framebuffer.screen[off];
 
     }
+    uint8_t & operator[](int delta) {
+        CHECK_BOUNDS_SCREEN(off+delta);
+
+        return spectrum_framebuffer.screen[off+delta];
+
+    }
     uint16_t getoff() const { return off.v; }
 private:
     u16_8_t off;
 };
 
+class WSYSObject
+{
+private:
+};
+
+
+screenptr_t drawthumbchar(screenptr_t screenptr, unsigned &bit_offset, char c);
+screenptr_t drawthumbstring(screenptr_t screenptr, const char *s);
+
+
 #endif
+

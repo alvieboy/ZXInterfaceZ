@@ -1,16 +1,31 @@
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "freertos/event_groups.h"
+#include "freertos/queue.h"
 #include "wsys.h"
 #include "wsys/screen.h"
 #include "wsys/menuwindow.h"
 #include "fpga.h"
+#include "wsys/messagebox.h"
+#include "wsys/pixel.h"
 
+struct wsys_event {
+    uint8_t type;
+    u16_8_t data;
+};
+
+static xQueueHandle wsys_evt_queue = NULL;
 
 static const MenuEntryList mainmenu = {
-    .sz = 4,
+    .sz = 7,
     .entries = {
-        { .flags = 0, .string = "Test1" },
-        { .flags = 0, .string = "Test2" },
-        { .flags = 0, .string = "Test3" },
-        { .flags = 0, .string = "Test4" },
+        { .flags = 0, .string = "Load snapshot..." },
+        { .flags = 0, .string = "Save snapshot..." },
+        { .flags = 0, .string = "Play tape..." },
+        { .flags = 1, .string = "Poke..." },
+        { .flags = 0, .string = "Settings..." },
+        { .flags = 0, .string = "Reset" },
+        { .flags = 0, .string = "Exit" },
     }
 };
 
@@ -21,8 +36,18 @@ void exit_nmi()
     wsys__send_command(0xFF);
 }
 
+
+void test3(void)
+{
+    MessageBox::show("Help");
+
+}
+
 static const CallbackMenu::Function mainmenu_functions[] =
 {
+    &test1,
+    &test3,
+    &test1,
     &test1,
     &test1,
     &test1,
@@ -55,7 +80,6 @@ static MenuWindow *settings_window;
 
 static void showsettings()
 {
-    //LD	DE, $1807 ; width=28, height=7
     settings_window = new MenuWindow("Settings", 28, 8);
     settings_window->setEntries( &settingsmenu );
     settings_window->setCallbackTable( settings_functions );
@@ -78,9 +102,10 @@ void test2(void)
 
 void wsys__keyboard_event(uint16_t raw, char ascii)
 {
-    u16_8_t v;
-    v.v=raw;
-    screen__keyboard_event(v);
+    struct wsys_event evt;
+    evt.data.v = raw;
+    evt.type = 0;
+    xQueueSend(wsys_evt_queue, &evt, portMAX_DELAY);
 }
 
 void wsys__get_screen_from_fpga()
@@ -88,40 +113,107 @@ void wsys__get_screen_from_fpga()
     fpga__read_extram_block(0x002006, &spectrum_framebuffer.screen[0], sizeof(spectrum_framebuffer));
 }
 
+MenuWindow *mainwindow;
+
 void wsys__nmiready()
 {
-    wsys__get_screen_from_fpga();
+    struct wsys_event evt;
+    evt.type = EVENT_NMIENTER;
+    xQueueSend(wsys_evt_queue, &evt, portMAX_DELAY);
+}
 
-    MenuWindow *m = new MenuWindow("ZX Interface Z", 24, 8);
-    m->setEntries( &mainmenu );
-    m->setCallbackTable( mainmenu_functions );
-    screen__addWindowCentered(m);
-    m->setVisible(true);
+void wsys__nmileave()
+{
+    struct wsys_event evt;
+    evt.type = EVENT_NMILEAVE;
+    xQueueSend(wsys_evt_queue, &evt, portMAX_DELAY);
+}
+
+
+void wsys__start()
+{
+    wsys__get_screen_from_fpga();
+    mainwindow = new MenuWindow("ZX Interface Z", 24, 10);
+
+    mainwindow->setEntries( &mainmenu );
+    mainwindow->setCallbackTable( mainmenu_functions );
+    mainwindow->setHelpText("Use Q/A to move, ENTER select");
+    screen__addWindowCentered( mainwindow );
+    mainwindow->setVisible(true);
 
     screen__redraw();
+
 }
 
 void wsys__reset()
 {
-    spectrum_framebuffer.seq = 0;
-    screen__destroyAll();
+    struct wsys_event evt;
+    evt.type = 2;
+    xQueueSend(wsys_evt_queue, &evt, portMAX_DELAY);
+}
+
+
+
+static void wsys__dispatchevent(struct wsys_event evt)
+{
+    switch(evt.type) {
+    case EVENT_KBD:
+        screen__keyboard_event(evt.data);
+        break;
+    case EVENT_RESET:
+        break;
+    case EVENT_NMIENTER:
+        //ESP_LOGI("WSYS", "Resetting screen");
+        wsys__start();
+        break;
+    case EVENT_NMILEAVE:
+        ESP_LOGI("WSYS", "Reset sequences");
+        spectrum_framebuffer.seq = 0;
+        wsys__send_command(0x00);
+        screen__destroyAll();
+        break;
+    }
+}
+
+void wsys__eventloop_iter()
+{
+    struct wsys_event evt;
+    if (xQueueReceive(wsys_evt_queue, &evt, portMAX_DELAY)) {
+        wsys__dispatchevent(evt);
+    }
+    screen__check_redraw();
+}
+
+void wsys__task(void *data __attribute__((unused)))
+{
+    screen__init();
+    //xQueueSend(wsys_evt_queue, &gpio_num, NULL);
+    while (1) {
+        wsys__eventloop_iter();
+    }
+}
+
+
+void wsys__sendEvent()
+{
 }
 
 void wsys__init()
 {
-    screen__init();
-
+    wsys_evt_queue = xQueueCreate(4, sizeof(struct wsys_event));
+    xTaskCreate(wsys__task, "wsys_task", 4096, NULL, 9, NULL);
 }
+
 
 void wsys__send_to_fpga()
 {
     spectrum_framebuffer.seq++;
     spectrum_framebuffer.seq &= 0x7F;
+
     fpga__write_extram_block(0x020000, &spectrum_framebuffer.screen[0], sizeof(spectrum_framebuffer));
 }
 
 void wsys__send_command(uint8_t command)
 {
-    command |= 0x80;
     fpga__write_extram_block(0x021B00, &command, 1);
 }

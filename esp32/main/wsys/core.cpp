@@ -1,6 +1,7 @@
 #include "core.h"
 #include "charmap.h"
 #include "../fpga.h"
+#include "pixel.h"
 
 extern "C" {
     struct framebuffer spectrum_framebuffer;
@@ -18,19 +19,6 @@ screenptr_t &screenptr_t::drawchar(const uint8_t *data)
     return *this;
 }
 
-/*      INC 	D				; Go down onto the next pixel line
-	LD 	A, D				; Check if we have gone onto next character boundary
-	AND	7
-	RET 	NZ				; No, so skip the next bit
-	LD 	A,E				; Go onto the next character line
-	ADD 	A, 32
-	LD 	E,A
-	RET 	C				; Check if we have gone onto next third of screen
-	LD 	A,D				; Yes, so go onto next third
-	SUB 	8
-	LD 	D,A
-	RET
-     */
 void screenptr_t::nextpixelline()
 {
     // Increment Y by 1 (Y0)
@@ -78,6 +66,37 @@ screenptr_t &screenptr_t::drawstring(const char *s)
     }
     return *this;
 }
+
+screenptr_t drawthumbchar(screenptr_t screenptr, unsigned &bit_offset, char c)
+{
+    c-=32;
+    int i;
+    screenptr_t tmp = screenptr;
+
+    uint8_t *charptr = &__tomthumb_bitmap__[c*6];
+
+    for (i=0;i<6;i++) {
+        pixel__draw8(tmp, bit_offset, 4, *charptr++);
+        tmp.nextpixelline();
+    }
+    bit_offset+=4;
+    if (bit_offset>7) {
+        bit_offset-=8;
+        screenptr++;
+    }
+    return screenptr;
+}
+
+screenptr_t drawthumbstring(screenptr_t screenptr, const char *s)
+{
+    unsigned off = 0;
+    while (*s) {
+        screenptr = drawthumbchar(screenptr, off, *s++);
+    }
+    return screenptr;
+}
+
+
 
 screenptr_t &screenptr_t::drawstringpad(const char *s, int len)
 {

@@ -8,19 +8,6 @@ Bin::Bin(Widget *parent): WidgetGroup(parent), m_child(NULL)
 {
 }
 
-void Bin::resize(uint8_t x, uint8_t y, uint8_t w, uint8_t h)
-{
-    ESP_LOGI( "WSYS", "resize");
-    Widget::resize(x,y,w,h);
-    resizeEvent();
-}
-
-void Bin::move(uint8_t x, uint8_t y)
-{
-    Widget::move(x,y);
-    resizeEvent();
-}
-
 void Bin::setChild(Widget *c)
 {
     m_child = c;
@@ -28,6 +15,7 @@ void Bin::setChild(Widget *c)
     ESP_LOGI( "WSYS", "resize due to addchild");
 
     resizeEvent();
+    damage(DAMAGE_CHILD);
 }
 
 void Bin::handleEvent(uint8_t type, u16_8_t code)
@@ -36,11 +24,30 @@ void Bin::handleEvent(uint8_t type, u16_8_t code)
         m_child->handleEvent(type, code);
 }
 
-void Bin::draw()
+void Bin::draw(bool force)
 {
-    drawImpl();
-    if (m_child)
-        m_child->draw();
+    ESP_LOGI("WSYS", "Bin::draw force=%d damage=0x%02x\n", force?1:0, damage());
+
+    if (force || (damage() & ~DAMAGE_CHILD)) { // If any bits beside child, then draw
+        ESP_LOGI("WSYS", "Bin::draw impl");
+        drawImpl();
+    }
+
+
+    if (m_child) {
+        ESP_LOGI("WSYS", "Bin::draw child force %d", force?1:0);
+        if (force || (damage() & DAMAGE_CHILD))  {
+            ESP_LOGI("WSYS", "Bin::draw child force=%d child_damage=0x%02x\n", force?1:0, m_child->damage());
+
+            if (force || m_child->damage())
+                m_child->draw(force);
+            m_child->clear_damage();
+        }
+    } else {
+        ESP_LOGI("WSYS", "Bin::draw no child");
+    }
+    clear_damage();
+
 }
 
 Bin::~Bin()
@@ -52,7 +59,9 @@ Bin::~Bin()
 void Bin::removeChild(Widget *c)
 {
     if (c==m_child) {
-        //delete(m_child);
+        delete(m_child);
         m_child = NULL;
     }
 }
+
+

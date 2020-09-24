@@ -4,16 +4,24 @@
 #include <inttypes.h>
 #include <stdlib.h>
 
+
+#define DAMAGE_ALL      0x80
+#define DAMAGE_WINDOW   0x40
+#define DAMAGE_CHILD    0x01
+#define DAMAGE_USER1    0x02
+#define DAMAGE_USER2    0x04
+#define DAMAGE_USER3    0x08
+
 #include "core.h"
 
-class Widget
+class Widget: public WSYSObject
 {
 public:
     Widget(Widget *parent=NULL);
     virtual ~Widget();
 
-    virtual void draw();
-    virtual void setVisible(bool v) { m_visible=v; if (v) draw(); }
+    virtual void draw(bool force=false);
+    virtual void setVisible(bool v) { m_visible=v; }
     virtual void resize(uint8_t x, uint8_t y, uint8_t w, uint8_t h);
     virtual void resize(uint8_t w, uint8_t h);
     virtual void move(uint8_t x, uint8_t y);
@@ -28,7 +36,14 @@ public:
 
     uint8_t x2() const { return m_x + m_w; }
     uint8_t y2() const { return m_y + m_h; }
-
+    void show() { setVisible(true); }
+    void hide() { setVisible(false); }
+    bool visible() const { return m_visible; }
+    virtual void damage(uint8_t mask);
+    void clear_damage(uint8_t mask);
+    void clear_damage();
+    uint8_t damage() const { return m_damage; }
+    void redraw() { damage(DAMAGE_ALL); }
 protected:
     virtual void drawImpl() = 0;
 
@@ -38,6 +53,7 @@ protected:
     Widget *m_parent;
     uint8_t m_x,m_y,m_w,m_h;
     bool m_visible;
+    uint8_t m_damage;
 };
 
 #endif

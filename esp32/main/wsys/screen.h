@@ -14,6 +14,7 @@ void screen__redraw();
 void screen__init();
 void screen__keyboard_event(u16_8_t v);
 void screen__damage(Widget *source);
+void screen__check_redraw();
 
 #endif
 

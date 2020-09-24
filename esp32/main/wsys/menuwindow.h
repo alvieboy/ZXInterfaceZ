@@ -13,6 +13,6 @@ public:
 protected:
 
 private:
-    CallbackMenu m_menu;
+    CallbackMenu *m_menu;
 };
 
