@@ -4,8 +4,11 @@
 extern "C" {
 #include "esp_log.h"
 };
+#include <algorithm>
 
 static std::vector<Window*> windows;
+static std::vector<Window*> window_cleanup;
+
 typedef std::vector<Window*>::const_iterator window_iter_t;
 
 void screen__init()
@@ -13,16 +16,27 @@ void screen__init()
     //windows.clear();
 }
 
+void screen__add_to_cleanup(Window *s)
+{
+    if (std::find(window_cleanup.begin(), window_cleanup.end(), s)!=window_cleanup.end())
+        window_cleanup.push_back(s);
+}
+
 void screen__destroyAll()
 {
+    WSYS_LOGI( "Destroying all windows");
+    for (auto i:windows) {
+        screen__add_to_cleanup(i);
+    }
     windows.clear();
+    screen__damage(NULL);
 }
 
 
 
 void screen__addWindow(Window*win, uint8_t x, uint8_t y)
 {
-    ESP_LOGI("WSYS", "Adding screen window");
+    WSYS_LOGI( "Adding screen window");
     windows.push_back(win);
     win->move(x, y);
     win->damage(DAMAGE_WINDOW);
@@ -39,9 +53,9 @@ void screen__addWindowCentered(Window*win)
 
 void screen__redraw()
 {
-    ESP_LOGI("WSYS", "Redraw windows %d", windows.size());
+    WSYS_LOGI( "Redraw windows %d", windows.size());
     for (auto i: windows) {
-        ESP_LOGI("WSYS", "Redraw window %p", i);
+        WSYS_LOGI( "Redraw window %p", i);
         i->draw(true);
     }
     wsys__send_to_fpga();
@@ -52,7 +66,9 @@ void screen__keyboard_event(u16_8_t k)
     if (k.l==0xff)
         return;
     unsigned l = windows.size();
-    ESP_LOGI("WSYS", "KBD event");
+    if (l==0)
+        return;
+    WSYS_LOGI( "KBD event");
     windows[l-1]->handleEvent(0,k);
 
     //wsys__send_to_fpga();
@@ -75,11 +91,21 @@ static Window * screen__getWindow(int index)
 
 static inline bool screen__checkEnclosed(Widget *source, Widget *w)
 {
+    WSYS_LOGI( "Check enclosed (%d,%d,%d,%d) (%d,%d,%d,%d)",
+             source->x(),
+             source->y(),
+             source->x2(),
+             source->y2(),
+             w->x(),
+             w->y(),
+             w->x2(),
+             w->y2());
+
     if (source->x() < w->x()) {
         return false;
     }
 
-    if (source->y() > w->y()) {
+    if (source->y() < w->y()) {
         return false;
     }
 
@@ -87,7 +113,7 @@ static inline bool screen__checkEnclosed(Widget *source, Widget *w)
         return false;
     }
 
-    if (source->y2() < w->y2()) {
+    if (source->y2() > w->y2()) {
         return false;
     }
     return true;
@@ -100,6 +126,8 @@ void screen__damage(Widget *source)
     bool redraw_root = false;
 
     window_iter_t w = windows.end();
+
+    WSYS_LOGI("Damage: checking windows (%d)", index);
 
     if (!windows.size()) {
         redraw_root = true;
@@ -125,10 +153,11 @@ void screen__damage(Widget *source)
     }
     if (redraw_root) {
         //
+        WSYS_LOGI( "Force root redraw");
         wsys__get_screen_from_fpga();
     }
 
-    ESP_LOGI("WSYS", "Force window redraw");
+    WSYS_LOGI( "Force window redraw (index %d)", index);
 
     while (w != windows.end()) {
         (*w)->draw(true);
@@ -140,8 +169,11 @@ void screen__damage(Widget *source)
 
 void screen__removeWindow(Window*w)
 {
-    windows.pop_back();
-    screen__damage(w);
+    if (std::find(windows.begin(), windows.end(), w)!=windows.end()) {
+        windows.pop_back();
+        screen__damage(w);
+        screen__add_to_cleanup(w);
+    }
 }
 
 
@@ -157,12 +189,17 @@ void screen__check_redraw()
 {
     Window *win = screen__getActiveWindow();
     if (win && win->needRedraw()) {
-        ESP_LOGI("WSYS", "Check_Redraw: Redrawing window");
+        WSYS_LOGI( "Check_Redraw: Redrawing window");
         win->draw();
-        ESP_LOGI("WSYS", "Updating spectrum image");
+        WSYS_LOGI( "Updating spectrum image");
         wsys__send_to_fpga();
     }
-
+    // Cleanup if needed
+    while (window_cleanup.size()) {
+        Window *w = window_cleanup.back();
+        window_cleanup.pop_back();
+        delete(w);
+    }
 
 }
 

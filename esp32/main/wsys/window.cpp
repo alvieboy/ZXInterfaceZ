@@ -6,6 +6,8 @@ extern "C" {
 #include "esp_log.h"
 };
 
+#define DAMAGE_HELPTEXT DAMAGE_USER1
+
 Window::Window(const char *title, uint8_t w, uint8_t h): Bin(NULL)
 {
     m_w = w;
@@ -13,6 +15,8 @@ Window::Window(const char *title, uint8_t w, uint8_t h): Bin(NULL)
     m_title = title;
     m_border = 1;
     m_helptext = NULL;
+    m_statuslines = 0;
+    m_statustext = NULL;
 }
 
 void Window::setTitle(const char *title)
@@ -25,10 +29,23 @@ void Window::setBorder(uint8_t border)
     m_border = border;
 }
 
-void Window::setHelpText(const char *text)
+void Window::setStatusLines(uint8_t lines)
+{
+    m_statuslines = lines;
+}
+
+void Window::setWindowHelpText(const char *text)
 {
     m_helptext = text;
     damage(DAMAGE_WINDOW);
+}
+
+void Window::displayHelpText(const char *c)
+{
+    //void maxCharsForPixelCount(const char *offset, unsigned pixels);
+    WSYS_LOGI("SHOW HELP: %s", c);
+    m_statustext = c;
+    damage(DAMAGE_HELPTEXT);
 }
 
 void Window::fillHeaderLine(attrptr_t attr)
@@ -40,7 +57,35 @@ void Window::fillHeaderLine(attrptr_t attr)
     *attr = 0x00; // last one black
 }
 
-void Window::drawImpl()
+void Window::drawStatus()
+{
+    screenptr_t screenptr;
+    if (m_statuslines>0) {
+        screenptr.fromxy(x(), y() + height() - m_statuslines );
+        //screenptr.drawhline(width());
+        unsigned count = 8 * m_statuslines - 1;
+        WSYS_LOGI( "Redrawing status, count %d", count);
+        screenptr.nextpixelline();
+        while (count--) {
+            screenptr_t temp = screenptr;
+            temp++;
+            for (int i=0;i<m_w-2;i++) {
+                *temp++ = 0x00;
+            }
+            screenptr.nextpixelline();
+        }
+        if (m_statustext) {
+            screenptr.fromxy(x()+1, y() + height() - m_statuslines );
+            screenptr.nextpixelline();
+            screenptr.nextpixelline();
+            drawthumbstring(screenptr, m_statustext);
+
+        }
+    }
+
+}
+
+void Window::drawWindowCore()
 {
     screenptr_t screenptr = m_screenptr;
     attrptr_t attrptr = m_attrptr;
@@ -100,22 +145,40 @@ void Window::drawImpl()
         for (i=0;i<7;i++) screenptr.nextpixelline();
         screenptr.drawhline(width());
     }
-    ESP_LOGI("WSYS","Window redrawn");
+
+    if (m_statuslines>0) {
+        screenptr.fromxy(x(), y() + height() - m_statuslines);
+        screenptr.drawhline(width());
+    }
+
+    WSYS_LOGI("Window redrawn");
 }
 
 void Window::resizeEvent()
 {
-    ESP_LOGI("WSYS","Window resize event");
+    WSYS_LOGI("Window resize event");
     if (m_child==NULL)
         return;
 
-    ESP_LOGI("WSYS","Window -> send resize to child %p", m_child);
+    WSYS_LOGI("Window -> send resize to child %p", m_child);
 
     unsigned topborder = 1 + m_border;
+
     if (hasHelpText())
         topborder++;
 
-    m_child->resize(m_x+1, m_y+topborder, m_w-2, m_h-(m_border+topborder));
+    m_child->resize(m_x+1, m_y+topborder, m_w-2, m_h-(m_border+topborder+m_statuslines));
+}
+
+void Window::drawImpl()
+{
+    if (damage() & ~DAMAGE_CHILD) {
+        if (damage() & DAMAGE_WINDOW)
+            drawWindowCore();
+        if (damage() & DAMAGE_HELPTEXT) {
+            drawStatus();
+        }
+    }
 }
 
 void Window::setBGLine(attrptr_t attrptr, uint8_t value)
@@ -158,8 +221,14 @@ void Window::setBackground()
 
     }
 
-    while (c--) {
+    while (c>m_statuslines) {
         setBGLine(attrptr, normal_bg);
+        attrptr.nextline();
+        c--;
+    }
+
+    for (c=0;c<m_statuslines;c++) {
+        setBGLine(attrptr, help_bg);
         attrptr.nextline();
     }
 }
@@ -178,4 +247,11 @@ bool Window::needRedraw() {
     if (damage()&DAMAGE_WINDOW)
         return true;
     return false;
+}
+
+void Window::draw(bool force)
+{
+    if (force)
+        damage(DAMAGE_WINDOW|DAMAGE_HELPTEXT);
+    Bin::draw(force);
 }

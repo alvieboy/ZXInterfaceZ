@@ -15,3 +15,8 @@ void MenuWindow::setCallbackTable(const CallbackMenu::Function f[])
 {
     m_menu->setCallbackTable(f);
 }
+
+void MenuWindow::setHelpStrings(const char *help[])
+{
+    m_menu->setHelp(help, this);
+}

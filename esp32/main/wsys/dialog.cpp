@@ -16,7 +16,7 @@ void Dialog::exec( void (*callback)(void*, int), void*data)
 {
     m_cbdata = data;
     m_callback = callback;
-    ESP_LOGI("WSYS", "Displaying dialog!");
+    WSYS_LOGI( "Displaying dialog!");
     screen__addWindowCentered(this);
     setVisible(true);
 }

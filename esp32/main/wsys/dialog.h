@@ -1,3 +1,6 @@
+#ifndef __WSYS_DIALOG_H__
+#define __WSYS_DIALOG_H__
+
 #include "window.h"
 
 class Dialog: public Window
@@ -7,10 +10,12 @@ public:
 
     void setResult(uint8_t val);
 
-    void exec( void (*callback)(void*, int), void*);
+    virtual void exec( void (*callback)(void*, int), void*);
 private:
     uint8_t m_result;
     void (*m_callback)(void*, int);
     void *m_cbdata;
 
 };
+
+#endif

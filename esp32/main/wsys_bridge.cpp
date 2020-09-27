@@ -8,6 +8,8 @@
 #include "fpga.h"
 #include "wsys/messagebox.h"
 #include "wsys/pixel.h"
+#include "wsys/filechooserdialog.h"
+#include "menus/nmimenu.h"
 
 struct wsys_event {
     uint8_t type;
@@ -15,90 +17,6 @@ struct wsys_event {
 };
 
 static xQueueHandle wsys_evt_queue = NULL;
-
-static const MenuEntryList mainmenu = {
-    .sz = 7,
-    .entries = {
-        { .flags = 0, .string = "Load snapshot..." },
-        { .flags = 0, .string = "Save snapshot..." },
-        { .flags = 0, .string = "Play tape..." },
-        { .flags = 1, .string = "Poke..." },
-        { .flags = 0, .string = "Settings..." },
-        { .flags = 0, .string = "Reset" },
-        { .flags = 0, .string = "Exit" },
-    }
-};
-
-void test1(void);
-
-void exit_nmi()
-{
-    wsys__send_command(0xFF);
-}
-
-
-void test3(void)
-{
-    MessageBox::show("Help");
-
-}
-
-static const CallbackMenu::Function mainmenu_functions[] =
-{
-    &test1,
-    &test3,
-    &test1,
-    &test1,
-    &test1,
-    &test1,
-    &exit_nmi,
-};
-
-static const MenuEntryList settingsmenu = {
-    .sz = 5,
-    .entries = {
-        { .flags = 0, .string = "Wifi..." },
-        { .flags = 0, .string = "Bluetooth..." },
-        { .flags = 0, .string = "USB..." },
-        { .flags = 0, .string = "Video..." },
-        { .flags = 0, .string = "Back" }
-    }
-};
-
-void test2(void);
-
-static const CallbackMenu::Function settings_functions[] =
-{
-    &test2,
-    &test2,
-    &test2,
-    &test2,
-    &test2,
-};
-
-static MenuWindow *settings_window;
-
-static void showsettings()
-{
-    settings_window = new MenuWindow("Settings", 28, 8);
-    settings_window->setEntries( &settingsmenu );
-    settings_window->setCallbackTable( settings_functions );
-    screen__addWindowCentered(settings_window);
-    settings_window->setVisible(true);
-}
-
-void test1(void)
-{
-    ESP_LOGI("WSYS", "Callback");
-    showsettings();
-
-}
-
-void test2(void)
-{
-    delete(settings_window);
-}
-
 
 void wsys__keyboard_event(uint16_t raw, char ascii)
 {
@@ -112,8 +30,6 @@ void wsys__get_screen_from_fpga()
 {
     fpga__read_extram_block(0x002006, &spectrum_framebuffer.screen[0], sizeof(spectrum_framebuffer));
 }
-
-MenuWindow *mainwindow;
 
 void wsys__nmiready()
 {
@@ -133,14 +49,7 @@ void wsys__nmileave()
 void wsys__start()
 {
     wsys__get_screen_from_fpga();
-    mainwindow = new MenuWindow("ZX Interface Z", 24, 10);
-
-    mainwindow->setEntries( &mainmenu );
-    mainwindow->setCallbackTable( mainmenu_functions );
-    mainwindow->setHelpText("Use Q/A to move, ENTER select");
-    screen__addWindowCentered( mainwindow );
-    mainwindow->setVisible(true);
-
+    nmimenu__show();
     screen__redraw();
 
 }
@@ -149,6 +58,7 @@ void wsys__reset()
 {
     struct wsys_event evt;
     evt.type = 2;
+    wsys__send_command(0x00); // Clear sequence immediatly
     xQueueSend(wsys_evt_queue, &evt, portMAX_DELAY);
 }
 
@@ -163,11 +73,11 @@ static void wsys__dispatchevent(struct wsys_event evt)
     case EVENT_RESET:
         break;
     case EVENT_NMIENTER:
-        //ESP_LOGI("WSYS", "Resetting screen");
+        //WSYS_LOGI( "Resetting screen");
         wsys__start();
         break;
     case EVENT_NMILEAVE:
-        ESP_LOGI("WSYS", "Reset sequences");
+        WSYS_LOGI( "Reset sequences");
         spectrum_framebuffer.seq = 0;
         wsys__send_command(0x00);
         screen__destroyAll();
@@ -209,7 +119,7 @@ void wsys__send_to_fpga()
 {
     spectrum_framebuffer.seq++;
     spectrum_framebuffer.seq &= 0x7F;
-
+    WSYS_LOGI("Framebuffer update, seq %d\n", spectrum_framebuffer.seq);
     fpga__write_extram_block(0x020000, &spectrum_framebuffer.screen[0], sizeof(spectrum_framebuffer));
 }
 

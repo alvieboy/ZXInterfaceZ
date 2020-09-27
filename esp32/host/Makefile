@@ -8,7 +8,7 @@ FREERTOSKERNEL:=$(FREERTOS)/Source/
 GITVER=$(shell git describe --tags --dirty)
 BUILDDATE=$(shell date --utc)
 
-CFLAGS= -fpic -DPIC \
+CFLAGS= -fpic -DPIC -Wall -Wextra \
 	-DGITVER=\"$(GITVER)\" \
 	-DBUILDDATE='"$(BUILDDATE)"' \
 	-O0 -g -Wall -Wextra -DIDF_VER=\"0.1\" \
@@ -140,12 +140,17 @@ wsys/menu.cpp      \
 wsys/indexedmenu.cpp      \
 wsys/callbackmenu.cpp      \
 wsys/menuwindow.cpp      \
+wsys/menuwindowindexed.cpp      \
 wsys/dialog.cpp      \
 wsys/label.cpp      \
 wsys/vlayout.cpp      \
 wsys/messagebox.cpp \
 wsys/multiwidget.cpp  \
 wsys/button.cpp  \
+wsys/filechooserdialog.cpp \
+menus/nmimenu.cpp \
+menus/settingsmenu.cpp \
+menus/videomodemenu.cpp \
 
 
 

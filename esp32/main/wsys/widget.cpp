@@ -36,8 +36,8 @@ void Widget::recalculateScreenPointers()
     m_screenptr.fromxy(m_x, m_y);
     m_attrptr.fromxy(m_x, m_y);
 
-    ESP_LOGI("WSYS", "%p Recomputing xy %d %d", this, m_x, m_y);
-    ESP_LOGI("WSYS", "%p Recomputed pointers %04x %04x", this, m_screenptr.getoff(), m_attrptr.getoff() );
+    WSYS_LOGI( "%p Recomputing xy %d %d", this, m_x, m_y);
+    WSYS_LOGI( "%p Recomputed pointers %04x %04x", this, m_screenptr.getoff(), m_attrptr.getoff() );
 }
 
 void Widget::handleEvent(uint8_t type, u16_8_t code)
@@ -66,7 +66,7 @@ Widget::Widget(Widget *parent): m_parent(parent)
 void Widget::damage(uint8_t mask)
 {
     m_damage |= mask;
-    ESP_LOGI("WSYS", "Widget::damage %d\n", damage());
+    WSYS_LOGI( "Widget::damage %d\n", damage());
 
     Widget *parent = m_parent;
     while (parent) {
@@ -84,4 +84,16 @@ void Widget::clear_damage(uint8_t mask)
 void Widget::clear_damage()
 {
     m_damage = 0;
+}
+
+void Widget::clearLines(screenptr_t start, unsigned len_chars, unsigned num_lines)
+{
+    int c = num_lines * 8;
+    while (c--) {
+        screenptr_t ptr = start;
+        for (int i=0;i<len_chars;i++) {
+            *ptr++ = 0x0;
+        }
+        start.nextpixelline();
+    }
 }

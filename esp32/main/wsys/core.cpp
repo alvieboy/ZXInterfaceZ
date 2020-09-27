@@ -60,7 +60,6 @@ screenptr_t &screenptr_t::drawstring(const char *s)
 {
     while (*s) {
         int c = (*s) - 32;
-        ESP_LOGI("WSYS","Char 0x%02x %d", *s, c);
         drawchar(&CHAR_SET[c*8])++;
         s++;
     }
@@ -102,7 +101,6 @@ screenptr_t &screenptr_t::drawstringpad(const char *s, int len)
 {
     while ((*s) && len) {
         int c = (*s) - 32;
-        ESP_LOGI("WSYS","Char 0x%02x %d", *s, c);
         drawchar(&CHAR_SET[c*8])++;
         s++;
         len--;
