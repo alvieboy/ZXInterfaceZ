@@ -3,7 +3,7 @@
 class IndexedMenu: public Menu
 {
 public:
-    IndexedMenu(Widget *parent): Menu(parent) {}
+    IndexedMenu(Widget *parent=NULL): Menu(parent) {}
 
     typedef void (*Function)(void *userptr, uint8_t sel);
 

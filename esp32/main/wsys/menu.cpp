@@ -1,5 +1,6 @@
 #include "menu.h"
 #include "../spectrum_kbd.h"
+#include "helpdisplayer.h"
 
 #define DAMAGE_SELECTION DAMAGE_USER1
 #define DAMAGE_CONTENTS  DAMAGE_USER2
@@ -9,7 +10,18 @@ Menu::Menu(Widget *parent): Widget(parent)
     m_displayOffset = 0;
     m_selectedEntry = 0;
     m_entries = NULL;
+    m_helpdisplayer = NULL;
 }
+
+void Menu::setHelp(const char *helpstrings[], HelpDisplayer *displayer)
+{
+    m_helpdisplayer = displayer;
+    m_helpstrings = helpstrings;
+
+    if (m_helpdisplayer)
+        m_helpdisplayer->displayHelpText(m_helpstrings[m_selectedEntry]);
+}
+
 
 void Menu::handleEvent(uint8_t type, u16_8_t code)
 {
@@ -18,7 +30,7 @@ void Menu::handleEvent(uint8_t type, u16_8_t code)
 
     char c = spectrum_kbd__to_ascii(code.v);
     
-    ESP_LOGI("WSYS", "Menu event kbd 0x%02x", c);
+    WSYS_LOGI( "Menu event kbd 0x%02x", c);
 
     switch (c) {
     case 'a':
@@ -31,7 +43,8 @@ void Menu::handleEvent(uint8_t type, u16_8_t code)
         if (!(m_entries->entries[m_selectedEntry].flags & MENU_FLAGS_DISABLED))
             activateEntry( m_selectedEntry );
         break;
-    case KEY_BREAK:
+    case KEY_BREAK:  /* fall-through */
+    case ' ':
         activateEntry( 0xff );
         break;
     }
@@ -41,6 +54,8 @@ void Menu::handleEvent(uint8_t type, u16_8_t code)
 void Menu::setEntries(const MenuEntryList *entries)
 {
     m_entries = entries;
+    m_selectedEntry = 0;
+    m_displayOffset = 0;
     damage(DAMAGE_SELECTION|DAMAGE_CONTENTS);
 }
 
@@ -58,6 +73,7 @@ void Menu::drawImpl()
         updateSelection();
     }
     if (damage() & (DAMAGE_CONTENTS)) {
+        WSYS_LOGI("Menu redraw contents");
         drawContents();
     }
     clear_damage(DAMAGE_SELECTION|DAMAGE_CONTENTS);
@@ -65,7 +81,7 @@ void Menu::drawImpl()
 
 void Menu::fillSline(attrptr_t attr, uint8_t value)
 {
-    ESP_LOGI("WSYS","fillsline attr %d", attr.getoff());
+    WSYS_LOGI("fillsline attr %d", attr.getoff());
 
     for (int i=0;i<width();i++) {
         *attr++ = value;
@@ -81,9 +97,9 @@ void Menu::updateSelection()
 
     unsigned int maxentries = m_entries->size();
 
-    ESP_LOGI("WSYS","update %p %d %d (attr %d)", this, pos, height(), attr.getoff());
+    WSYS_LOGI("update %p %d %d (attr %d)", this, pos, height(), attr.getoff());
 
-    ESP_LOGI("WSYS","selected entry %d offset %d", m_selectedEntry, m_displayOffset);
+    WSYS_LOGI("selected entry %d offset %d", m_selectedEntry, m_displayOffset);
     while (pos < height()) {
         if (currententry < maxentries && currententry==m_selectedEntry) {
             const MenuEntry &ref = (*m_entries)[currententry];
@@ -109,7 +125,7 @@ void Menu::drawContents()
     screenptr_t screenptr = m_screenptr;
 
     unsigned int numlines = height();
-
+    unsigned int linesdrawn = 0;
     maxentries -= m_displayOffset;
 
     if (numlines > maxentries)
@@ -117,7 +133,7 @@ void Menu::drawContents()
 
     unsigned int currententry = m_displayOffset;
 
-    ESP_LOGI("WSYS", "Menu: will draw %d lines", numlines);
+    WSYS_LOGI( "Menu: will draw %d lines", numlines);
 
     //screenptr++;
 
@@ -126,7 +142,13 @@ void Menu::drawContents()
         drawItem( screenptr, ref.string );
         screenptr.nextcharline();
         currententry++;
+        linesdrawn++;
     }
+
+    if (linesdrawn<height()) {
+        clearLines(screenptr, width(), height()-linesdrawn);
+    }
+
 }
 
 void Menu::drawItem(screenptr_t screenptr, const char *what)
@@ -140,14 +162,18 @@ void Menu::chooseNext()
     sel++;
     if (sel>=m_entries->size())
         return;
-    ESP_LOGI("WSYS", "Menu select next");
+    WSYS_LOGI( "Menu select next");
     m_selectedEntry = sel;
 
-    if (sel > (m_displayOffset+height())) {
+    if (sel >= (m_displayOffset+height())) {
         m_displayOffset++;
         damage(DAMAGE_CONTENTS);
     }
     damage(DAMAGE_SELECTION);
+
+    if (m_helpdisplayer)
+        m_helpdisplayer->displayHelpText(m_helpstrings[m_selectedEntry]);
+
 }
 
 void Menu::choosePrev()
@@ -160,5 +186,10 @@ void Menu::choosePrev()
         damage(DAMAGE_CONTENTS);
     }
     damage(DAMAGE_SELECTION);
+
+    if (m_helpdisplayer)
+        m_helpdisplayer->displayHelpText(m_helpstrings[m_selectedEntry]);
+
 }
+
 

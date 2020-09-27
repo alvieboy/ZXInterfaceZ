@@ -9,7 +9,7 @@ public:
     void setEntries(const MenuEntryList *entries);
 
     void setCallbackTable(const CallbackMenu::Function f[]);
-
+    void setHelpStrings(const char *help[]);
 protected:
 
 private:

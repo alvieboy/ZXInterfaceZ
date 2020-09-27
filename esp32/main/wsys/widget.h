@@ -44,6 +44,7 @@ public:
     void clear_damage();
     uint8_t damage() const { return m_damage; }
     void redraw() { damage(DAMAGE_ALL); }
+    static void clearLines(screenptr_t start, unsigned len_chars, unsigned num_lines);
 protected:
     virtual void drawImpl() = 0;
 

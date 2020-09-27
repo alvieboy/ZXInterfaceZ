@@ -141,93 +141,6 @@ IGNORE:
 	RET
 
 
-GRAPHICS_SDON:
-	PUSH 	IX
-	LD	IX, ATTR
-        LD	(IX+1), %01100000
-        LD	(IX+33), %01100000
-	POP 	IX
-        RET
-
-GRAPHICS_SDOFF:
-	PUSH 	IX
-	LD	IX, ATTR
-        LD	(IX+1), %00111000
-        LD	(IX+33), %00111000
-	POP	IX
-        RET
-        
-GRAPHICS_WIFION:
-        LD	A, %01111001
-GR1:
-	PUSH 	IX
-	LD	IX, ATTR        
-        LD	(IX+64), A
-        LD	(IX+65), A
-        LD	(IX+66), A
-        LD	(IX+96), A
-        LD	(IX+97), A
-        LD	(IX+98), A
-        POP 	IX
-        RET
-
-GRAPHICS_WIFIOFF:
-	LD	A, %01111000
-        CALL	GR1
-        ; Write "disconnected" area
-        LD	HL, DISCONNECTED
-	LD	DE, LINE3 + 3
-        LD	A, 23
-	CALL	PRINTSTRINGPAD
-        RET
-;	A: 0 (STA) or 1(AP) mode
-;	HL:	SSID
-
-GRAPHICS_WIFIPRINT:
-	LD	DE, LINE3 + 2
-        LD	C, %01111000 ; Normal color
-	CP	0
-        LD	A, 23 ; for string padding
-        JR	Z, _stamode
-        PUSH	HL
-        LD	A, 'A'
-        CALL	PRINTCHAR
-        LD	A, 'P'
-        CALL	PRINTCHAR
-        INC	DE
-        POP	HL
-        LD	C, %00001110 ; Color for AP mode text
-        LD	A, 20 ; For string padding
-_stamode:
-	CALL	PRINTSTRINGPAD
-        PUSH 	IX
-        LD	IX, ATTR+96+3
-        LD	A, C
-        LD	(IX), A
-        LD	(IX+1), A
-        POP 	IX
-        RET
-
-GETSSID:
-	LD	HL, SSID
-        LD	A, $04
-        CALL	LOADRESOURCE
-        JR	Z, INTERNALERROR
-        LD	(HL), 0 ; NULL-terminate the string.
-        RET
-
-CALLTABLE:
-        ADD	A, A ; a = a*2
-        ADD_HL_A
-	LD	A, (HL)
-        INC 	HL
-	LD	H, (HL)
-	LD	L, A
-        PUSH	HL
-        RET
-    
-
-
 SETATTRS:
         LD	HL, ATTR
         LD	D, $3
@@ -256,46 +169,17 @@ _endl1: HALT
 
 	include "debug.asm"
 	include "menu_defs.asm"
-        ;include "frame.asm"
-        ;include "textinput.asm"
-        ;include "textmessage.asm"
         include "string.asm"
-        include "alloc.asm"
-        ;include "mainmenu.asm"
-        ;include "wifimenu.asm"
-        ;include "sdcardmenu.asm"
-        ;include "nmimenu.asm"
         include "keyboard.asm"
 	include	"charmap.asm"
         include	"resource.asm"
         include	"graphics.asm"
-        ;include "videomode.asm"
         include	"print.asm"
         include	"regdebug.asm"
 	include "keybtest.asm"
-        ;include "widget.asm"
-        include "object.asm"
-        include "widget_class.asm"
-        include "widgetgroup.asm"
-        include "bin.asm"
-        include "menu.asm"
-        include "callbackmenu.asm"
-        include "window.asm"
-        include "menuwindow.asm"
-        include "screen.asm"
         include "utils.asm"
-        include "indexedmenu.asm"
-        include "dialog.asm"
-        include "filechooser.asm"
-        
 	include "nmihandler.asm"
-        include "settingsmenu.asm"
-        include "menuwindowindexed.asm"
-        include "videomode.asm"
-        include "textinput.asm"
-        include "multiwidget.asm"
 	include "snaram.asm"
-       ; include "filechooser.asm"
        
                ; 00000000001111111111222222222233
                ; 01234567890123456789012345678901

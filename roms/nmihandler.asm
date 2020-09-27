@@ -147,56 +147,6 @@ _l2:
 	POP 	AF
         RETN
         
-NMIPROCESS:
-	LD	A,0
-        LD	(FLAGS),A
-        
-        CALL	ALLOC__INIT
-        ; Create menu window
-
-
-        LD	HL, Screen_INST ; Need to set up parent pointer in advance
-        
-        
-        LD	IX, MainWindow_INST
-        LD	DE, $1C09 ; width=28, height=8
-        CALL	Menuwindow__CTOR
-        
-        LD	HL, MAINWINDOWTITLE
-        CALL	Window__setTitle
-        
-        ; Set menu entries
-        LD	A,  7
-        LD	HL, MAINMENU_ENTRIES
-        CALL	Menuwindow__setEntries
-        
-        LD	HL, NMIMENU_CALLBACK_TABLE
-        CALL	Menuwindow__setCallbackTable
-        
-        PUSH	IX
-        POP	HL
-        
-        ; Instantiate main screen @Screen_INST
-        LD	IX, Screen_INST
-        CALL	Screen__CTOR
-        ; Add window to screen (window in HL), centered.
-        CALL 	Screen__addWindowCentered
-
-        LD	IX, MainWindow_INST
-        LD	A, 1
-        VCALL	Widget__setVisible
-        
-        LD	IX, Screen_INST
-        ;CALL	Screen__redraw
-        
-        CALL	Screen__eventLoop
-        
-        JP	WAITFORNOKEY
-
-
-
-
-
 
 ; Returns NZ if we have a key
 CHECKKEY:
@@ -260,136 +210,7 @@ _r1:
         RET
         
 
-UNSPECIFIEDMSG: DB "Unspecified error", 0
-FILENAMETITLE:  DB "Save name", 0
 
-MAINWINDOWTITLE:
-	DB 	"ZX Interface Z", 0
-
-
-NMIENTRY1: DB	"Load snapshot..", 0
-NMIENTRY2: DB	"Save snapshot..", 0
-NMIENTRY3: DB	"Play tape...", 0
-NMIENTRY4: DB	"Poke...",0
-NMIENTRY5: DB	"Settings...", 0
-NMIENTRY6: DB	"Reset", 0
-NMIENTRY7: DB	"Exit", 0
-
-MAINMENU_ENTRIES:
-	DB	0
-        DW	NMIENTRY1
-	DB	0
-        DW	NMIENTRY2
-	DB	0
-        DW	NMIENTRY3
-	DB	0
-        DW	NMIENTRY4
-	DB	0
-        DW	NMIENTRY5
-	DB	0
-        DW	NMIENTRY6
-	DB	0
-        DW	NMIENTRY7
-
-
-LOADSNAPSHOT:
-	PUSH	IX
-        LD	HL, REQUEST_SNAPSHOT
-        LD	A, FILE_FILTER_SNAPSHOTS
-        CALL	LOADFILE
-        POP	IX
-        RET
-
-LOADTAPE:
-	PUSH	IX
-        LD	HL, REQUEST_TAPE
-        LD	A, FILE_FILTER_TAPES
-        CALL	LOADFILE
-        POP	IX
-        RET
-        
-REQUEST_TAPE:
-        LD 	A, CMD_PLAY_TAPE
-        CALL	WRITECMDFIFO
-        ; String still in HL
-        CALL	WRITECMDSTRING
-        ; Close all widgets and return
-        LD	IX, Screen_INST
-        JP	Screen__closeAll
-        
-LOADFILE:
-	PUSH	HL
-        PUSH	AF
-        
-        LD	IX, FileWindow_INST
-        LD	DE, $1C0F ; width=28, height=8
-        LD	HL, Screen_INST
-
-        CALL	FileDialog__CTOR
-        
-	LD	HL, FileWindow_INST
-        LD	IX, Screen_INST
-        CALL 	Screen__addWindowCentered
-	
-        
-        LD	IX, FileWindow_INST
-        LD	A, 1
-        VCALL	Widget__setVisible
-	POP	AF
-	; A comes from parameter        
-	CALL	FileDialog__setFilter
-
-        LD	IX, FileWindow_INST
-	CALL	Dialog__exec
-        JR	NZ, _canceled
-        
-        LD	IX, FileWindow_INST
-        CALL	FileDialog__getSelectionString
-        PUSH	HL
-        CALL	FileDialog__DTOR
-        POP	HL
-        
-        RET 	; JP	(HL)
-_canceled:
-	POP	HL
-        JP	FileDialog__DTOR
-
-        
-REQUEST_SNAPSHOT:
-	; Request load snapshot
-        LD 	A, CMD_LOAD_SNA
-        CALL	WRITECMDFIFO
-        ; String still in HL
-        CALL	WRITECMDSTRING
-        ;
-        ; Wait for completion
-_wait:
-        LD	HL, NMICMD_RESPONSE
-	LD	A, RESOURCE_ID_OPERATION_STATUS
-        CALL	LOADRESOURCE
-        JR	Z, _error1
-        ; Get operation status
-        LD	A, (NMICMD_RESPONSE)
-        CP      STATUS_INPROGRESS
-        JR	Z, _wait
-        CP	STATUS_OK
-        JP	Z, SNARAM
-        
-        LD	HL, NMICMD_RESPONSE
-        INC	HL	
-        ;JP	SHOWOPERRORMSG
-        ENDLESS
-_error1:
-	JP	INTERNALERROR
-	ENDLESS
-
-REQUESTRESET:
-	; Request RESET from FPGA
-        DI
-        LD   	A, CMD_RESET
-        CALL 	WRITECMDFIFO
-	ENDLESS
-        
 
 NMIPROCESS_VIDEOONLY:
 	DI
@@ -444,12 +265,20 @@ _command:
         DEBUGHEXA
 	CP	$FF
         JR	Z, _leavenmi
+        CP	$FE
+        JR	Z, _snapshot
         JR	screenloop
 _leavenmi:
 	LD	A, CMD_LEAVENMI
         CALL	WRITECMDFIFO
         RET
+_snapshot:
+	LD	A, CMD_LEAVENMI
+        CALL	WRITECMDFIFO
+        JP 	SNARAM
 _processvideo:
+	DEBUGSTR "Sequence "
+        DEBUGHEXA
         LD	(FRAMES1), A
 
         LD	C, PORT_RAM_ADDR_0
@@ -472,19 +301,3 @@ _loop1:
        	JP 	screenloop
         RET
         
-;ASKFILENAME:
-TBD:
-NMIENTRY4HANDLER:
-NMIENTRY6HANDLER:
-Wrap_close_mainwindow:
-	LD	IX, Screen_INST
-        JP	Screen__closeAll
-
-NMIMENU_CALLBACK_TABLE:
-	DEFW LOADSNAPSHOT       ; Load snapshot
-        DEFW TBD        	; Save snapshot
-        DEFW LOADTAPE           ; Play tape
-        DEFW NMIENTRY4HANDLER	; Poke
-        DEFW Settings__show	; Settings
-        DEFW REQUESTRESET	; Reset
-        DEFW Wrap_close_mainwindow

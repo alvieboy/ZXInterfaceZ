@@ -319,7 +319,11 @@ int sna__save_from_extram(const char *file)
 #define SNA_EXTRAM_ADDRESS 0x010000
 
 #undef LOCAL_CHUNK_SIZE
+#ifdef __linux__
+#define LOCAL_CHUNK_SIZE 2048
+#else
 #define LOCAL_CHUNK_SIZE 64
+#endif
 
 int sna__load_sna_extram(const char *file)
 {

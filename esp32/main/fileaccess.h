@@ -1,6 +1,10 @@
 #ifndef __FILEACCESS_H__
 #define __FILEACCESS_H__
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <string.h>
 #include "strcmpi.h"
 #include <esp_vfs.h>
@@ -65,5 +69,9 @@ typedef enum {
 } filetype_t;
 
 filetype_t file_type(const char *filename);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

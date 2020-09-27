@@ -4,14 +4,14 @@
 
 void MultiWidget::draw(bool force)
 {
-    ESP_LOGI("WSYS", "MultiWidget::draw force=%d damage=0x%02x\n", force?1:0, damage());
+    WSYS_LOGI( "MultiWidget::draw force=%d damage=0x%02x\n", force?1:0, damage());
 
     if (force || (damage() & ~DAMAGE_CHILD)) { // If any bits beside child, then draw
         drawImpl();
     }
 
     for (int i=0;i<m_numchilds;i++) {
-        ESP_LOGI("WSYS", "MultiWidget::draw child force=%d child_damage=0x%02x\n", force?1:0, m_childs[i]->damage());
+        WSYS_LOGI( "MultiWidget::draw child force=%d child_damage=0x%02x\n", force?1:0, m_childs[i]->damage());
 
         if ((force || (damage() & DAMAGE_CHILD)))  {
             if (force || m_childs[i]->damage())

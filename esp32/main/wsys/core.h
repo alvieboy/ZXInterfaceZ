@@ -4,10 +4,14 @@
 #include <inttypes.h>
 #include <stdlib.h>
 #include "../wsys.h"
+
 extern "C" {
 #include "esp_log.h"
-};
+}
 
+#define WSYS_LOGI(x...) do \
+     ESP_LOGI(__PRETTY_FUNCTION__, x); \
+    while (0);
 
 struct framebuffer {
     uint8_t screen[32*24*8];
@@ -56,7 +60,7 @@ static inline u16_8_t getxyscreenstart(uint8_t x, uint8_t y)
     off.l = (y<<5) & 0xE0;
     off.l += x;
     off.h = y & 0x18;
-    ESP_LOGI("WSYS", "Comp %d %d 0x%04x", x,y, off.v);
+    WSYS_LOGI( "Comp %d %d 0x%04x", x,y, off.v);
     return off;
     /*GETXYSCREENSTART:
         LD	A, D
