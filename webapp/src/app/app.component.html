@@ -1,16 +1,36 @@
 <p>
   <mat-toolbar color="primary">
     <button mat-icon-button class="toolbar-button">
-      <mat-icon class="toolbar-icon">menu</mat-icon>
+      <mat-icon class="toolbar-icon">android</mat-icon> <!-- TODO logo here -->
     </button>
-    <span>ZX Interface Z</span>
+    <span>ZX Interface Z</span><!-- TODO Use Spectrum font here -->
+
     <span class="toolbar-spacer"></span>
-    <button mat-fab-button class="toolbar-button">
-      <mat-icon class="toolbar-icon">favorite</mat-icon>
-    </button>
-    <button mat-icon-button class="toolbar-button">
-      <mat-icon class="toolbar-icon">share</mat-icon>
-    </button>
+
+    <a routerLink="/" mat-fab-button class="toolbar-button">
+      <mat-icon class="toolbar-icon">house</mat-icon>
+    </a>
+    <a routerLink="/sdcard" mat-fab-button class="toolbar-button">
+      <mat-icon class="toolbar-icon">sd_storage</mat-icon>
+    </a>
+    <a routerLink="/status" mat-fab-button class="toolbar-button">
+      <mat-icon class="toolbar-icon">assessment</mat-icon>
+    </a>
+    <a routerLink="/wifi" mat-fab-button class="toolbar-button">
+      <mat-icon class="toolbar-icon">wifi</mat-icon>
+    </a>
+    <a routerLink="/devices" mat-fab-button class="toolbar-button">
+      <mat-icon class="toolbar-icon">usb</mat-icon>
+    </a>
+    <a routerLink="/about" mat-fab-button class="toolbar-button">
+      <mat-icon class="toolbar-icon">announcement</mat-icon>
+    </a>
+
+    <span class="toolbar-spacer"></span>
+
+    <a href="https://github.com/alvieboy/ZXInterfaceZ" mat-fab-button class="toolbar-button">
+      <mat-icon class="toolbar-icon">code</mat-icon>
+    </a>
   </mat-toolbar>
 </p>
 

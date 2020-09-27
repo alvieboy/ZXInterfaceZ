@@ -4,6 +4,11 @@
 
 .toolbar-icon {
   padding: 0 14px;
+  transition-duration: 0.4s;
+}
+
+.toolbar-icon:hover {
+  color: grey;
 }
 
 .toolbar-button {
