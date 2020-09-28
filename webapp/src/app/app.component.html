@@ -1,6 +1,6 @@
 <p>
   <mat-toolbar color="primary">
-    <button mat-icon-button class="toolbar-button">
+    <button routerLink="/" mat-fab-button class="toolbar-button">
       <mat-icon class="toolbar-icon">android</mat-icon> <!-- TODO logo here -->
     </button>
     <span>ZX Interface Z</span><!-- TODO Use Spectrum font here -->
@@ -34,4 +34,6 @@
   </mat-toolbar>
 </p>
 
-<router-outlet></router-outlet>
+<div style="padding: 0 14px">
+  <router-outlet></router-outlet>
+</div>

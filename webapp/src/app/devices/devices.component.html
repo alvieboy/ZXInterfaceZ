@@ -1,1 +1,31 @@
-<p>devices works!</p>
+<h1 class="mat-headline">Devices</h1>
+
+<div class="mat-elevation-z8">
+<table mat-table [dataSource]="devices"> <!--  [dataSource]="dataSource" -->
+  <ng-container matColumnDef="id">
+    <th mat-header-cell *matHeaderCellDef> ID </th>
+    <td mat-cell *matCellDef="let device"> {{device.id}} </td>
+  </ng-container>
+
+  <ng-container matColumnDef="vendor">
+    <th mat-header-cell *matHeaderCellDef> Vendor </th>
+    <td mat-cell *matCellDef="let device"> {{device.vendor}} </td>
+  </ng-container>
+
+  <ng-container matColumnDef="product">
+    <th mat-header-cell *matHeaderCellDef> Product </th>
+    <td mat-cell *matCellDef="let device"> {{device.product}} </td>
+  </ng-container>
+
+  <ng-container matColumnDef="connected">
+    <th mat-header-cell *matHeaderCellDef> Connected </th>
+    <td mat-cell *matCellDef="let device"> {{device.connected}} </td>
+  </ng-container>
+
+  <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+  <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+</table>
+
+<!-- mat-paginator [pageSizeOptions]="[5, 10, 20]" showFirstLastButtons></mat-paginator -->
+</div>
+<!-- TODO Add Class and icon -->
