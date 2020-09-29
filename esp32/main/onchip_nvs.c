@@ -1,4 +1,4 @@
-#include "nvs.h"
+#include "onchip_nvs.h"
 #include "esp_system.h"
 #include "nvs_flash.h"
 #include <string.h>

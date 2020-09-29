@@ -5,7 +5,7 @@ CP:=cp
 
 GITVER=$(shell git describe --tags --dirty)
 BUILDDATE=$(shell date --utc)
-EXTRA_CFLAGS+=-DGITVER=\"$(GITVER)\" -DBUILDDATE='"$(BUILDDATE)"' -Imain/wsys
+EXTRA_CFLAGS+=-DGITVER=\"$(GITVER)\" -DBUILDDATE='"$(BUILDDATE)"'
 
 EXTRA_COMPONENT_DIRS=main/wsys main/menus
 
