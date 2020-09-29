@@ -120,18 +120,21 @@ unsigned fpga__read_id()
 static int fpga__configurefromflash()
 {
 #ifndef __linux__
-    void *data;
-    int size;
+    int fh;
     int r = -1;
-
+    struct stat st;
     do {
-        data = readfile(FPGA_BINARYFILE, &size);
-        if (data==NULL) {
-            ESP_LOGE(TAG, "Cannot load FPGA image");
+        r = __lstat(FPGA_BINARYFILE, &st);
+        if (r<0) {
+            ESP_LOGE(TAG, "Cannot stat FPGA image");
             break;
         }
-        r = fpga__passiveserialconfigure( data, size );
-        free( data );
+        fh = __open(FPGA_BINARYFILE, O_RDONLY);
+        if (fh<0) {
+            ESP_LOGE(TAG, "Cannot open FPGA image");
+            break;
+        }
+        r = fpga__passiveserialconfigure_fromfile( fh, st.st_size );
     } while (0);
 
     if (r!=0) {
@@ -401,6 +404,55 @@ int fpga__passiveserialconfigure(const uint8_t *data, unsigned len)
         int i;
         for (i=0;i<chunk;i++) {
             txrxbuf[i] = bitRevTable[ *data++ ];
+        }
+        spi__transceive(spi0_fpga, txrxbuf, chunk);
+        if (gpio_get_level(PIN_NUM_NSTATUS)==0) {
+            ESP_LOGW(TAG,"FPGA pin NSTATUS LOW while uploading (%d remaining)", len);
+            return -1;
+        }
+        len-=chunk;
+    }
+
+    while(1) {
+        if (gpio__waitpin( PIN_NUM_CONF_DONE, 1, 1000)<0) {
+            ESP_LOGW(TAG,"FPGA pin CONF_DONE failed to go LOW!");
+        } else {
+            break;
+        }
+        ESP_LOGI(TAG, "CONF_DONE: %d", gpio_get_level(PIN_NUM_CONF_DONE) );
+    }
+
+    return 0;
+}
+
+int fpga__passiveserialconfigure_fromfile(int fh, unsigned len)
+{
+    uint8_t txrxbuf[128];
+
+    ESP_LOGI(TAG,"Loading FPGA bitfile (%d bytes)", len);
+
+
+    gpio_set_level( PIN_NUM_NCONFIG, 1 );
+    gpio_set_level( PIN_NUM_NCONFIG, 0 );
+    vTaskDelay(1 / portTICK_RATE_MS);
+    gpio_set_level( PIN_NUM_NCONFIG, 1 );
+
+    if (gpio__waitpin( PIN_NUM_NSTATUS, 1, 100)<0) {
+        ESP_LOGW(TAG,"FPGA pin NSTATUS failed to go HIGH!");
+        return -1;
+    }
+
+    while (len) {
+        int chunk = MIN(len,sizeof(txrxbuf));
+        int i;
+        // Read first.
+        int r = read(fh, txrxbuf, chunk);
+        if (r!=chunk) {
+            ESP_LOGE(TAG,"Short read from file!");
+            return -1;
+        }
+        for (i=0;i<chunk;i++) {
+            txrxbuf[i] = bitRevTable[ txrxbuf[i] ];
         }
         spi__transceive(spi0_fpga, txrxbuf, chunk);
         if (gpio_get_level(PIN_NUM_NSTATUS)==0) {

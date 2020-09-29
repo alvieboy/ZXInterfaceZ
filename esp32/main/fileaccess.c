@@ -252,9 +252,9 @@ void *readfile(const char *filename, int *size)
         if (r<0)
             break;
         // Read file into memory first.
-        data= malloc(st.st_size);
+        data = malloc(st.st_size);
         if (data==NULL) {
-            ESP_LOGE(TAG, "Cannot allocate memory for file");
+            ESP_LOGE(TAG, "Cannot allocate memory for file (%d bytes)", (int)st.st_size);
             r = -1;
             break;
         }

@@ -9,6 +9,7 @@
 #include "fpga.h"
 #include "wifi.h"
 #include "rom.h"
+#include "memlayout.h"
 
 char cmd[256];
 uint8_t cmdptr = 0;
@@ -143,7 +144,7 @@ static int console__loadrom(int argc, char **argv)
         ESP_LOGE(CTAG, "Too few arguments");
         return -1;
     }
-    int f = rom__load_custom_from_file(argv[0]);
+    int f = rom__load_custom_from_file(argv[0], MEMLAYOUT_ROM2_BASEADDRESS);
     if (f<0) {
         ESP_LOGE(CTAG, "Cannot load ROM '%s'", argv[0]);
         return -1;

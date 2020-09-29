@@ -13,7 +13,7 @@
 
 int rom__load_from_flash(void)
 {
-    int size;
+    /*int size;
     void *data = readfile(ROM_FILENAME, &size);
 
     if (data==NULL) {
@@ -24,10 +24,11 @@ int rom__load_from_flash(void)
 
     free(data);
 
-    return r;
+    return r;*/
+    return rom__load_custom_from_file(ROM_FILENAME, NMI_ROM_BASEADDRESS);
 }
 
-int rom__load_custom_from_file(const char *file)
+int rom__load_custom_from_file(const char *file, unsigned address)
 {
     struct stat st;
 
@@ -48,7 +49,7 @@ int rom__load_custom_from_file(const char *file)
 
     ESP_LOGI(TAG, "ROM: loading %ld bytes", st.st_size);
 
-    int r = fpga__write_extram_block_from_file(MEMLAYOUT_ROM2_BASEADDRESS, fd, st.st_size, false);
+    int r = fpga__write_extram_block_from_file(address, fd, st.st_size, false);
 
     close(fd);
 
