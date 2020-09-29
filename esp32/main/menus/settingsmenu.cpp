@@ -3,6 +3,7 @@
 #include "wsys/menuwindow.h"
 #include "wsys/screen.h"
 #include "videomodemenu.h"
+#include "wifimenu.h"
 
 static MenuWindow *settings_window;
 
@@ -43,8 +44,11 @@ void settings__show()
 
 static void settings__wifi()
 {
-
+    WifiMenu *wifimenu = new WifiMenu();
+    screen__addWindowCentered(wifimenu);
+    wifimenu->setVisible(true);
 }
+
 static void settings__usb()
 {
 }
