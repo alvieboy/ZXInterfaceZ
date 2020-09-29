@@ -1,37 +1,27 @@
 #include "vlayout.h"
 
-VLayout::VLayout(Widget *parent): MultiWidget(parent)
+VLayout::VLayout(Widget *parent): Layout(parent)
 {
 }
-
-
-/*
- 1
- 4 (exp)
- 3 (exp)
- 1
- 1
-
- height=10
- expanded_childs=2
- expanded_size = 10 - (childs-expanded_childs) = 7
- expanded_delta = 7/2;
- */
 
 void VLayout::resizeEvent()
 {
     unsigned expanded_childs = 0;
     unsigned expanded_size = 0;
+    unsigned nonexpanded_minimum_size = 0;
 
     if (m_numchilds==0)
         return;
 
     for (int i=0;i<m_numchilds;i++) {
-        if (m_flags[i] & LAYOUT_FLAG_VEXPAND)
+        if (m_flags[i] & LAYOUT_FLAG_VEXPAND) {
             expanded_childs++;
+        } else {
+            nonexpanded_minimum_size += m_childs[i]->getMinimumHeight();
+        }
     }
 
-    expanded_size = height()-(m_numchilds-expanded_childs);
+    expanded_size = height() - nonexpanded_minimum_size;
 
     unsigned my = y();
 
@@ -44,8 +34,9 @@ void VLayout::resizeEvent()
                 m_childs[i]->resize(m_x, my, m_w, this_expanded_size);
                 my+=this_expanded_size;
             } else {
-                m_childs[i]->resize(m_x, my, m_w, 1);
-                my++;
+                unsigned size = m_childs[i]->getMinimumHeight();
+                m_childs[i]->resize(m_x, my, m_w,size);
+                my+=size;
             }
         }
     } else {
@@ -59,17 +50,3 @@ void VLayout::resizeEvent()
     }
 }
 
-void VLayout::drawImpl()
-{
-}
-
-
-void VLayout::addChild(Widget *w) {
-    m_flags[m_numchilds] = 0;
-    MultiWidget::addChild(w);
-}
-
-void VLayout::addChild(Widget *w, uint8_t flags) {
-    m_flags[m_numchilds] = flags;
-    MultiWidget::addChild(w);
-}

@@ -1,7 +1,8 @@
 #include "label.h"
 
-Label::Label(Widget *parent, const char *text): Widget(parent), m_text(text)
+Label::Label(const char *text,Widget *parent): Widget(parent), m_text(text)
 {
+    redraw();
 }
 
 void Label::drawImpl()

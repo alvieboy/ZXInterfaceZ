@@ -1,6 +1,7 @@
 #include "menu.h"
 #include "../spectrum_kbd.h"
 #include "helpdisplayer.h"
+#include <cstring>
 
 #define DAMAGE_SELECTION DAMAGE_USER1
 #define DAMAGE_CONTENTS  DAMAGE_USER2
@@ -192,4 +193,15 @@ void Menu::choosePrev()
 
 }
 
-
+uint8_t Menu::getMinimumWidth() const
+{
+    int len = 1;
+    if (!m_entries)
+        return len;
+    for (int i=0;i<m_entries->size();i++) {
+        int clen = strlen((*m_entries)[i].string);
+        if (clen>len)
+            len=clen;
+    }
+    return len;
+}

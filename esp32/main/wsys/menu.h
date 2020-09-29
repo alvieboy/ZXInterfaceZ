@@ -1,6 +1,10 @@
+#ifndef __WSYS_MENU_H__
+#define __WSYS_MENU_H__
+
 #include "widget.h"
 #include <stdlib.h>
 #include <vector>
+
 
 #define MENU_COLOR_NORMAL			0x78
 #define MENU_COLOR_DISABLED			0x38
@@ -88,6 +92,9 @@ public:
     const MenuEntry *getEntry() {
         return &m_entries->entries[m_selectedEntry];
     }
+
+    virtual uint8_t getMinimumWidth() const;
+
 protected:
     void chooseNext();
     void choosePrev();
@@ -111,3 +118,4 @@ protected:
 
 
 
+#endif

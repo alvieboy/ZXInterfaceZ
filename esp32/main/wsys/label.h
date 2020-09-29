@@ -6,7 +6,7 @@
 class Label: public Widget
 {
 public:
-    Label(Widget *parent=NULL, const char *text=NULL);
+    Label(const char *text=NULL,Widget *parent=NULL);
     virtual void drawImpl();
     void setText(const char *text) { m_text=text; redraw(); }
 private:

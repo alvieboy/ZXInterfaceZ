@@ -792,6 +792,17 @@ const uint8_t LEFTVERTICAL[8] = {
     0x80 ,
     0x80 ,
 };
+
+const uint8_t CENTERVERTICAL[8] = {
+    0x10 ,
+    0x10 ,
+    0x10 ,
+    0x10 ,
+    0x10 ,
+    0x10 ,
+    0x10 ,
+    0x10 ,
+};
 const uint8_t HH[8] = {
     0x01 ,
     0x03 ,

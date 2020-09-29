@@ -66,7 +66,7 @@ Widget::Widget(Widget *parent): m_parent(parent)
 void Widget::damage(uint8_t mask)
 {
     m_damage |= mask;
-    WSYS_LOGI( "Widget::damage %d\n", damage());
+    WSYS_LOGI( "damage %d parent %p\n", damage(), m_parent);
 
     Widget *parent = m_parent;
     while (parent) {
