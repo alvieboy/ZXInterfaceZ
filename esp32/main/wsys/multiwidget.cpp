@@ -37,6 +37,7 @@ void MultiWidget::handleEvent(uint8_t type, u16_8_t code)
 void MultiWidget::addChild(Widget *w)
 {
     m_childs[m_numchilds++]=w;
+    w->setParent(this);
     resizeEvent();
     damage(DAMAGE_CHILD);
 }

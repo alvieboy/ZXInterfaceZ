@@ -45,6 +45,8 @@ public:
     uint8_t damage() const { return m_damage; }
     void redraw() { damage(DAMAGE_ALL); }
     static void clearLines(screenptr_t start, unsigned len_chars, unsigned num_lines);
+    virtual uint8_t getMinimumWidth() const { return 1; }
+    virtual uint8_t getMinimumHeight() const { return 1; }
 protected:
     virtual void drawImpl() = 0;
 

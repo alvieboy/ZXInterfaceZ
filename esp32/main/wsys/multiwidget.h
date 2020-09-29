@@ -1,6 +1,9 @@
+#ifndef __WSYS_MULTIWIDGET_H__
+#define __WSYS_MULTIWIDGET_H__
+
 #include "widgetgroup.h"
 
-#define MULTIWIDGET_MAX_CHILDS 4
+#define MULTIWIDGET_MAX_CHILDS 8
 
 class MultiWidget: public WidgetGroup
 {
@@ -21,3 +24,4 @@ protected:
     Widget *m_childs[MULTIWIDGET_MAX_CHILDS];
 };
 
+#endif
