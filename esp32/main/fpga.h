@@ -104,6 +104,8 @@ int fpga__load_resource_fifo(const uint8_t *data, unsigned len, int timeout);
 
 
 int fpga__passiveserialconfigure(const uint8_t *data, unsigned len);
+int fpga__passiveserialconfigure_fromfile(int fh, unsigned len);
+
 #if 0
 int fpga__startprogram(fpga_program_state_t*);
 int fpga__program(fpga_program_state_t*,const uint8_t *data, unsigned len);

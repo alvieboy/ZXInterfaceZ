@@ -35,6 +35,7 @@
 #include "version.h"
 #include "buttons.h"
 #include "vga.h"
+#include "memlayout.h"
 
 static int8_t videomode = 0;
 
@@ -79,7 +80,7 @@ static void io0_long_press()
     }
     ESP_LOGI(TAG, "Loading ROM %s", romname);
 
-    int f = rom__load_custom_from_file(romname);
+    int f = rom__load_custom_from_file(romname, MEMLAYOUT_ROM2_BASEADDRESS);
     if (f<0) {
         ESP_LOGE(TAG, "Cannot load ROM %s", romname);
         return;
@@ -140,6 +141,7 @@ void app_main()
     nvs__init();
     wifi__init();
 
+    resource__init();
 
     if (fpga__init()<0) {
         ESP_LOGE(TAG, "Cannot proceed without FPGA!");
@@ -153,8 +155,6 @@ void app_main()
     }
 
     spectint__init();
-
-    resource__init();
 
     resource__register( 0x00, &versionresource);
     resource__register( 0x02, &statusresource.r);
