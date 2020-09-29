@@ -70,14 +70,14 @@ static void do_load_snapshot(void *data, int status)
 {
     if (status==0) {
         FileChooserDialog *d = static_cast<FileChooserDialog*>(data);
-        ESP_LOGI("WSYS", "Snapshot is: %s", d->getSelection());
+        WSYS_LOGI("Snapshot is: %s", d->getSelection());
         int ret = sna__load_sna_extram(d->getSelection());
-        ESP_LOGI("WSYS", "Load Snapshot %d", ret);
+        WSYS_LOGI("Load Snapshot %d", ret);
         if (ret==0) {
-            ESP_LOGI("WSYS", "Starting SNA");
+            WSYS_LOGI("Starting SNA");
             wsys__send_command(0xFE);
         } else {
-            ESP_LOGI("WSYS", "Error loading SNA");
+            WSYS_LOGE("Error loading SNA");
             MessageBox::show("Cannot load SNA");
         }
     }
@@ -95,7 +95,7 @@ static void do_load_tape(void *data, int status)
 {
     if (status==0) {
         FileChooserDialog *d = static_cast<FileChooserDialog*>(data);
-        ESP_LOGI("WSYS", "Tape is: %s", d->getSelection());
+        WSYS_LOGI("Tape is: %s", d->getSelection());
         tapeplayer__play(d->getSelection());
         screen__destroyAll();
         wsys__send_command(0xFF);

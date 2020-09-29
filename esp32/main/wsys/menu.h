@@ -45,7 +45,7 @@ public:
             menudatabuf = (uint8_t*)malloc( sizeof(MenuEntryList) + count * sizeof(MenuEntry));
 
             if (!menudatabuf) {
-                ESP_LOGE("WSYS", "Menu: cannot allocate");
+                WSYS_LOGE("Menu: cannot allocate");
                 return NULL;
             }
 
@@ -68,7 +68,7 @@ public:
             data = cdata;
 
             if (cdata==NULL) {
-                ESP_LOGE("WSYS", "Menu: cannot allocate cdata");
+                WSYS_LOGE("Menu: cannot allocate cdata");
                 free(menudatabuf);
                 return NULL;
             }
