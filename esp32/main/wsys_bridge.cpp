@@ -24,6 +24,7 @@ void wsys__keyboard_event(uint16_t raw, char ascii)
     evt.data.v = raw;
     evt.type = 0;
     xQueueSend(wsys_evt_queue, &evt, portMAX_DELAY);
+    portYIELD();
 }
 
 void wsys__get_screen_from_fpga()
@@ -36,6 +37,7 @@ void wsys__nmiready()
     struct wsys_event evt;
     evt.type = EVENT_NMIENTER;
     xQueueSend(wsys_evt_queue, &evt, portMAX_DELAY);
+    portYIELD();
 }
 
 void wsys__nmileave()

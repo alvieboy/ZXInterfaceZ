@@ -5,6 +5,13 @@
 #include <stdlib.h>
 #include "../wsys.h"
 
+#ifdef __linux__
+#define WSYS_BOUND_CHECKS
+#define WSYS_ENABLE_DEBUG
+#endif
+
+#ifdef WYS_ENABLE_DEBUG
+
 extern "C" {
 #include "esp_log.h"
 }
@@ -13,11 +20,26 @@ extern "C" {
      ESP_LOGI(__PRETTY_FUNCTION__, x); \
     while (0);
 
+#else
+
+#define WSYS_LOGI(x...)
+
+#endif
+
+#define WSYS_LOGE(x...) do \
+     ESP_LOGE(__PRETTY_FUNCTION__, x); \
+    while (0);
+
+
+
+
 struct framebuffer {
     uint8_t screen[32*24*8];
     uint8_t attr[32*24];
     uint8_t seq;
 } __attribute__((packed));
+
+#ifdef WSYS_BOUND_CHECKS
 
 #define CHECK_BOUNDS_SCREEN(x) do { \
     if (off.v>sizeof(spectrum_framebuffer.screen)) { \
@@ -31,6 +53,14 @@ struct framebuffer {
     abort(); \
     }\
 } while (0);
+
+#else
+
+#define CHECK_BOUNDS_SCREEN(x)
+#define CHECK_BOUNDS_ATTR(x)
+
+#endif
+
 
 extern "C" struct framebuffer spectrum_framebuffer;
 

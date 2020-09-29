@@ -98,7 +98,7 @@ bool FileChooserDialog::buildDirectoryList()
     }
 
     if (__getcwd(cwd,sizeof(cwd))==NULL) {
-        ESP_LOGE("WSYS", "Cannot get root directory!");
+        WSYS_LOGE("Cannot get root directory!");
         return false;
     }
 
@@ -109,7 +109,7 @@ bool FileChooserDialog::buildDirectoryList()
 
     char *cdir = strrchr(cwd,'/');
     if (NULL==cdir) {
-        ESP_LOGE("WSYS", "Cannot extract current dir from '%s'", cwd);
+        WSYS_LOGE("Cannot extract current dir from '%s'", cwd);
         return false;
     }
     if (cdir[1] != '\0') {
