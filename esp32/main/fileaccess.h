@@ -8,6 +8,7 @@
 #include "sdkconfig.h"
 #include <dirent.h>
 #include <sys/types.h>
+#include <fcntl.h>
 
 #define FILE_FILTER_NONE (0x00)
 #define FILE_FILTER_SNAPSHOTS (0x01)
@@ -52,6 +53,8 @@ struct mountpoints {
 char *fullpath(const char *name, char *dest, int maxlen);
 int file_size(const char *path, const char *filename);
 int __open(const char *path, int flags, ...);
+int __lstat(const char *path, struct stat *st);
+void *readfile(const char *path, int *size);
 
 const struct mountpoints *__get_mountpoints();
 

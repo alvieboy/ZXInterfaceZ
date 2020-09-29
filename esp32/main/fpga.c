@@ -16,6 +16,8 @@
 #include "string.h"
 #include "errno.h"
 
+#define FPGA_BINARYFILE "/spiffs/fpga0.rbf"
+
 static spi_device_handle_t spi0_fpga;
 
 static fpga_flags_t latched_flags = 0;
@@ -118,43 +120,23 @@ unsigned fpga__read_id()
 static int fpga__configurefromflash()
 {
 #ifndef __linux__
-    const esp_partition_t *fpga_partition = NULL;
-    const uint8_t *fpga_ptr = NULL;
-    spi_flash_mmap_handle_t mmap_handle;
+    void *data;
+    int size;
+    int r = -1;
 
+    do {
+        data = readfile(FPGA_BINARYFILE, &size);
+        if (data==NULL) {
+            ESP_LOGE(TAG, "Cannot load FPGA image");
+            break;
+        }
+        r = fpga__passiveserialconfigure( data, size );
+        free( data );
+    } while (0);
 
-
-    esp_partition_iterator_t i =
-        esp_partition_find(0x40, 0x00, NULL);
-
-    if (i!=NULL) {
-        fpga_partition = esp_partition_get(i);
-
-        esp_err_t err =esp_partition_mmap(fpga_partition,
-                                          0, /* Offset */
-                                          fpga_partition->size,
-                                          SPI_FLASH_MMAP_DATA,
-                                          (const void**)&fpga_ptr,
-                                          &mmap_handle);
-        ESP_ERROR_CHECK(err);
-        ESP_LOGI(TAG,"Mapped FPGA partition at %p", fpga_ptr);
-    } else {
-        ESP_LOGW(TAG,"Cannot find FPGA partition!!!");
+    if (r!=0) {
+        ESP_LOGE(TAG, "Cannot load FPGA binary!");
     }
-    esp_partition_iterator_release(i);
-
-    uint32_t size = *((uint32_t*)fpga_ptr);
-
-    if (size > fpga_partition->size) {
-        ESP_LOGW(TAG, "FPGA bitfile is larger than partition size!");
-        spi_flash_munmap(mmap_handle);
-        return -1;
-    }
-
-    int r = fpga__passiveserialconfigure( &fpga_ptr[8], size );
-
-    spi_flash_munmap(mmap_handle);
-
     return r;
 #else
     return 0;

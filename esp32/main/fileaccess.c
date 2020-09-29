@@ -119,6 +119,21 @@ int __open(const char *path, int flags, ...)
     return fd;
 }
 
+int __lstat(const char *path, struct stat *st)
+{
+    int r;
+#ifdef __linux__
+    do {
+        char fpath[512];
+        sprintf(fpath,"%s/%s", startupdir, path);
+        r = stat(fpath, st);
+    } while (0);
+#else
+    r = stat(path, st);
+#endif
+    return r;
+}
+
 const char *__getcwd_const()
 {
     init_cwd();
@@ -204,7 +219,7 @@ int file_size(const char *path, const char *filename)
 filetype_t file_type(const char *filename)
 {
     struct stat st;
-    if (stat(filename,&st)<0)
+    if (__lstat(filename,&st)<0)
         return TYPE_INVALID;
 
     if ((st.st_mode&S_IFMT)== S_IFDIR) {
@@ -226,3 +241,44 @@ struct dirent *__readdir(DIR*dir)
 
 
 
+void *readfile(const char *filename, int *size)
+{
+    struct stat st;
+    void *data;
+    int r;
+
+    do {
+        r = __lstat(filename, &st);
+        if (r<0)
+            break;
+        // Read file into memory first.
+        data= malloc(st.st_size);
+        if (data==NULL) {
+            ESP_LOGE(TAG, "Cannot allocate memory for file");
+            r = -1;
+            break;
+        }
+        int fh = __open(filename, O_RDONLY);
+        if (fh<0) {
+            ESP_LOGE(TAG, "Cannot open file");
+            r=-1;
+            break;
+        }
+        int readsize = read(fh, data, st.st_size);
+
+        if (readsize!=st.st_size) {
+            ESP_LOGE(TAG, "Cannot read file");
+            r=-1;
+            free(data);
+            break;
+        }
+        close(fh);
+        r = 0;
+    } while (0);
+
+    if (r!=0) {
+        return NULL;
+    }
+    *size = st.st_size;
+    return data;
+}

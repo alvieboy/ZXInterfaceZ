@@ -1,6 +1,7 @@
 PROJECT_NAME := esp32_interfacez
 
 IDF_PATH ?=/home/alvieboy/Temp/esp-idf
+CP:=cp
 
 GITVER=$(shell git describe --tags --dirty)
 BUILDDATE=$(shell date --utc)
@@ -9,22 +10,23 @@ EXTRA_CFLAGS+=-DGITVER=\"$(GITVER)\" -DBUILDDATE='"$(BUILDDATE)"'
 
 include $(IDF_PATH)/make/project.mk
 
-flash: fpga.bin
+flash: spiffs/fpga0.rbf spiffs/intz.rom
 
-filesize: filesize.c
-	$(HOSTCC) -O2 filesize.c -o filesize
+#filesize: filesize.c
+#	$(HOSTCC) -O2 filesize.c -o filesize
 
 
-fpga.bin: ../output_files/interfacez.rbf filesize
-	@echo GEN fpga.bin
-	./filesize ../output_files/interfacez.rbf fpga.bin
+spiffs/fpga0.rbf: ../output_files/interfacez.rbf 
+	$(CP) ../output_files/interfacez.rbf spiffs/fpga0.rbf
 
 SPIFFS_IMAGE_FLASH_IN_PROJECT := 1
 SPIFFS_IMAGE_DEPENDS := 
 
 $(eval $(call spiffs_create_partition_image,resources,spiffs))
 
-ESPTOOL_ALL_FLASH_ARGS+=0x310000 fpga.bin 0x36A000 ../roms/intz.rom
+#ESPTOOL_ALL_FLASH_ARGS+=0x310000 fpga.bin 0x36A000 ../roms/intz.rom
+spiffs/intz.rom: ../roms/intz.rom
+	$(CP) ../roms/intz.rom spiffs/intz.rom
 
 
 all: GENVERSION

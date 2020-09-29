@@ -9,76 +9,23 @@
 #include "fileaccess.h"
 #include "fcntl.h"
 
-#ifndef __linux__
-
-static const esp_partition_t *rom_partition = NULL;
-static const uint8_t *rom_ptr = NULL;
-static spi_flash_mmap_handle_t mmap_handle;
+#define ROM_FILENAME "/spiffs/intz.rom"
 
 int rom__load_from_flash(void)
 {
-    esp_partition_iterator_t i =
-        esp_partition_find(0x42, 0x00, NULL);
-    if (i!=NULL) {
-        rom_partition = esp_partition_get(i);
+    int size;
+    void *data = readfile(ROM_FILENAME, &size);
 
-        esp_err_t err =esp_partition_mmap(rom_partition,
-                                          0, /* Offset */
-                                          rom_partition->size,
-                                          SPI_FLASH_MMAP_DATA,
-                                          (const void**)&rom_ptr,
-                                          &mmap_handle);
-        ESP_ERROR_CHECK(err);
-        ESP_LOGI(TAG,"Mapped rom partition at %p", rom_ptr);
-    } else {
-        ESP_LOGW(TAG,"Cannot find rom partition!!!");
-
-    }
-    esp_partition_iterator_release(i);
-
-    //ASSERT(ROM_SIZE == NMI_ROM_SIZE);
-
-    int r = fpga__upload_rom(NMI_ROM_BASEADDRESS, rom_ptr, ROM_SIZE);
-
-    spi_flash_munmap(mmap_handle);
-    return r;
-}
-#else
-#include <string.h>
-#include <unistd.h>
-
-int rom__load_from_flash(void)
-{
-    uint8_t *rom;
-    struct stat st;
-    int fd;
-    printf("Loading intz.rom\n");
-    fd = open("intz.rom", O_RDONLY);
-    if (fd<0) {
-        printf("Cannot open rom intz.rom: %s\n", strerror(errno));
-        return -1;
-    }
-    if (fstat(fd, &st)<0) {
-        perror("stat");
-        return -1;
-    }
-    rom = malloc(st.st_size);
-
-    if (rom==NULL) {
-        perror("malloc");
-        return -1;
+    if (data==NULL) {
+        ESP_LOGE(TAG,"Cannot load ROM file");
     }
 
-    read(fd, rom, st.st_size);
-    close(fd);
+    int r = fpga__upload_rom(NMI_ROM_BASEADDRESS, data, size);
 
-    int r = fpga__upload_rom(MEMLAYOUT_ROM0_BASEADDRESS, rom, st.st_size);
+    free(data);
 
     return r;
 }
-
-#endif
-
 
 int rom__load_custom_from_file(const char *file)
 {
