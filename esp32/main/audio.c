@@ -1,5 +1,5 @@
 #include "fpga.h"
-#include "nvs.h"
+#include "onchip_nvs.h"
 #include <math.h>
 #include "esp_log.h"
 

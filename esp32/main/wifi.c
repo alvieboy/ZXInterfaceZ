@@ -15,7 +15,7 @@
 #include "led.h"
 #include <string.h>
 #include "interfacez_resources.h"
-#include "nvs.h"
+#include "onchip_nvs.h"
 #include "mdns.h"
 #include "json.h"
 #include "wifi.h"

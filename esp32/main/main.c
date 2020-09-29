@@ -12,7 +12,7 @@
 #include "spectcmd.h"
 #include "wifi.h"
 #include "led.h"
-#include "nvs.h"
+#include "onchip_nvs.h"
 #include "gpio.h"
 #include "interfacez_resources.h"
 #include "spectint.h"

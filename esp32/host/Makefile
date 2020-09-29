@@ -8,6 +8,8 @@ FREERTOSKERNEL:=$(FREERTOS)/Source/
 GITVER=$(shell git describe --tags --dirty)
 BUILDDATE=$(shell date --utc)
 
+SRCPATH=$(shell pwd)
+
 CFLAGS= -fpic -DPIC -Wall -Wextra \
 	-DGITVER=\"$(GITVER)\" \
 	-DBUILDDATE='"$(BUILDDATE)"' \
@@ -44,7 +46,9 @@ CFLAGS= -fpic -DPIC -Wall -Wextra \
        -I$(ESP_IDF)/components/nghttp/port/include/ \
        -I$(ESP_IDF)/components/nvs_flash/include/ \
        -I$(ESP_IDF)/components/tcpip_adapter/include/ \
-       -I$(ESP_IDF)/components/driver/include/
+       -I$(ESP_IDF)/components/driver/include/ \
+       -I$(SRCPATH)/wsys/ \
+       -I$(SRCPATH)/menus/ 
 
 FREERTOS_SRC := $(FREERTOSKERNEL)/list.c \
 		$(FREERTOSKERNEL)/portable/GCC/Linux/port.c \
@@ -85,7 +89,7 @@ list.c                \
 main.c                \
 netcmd.c              \
 netcomms.c            \
-nvs.c                 \
+onchip_nvs.c          \
 opstatus.c            \
 opstatus_resource.c   \
 ota.c                 \
@@ -143,11 +147,15 @@ wsys/menuwindow.cpp      \
 wsys/menuwindowindexed.cpp      \
 wsys/dialog.cpp      \
 wsys/label.cpp      \
+wsys/layout.cpp      \
 wsys/vlayout.cpp      \
+wsys/hlayout.cpp      \
 wsys/messagebox.cpp \
 wsys/multiwidget.cpp  \
+wsys/stackedwidget.cpp  \
 wsys/button.cpp  \
 wsys/filechooserdialog.cpp \
+wsys/vbar.cpp \
 menus/nmimenu.cpp \
 menus/settingsmenu.cpp \
 menus/videomodemenu.cpp \
