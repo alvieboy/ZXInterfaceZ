@@ -37,6 +37,7 @@
 #include "vga.h"
 #include "memlayout.h"
 #include "wsys.h"
+#include "memlayout.h"
 
 static int8_t videomode = 0;
 
