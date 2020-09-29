@@ -2,24 +2,19 @@
 #include "wsys.h"
 #include "wsys/menuwindowindexed.h"
 #include "wsys/screen.h"
-#include "fpga.h"
+#include "vga.h"
 
 static MenuWindowIndexed *videomode_window;
 
 static void videomode__set(void *data, uint8_t index)
 {
     switch (index) {
-    case 0:
-        fpga__clear_flags(FPGA_FLAG_VIDMODE0 | FPGA_FLAG_VIDMODE1);
-        break;
-    case 1:
-        fpga__set_clear_flags(FPGA_FLAG_VIDMODE0, FPGA_FLAG_VIDMODE1);
-        break;
-    case 2:
-        fpga__set_clear_flags(FPGA_FLAG_VIDMODE1, FPGA_FLAG_VIDMODE0);
-        break;
     case 3:
+    case 0xff:
         screen__removeWindow(static_cast<Window*>(data));
+        break;
+    default:
+        vga__setmode(index);
         break;
     }
 }

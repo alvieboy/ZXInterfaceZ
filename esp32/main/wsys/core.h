@@ -4,6 +4,9 @@
 #include <inttypes.h>
 #include <stdlib.h>
 #include "../wsys.h"
+extern "C" {
+#include "esp_log.h"
+}
 
 #ifdef __linux__
 #define WSYS_BOUND_CHECKS
@@ -12,9 +15,6 @@
 
 #ifdef WYS_ENABLE_DEBUG
 
-extern "C" {
-#include "esp_log.h"
-}
 
 #define WSYS_LOGI(x...) do \
      ESP_LOGI(__PRETTY_FUNCTION__, x); \

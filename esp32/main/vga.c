@@ -1,6 +1,6 @@
 #include "vga.h"
 #include "fpga.h"
-#include "nvs.h"
+#include "onchip_nvs.h"
 
 static void vga__applymode(uint8_t mode)
 {
