@@ -11,11 +11,6 @@ void MenuWindowIndexed::setEntries(const MenuEntryList *entries)
     m_menu->setEntries(entries);
 }
 
-void MenuWindowIndexed::setCallbackFunction(const IndexedMenu::Function f, void *data)
-{
-    m_menu->setFunctionHandler(f,data);
-}
-
 void MenuWindowIndexed::setHelpStrings(const char *help[])
 {
     m_menu->setHelp(help, this);

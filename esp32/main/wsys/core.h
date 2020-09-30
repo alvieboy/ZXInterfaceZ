@@ -13,7 +13,7 @@ extern "C" {
 #define WSYS_ENABLE_DEBUG
 #endif
 
-#ifdef WYS_ENABLE_DEBUG
+#ifdef WSYS_ENABLE_DEBUG
 
 
 #define WSYS_LOGI(x...) do \

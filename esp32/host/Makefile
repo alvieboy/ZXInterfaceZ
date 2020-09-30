@@ -159,6 +159,7 @@ wsys/vbar.cpp \
 menus/nmimenu.cpp \
 menus/settingsmenu.cpp \
 menus/videomodemenu.cpp \
+menus/wifimenu.cpp
 
 
 

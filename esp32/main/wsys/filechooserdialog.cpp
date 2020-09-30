@@ -9,8 +9,7 @@ FileChooserDialog::FileChooserDialog(const char*title, uint8_t w, uint8_t h): Di
 {
     m_menu = new IndexedMenu();
     setChild(m_menu);
-    m_menu->setFunctionHandler( [](void*self,uint8_t sel){ static_cast<FileChooserDialog*>(self)->activate(sel); },
-    this);
+    m_menu->selected().connect( this, &FileChooserDialog::activate );
     m_menudata = NULL;
     m_menulistdata = NULL;
     m_filter = FILE_FILTER_NONE;
