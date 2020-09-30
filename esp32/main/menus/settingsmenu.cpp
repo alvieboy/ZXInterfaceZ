@@ -35,7 +35,7 @@ static const CallbackMenu::Function settings_functions[] =
 
 void settings__show()
 {
-    settings_window = new MenuWindow("Settings", 28, 8);
+    settings_window = new MenuWindow("Settings", 20, 8);
     settings_window->setEntries( &settingsmenu );
     settings_window->setCallbackTable( settings_functions );
     screen__addWindowCentered(settings_window);

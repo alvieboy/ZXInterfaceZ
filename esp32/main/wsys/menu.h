@@ -4,7 +4,7 @@
 #include "widget.h"
 #include <stdlib.h>
 #include <vector>
-
+#include "object_signal.h"
 
 #define MENU_COLOR_NORMAL			0x78
 #define MENU_COLOR_DISABLED			0x38
@@ -94,7 +94,7 @@ public:
     }
 
     virtual uint8_t getMinimumWidth() const;
-
+    Signal<uint8_t> &selectionChanged() { return m_selectionChanged; }
 protected:
     void chooseNext();
     void choosePrev();
@@ -105,12 +105,12 @@ protected:
 
     virtual void drawItem(screenptr_t screenptr, const char *what);
 
-    
+    Signal<uint8_t> m_selectionChanged;
+
     virtual void drawImpl() override;
     virtual void activateEntry(uint8_t entry) = 0;
     uint8_t m_displayOffset;
     uint8_t m_selectedEntry;
-    //    std::vector<MenuEntry>* m_entries;
     const MenuEntryList *m_entries;
     HelpDisplayer *m_helpdisplayer;
     const char **m_helpstrings;

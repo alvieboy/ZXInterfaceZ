@@ -166,6 +166,8 @@ void Menu::chooseNext()
     WSYS_LOGI( "Menu select next");
     m_selectedEntry = sel;
 
+    m_selectionChanged.emit(m_selectedEntry);
+
     if (sel >= (m_displayOffset+height())) {
         m_displayOffset++;
         damage(DAMAGE_CONTENTS);
@@ -182,6 +184,8 @@ void Menu::choosePrev()
     if (m_selectedEntry==0)
         return;
     m_selectedEntry--;
+    m_selectionChanged.emit(m_selectedEntry);
+
     if (m_selectedEntry<m_displayOffset) {
         m_displayOffset--;
         damage(DAMAGE_CONTENTS);
