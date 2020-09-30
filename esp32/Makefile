@@ -21,7 +21,7 @@ spiffs/fpga0.rbf: ../output_files/interfacez.rbf
 	$(CP) ../output_files/interfacez.rbf spiffs/fpga0.rbf
 
 SPIFFS_IMAGE_FLASH_IN_PROJECT := 1
-SPIFFS_IMAGE_DEPENDS := 
+SPIFFS_IMAGE_DEPENDS := spiffs/fpga0.rbf spiffs/intz.rom
 
 
 $(eval $(call spiffs_create_partition_image,resources,spiffs))

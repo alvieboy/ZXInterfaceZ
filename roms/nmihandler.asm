@@ -80,7 +80,7 @@ lone:
         ; Save border.
         IN	A, (PORT_ULA)
         OUT	(C), A	   	; Ram: 0x4011
- ;       DEBUGSTR "Serving NMI\n"
+        DEBUGSTR "Serving NMI\n"
 
         CALL	NMIPROCESS_VIDEOONLY
 
@@ -213,7 +213,6 @@ _r1:
 
 
 NMIPROCESS_VIDEOONLY:
-	DI
  	LD	A, CMD_NMIREADY
         CALL	WRITECMDFIFO
 
@@ -223,7 +222,7 @@ NMIPROCESS_VIDEOONLY:
         
         LD	A, 0
         LD	(FRAMES1), A
-        
+
 screenloop:
 
         ; Get sequence at 0x021B00
@@ -237,13 +236,13 @@ screenloop:
 	IN	A, (C)
         BIT	7, A
         JR 	NZ, _command
+
         ; Not a command. Compare with frame seq.
         LD	B, A
         LD	A, (FRAMES1)
         CP	B
         LD	A, B
         JR	NZ, _processvideo
-        
 
         CALL	KEYBOARD
         LD	HL, FLAGS
@@ -259,6 +258,7 @@ screenloop:
         CALL	WRITECMDFIFO
         LD	A, D        
         CALL	WRITECMDFIFO
+        
 _l1:    JR	screenloop
 _command:
 	DEBUGSTR "ROM: command "
@@ -271,7 +271,12 @@ _command:
 _leavenmi:
 	LD	A, CMD_LEAVENMI
         CALL	WRITECMDFIFO
-        RET
+
+	; Wait for keys to be released.
+        CALL	WAITFORNOKEY
+        JP	WAITFORNOKEY ; TAILCALL
+
+        ;RET
 _snapshot:
 	LD	A, CMD_LEAVENMI
         CALL	WRITECMDFIFO
@@ -299,5 +304,4 @@ _loop1:
         DEC	A     			; T4
         JP	NZ, _loop1              ; T10   (sum 111348)
        	JP 	screenloop
-        RET
         

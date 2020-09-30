@@ -17,6 +17,7 @@ struct wsys_event {
 };
 
 static xQueueHandle wsys_evt_queue = NULL;
+volatile bool can_update = false;
 
 void wsys__keyboard_event(uint16_t raw, char ascii)
 {
@@ -34,6 +35,7 @@ void wsys__get_screen_from_fpga()
 
 void wsys__nmiready()
 {
+    can_update = true;
     struct wsys_event evt;
     evt.type = EVENT_NMIENTER;
     xQueueSend(wsys_evt_queue, &evt, portMAX_DELAY);
@@ -42,6 +44,7 @@ void wsys__nmiready()
 
 void wsys__nmileave()
 {
+    can_update = false;
     struct wsys_event evt;
     evt.type = EVENT_NMILEAVE;
     xQueueSend(wsys_evt_queue, &evt, portMAX_DELAY);
@@ -53,13 +56,13 @@ void wsys__start()
     wsys__get_screen_from_fpga();
     nmimenu__show();
     screen__redraw();
-
 }
 
 void wsys__reset()
 {
     struct wsys_event evt;
-    evt.type = 2;
+    evt.type = EVENT_RESET;
+    can_update = false;
     wsys__send_command(0x00); // Clear sequence immediatly
     xQueueSend(wsys_evt_queue, &evt, portMAX_DELAY);
 }
@@ -121,8 +124,10 @@ void wsys__send_to_fpga()
 {
     spectrum_framebuffer.seq++;
     spectrum_framebuffer.seq &= 0x7F;
-    WSYS_LOGI("Framebuffer update, seq %d\n", spectrum_framebuffer.seq);
-    fpga__write_extram_block(0x020000, &spectrum_framebuffer.screen[0], sizeof(spectrum_framebuffer));
+    if (can_update) {
+        WSYS_LOGI("Framebuffer update, seq %d\n", spectrum_framebuffer.seq);
+        fpga__write_extram_block(0x020000, &spectrum_framebuffer.screen[0], sizeof(spectrum_framebuffer));
+    }
 }
 
 void wsys__send_command(uint8_t command)
