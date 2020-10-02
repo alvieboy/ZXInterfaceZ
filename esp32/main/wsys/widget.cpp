@@ -63,14 +63,14 @@ Widget::Widget(Widget *parent): m_parent(parent)
     m_h = 0;
 }
 
-void Widget::damage(uint8_t mask)
+void Widget::setdamage(uint8_t mask)
 {
     m_damage |= mask;
     WSYS_LOGI( "damage %d parent %p\n", damage(), m_parent);
 
     Widget *parent = m_parent;
     while (parent) {
-        parent->damage(DAMAGE_CHILD);
+        parent->setdamage(DAMAGE_CHILD);
         parent = parent->m_parent;
     }
 }
@@ -95,5 +95,12 @@ void Widget::clearLines(screenptr_t start, unsigned len_chars, unsigned num_line
             *ptr++ = 0x0;
         }
         start.nextpixelline();
+    }
+}
+
+void Widget::clearChildArea(uint8_t x, uint8_t y, uint8_t w, uint8_t h)
+{
+    if (m_parent) {
+        m_parent->clearChildArea(x,y,w,h);
     }
 }

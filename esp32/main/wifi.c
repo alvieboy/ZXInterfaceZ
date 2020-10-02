@@ -39,6 +39,7 @@ static EventGroupHandle_t s_wifi_event_group;
 static const wifi_scan_parser_t *scan_parser = NULL;
 static void *scan_parser_data = NULL;
 
+static esp_netif_t *netif;
 
 #ifndef __linux__
 
@@ -158,9 +159,6 @@ static const wifi_scan_config_t scan_config = {
     .channel = 0,
     .show_hidden = false
 };
-
-
-static esp_netif_t *netif;
 
 void wifi__init_softap()
 {
@@ -586,3 +584,24 @@ int wifi__config_ap(const char *ssid, const char *pwd, uint8_t channel)
 
 }
 
+int wifi__get_clients()
+{
+    wifi_sta_list_t list;
+
+    if (esp_wifi_ap_get_sta_list(&list)<0)
+        return -1;
+
+    return list.num;
+}
+
+int wifi__get_ip_info(uint32_t *addr, uint32_t *netmask, uint32_t *gw)
+{
+    esp_netif_ip_info_t info;
+    int r = esp_netif_get_ip_info(netif, &info);
+    if (r<0)
+        return -1;
+    *addr = info.ip.addr;
+    *netmask = info.netmask.addr;
+    *gw = info.gw.addr;
+    return 0;
+}

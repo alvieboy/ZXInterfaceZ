@@ -5,7 +5,7 @@
 #include <stdlib.h>
 
 
-#define DAMAGE_ALL      0x80
+#define DAMAGE_ALL      0xFF
 #define DAMAGE_WINDOW   0x40
 #define DAMAGE_CHILD    0x01
 #define DAMAGE_USER1    0x02
@@ -39,14 +39,19 @@ public:
     void show() { setVisible(true); }
     void hide() { setVisible(false); }
     bool visible() const { return m_visible; }
-    virtual void damage(uint8_t mask);
     void clear_damage(uint8_t mask);
     void clear_damage();
     uint8_t damage() const { return m_damage; }
-    void redraw() { damage(DAMAGE_ALL); }
+    virtual void setdamage(uint8_t mask);
+    void redraw() { setdamage(DAMAGE_ALL); }
     static void clearLines(screenptr_t start, unsigned len_chars, unsigned num_lines);
     virtual uint8_t getMinimumWidth() const { return 1; }
     virtual uint8_t getMinimumHeight() const { return 1; }
+    virtual void clearChildArea(uint8_t x, uint8_t y, uint8_t w, uint8_t h);
+    void parentDrawImpl() {
+        clearChildArea(m_x, m_y, m_w, m_h );
+    }
+
 protected:
     virtual void drawImpl() = 0;
 

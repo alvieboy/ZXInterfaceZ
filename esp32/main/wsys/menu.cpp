@@ -57,13 +57,13 @@ void Menu::setEntries(const MenuEntryList *entries)
     m_entries = entries;
     m_selectedEntry = 0;
     m_displayOffset = 0;
-    damage(DAMAGE_SELECTION|DAMAGE_CONTENTS);
+    setdamage(DAMAGE_SELECTION|DAMAGE_CONTENTS);
 }
 
 void Menu::draw(bool force)
 {
     if (force) {
-        damage(DAMAGE_SELECTION|DAMAGE_CONTENTS);
+        setdamage(DAMAGE_SELECTION|DAMAGE_CONTENTS);
     }
     drawImpl();
 }
@@ -170,9 +170,9 @@ void Menu::chooseNext()
 
     if (sel >= (m_displayOffset+height())) {
         m_displayOffset++;
-        damage(DAMAGE_CONTENTS);
+        setdamage(DAMAGE_CONTENTS);
     }
-    damage(DAMAGE_SELECTION);
+    setdamage(DAMAGE_SELECTION);
 
     if (m_helpdisplayer)
         m_helpdisplayer->displayHelpText(m_helpstrings[m_selectedEntry]);
@@ -188,9 +188,9 @@ void Menu::choosePrev()
 
     if (m_selectedEntry<m_displayOffset) {
         m_displayOffset--;
-        damage(DAMAGE_CONTENTS);
+        setdamage(DAMAGE_CONTENTS);
     }
-    damage(DAMAGE_SELECTION);
+    setdamage(DAMAGE_SELECTION);
 
     if (m_helpdisplayer)
         m_helpdisplayer->displayHelpText(m_helpstrings[m_selectedEntry]);

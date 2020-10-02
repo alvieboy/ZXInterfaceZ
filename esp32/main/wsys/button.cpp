@@ -30,8 +30,8 @@ void Button::handleEvent(uint8_t type, u16_8_t code)
         return;
 
     char c = spectrum_kbd__to_ascii(code.v);
-    if (c==KEY_ENTER && m_onclick) {
-        m_onclick(m_onclickdata);
+    if (c==KEY_ENTER) {
+        m_onclick.emit();
     }
 }
 

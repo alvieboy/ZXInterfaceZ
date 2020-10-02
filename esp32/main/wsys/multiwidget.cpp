@@ -33,13 +33,24 @@ void MultiWidget::handleEvent(uint8_t type, u16_8_t code)
     }
 }
 
+void MultiWidget::setdamage(uint8_t mask)
+{
+    Widget::setdamage(mask);
+    if (mask!=DAMAGE_CHILD) {
+        for (int i=0;i<m_numchilds;i++) {
+            m_childs[i]->setdamage(mask);
+        }
+    }
+}
+
+
 
 void MultiWidget::addChild(Widget *w)
 {
     m_childs[m_numchilds++]=w;
     w->setParent(this);
     resizeEvent();
-    damage(DAMAGE_CHILD);
+    setdamage(DAMAGE_CHILD);
 }
 
 MultiWidget::~MultiWidget()

@@ -137,11 +137,12 @@ struct screenptr_t {
     }
     void nextpixelline();
     void nextcharline();
-    screenptr_t &drawchar(const uint8_t *data);
-    screenptr_t &drawascii(char);
-    screenptr_t &drawstring(const char *);
-    screenptr_t &drawstringpad(const char *, int len);
-    screenptr_t &drawhline(int len);
+    screenptr_t drawchar(const uint8_t *data);
+    screenptr_t drawascii(char);
+    screenptr_t drawstring(const char *);
+    screenptr_t printf(const char *fmt,...) __attribute__ ((format (printf, 2, 3)));
+    screenptr_t drawstringpad(const char *, int len);
+    screenptr_t drawhline(int len);
     screenptr_t &operator++() { off++; return *this; }
     screenptr_t operator++(int delta  __attribute__((unused))) { screenptr_t s = *this; off++;return s; }
     screenptr_t &operator+=(int delta) { off+=delta; return *this; }
