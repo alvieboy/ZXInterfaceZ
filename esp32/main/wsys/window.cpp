@@ -37,7 +37,7 @@ void Window::setStatusLines(uint8_t lines)
 void Window::setWindowHelpText(const char *text)
 {
     m_helptext = text;
-    damage(DAMAGE_WINDOW);
+    setdamage(DAMAGE_WINDOW);
 }
 
 void Window::displayHelpText(const char *c)
@@ -45,7 +45,7 @@ void Window::displayHelpText(const char *c)
     //void maxCharsForPixelCount(const char *offset, unsigned pixels);
     WSYS_LOGI("SHOW HELP: %s", c);
     m_statustext = c;
-    damage(DAMAGE_HELPTEXT);
+    setdamage(DAMAGE_HELPTEXT);
 }
 
 void Window::fillHeaderLine(attrptr_t attr)
@@ -122,11 +122,11 @@ void Window::drawWindowCore()
 
     screenptr = m_screenptr;
     screenptr += m_w - 6;
-    screenptr.drawchar(HH)++;
-    screenptr.drawchar(HH)++;
-    screenptr.drawchar(HH)++;
-    screenptr.drawchar(HH)++;
-    screenptr.drawchar(HH)++;
+    screenptr = screenptr.drawchar(HH);
+    screenptr = screenptr.drawchar(HH);
+    screenptr = screenptr.drawchar(HH);
+    screenptr = screenptr.drawchar(HH);
+    screenptr = screenptr.drawchar(HH);
 
     attrptr = m_attrptr;
     attrptr += m_w - 6;
@@ -181,10 +181,10 @@ void Window::drawImpl()
     }
 }
 
-void Window::setBGLine(attrptr_t attrptr, uint8_t value)
+void Window::setBGLine(attrptr_t attrptr, int len, uint8_t value)
 {
-    for (int i=0;i<m_w;i++) {
-            *attrptr++ = value;
+    for (int i=0;i<len;i++) {
+        *attrptr++ = value;
     }
 }
 
@@ -194,7 +194,6 @@ void Window::setBackground()
     screenptr_t screenptr = m_screenptr;
     attrptr_t attrptr = m_attrptr;
     screenptr_t save;
-    attrptr_t attrptr2;
     const uint8_t normal_bg = 0x78;
     const uint8_t help_bg   = 0x38;
 
@@ -212,23 +211,23 @@ void Window::setBackground()
     c = (m_h)-1;
 
     // Header
-    setBGLine(attrptr, normal_bg);
+    setBGLine(attrptr, m_w, normal_bg);
     attrptr.nextline();
     if (hasHelpText()) {
         c--;
-        setBGLine(attrptr, help_bg);
+        setBGLine(attrptr, m_w, help_bg);
         attrptr.nextline();
 
     }
 
     while (c>m_statuslines) {
-        setBGLine(attrptr, normal_bg);
+        setBGLine(attrptr, m_w, normal_bg);
         attrptr.nextline();
         c--;
     }
 
     for (c=0;c<m_statuslines;c++) {
-        setBGLine(attrptr, help_bg);
+        setBGLine(attrptr, m_w, help_bg);
         attrptr.nextline();
     }
 }
@@ -252,6 +251,23 @@ bool Window::needRedraw() {
 void Window::draw(bool force)
 {
     if (force)
-        damage(DAMAGE_WINDOW|DAMAGE_HELPTEXT);
+        setdamage(DAMAGE_WINDOW|DAMAGE_HELPTEXT);
     Bin::draw(force);
+}
+
+
+void Window::clearChildArea(uint8_t x, uint8_t y, uint8_t w, uint8_t h)
+{
+    screenptr_t r;
+    attrptr_t a;
+    r.fromxy(x,y);
+    a.fromxy(x,y);
+    WSYS_LOGI("clear xy %d %d\n",x,y);
+    clearLines( r, w, h);
+
+    for (int c=0; c<h;c++) {
+        setBGLine(a, w, 0x78);
+        a.nextline();
+    }
+
 }

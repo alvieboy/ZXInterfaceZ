@@ -19,6 +19,8 @@ public:
 
     void displayHelpText(const char *c) override;
     virtual void draw(bool force=false) override;
+    void clearChildArea(uint8_t x, uint8_t y, uint8_t w, uint8_t h);
+
 protected:
     void fillHeaderLine(attrptr_t attr);
     void setBackground();
@@ -27,7 +29,7 @@ protected:
     void drawStatus();
     bool hasHelpText() const { return m_helptext!=NULL; }
     int  statusLines() const { return m_statuslines; }
-    void setBGLine(attrptr_t attrptr, uint8_t value);
+    void setBGLine(attrptr_t attrptr, int width,  uint8_t value);
 
     const char *m_title;
     uint8_t m_border;

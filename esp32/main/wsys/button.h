@@ -3,6 +3,7 @@
 
 #include "widget.h"
 #include <string.h>
+#include "object_signal.h"
 
 class Button: public Widget
 {
@@ -11,15 +12,11 @@ public:
     virtual void drawImpl();
     void setText(const char *text) { m_text=text; m_textlen=strlen(text); redraw(); }
     virtual void handleEvent(uint8_t type, u16_8_t code);
-    void onClick(void (*callback)(void*),void*data) {
-        m_onclick=callback;
-        m_onclickdata=data;
-    }
+    Signal<> &onClick() { return m_onclick; }
 private:
     const char *m_text;
     uint8_t m_textlen;
-    void (*m_onclick)(void*);
-    void *m_onclickdata;
+    Signal<> m_onclick;
 };
 
 

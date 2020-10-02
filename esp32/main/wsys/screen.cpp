@@ -39,7 +39,7 @@ void screen__addWindow(Window*win, uint8_t x, uint8_t y)
     WSYS_LOGI( "Adding screen window");
     windows.push_back(win);
     win->move(x, y);
-    win->damage(DAMAGE_WINDOW);
+    win->setdamage(DAMAGE_WINDOW);
 }
 
 void screen__addWindowCentered(Window*win)

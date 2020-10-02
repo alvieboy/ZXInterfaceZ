@@ -4,11 +4,18 @@
 #include <stdbool.h>
 #include "json.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 void wifi__init(void);
 bool wifi__isconnected(void);
 bool wifi__issta(void);
 bool wifi__scanning(void);
 void wifi__get_conf_json(cJSON *node);
+int wifi__get_clients();
+int wifi__get_ip_info(uint32_t *addr, uint32_t *netmask, uint32_t *gw);
 
 typedef struct {
     void (*reset)(void *user);
@@ -24,11 +31,11 @@ int wifi__scan_json();
 int wifi__config_sta(const char *ssid, const char *pwd);
 int wifi__config_ap(const char *ssid, const char *pwd, uint8_t channel);
 
-
-
-
-
 extern char wifi_ssid[33];
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
 

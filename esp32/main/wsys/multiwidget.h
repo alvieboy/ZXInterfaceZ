@@ -19,6 +19,8 @@ public:
     virtual void handleEvent(uint8_t type, u16_8_t code) override;
 
     virtual void draw(bool force=false) override;
+    virtual void setdamage(uint8_t mask);
+
 protected:
     uint8_t m_numchilds;
     Widget *m_childs[MULTIWIDGET_MAX_CHILDS];

@@ -15,7 +15,7 @@ void Bin::setChild(Widget *c)
     WSYS_LOGI( "resize due to addchild");
 
     resizeEvent();
-    damage(DAMAGE_CHILD);
+    setdamage(DAMAGE_CHILD);
 }
 
 void Bin::handleEvent(uint8_t type, u16_8_t code)

@@ -2,21 +2,25 @@
 #include "charmap.h"
 #include "../fpga.h"
 #include "pixel.h"
+#include <stdarg.h>
 
 extern "C" {
     struct framebuffer spectrum_framebuffer;
 };
 
-screenptr_t &screenptr_t::drawchar(const uint8_t *data)
+screenptr_t screenptr_t::drawchar(const uint8_t *data)
 {
+    screenptr_t temp = *this;
     uint16_t o = off;
+
     int i;
     for (i=0;i<8;i++) {
         CHECK_BOUNDS_SCREEN(o);
         spectrum_framebuffer.screen[o] = *data++;
         o+=256;
     }
-    return *this;
+    temp++;
+    return temp;
 }
 
 void screenptr_t::nextpixelline()
@@ -48,22 +52,25 @@ void screenptr_t::nextcharline()
     off.l = l & 0xff;
 }
 
-screenptr_t &screenptr_t::drawascii(char c)
+screenptr_t screenptr_t::drawascii(char c)
 {
+    screenptr_t temp = *this;
     if (c<32)
         return *this;
     c-=32;
-    drawchar(&CHAR_SET[(int)c*8]);
-    return *this;
+    temp = temp.drawchar(&CHAR_SET[(int)c*8]);
+    return temp;
 }
-screenptr_t &screenptr_t::drawstring(const char *s)
+
+screenptr_t screenptr_t::drawstring(const char *s)
 {
+    screenptr_t temp = *this;
     while (*s) {
         int c = (*s) - 32;
-        drawchar(&CHAR_SET[c*8])++;
+        temp = temp.drawchar(&CHAR_SET[c*8])++;
         s++;
     }
-    return *this;
+    return temp;
 }
 
 screenptr_t drawthumbchar(screenptr_t screenptr, unsigned &bit_offset, char c)
@@ -97,26 +104,41 @@ screenptr_t drawthumbstring(screenptr_t screenptr, const char *s)
 
 
 
-screenptr_t &screenptr_t::drawstringpad(const char *s, int len)
+screenptr_t screenptr_t::drawstringpad(const char *s, int len)
 {
+    screenptr_t temp = *this;
     while ((*s) && len) {
         int c = (*s) - 32;
-        drawchar(&CHAR_SET[c*8])++;
+        temp = temp.drawchar(&CHAR_SET[c*8])++;
         s++;
         len--;
     }
     while (len--) {
-        drawchar(&CHAR_SET[0])++;
+        temp = temp.drawchar(&CHAR_SET[0])++;
     }
-    return *this;
+    return temp;
 }
-screenptr_t &screenptr_t::drawhline(int len)
+
+screenptr_t screenptr_t::drawhline(int len)
 {
+    screenptr_t temp = *this;
     while (len--) {
         CHECK_BOUNDS_SCREEN(off);
         spectrum_framebuffer.screen[off++] = 0xFF;
     }
-    return *this;
+    return temp;
+}
+
+screenptr_t screenptr_t::printf(const char *fmt,...)
+{
+    screenptr_t temp;
+    va_list ap;
+    char *c;
+    va_start(ap, fmt);
+    vasprintf(&c, fmt, ap);
+    temp = drawstring(c);
+    free(c);
+    return temp;
 }
 
 
