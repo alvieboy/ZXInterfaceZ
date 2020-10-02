@@ -12,11 +12,11 @@ public:
     virtual void drawImpl();
     void setText(const char *text) { m_text=text; m_textlen=strlen(text); redraw(); }
     virtual void handleEvent(uint8_t type, u16_8_t code);
-    Signal<> &onClick() { return m_onclick; }
+    Signal<> &clicked() { return m_clicked; }
 private:
     const char *m_text;
     uint8_t m_textlen;
-    Signal<> m_onclick;
+    Signal<> m_clicked;
 };
 
 
