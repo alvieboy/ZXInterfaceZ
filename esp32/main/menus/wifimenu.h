@@ -25,6 +25,16 @@ public:
     virtual void drawImpl();
 };
 
+
+static const MenuEntryList wifimodeselectormenu = {
+    .sz = 3,
+    .entries = {
+        { .flags = 0, .string = "Access Point mode" },
+        { .flags = 0, .string = "Station mode" },
+        { .flags = 0, .string = "Back" }
+    }
+};
+
 class WifiMode: public VLayout
 {
 public:
@@ -34,10 +44,18 @@ public:
         m_button = new Button(NULL,"Change mode");
         addChild(m_text, LAYOUT_FLAG_VEXPAND);
         addChild(m_button);
+        m_button->clicked().connect( this, &WifiMode::changeMode );
+    }
+    void changeMode() {
+        m_modeselwindow = new MenuWindowIndexed("WiFi mode", 18, 6);
+        m_modeselwindow->selected().connect( this, &WifiMode::modeSelected );
+        screen__addWindowCentered(m_modeselwindow);
+        m_modeselwindow->show();
     }
 private:
     WifiModeText *m_text;
     Button *m_button;
+    MenuWindowIndexed *m_modeselwindow;
 };
 
 class WifiMenu: public Window
