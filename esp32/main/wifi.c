@@ -38,8 +38,47 @@ static EventGroupHandle_t s_wifi_event_group;
 
 static const wifi_scan_parser_t *scan_parser = NULL;
 static void *scan_parser_data = NULL;
-
 static esp_netif_t *netif;
+
+
+const struct channel_list wifi_channels =
+{
+    12,
+    {
+        { 1, 2412 },
+        { 2, 2417 },
+        { 3, 2422 },
+        { 4, 2427 },
+        { 5, 2432 },
+        { 6, 2437 },
+        { 7, 2442 },
+        { 8, 2447 },
+        { 9, 2452 },
+        { 10, 2457 },
+        { 11, 2462 },
+        { 12, 2467 }
+    }
+};
+
+int wifi__get_ap_channel()
+{
+    return nvs__u8("ap_chan", 3);
+}
+
+int wifi__get_ap_ssid(char *dest, unsigned size)
+{
+    return nvs__str("ap_ssid",
+                    dest, size,
+                    EXAMPLE_ESP_WIFI_SSID);
+}
+
+int wifi__get_ap_pwd( char *dest, unsigned size)
+{
+    return nvs__str("ap_pwd",
+                    dest,
+                    size,
+                    EXAMPLE_ESP_WIFI_PASS);
+}
 
 #ifndef __linux__
 
@@ -189,21 +228,16 @@ void wifi__init_softap()
 
     memset(&wifi_config,0,sizeof(wifi_config));
 
-    wifi_config.ap.channel = nvs__u8("ap_chan", 3);
-    wifi_config.ap.ssid_len = nvs__str("ap_ssid",
-                                       (char*)&wifi_config.ap.ssid[0],
-                                       sizeof(wifi_config.ap.ssid),
-                                       EXAMPLE_ESP_WIFI_SSID);
+    wifi_config.ap.channel = wifi__get_ap_channel();
+    wifi_config.ap.ssid_len = wifi__get_ap_ssid((char*)&wifi_config.ap.ssid[0],
+                                                sizeof(wifi_config.ap.ssid));
 
-    wifi_config.ap.max_connection = EXAMPLE_MAX_STA_CONN,
+    wifi_config.ap.max_connection = EXAMPLE_MAX_STA_CONN;
 
-    nvs__str("ap_pwd",
-             (char*)&wifi_config.ap.password[0],
-             sizeof(wifi_config.ap.password),
-             EXAMPLE_ESP_WIFI_PASS);
+    int pwdsize = wifi__get_ap_pwd((char*)&wifi_config.ap.password[0],
+                                   sizeof(wifi_config.ap.password));
 
-
-    if (strlen(EXAMPLE_ESP_WIFI_PASS) == 0) {
+    if (pwdsize == 0) {
         wifi_config.ap.authmode = WIFI_AUTH_OPEN;
     } else {
         wifi_config.ap.authmode = WIFI_AUTH_WPA_WPA2_PSK;
@@ -605,3 +639,4 @@ int wifi__get_ip_info(uint32_t *addr, uint32_t *netmask, uint32_t *gw)
     *gw = info.gw.addr;
     return 0;
 }
+

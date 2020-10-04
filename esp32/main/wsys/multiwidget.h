@@ -16,7 +16,8 @@ public:
     virtual void addChild(Widget *w);
     virtual ~MultiWidget();
 
-    virtual void handleEvent(uint8_t type, u16_8_t code) override;
+    virtual bool handleEvent(uint8_t type, u16_8_t code) override;
+    virtual bool handleLocalEvent(uint8_t type, u16_8_t code);
 
     virtual void draw(bool force=false) override;
     virtual void setdamage(uint8_t mask);

@@ -12,6 +12,7 @@ public:
     void setEntries(const MenuEntryList *entries);
     void setHelpStrings(const char *help[]);
     Signal<uint8_t> &selected() { return m_menu->selected(); }
+    void setActiveEntry(uint8_t entry);
 
 private:
     IndexedMenu *m_menu;

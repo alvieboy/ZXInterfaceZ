@@ -1,10 +1,10 @@
 #include "stackedwidget.h"
 
-void StackedWidget::handleEvent(uint8_t type, u16_8_t code)
+bool StackedWidget::handleEvent(uint8_t type, u16_8_t code)
 {
     if (m_currentindex >= m_numchilds)
-        return;
-    m_childs[m_currentindex]->handleEvent(type, code);
+        return false;
+    return m_childs[m_currentindex]->handleEvent(type, code);
 }
 
 void StackedWidget::draw(bool force)

@@ -45,7 +45,7 @@ static bool filter_match(uint8_t filter, struct dirent *e)
 
 static bool filecompare(const FileEntry &a, const FileEntry &b)
 {
-    int i;
+    //int i;
     const char *pa = a.str();
     const char *pb = b.str();
 

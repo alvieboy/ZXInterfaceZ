@@ -18,10 +18,11 @@ void Bin::setChild(Widget *c)
     setdamage(DAMAGE_CHILD);
 }
 
-void Bin::handleEvent(uint8_t type, u16_8_t code)
+bool Bin::handleEvent(uint8_t type, u16_8_t code)
 {
     if (m_child)
-        m_child->handleEvent(type, code);
+        return m_child->handleEvent(type, code);
+    return false;
 }
 
 void Bin::draw(bool force)

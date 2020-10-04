@@ -24,14 +24,15 @@ void Menu::setHelp(const char *helpstrings[], HelpDisplayer *displayer)
 }
 
 
-void Menu::handleEvent(uint8_t type, u16_8_t code)
+bool Menu::handleEvent(uint8_t type, u16_8_t code)
 {
     if (type!=0)
-        return;
+        return false;
 
     char c = spectrum_kbd__to_ascii(code.v);
     
     WSYS_LOGI( "Menu event kbd 0x%02x", c);
+    bool handled = true;
 
     switch (c) {
     case 'a':
@@ -48,7 +49,10 @@ void Menu::handleEvent(uint8_t type, u16_8_t code)
     case ' ':
         activateEntry( 0xff );
         break;
+    default:
+        handled = false;
     }
+    return handled;
 }
 
 
@@ -78,6 +82,16 @@ void Menu::drawImpl()
         drawContents();
     }
     clear_damage(DAMAGE_SELECTION|DAMAGE_CONTENTS);
+}
+
+void Menu::setActiveEntry(uint8_t entry)
+{
+    m_selectedEntry=entry;
+
+    if (m_selectedEntry>=height()) {
+        m_displayOffset = (m_selectedEntry-height())+1;
+    }
+    setdamage(DAMAGE_SELECTION|DAMAGE_CONTENTS);
 }
 
 void Menu::fillSline(attrptr_t attr, uint8_t value)

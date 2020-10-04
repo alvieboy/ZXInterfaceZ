@@ -11,7 +11,7 @@ MessageBox::MessageBox(const char *title,uint8_t w, uint8_t h): Dialog(title, w,
     m_layout->addChild(m_text, LAYOUT_FLAG_VEXPAND);
     m_layout->addChild(m_close);
 
-    m_close->onClick( [](void*arg){ static_cast<MessageBox*>(arg)->clicked(); }, this );
+    m_close->clicked().connect(this, &MessageBox::clicked );
 }
 
 static void nocallback(void *win, int val)

@@ -3,6 +3,9 @@
 
 #include <inttypes.h>
 #include <stdlib.h>
+#include <functional>
+#include "systemevent.h"
+
 #include "../wsys.h"
 extern "C" {
 #include "esp_log.h"
@@ -116,7 +119,7 @@ struct attrptr_t {
     void fromxy(uint8_t x, uint8_t y) {
         off = getxyattrstart(x,y);
     }
-    void nextline() { off+=32; }
+    void nextline(int amt=1) { off+=(32*amt); }
     attrptr_t& operator++() { off++; return *this; }
     attrptr_t operator++(int delta __attribute__((unused))) { attrptr_t s = *this; off++; return s; }
     attrptr_t &operator+=(int delta) { off +=delta; return *this; }
@@ -136,7 +139,7 @@ struct screenptr_t {
         off.v = getxyscreenstart(x,y);
     }
     void nextpixelline();
-    void nextcharline();
+    void nextcharline(int amt=1);
     screenptr_t drawchar(const uint8_t *data);
     screenptr_t drawascii(char);
     screenptr_t drawstring(const char *);
@@ -172,6 +175,19 @@ private:
 screenptr_t drawthumbchar(screenptr_t screenptr, unsigned &bit_offset, char c);
 screenptr_t drawthumbstring(screenptr_t screenptr, const char *s);
 
+int wsys__subscribesystemeventfun(std::function<void(const systemevent_t&)> handler);
+
+template<typename T>
+    int wsys__subscribesystemevent(T *object, void (T::*function)(const systemevent_t&) ) {
+        return wsys__subscribesystemeventfun(
+                                             [=](const systemevent_t &event) {
+                                                 (object->*function)(event);
+                                             }
+                                            );
+    }
+
+void wsys__unsubscribesystemevent(int index);
+void wsys__propagatesystemevent(const systemevent_t &event);
 
 #endif
 
