@@ -24,15 +24,17 @@ void Button::drawImpl()
     }
 }
 
-void Button::handleEvent(uint8_t type, u16_8_t code)
+bool Button::handleEvent(uint8_t type, u16_8_t code)
 {
     if (type!=0)
-        return;
+        return false;
 
     char c = spectrum_kbd__to_ascii(code.v);
     if (c==KEY_ENTER) {
-        m_onclick.emit();
+        m_clicked.emit();
+        return true;
     }
+    return false;
 }
 
 

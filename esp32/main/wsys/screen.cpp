@@ -10,6 +10,7 @@ static std::vector<Window*> windows;
 static std::vector<Window*> window_cleanup;
 
 typedef std::vector<Window*>::const_iterator window_iter_t;
+static Widget *kbdfocuswidget = NULL;
 
 void screen__init()
 {
@@ -69,7 +70,11 @@ void screen__keyboard_event(u16_8_t k)
     if (l==0)
         return;
     WSYS_LOGI( "KBD event");
-    windows[l-1]->handleEvent(0,k);
+    if (kbdfocuswidget) {
+        kbdfocuswidget->handleEvent(0,k);
+    } else {
+        windows[l-1]->handleEvent(0,k);
+    }
 
     //wsys__send_to_fpga();
 }
@@ -200,6 +205,22 @@ void screen__check_redraw()
         window_cleanup.pop_back();
         delete(w);
     }
-
 }
+
+void screen__grabKeyboardFocus(Widget *d)
+{
+    if (kbdfocuswidget) {
+        WSYS_LOGE("ERROR: trying to grab already-grabbed keyboard focus!!!");
+    }
+    WSYS_LOGI("Grabbing keyboard %p",d);
+    kbdfocuswidget = d;
+}
+
+void screen__releaseKeyboardFocus(Widget *d)
+{
+    if (kbdfocuswidget==d)
+        kbdfocuswidget=NULL;
+}
+
+
 

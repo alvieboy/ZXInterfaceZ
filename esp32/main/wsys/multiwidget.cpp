@@ -26,11 +26,21 @@ void MultiWidget::draw(bool force)
 
 }
 
-void MultiWidget::handleEvent(uint8_t type, u16_8_t code)
+bool MultiWidget::handleLocalEvent(uint8_t type, u16_8_t code)
 {
+    return false;
+}
+
+bool MultiWidget::handleEvent(uint8_t type, u16_8_t code)
+{
+    bool handled = false;
     for (int i=0;i<m_numchilds;i++) {
-        m_childs[i]->handleEvent(type,code);
+        if (m_childs[i]->handleEvent(type,code))
+            handled = true;
     }
+    if (!handled)
+        handled = handleLocalEvent(type, code);
+    return handled;
 }
 
 void MultiWidget::setdamage(uint8_t mask)

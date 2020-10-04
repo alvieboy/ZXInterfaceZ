@@ -15,3 +15,8 @@ void MenuWindowIndexed::setHelpStrings(const char *help[])
 {
     m_menu->setHelp(help, this);
 }
+
+void MenuWindowIndexed::setActiveEntry(uint8_t entry)
+{
+    m_menu->setActiveEntry(entry);
+}

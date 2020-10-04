@@ -1,4 +1,6 @@
 #include "widget.h"
+#include "screen.h"
+
 extern "C" {
 #include "esp_log.h"
 };
@@ -40,14 +42,14 @@ void Widget::recalculateScreenPointers()
     WSYS_LOGI( "%p Recomputed pointers %04x %04x", this, m_screenptr.getoff(), m_attrptr.getoff() );
 }
 
-void Widget::handleEvent(uint8_t type, u16_8_t code)
+bool Widget::handleEvent(uint8_t type, u16_8_t code)
 {
+    return false;
 }
 
 Widget::~Widget()
 {
-    //if (m_parent)
-      //  m_parent->removeChild(this);
+    screen__releaseKeyboardFocus(this);
 }
 
 void Widget::removeChild(Widget*)
@@ -103,4 +105,21 @@ void Widget::clearChildArea(uint8_t x, uint8_t y, uint8_t w, uint8_t h)
     if (m_parent) {
         m_parent->clearChildArea(x,y,w,h);
     }
+}
+
+void Widget::setBGLine(attrptr_t attrptr, int len, uint8_t value)
+{
+    for (int i=0;i<len;i++) {
+        *attrptr++ = value;
+    }
+}
+
+void Widget::grabKeyboardFocus()
+{
+    screen__grabKeyboardFocus(this);
+}
+
+void Widget::releaseKeyboardFocus()
+{
+    screen__releaseKeyboardFocus(this);
 }

@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <vector>
 #include "object_signal.h"
+#include <cstring>
 
 #define MENU_COLOR_NORMAL			0x78
 #define MENU_COLOR_DISABLED			0x38
@@ -32,7 +33,7 @@ class Menu: public Widget
 {
 public:
     Menu(Widget *parent);
-    virtual void handleEvent(uint8_t type, u16_8_t code) override;
+    virtual bool handleEvent(uint8_t type, u16_8_t code) override;
     void setEntries( const MenuEntryList *);
     void draw(bool force=false) override;
     void setHelp(const char *helpstrings[], HelpDisplayer *displayer);
@@ -95,6 +96,7 @@ public:
 
     virtual uint8_t getMinimumWidth() const;
     Signal<uint8_t> &selectionChanged() { return m_selectionChanged; }
+    void setActiveEntry(uint8_t entry);
 protected:
     void chooseNext();
     void choosePrev();

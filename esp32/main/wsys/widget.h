@@ -27,7 +27,7 @@ public:
     virtual void move(uint8_t x, uint8_t y);
     void setParent(Widget *w) { m_parent=w; }
     virtual void removeChild(Widget*);
-    virtual void handleEvent(uint8_t type, u16_8_t code);
+    virtual bool handleEvent(uint8_t type, u16_8_t code);
 
     uint8_t width() const { return m_w; }
     uint8_t height() const { return m_h; }
@@ -51,6 +51,9 @@ public:
     void parentDrawImpl() {
         clearChildArea(m_x, m_y, m_w, m_h );
     }
+    static void setBGLine(attrptr_t attrptr, int width,  uint8_t value);
+    void grabKeyboardFocus();
+    void releaseKeyboardFocus();
 
 protected:
     virtual void drawImpl() = 0;

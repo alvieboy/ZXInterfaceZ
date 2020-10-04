@@ -10,10 +10,14 @@
 #include "wsys/pixel.h"
 #include "wsys/filechooserdialog.h"
 #include "menus/nmimenu.h"
+#include "systemevent.h"
 
 struct wsys_event {
     uint8_t type;
-    u16_8_t data;
+    union {
+        u16_8_t data;
+        systemevent_t sysevent;
+    };
 };
 
 static xQueueHandle wsys_evt_queue = NULL;
@@ -87,6 +91,8 @@ static void wsys__dispatchevent(struct wsys_event evt)
         wsys__send_command(0x00);
         screen__destroyAll();
         break;
+    case EVENT_SYSTEM:
+        break;
     }
 }
 
@@ -134,3 +140,12 @@ void wsys__send_command(uint8_t command)
 {
     fpga__write_extram_block(0x021B00, &command, 1);
 }
+
+void systemevent__handleevent(const systemevent_t *event)
+{
+    struct wsys_event evt;
+    evt.type = EVENT_SYSTEM;
+    evt.sysevent = *event; // Check copy!
+    xQueueSend(wsys_evt_queue, &evt, portMAX_DELAY);
+}
+

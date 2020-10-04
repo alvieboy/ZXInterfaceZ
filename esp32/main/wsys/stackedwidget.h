@@ -11,7 +11,7 @@ public:
         m_currentindex = 0;
     }
 
-    virtual void handleEvent(uint8_t type, u16_8_t code) override;
+    virtual bool handleEvent(uint8_t type, u16_8_t code) override;
     virtual void draw(bool force=false) override;
     virtual void setCurrentIndex(uint8_t index);
     virtual void drawImpl();

@@ -3,6 +3,9 @@
 #include "../fpga.h"
 #include "pixel.h"
 #include <stdarg.h>
+#include <functional>
+#include <map>
+#include "systemevent.h"
 
 extern "C" {
     struct framebuffer spectrum_framebuffer;
@@ -39,25 +42,27 @@ void screenptr_t::nextpixelline()
     }
 }
 
-void screenptr_t::nextcharline()
+void screenptr_t::nextcharline(int amt)
 {
     // Increment Y by 8 (Y3)
-    uint16_t l = off.l;
-    l += 32;
-    if (l&0x100) {
-        // Overflow.
-        off.h += 0x08;
-        off.h &= 0x1F;
+    while (amt--) {
+        uint16_t l = off.l;
+        l += 32;
+        if (l&0x100) {
+            // Overflow.
+            off.h += 0x08;
+            off.h &= 0x1F;
+        }
+        off.l = l & 0xff;
     }
-    off.l = l & 0xff;
 }
 
 screenptr_t screenptr_t::drawascii(char c)
 {
     screenptr_t temp = *this;
-    if (c<32)
+    if (c<FIRST_PRINTABLE_CHAR)
         return *this;
-    c-=32;
+    c-=FIRST_PRINTABLE_CHAR;
     temp = temp.drawchar(&CHAR_SET[(int)c*8]);
     return temp;
 }
@@ -66,7 +71,7 @@ screenptr_t screenptr_t::drawstring(const char *s)
 {
     screenptr_t temp = *this;
     while (*s) {
-        int c = (*s) - 32;
+        int c = (*s) - FIRST_PRINTABLE_CHAR;
         temp = temp.drawchar(&CHAR_SET[c*8])++;
         s++;
     }
@@ -141,4 +146,24 @@ screenptr_t screenptr_t::printf(const char *fmt,...)
     return temp;
 }
 
+static std::map<int,  std::function<void(const systemevent_t&)> > m_systemeventhandlers;
+static int event_index = 0;
 
+int wsys__subscribesystemeventfun(std::function<void(const systemevent_t&)> handler)
+{
+    m_systemeventhandlers[event_index] = handler;
+    event_index++;
+    return event_index-1;
+}
+
+void wsys__unsubscribesystemevent(int index)
+{
+    m_systemeventhandlers.erase( index );
+}
+
+void wsys__propagatesystemevent(const systemevent_t &event)
+{
+    for (auto i: m_systemeventhandlers) {
+        (i.second)(event);
+    }
+}

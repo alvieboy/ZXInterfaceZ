@@ -29,7 +29,6 @@ protected:
     void drawStatus();
     bool hasHelpText() const { return m_helptext!=NULL; }
     int  statusLines() const { return m_statuslines; }
-    void setBGLine(attrptr_t attrptr, int width,  uint8_t value);
 
     const char *m_title;
     uint8_t m_border;

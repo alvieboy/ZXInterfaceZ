@@ -181,13 +181,6 @@ void Window::drawImpl()
     }
 }
 
-void Window::setBGLine(attrptr_t attrptr, int len, uint8_t value)
-{
-    for (int i=0;i<len;i++) {
-        *attrptr++ = value;
-    }
-}
-
 void Window::setBackground()
 {
     int c = (m_h) * 8;
