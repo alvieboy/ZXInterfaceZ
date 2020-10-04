@@ -122,7 +122,8 @@ public:
         m_password->setEditable(false);
     }
 
-    static void getChannelString(const struct channel_info &info, char *dest) {
+    static void getChannelString(const struct channel_info &info, char *dest)
+    {
         sprintf(dest,"%d (%d MHz)",
                 info.chan,
                 info.
@@ -133,6 +134,7 @@ public:
     {
         const struct channel_list *list = &wifi_channels;
         int i;
+
         class strwrap: public std::string
         {
         public:
@@ -284,7 +286,6 @@ WifiMenu::WifiMenu(): Window("Wifi settings", 32, 20)
 
     m_hl->addChild(m_stack, LAYOUT_FLAG_HEXPAND);
     m_menu->setEntries(&wifimenu_entries);
-   // m_menu->setFunctionHandler( [](void*arg,uint8_t index){ static_cast<WifiMenu*>(arg)->selected(index);} ,this);
 
     m_menu->selectionChanged().connect( this, &WifiMenu::selected ) ;
     m_menu->selected().connect( this, &WifiMenu::activated ) ;
