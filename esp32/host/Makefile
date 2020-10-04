@@ -156,6 +156,8 @@ wsys/stackedwidget.cpp  \
 wsys/button.cpp  \
 wsys/filechooserdialog.cpp \
 wsys/vbar.cpp \
+wsys/fixedlayout.cpp \
+wsys/editbox.cpp \
 menus/nmimenu.cpp \
 menus/settingsmenu.cpp \
 menus/videomodemenu.cpp \
@@ -183,6 +185,7 @@ OBJS:=$(FREERTOS_OBJS) $(COBJ) $(CXXOBJ) \
 	esplayer/esp_log.o \
 	esplayer/driver/gpio.o \
 	esplayer/driver/spi_master.o \
+	esplayer/driver/wifi.o \
 	$(ESP_IDF)/components/esp_http_server/src/httpd_parse.o \
 	$(ESP_IDF)/components/esp_http_server/src/httpd_txrx.o  \
 	$(ESP_IDF)/components/esp_http_server/src/httpd_sess.o  \
