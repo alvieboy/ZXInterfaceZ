@@ -19,8 +19,8 @@ typedef enum {
 } eptype_t;
 
 
-void usb_ll__interrupt();
-int usb_ll__init();
+void usb_ll__interrupt(void);
+int usb_ll__init(void);
 void usb_ll__set_power(int on);
 
 int usb_ll__read_status(uint8_t regs[4]);
@@ -48,7 +48,7 @@ int usb_ll__alloc_channel(uint8_t devaddr,
 
 int usb_ll__release_channel(uint8_t channel);
 int usb_ll__read_in_block(uint8_t channel, uint8_t *target, uint8_t *rxlen);
-void usb_ll__reset();
-void usb_ll__dump_info();
+void usb_ll__reset(void);
+void usb_ll__dump_info(void);
 
 #endif

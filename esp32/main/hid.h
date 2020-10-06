@@ -93,4 +93,5 @@ uint32_t hid__get_id(const hid_device_t *hiddev);
 const char *hid__get_serial(const hid_device_t *hiddev);
 
 void hid__get_devices(hid_device_t *devices, unsigned *num, unsigned max);
+const char* hid__get_driver_name(const hid_device_t*hiddev);
 

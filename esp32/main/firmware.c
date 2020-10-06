@@ -150,7 +150,7 @@ static int firmware__read_file_contents(firmware_upgrade_t *f)
     return 0;
 }
 
-struct manifest_file_info *firmware__get_file_info(firmware_upgrade_t *f, const char *filename)
+static struct manifest_file_info *firmware__get_file_info(firmware_upgrade_t *f, const char *filename)
 {
     int i;
 

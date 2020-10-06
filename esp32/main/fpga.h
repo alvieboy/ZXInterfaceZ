@@ -118,7 +118,7 @@ int fpga__finishprogram(fpga_program_state_t*);
 void fpga__trigger_reconfiguration(void);
 #endif
 
-uint8_t fpga__get_status();
+uint8_t fpga__get_status(void);
 
 static inline void fpga__set_flags(fpga_flags_t enable)
 {
@@ -129,12 +129,12 @@ static inline void fpga__clear_flags(fpga_flags_t disable)
     fpga__set_clear_flags(0, disable);
 }
 uint32_t fpga__get_capture_status(void);
-int fpga__read_command_fifo();
-uint16_t fpga__get_spectrum_pc();
+int fpga__read_command_fifo(void);
+uint16_t fpga__get_spectrum_pc(void);
 int fpga__load_tap_fifo(const uint8_t *data, unsigned len, int timeout);
 int fpga__load_tap_fifo_command(const uint8_t *data, unsigned len, int timeout);
-uint16_t fpga__get_tap_fifo_free();
-bool fpga__tap_fifo_empty();
+uint16_t fpga__get_tap_fifo_free(void);
+bool fpga__tap_fifo_empty(void);
 
 int fpga__write_rom(unsigned offset, uint8_t val);
 
@@ -155,7 +155,7 @@ void fpga__set_config1_bits(uint32_t bits);
 void fpga__clear_config1_bits(uint32_t bits);
 int fpga__set_rom(uint8_t rom);
 int fpga__set_ram(uint8_t ram);
-int fpga__reset_spectrum();
+int fpga__reset_spectrum(void);
 
 #ifdef __cplusplus
 }

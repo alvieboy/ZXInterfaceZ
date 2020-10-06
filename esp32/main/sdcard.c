@@ -5,6 +5,7 @@
 #include "esp_vfs_fat.h"
 #include <sys/types.h>
 #include <dirent.h>
+#include "sdcard.h"
 
 #ifndef __linux__
 

@@ -61,13 +61,13 @@ int aplist_resource__sendToFifo(struct resource *r)
 }
 
 
-void aplist_resource__wifi_scan_reset(void *a)
+static void aplist_resource__wifi_scan_reset(void *a)
 {
     struct aplist_resource *ar = (struct aplist_resource*)a;
     ar->needlen = 0;
 }
 
-void aplist_resource__wifi_apcount(void *a, uint8_t apcount, size_t ssidlensum)
+static void aplist_resource__wifi_apcount(void *a, uint8_t apcount, size_t ssidlensum)
 {
     struct aplist_resource *ar = (struct aplist_resource*)a;
 
@@ -76,7 +76,7 @@ void aplist_resource__wifi_apcount(void *a, uint8_t apcount, size_t ssidlensum)
     aplist_resource__setnumaps(a, apcount );
 }
 
-void aplist_resource__wifi_ap(void *a, uint8_t auth, uint8_t channel, const char *ssid, size_t ssidlen)
+static void aplist_resource__wifi_ap(void *a, uint8_t auth, uint8_t channel, int8_t rssi, const char *ssid, size_t ssidlen)
 {
     uint8_t flags = 0;
     switch ( auth ) {
@@ -92,7 +92,7 @@ void aplist_resource__wifi_ap(void *a, uint8_t auth, uint8_t channel, const char
     aplist_resource__addap(a, flags, ssid, ssidlen);
 }
 
-void aplist_resource__wifi_finish(void *a)
+static void aplist_resource__wifi_finish(void *a)
 {
 }
 
@@ -104,9 +104,10 @@ static const wifi_scan_parser_t scan_parser =  {
 };
 
 
-
+#if 0
 int aplist_resource__request_wifi_scan(struct aplist_resource *r)
 {
     return wifi__scan(&scan_parser, r);
 }
 
+#endif

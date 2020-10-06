@@ -4,6 +4,7 @@
 #include "soc/gpio_struct.h"
 #include "driver/gpio.h"
 #include "defs.h"
+#include "spectint.h"
 
 static xQueueHandle gpio_evt_queue = NULL;
 

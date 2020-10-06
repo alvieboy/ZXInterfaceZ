@@ -94,6 +94,8 @@ static int fpga_ota__chunk(command_t *cmdt)
 }
 
 #else
+#include "fpga_ota.h"
+
 int fpga_ota__performota(command_t *cmdt, int argc, char **argv)
 {
     return -1;

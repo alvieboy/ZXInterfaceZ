@@ -13,6 +13,7 @@ public:
         void connect(T *object, void (T::*F)(Arg... arg)) {
             m_function = [=](Arg... arg) { (object->*F)(arg...); };
         }
+    bool connected() const { return m_function!=NULL; }
 protected:
     std::function<void(Arg...)> m_function;
 };

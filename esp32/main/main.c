@@ -67,7 +67,7 @@ static void start_capture()
 #endif
 
 
-void request_restart()
+void request_restart(void)
 {
     restart_requested = 1;
 }
@@ -135,6 +135,8 @@ static void process_buttons()
     }
 }
 
+void app_main(void);
+
 void app_main()
 {
     int lstatus = 0;
@@ -146,9 +148,16 @@ void app_main()
     spi__init_bus();
     sdcard__init();
     nvs__init();
+
+    wsys__init();
+
+    ESP_LOGI(TAG, "Init wifi");
+
     wifi__init();
 
     resource__init();
+
+    ESP_LOGI(TAG, "Init FPGA");
 
     if (fpga__init()<0) {
         ESP_LOGE(TAG, "Cannot proceed without FPGA!");
@@ -160,6 +169,8 @@ void app_main()
 
         }
     }
+    ESP_LOGI(TAG, "Init spectrum");
+
 
     spectint__init();
 
@@ -190,7 +201,6 @@ void app_main()
     webserver__init();
     vga__init();
     buttons__init();
-    wsys__init();
 
     ESP_LOGI(TAG, "InterfaceZ version: %s %s", version, gitversion);
     ESP_LOGI(TAG, "  built %s", builddate);

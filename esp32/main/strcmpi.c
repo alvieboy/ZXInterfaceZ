@@ -11,6 +11,7 @@
 
 #include <ctype.h>
 #include <stddef.h>
+#include "strcmpi.h"
 
 int strcmpi (const char *s1, const char *s2)
 {

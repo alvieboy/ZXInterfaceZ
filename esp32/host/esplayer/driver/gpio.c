@@ -2,6 +2,8 @@
 #include <malloc.h>
 #include "hal/gpio_ll.h"
 
+void gpio_isr_do_trigger(gpio_num_t num);
+
 struct gpioh {
     struct gpioh *next;
     gpio_num_t num;

@@ -92,6 +92,9 @@ static void wsys__dispatchevent(struct wsys_event evt)
         screen__destroyAll();
         break;
     case EVENT_SYSTEM:
+        //
+        wsys__propagatesystemevent(evt.sysevent);
+
         break;
     }
 }

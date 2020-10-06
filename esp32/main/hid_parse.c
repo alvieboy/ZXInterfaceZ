@@ -17,7 +17,7 @@
 
 #define zalloc(s) calloc(1,(s))
 
-hid_report_t *hid_register_report(struct hid *hid, uint8_t id)
+static hid_report_t *hid_register_report(struct hid *hid, uint8_t id)
 {
     hid_report_t *r = hid->reports;
 
@@ -48,7 +48,7 @@ hid_report_t *hid_register_report(struct hid *hid, uint8_t id)
     return r;
 }
 
-void hid_destroy_reports(struct hid *hid)
+static void hid_destroy_reports(struct hid *hid)
 {
 }
 
@@ -91,7 +91,7 @@ void hid_destroy_reports(struct hid *hid)
 #define HID_LOCAL_TAG_DELIMITER  0x2A
 
 /* These assume little-endian systems */
-int hid_get_signed_data(const uint8_t *data, uint8_t len)
+static int hid_get_signed_data(const uint8_t *data, uint8_t len)
 {
     int val = 0;
     switch (len) {
@@ -107,7 +107,8 @@ int hid_get_signed_data(const uint8_t *data, uint8_t len)
     }
     return val;
 }
-unsigned int hid_get_unsigned_data(const uint8_t *data, uint8_t len)
+
+static unsigned int hid_get_unsigned_data(const uint8_t *data, uint8_t len)
 {
     unsigned int val = 0;
     switch (len) {
@@ -125,7 +126,7 @@ unsigned int hid_get_unsigned_data(const uint8_t *data, uint8_t len)
 
 }
 
-void hid_report_append_field(hid_report_t *report, hid_field_t *field)
+static void hid_report_append_field(hid_report_t *report, hid_field_t *field)
 {
     field->next = NULL;
     if (report->fields == NULL) {
@@ -139,7 +140,7 @@ void hid_report_append_field(hid_report_t *report, hid_field_t *field)
     }
 }
 
-int hid_add_input(struct hid *h, uint8_t val)
+static int hid_add_input(struct hid *h, uint8_t val)
 {
     unsigned offset;
 
@@ -202,7 +203,7 @@ int hid_add_input(struct hid *h, uint8_t val)
     return 0;
 }
 
-int parse_hid_main_entry(struct hid *h, uint8_t tag, const uint8_t *data, uint8_t len)
+static int parse_hid_main_entry(struct hid *h, uint8_t tag, const uint8_t *data, uint8_t len)
 {
     int r = 0;
 
@@ -251,7 +252,7 @@ int parse_hid_main_entry(struct hid *h, uint8_t tag, const uint8_t *data, uint8_
     return r;
 }
 
-int parse_hid_local_entry(struct hid *h, uint8_t tag, const uint8_t *data, uint8_t len)
+static int parse_hid_local_entry(struct hid *h, uint8_t tag, const uint8_t *data, uint8_t len)
 {
     int r = 0;
 
@@ -298,7 +299,7 @@ int parse_hid_local_entry(struct hid *h, uint8_t tag, const uint8_t *data, uint8
 }
 
 
-int parse_hid_global_entry(struct hid *h, uint8_t tag, const uint8_t *data, uint8_t len)
+static int parse_hid_global_entry(struct hid *h, uint8_t tag, const uint8_t *data, uint8_t len)
 {
     int r = 0;
 
@@ -356,7 +357,7 @@ int parse_hid_global_entry(struct hid *h, uint8_t tag, const uint8_t *data, uint
     return r;
 }
 
-void hid_list_entries(struct hid *h)
+static void hid_list_entries(struct hid *h)
 {
     HIDDEBUG("**********************************");
     HIDDEBUG("**********************************");

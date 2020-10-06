@@ -115,7 +115,7 @@ void sna_apply_relocs_mem(const uint8_t *sna, uint8_t *rom, uint16_t offset)
     sna_apply_relocs(sna, offset, &writefun_mem, rom);
 }
 
-void sna_apply_relocs_extram(const uint8_t *sna, unsigned extram_address, uint16_t offset)
+static void sna_apply_relocs_extram(const uint8_t *sna, unsigned extram_address, uint16_t offset)
 {
     sna_apply_relocs(sna, offset, &writefun_extram, (void*)&extram_address);
 }

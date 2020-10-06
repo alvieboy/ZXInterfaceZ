@@ -30,7 +30,7 @@ extern unsigned int INTZ_ROM_len;
 #endif
 
 
-static void sna__prepare();
+static void sna__prepare(void);
 static int sna__chunk(command_t *cmdt);
 
 static bool header_seen = false;

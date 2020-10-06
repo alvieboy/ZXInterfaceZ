@@ -1,4 +1,5 @@
 #include <inttypes.h>
+#include "hid_usage.h"
 
 static const uint8_t page0_idx_table[] = {
     0x00,//  Undefined

@@ -13,6 +13,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include "driver/gpio.h"
+#include "fpga.h"
+
 
 static xQueueHandle fpga_spi_queue = NULL;
 
@@ -27,12 +29,15 @@ static unsigned hdlcrxlen = 0;
 static int emulator_socket = -1;
 extern uint64_t pinstate;
 
-void hdlc_writer(void *userdata, const uint8_t c)
+void fpga_do_transaction(uint8_t *buffer, size_t len);
+int fpga_set_comms_socket(int socket);
+
+static void hdlc_writer(void *userdata, const uint8_t c)
 {
     writebuf[writebufptr++] = c;
 }
 
-void hdlc_flusher(void *userdata)
+static void hdlc_flusher(void *userdata)
 {
     send(emulator_socket, writebuf, writebufptr, 0);
     writebufptr = 0;
@@ -53,7 +58,9 @@ int fpga_set_comms_socket(int socket)
     emulator_socket = socket;
 }
 
-int fpga_init()
+int fpga_init(void);
+
+int fpga_init(void)
 {
     struct sockaddr_in sockaddr;
     int yes = 1;
@@ -86,12 +93,13 @@ int fpga_init()
                        &hdlc_data, NULL);
 
     hdlc_encoder__init(&hdlc_encoder, &hdlc_writer, &hdlc_flusher, NULL);
-
+    printf("Starting FPGA thread\n");
     // Start RX thread
     xTaskCreate(fpga_rxthread, "fpgathread", 4096, NULL, 6, NULL);
+    printf("FPGA ready\n");
     return 0;
 }
-#if 1
+#if 0
 
 void dump(const char *t, const uint8_t *buffer, size_t len)
 {

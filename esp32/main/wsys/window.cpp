@@ -255,7 +255,7 @@ void Window::clearChildArea(uint8_t x, uint8_t y, uint8_t w, uint8_t h)
     attrptr_t a;
     r.fromxy(x,y);
     a.fromxy(x,y);
-    WSYS_LOGI("clear xy %d %d\n",x,y);
+    WSYS_LOGI("clear xy %d %d, width=%d, height=%d\n",x,y,w,h);
     clearLines( r, w, h);
 
     for (int c=0; c<h;c++) {

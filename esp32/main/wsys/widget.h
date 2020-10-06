@@ -3,7 +3,7 @@
 
 #include <inttypes.h>
 #include <stdlib.h>
-
+#include "screen.h"
 
 #define DAMAGE_ALL      0xFF
 #define DAMAGE_WINDOW   0x40
@@ -54,8 +54,9 @@ public:
     static void setBGLine(attrptr_t attrptr, int width,  uint8_t value);
     void grabKeyboardFocus();
     void releaseKeyboardFocus();
-
 protected:
+
+
     virtual void drawImpl() = 0;
 
     void recalculateScreenPointers();

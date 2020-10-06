@@ -2,7 +2,7 @@
 #include <string.h>
 #include "../spectrum_kbd.h"
 
-Button::Button(Widget *parent, const char *text): Widget(parent), m_text(text)
+Button::Button(const char *text, Widget *parent): Widget(parent), m_text(text)
 {
     if (text) {
         m_textlen=strlen(text);

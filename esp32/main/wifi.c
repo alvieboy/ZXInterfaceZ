@@ -19,6 +19,7 @@
 #include "mdns.h"
 #include "json.h"
 #include "wifi.h"
+#include "systemevent.h"
 
 #define EXAMPLE_ESP_WIFI_SSID      CONFIG_ESP_WIFI_SSID
 #define EXAMPLE_ESP_WIFI_PASS      CONFIG_ESP_WIFI_PASSWORD
@@ -40,6 +41,7 @@ static const wifi_scan_parser_t *scan_parser = NULL;
 static void *scan_parser_data = NULL;
 static esp_netif_t *netif;
 
+static volatile wifi_status_t wifi_status;
 
 const struct channel_list wifi_channels =
 {
@@ -80,7 +82,65 @@ int wifi__get_ap_pwd( char *dest, unsigned size)
                     EXAMPLE_ESP_WIFI_PASS);
 }
 
-#ifndef __linux__
+static void wifi__set_status(wifi_status_t status)
+{
+    wifi_status = status;
+    systemevent_t event;
+    event.type = SYSTEMEVENT_TYPE_WIFI;
+    event.event = SYSTEMEVENT_WIFI_STATUS_CHANGED;
+    systemevent__send(&event);
+}
+
+static void wifi__emit_network_changed()
+{
+    systemevent_t event;
+    event.type = SYSTEMEVENT_TYPE_NETWORK;
+    event.event = SYSTEMEVENT_NETWORK_STATUS_CHANGED;
+    systemevent__send(&event);
+}
+
+static void wifi__emit_scan_finished()
+{
+    systemevent_t event;
+    event.type = SYSTEMEVENT_TYPE_WIFI;
+    event.event = SYSTEMEVENT_WIFI_SCAN_COMPLETED;
+    systemevent__send(&event);
+}
+
+wifi_status_t wifi__get_status()
+{
+    if (wifi__scanning())
+        return WIFI_SCANNING;
+    return wifi_status;
+}
+
+static const char *status_strings[] = {
+    "Scanning",
+    "Disconnected",
+    "Accepting",
+    "Connecting",
+    "Obtaining IP",
+    "Connected"
+};
+
+
+const char *wifi__status_string(wifi_status_t status)
+{
+    unsigned idx =(unsigned)status;
+    if (idx<sizeof(status_strings)/sizeof(status_strings[0])) {
+        return status_strings[idx];
+    }
+    return "Unknown";
+}
+
+int wifi__get_sta_ssid(char *dest, unsigned size)
+{
+    return nvs__fetch_str("sta_ssid", dest, size, "");
+}
+
+
+
+#if 1
 
 static bool issta = false;
 char wifi_ssid[33];
@@ -133,6 +193,10 @@ static void ip_event_handler(void* arg, esp_event_base_t event_base,
         ESP_LOGI(TAG, "got ip: " IPSTR, IP2STR(&event->ip_info.ip));
         xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
         led__set(LED2, 1);
+#if 1
+        wifi__set_status(WIFI_CONNECTED);
+#endif
+        wifi__emit_network_changed();
 
         setup_mdns();
 
@@ -143,7 +207,7 @@ static void ip_event_handler(void* arg, esp_event_base_t event_base,
     }
 }
 
-static void wifi__parse_scan();
+static void wifi__parse_scan(void);
 
 static void wifi_event_handler(void* arg, esp_event_base_t event_base,
                                int32_t event_id, void* event_data)
@@ -154,13 +218,27 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,
     switch (event_id) {
 
     case WIFI_EVENT_STA_START:
+        wifi__set_status(WIFI_CONNECTING);
         esp_wifi_connect();
         break;
     case WIFI_EVENT_STA_DISCONNECTED:
         led__set(LED2, 0);
-        esp_wifi_connect();
         xEventGroupClearBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
+        wifi__set_status(WIFI_DISCONNECTED);
+        esp_wifi_connect();
         break;
+    case WIFI_EVENT_STA_STOP:
+        wifi__set_status(WIFI_DISCONNECTED);
+        break;
+
+    case WIFI_EVENT_STA_CONNECTED:
+        wifi__set_status(WIFI_WAIT_IP_ADDRESS);
+        break;
+#if 0
+    case WIFI_EVENT_STA_GOT_IP:
+        wifi__set_status(WIFI_CONNECTED);
+        break;
+#endif
     case WIFI_EVENT_AP_STACONNECTED:
         {
             wifi_event_ap_staconnected_t* event = (wifi_event_ap_staconnected_t*) event_data;
@@ -179,10 +257,13 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,
     case WIFI_EVENT_SCAN_DONE:
         wifi__parse_scan();
         xEventGroupClearBits(s_wifi_event_group, WIFI_SCANNING_BIT);
+        wifi__emit_scan_finished();
+
         //case WIFI_EVENT_STA_CONNECTED:
         break;
     case WIFI_EVENT_AP_START:
         ESP_LOGI(TAG,"WiFi AP started");
+        wifi__set_status(WIFI_ACCEPTING);
         setup_mdns();
         break;
     default:
@@ -199,12 +280,25 @@ static const wifi_scan_config_t scan_config = {
     .show_hidden = false
 };
 
-void wifi__init_softap()
+static void wifi__teardown()
 {
     if (netif) {
+        esp_err_t err = esp_wifi_stop();
+        if (err == ESP_ERR_WIFI_NOT_INIT) {
+            return;
+        }
+        ESP_ERROR_CHECK(err);
+        ESP_ERROR_CHECK(esp_wifi_deinit());
+        ESP_ERROR_CHECK(esp_wifi_clear_default_wifi_driver_and_handlers(netif));
         esp_netif_destroy(netif);
-        esp_wifi_stop();
+        netif = NULL;
     }
+}
+
+static void wifi__init_softap()
+{
+
+    wifi__teardown();
 
     netif = esp_netif_create_default_wifi_ap();
 
@@ -256,22 +350,21 @@ void wifi__init_softap()
 
 static void wifi__init_core()
 {
+#ifndef __linux__ /* we still don't support this */
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
 
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+#endif
 
     ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL));
     ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, ESP_EVENT_ANY_ID, &ip_event_handler, NULL));
 
+    wifi_status = WIFI_DISCONNECTED;
 }
 
-void wifi__init_wpa2()
+static void wifi__init_wpa2()
 {
-    if (netif) {
-        ESP_ERROR_CHECK(esp_netif_dhcps_stop(netif));
-        esp_netif_destroy(netif);
-        esp_wifi_stop();
-    }
+    wifi__teardown();
 
     issta = true;
 
@@ -308,18 +401,32 @@ void wifi__init()
 {
     s_wifi_event_group = xEventGroupCreate();
 
+    ESP_LOGI(TAG, "t1");
+
     esp_netif_init();
+
+    ESP_LOGI(TAG, "t2");
+
     ESP_ERROR_CHECK(esp_event_loop_create_default());
 
+    ESP_LOGI(TAG, "t3");
+
     wifi__init_core();
+    ESP_LOGI(TAG, "t4");
+
     if (nvs__u8("wifi", WIFI_MODE_AP)==WIFI_MODE_STA) {
+        ESP_LOGI(TAG, "wpa");
+
         wifi__init_wpa2();
     } else {
+        ESP_LOGI(TAG, "ap");
+
         wifi__init_softap();
     }
+
 }
 
-static int wifi__start_scan()
+int wifi__start_scan()
 {
     int r = esp_wifi_scan_start(&scan_config, false);
     if (r<0) {
@@ -330,9 +437,19 @@ static int wifi__start_scan()
     return 0;
 }
 
+int wifi__get_rssi()
+{
+    wifi_ap_record_t wifidata;
+    if (esp_wifi_sta_get_ap_info(&wifidata)==0){
+        return wifidata.rssi;
+    }
+    return -1;
+}
 
 
-#else
+#endif
+#if 0// __linux__
+
 #include <stdbool.h>
 #include "json.h"
 #include <inttypes.h>
@@ -344,12 +461,13 @@ void wifi__end_scan()
     ESP_LOGI(TAG,"WiFI scan finished");
     wifi__parse_scan();
     xEventGroupClearBits(s_wifi_event_group, WIFI_SCANNING_BIT);
-
+    wifi__emit_scan_finished();
 }
 
 void wifi__init()
 {
     s_wifi_event_group = xEventGroupCreate();
+    wifi_status = WIFI_DISCONNECTED;
 }
 
 bool wifi__isconnected()
@@ -364,7 +482,7 @@ bool wifi__scanning()
 
 bool wifi__issta()
 {
-    return false;
+    return true;
 }
 
 void wifi__init_softap()
@@ -433,7 +551,7 @@ void wifi__get_conf_json(cJSON *node)
 }
 
 
-static void wifi__ap_json_entry(void *user, uint8_t auth, uint8_t channel, const char *ssid, size_t ssidlen)
+static void wifi__ap_json_entry(void *user, uint8_t auth, uint8_t channel, int8_t rssi, const char *ssid, size_t ssidlen)
 {
     cJSON *e = cJSON_CreateObject();
     cJSON *array = (cJSON *)user;
@@ -441,12 +559,13 @@ static void wifi__ap_json_entry(void *user, uint8_t auth, uint8_t channel, const
     cJSON_AddNumberToObject(e, "auth", auth);
     cJSON_AddStringToObject(e, "ssid", ssid);
     cJSON_AddNumberToObject(e, "channel", channel);
+    cJSON_AddNumberToObject(e, "rssi", rssi);
     cJSON_AddItemToArray(array, e);
 }
 
 static cJSON *scan_array = NULL;
 
-void wifi__ap_json_finished(void *user)
+static void wifi__ap_json_finished(void *user)
 {
     scan_array = (cJSON*)user;
 }
@@ -522,7 +641,13 @@ void wifi__parse_scan()
 
     //aplist_resource__setnumaps(&aplistresource, ap_num );
     for (int i=0;i<ap_num; i++) {
-        scan_parser->ap(scan_parser_data, ap_records[i].authmode, ap_records[i].primary, (const char*)ap_records[i].ssid, strlen((char*)ap_records[i].ssid));
+        scan_parser->ap(scan_parser_data,
+                        ap_records[i].authmode,
+                        ap_records[i].primary,
+                        ap_records[i].rssi,
+                        (const char*)ap_records[i].ssid,
+                        strlen((char*)ap_records[i].ssid)
+                       );
     }
     if (scan_parser->finish)
         scan_parser->finish(scan_parser_data);

@@ -6,6 +6,7 @@
 #include <vector>
 #include "object_signal.h"
 #include <cstring>
+#include <functional>
 
 #define MENU_COLOR_NORMAL			0x78
 #define MENU_COLOR_DISABLED			0x38
@@ -37,6 +38,7 @@ public:
     void setEntries( const MenuEntryList *);
     void draw(bool force=false) override;
     void setHelp(const char *helpstrings[], HelpDisplayer *displayer);
+    void setHelp(const std::function<const char*(uint8_t)> fun, HelpDisplayer *displayer);
     template<class Iter>
         static MenuEntryList *allocEntryList(Iter first, Iter last, void *&data) {
             int count = std::distance(first,last);
@@ -46,7 +48,7 @@ public:
             menudatabuf = (uint8_t*)malloc( sizeof(MenuEntryList) + count * sizeof(MenuEntry));
 
             if (!menudatabuf) {
-                WSYS_LOGE("Menu: cannot allocate");
+                WSYS_LOGE("Menu: cannot allocate memory? %d items", count);
                 return NULL;
             }
 
@@ -59,6 +61,7 @@ public:
             // Do a first pass to compute string sizes.
             unsigned strsize = 0;
             for (Iter s = first; s!=last; s++) {
+                WSYS_LOGI("Iter %s\n", s->str());
                 strsize += strlen(s->str()) + 1;
             }
 
@@ -97,6 +100,7 @@ public:
     virtual uint8_t getMinimumWidth() const;
     Signal<uint8_t> &selectionChanged() { return m_selectionChanged; }
     void setActiveEntry(uint8_t entry);
+    //static const char *strtablehelp(uint8_t index) { return
 protected:
     void chooseNext();
     void choosePrev();
@@ -115,7 +119,8 @@ protected:
     uint8_t m_selectedEntry;
     const MenuEntryList *m_entries;
     HelpDisplayer *m_helpdisplayer;
-    const char **m_helpstrings;
+    //const char **m_helpstrings;
+    std::function<const char *(uint8_t)> m_helpfun;
 };
 
 

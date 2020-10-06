@@ -5,7 +5,7 @@
 #include "hal/gpio_ll.h"
 
 
-void gpio__init();
+void gpio__init(void);
 int gpio__waitpin(gpio_num_t pin, uint8_t value, int timeout);
 
 /* This needs to be here so that it can be fully inlined, because we need all code here to be

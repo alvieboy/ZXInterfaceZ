@@ -47,7 +47,6 @@ static int usbh__assign_address(struct usb_device *dev);
 static int usbh__control_request_completed_reply(uint8_t chan, uint8_t stat, struct usb_request *req);
 static int usbh__request_completed_reply(uint8_t chan, uint8_t stat, void *req);
 static int usbh__issue_setup_data_request(struct usb_request *req);
-
 static void usbh__add_device(struct usb_device *);
 static void usbh__remove_device(struct usb_device *);
 
@@ -110,7 +109,7 @@ void usb_ll__connected_callback()
     }
 }
 
-void usbh__ll_task(void *pvParam)
+static void usbh__ll_task(void *pvParam)
 {
     struct usbcmd cmd;
     while (1) {
@@ -129,7 +128,7 @@ void usbh__ll_task(void *pvParam)
     }
 }
 
-int usbh__parse_interfaces(struct usb_device *dev)
+static int usbh__parse_interfaces(struct usb_device *dev)
 {
     int index = 0;
     int intflen;
@@ -183,15 +182,14 @@ void IRAM_ATTR usb__isr_handler(void* arg)
     xQueueSendFromISR(usb_cmd_queue, &cmd, NULL);
 }
 
-
-void usbh__reset()
+static void usbh__reset(void)
 {
     usb_ll__reset();
 
     vTaskDelay(100 / portTICK_RATE_MS);
 }
 
-void usbh__device_free(struct usb_device *dev)
+static void usbh__device_free(struct usb_device *dev)
 {
     if (dev->config_descriptor)
         free(dev->config_descriptor);
@@ -204,7 +202,7 @@ void usbh__device_free(struct usb_device *dev)
         free(dev->serial);
 }
 
-char *usbh__string_unicode8_to_char(const uint8_t  *src, unsigned len)
+static char *usbh__string_unicode8_to_char(const uint8_t  *src, unsigned len)
 {
     if (len&1) {
         ESP_LOGE(TAG,"String len is odd!");
@@ -256,14 +254,15 @@ static char *usbh__get_device_string(struct usb_device *dev,uint16_t index)
     return usbh__string_unicode8_to_char(&local_string_descriptor[2], len - 2);
 }
 
-int usbh__get_device_strings(struct usb_device *dev)
+static int usbh__get_device_strings(struct usb_device *dev)
 {
     dev->vendor = usbh__get_device_string(dev, dev->device_descriptor.iManufacturer);
     dev->product = usbh__get_device_string(dev, dev->device_descriptor.iProduct);
     dev->serial = usbh__get_device_string(dev, dev->device_descriptor.iSerialNumber);
     return 0;
 }
-int usbh__detect_and_assign_address()
+
+static int usbh__detect_and_assign_address()
 {
     struct usb_device dev;
     usb_config_descriptor_t cd;
@@ -428,7 +427,7 @@ int usbh__claim_interface(struct usb_device *dev, struct usb_interface *intf)
     return 0;
 }
 
-void usbh__main_task(void *pvParam)
+static void usbh__main_task(void *pvParam)
 {
     struct usbresponse resp;
 

@@ -57,6 +57,8 @@ static const esp_partition_t partitions[] = {
 
 static int flashfd = -1;
 
+int partition_init(void);
+
 int partition_init()
 {
     flashfd = open(BINFILE, O_RDWR|O_CREAT, 0666);

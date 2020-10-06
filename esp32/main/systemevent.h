@@ -5,6 +5,8 @@
 extern "C" {
 #endif
 
+#include <inttypes.h>
+
 #define SYSTEMEVENT_TYPE_WIFI    (1<<0)
 #define SYSTEMEVENT_TYPE_NETWORK (1<<1)
 

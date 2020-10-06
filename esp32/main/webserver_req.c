@@ -333,7 +333,7 @@ static esp_err_t webserver_req__post_file(httpd_req_t *req, const char *querystr
     return ESP_OK;
 }
 
-int webserver_req__devlist(httpd_req_t *req, const char *querystr)
+static int webserver_req__devlist(httpd_req_t *req, const char *querystr)
 {
     cJSON *root = cJSON_CreateObject();
 
@@ -344,7 +344,7 @@ int webserver_req__devlist(httpd_req_t *req, const char *querystr)
 }
 
 
-int webserver_req__wifi(httpd_req_t *req, const char *querystr)
+static int webserver_req__wifi(httpd_req_t *req, const char *querystr)
 {
     cJSON *root = cJSON_CreateObject();
 
@@ -355,7 +355,7 @@ int webserver_req__wifi(httpd_req_t *req, const char *querystr)
 }
 
 
-int webserver_req__start_scan(httpd_req_t *req, const char *querystr)
+static int webserver_req__start_scan(httpd_req_t *req, const char *querystr)
 {
     cJSON *root = cJSON_CreateObject();
 
@@ -377,7 +377,7 @@ int webserver_req__start_scan(httpd_req_t *req, const char *querystr)
     return ESP_OK;
 }
 
-int webserver_req__scan(httpd_req_t *req, const char *querystr)
+static int webserver_req__scan(httpd_req_t *req, const char *querystr)
 {
     cJSON *root = cJSON_CreateObject();
 
@@ -486,7 +486,7 @@ static const struct webserver_req_entry post_handlers[] = {
 };
 
 
-webserver_req_handler_t webserver_find_handler(const char *path, const struct webserver_req_entry *handlers, unsigned num_entries)
+static webserver_req_handler_t webserver_find_handler(const char *path, const struct webserver_req_entry *handlers, unsigned num_entries)
 {
     unsigned int i;
     char reqname[128];

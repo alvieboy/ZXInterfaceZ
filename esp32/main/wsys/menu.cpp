@@ -13,7 +13,7 @@ Menu::Menu(Widget *parent): Widget(parent)
     m_entries = NULL;
     m_helpdisplayer = NULL;
 }
-
+     /*
 void Menu::setHelp(const char *helpstrings[], HelpDisplayer *displayer)
 {
     m_helpdisplayer = displayer;
@@ -22,7 +22,21 @@ void Menu::setHelp(const char *helpstrings[], HelpDisplayer *displayer)
     if (m_helpdisplayer)
         m_helpdisplayer->displayHelpText(m_helpstrings[m_selectedEntry]);
 }
+       */
 
+void Menu::setHelp(const char *helpstrings[], HelpDisplayer *displayer)
+{
+    setHelp( [=](uint8_t index){ return helpstrings[index]; }, displayer );
+}
+
+void Menu::setHelp(std::function<const char *(uint8_t)> fun, HelpDisplayer *displayer)
+{
+    m_helpfun = fun;
+    m_helpdisplayer = displayer;
+
+    if (m_helpdisplayer)
+        m_helpdisplayer->displayHelpText( m_helpfun(m_selectedEntry) );
+}
 
 bool Menu::handleEvent(uint8_t type, u16_8_t code)
 {
@@ -189,8 +203,7 @@ void Menu::chooseNext()
     setdamage(DAMAGE_SELECTION);
 
     if (m_helpdisplayer)
-        m_helpdisplayer->displayHelpText(m_helpstrings[m_selectedEntry]);
-
+        m_helpdisplayer->displayHelpText( m_helpfun(m_selectedEntry) );
 }
 
 void Menu::choosePrev()
@@ -207,7 +220,7 @@ void Menu::choosePrev()
     setdamage(DAMAGE_SELECTION);
 
     if (m_helpdisplayer)
-        m_helpdisplayer->displayHelpText(m_helpstrings[m_selectedEntry]);
+        m_helpdisplayer->displayHelpText( m_helpfun(m_selectedEntry) );
 
 }
 

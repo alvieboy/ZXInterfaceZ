@@ -40,6 +40,7 @@ void screen__addWindow(Window*win, uint8_t x, uint8_t y)
     WSYS_LOGI( "Adding screen window");
     windows.push_back(win);
     win->move(x, y);
+    win->setVisible(true);
     win->setdamage(DAMAGE_WINDOW);
 }
 
@@ -223,4 +224,17 @@ void screen__releaseKeyboardFocus(Widget *d)
 }
 
 
-
+void screen__windowLoop(Window *w)
+{
+    do {
+        if (std::find(windows.begin(), windows.end(), w)!=windows.end()) {
+            if (w->visible()) {
+                wsys__eventloop_iter();
+            } else {
+                return;
+            }
+        } else {
+            return;
+        }
+    } while (1);
+}
