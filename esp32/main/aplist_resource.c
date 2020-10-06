@@ -60,6 +60,7 @@ int aplist_resource__sendToFifo(struct resource *r)
     return fpga__load_resource_fifo(ar->buf, ar->bufpos, RESOURCE_DEFAULT_TIMEOUT);
 }
 
+#if 0
 
 static void aplist_resource__wifi_scan_reset(void *a)
 {
@@ -104,7 +105,6 @@ static const wifi_scan_parser_t scan_parser =  {
 };
 
 
-#if 0
 int aplist_resource__request_wifi_scan(struct aplist_resource *r)
 {
     return wifi__scan(&scan_parser, r);
