@@ -68,7 +68,7 @@ static inline void button__check(int index, uint32_t gpio_num)
 }
 
 
-void button_scan_task(void *data)
+static void button_scan_task(void *data)
 {
     ESP_LOGI("Button","Scan task starting");
     while (1) {

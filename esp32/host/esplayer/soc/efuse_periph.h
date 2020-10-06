@@ -1,0 +1,4 @@
+#define EFUSE_BLK0_RDATA0_REG 0
+#define EFUSE_RD_FLASH_CRYPT_CNT 0
+#define REG_GET_FIELD(x,y) (0)
+

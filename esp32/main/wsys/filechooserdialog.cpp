@@ -178,7 +178,9 @@ void FileChooserDialog::activate(uint8_t index)
     if (index==0xff) {
         // Closed, abort.
         releaseResources();
-        screen__removeWindow(this);
+        //screen__removeWindow(this);
+        setResult(-1);
+        return;
     }
     const MenuEntry *e = m_menu->getEntry(index);
     WSYS_LOGI("Flags %d, '%s'",e->flags, e->string);
@@ -193,11 +195,11 @@ void FileChooserDialog::activate(uint8_t index)
     }
 }
 
-void FileChooserDialog::exec( void (*callback)(void*, int), void* data)
+int FileChooserDialog::exec()
 {
     buildDirectoryList();
     WSYS_LOGI( "Loaded directory list");
-    Dialog::exec(callback, data);
+    return Dialog::exec();
 }
 
 FileChooserDialog::~FileChooserDialog()

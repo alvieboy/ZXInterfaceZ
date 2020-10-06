@@ -10,6 +10,8 @@ BUILDDATE=$(shell date --utc)
 
 SRCPATH=$(shell pwd)
 
+# -Werror=missing-prototypes
+
 CFLAGS= -fpic -DPIC -Wall -Wextra \
 	-DGITVER=\"$(GITVER)\" \
 	-DBUILDDATE='"$(BUILDDATE)"' \
@@ -47,6 +49,7 @@ CFLAGS= -fpic -DPIC -Wall -Wextra \
        -I$(ESP_IDF)/components/nvs_flash/include/ \
        -I$(ESP_IDF)/components/tcpip_adapter/include/ \
        -I$(ESP_IDF)/components/driver/include/ \
+       -I$(ESP_IDF)/components/mdns/include/ \
        -I$(SRCPATH)/wsys/ \
        -I$(SRCPATH)/menus/ 
 
@@ -130,6 +133,7 @@ firmware.c            \
 rle.c                 \
 vga.c                 \
 spectrum_kbd.c        \
+systemevent.c 	      \
 wsys/charmap.c        \
 wsys/tomthumb.c        
 
@@ -158,6 +162,8 @@ wsys/filechooserdialog.cpp \
 wsys/vbar.cpp \
 wsys/fixedlayout.cpp \
 wsys/editbox.cpp \
+wsys/wifiscanner.cpp \
+wsys/inputdialog.cpp \
 menus/nmimenu.cpp \
 menus/settingsmenu.cpp \
 menus/videomodemenu.cpp \
@@ -174,7 +180,10 @@ CXXOBJ:=$(patsubst %, $(SRCPATH)/%, $(_CXXOBJ))
 
 OBJS:=$(FREERTOS_OBJS) $(COBJ) $(CXXOBJ) \
 	main.o \
+	wifi_task.o \
+	event_task.o \
 	fpga.o \
+	mdns.o \
 	partition.o \
 	ota.o \
 	strlcpy.o \
@@ -186,6 +195,8 @@ OBJS:=$(FREERTOS_OBJS) $(COBJ) $(CXXOBJ) \
 	esplayer/driver/gpio.o \
 	esplayer/driver/spi_master.o \
 	esplayer/driver/wifi.o \
+	esplayer/esp_netif.o \
+	esplayer/esp_wifi.o \
 	$(ESP_IDF)/components/esp_http_server/src/httpd_parse.o \
 	$(ESP_IDF)/components/esp_http_server/src/httpd_txrx.o  \
 	$(ESP_IDF)/components/esp_http_server/src/httpd_sess.o  \

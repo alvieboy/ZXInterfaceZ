@@ -24,7 +24,7 @@ public:
     virtual ~FileChooserDialog();
     bool buildDirectoryList();
     void setFilter(uint8_t filter);
-    virtual void exec( void (*callback)(void*, int), void*) override;
+    virtual int exec() override;// void (*callback)(void*, int), void*) override;
     const char *getSelection() const;
 protected:
     void activate(uint8_t index);

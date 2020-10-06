@@ -6,6 +6,9 @@
 #include "fixedlayout.h"
 #include "color.h"
 #include "spectrum_kbd.h"
+#include "messagebox.h"
+#include "wifiscanner.h"
+#include "inputdialog.h"
 
 static const MenuEntryList wifimenu_entries = {
     .sz = 6,
@@ -229,10 +232,146 @@ private:
 class WifiWirelessSettingsSTA: public FixedLayout
 {
 public:
-    virtual void drawImpl()  {
-        parentDrawImpl();
+    WifiWirelessSettingsSTA()
+    {
+        m_ssid = new Label("");
+        m_status = new Label("");
+        m_rssi = new Label("");
+        m_scan = new Button("Scan WiFi network");
+
+        m_ssid->setBackground( MAKECOLOR(WHITE, BLUE) );
+
+        addChild(m_ssid, 0, 3, 21, 1);
+        addChild(m_status, 1, 7, 21, 1);
+        addChild(m_rssi, 11, 9, 11, 1);
+        addChild(m_scan, 0, 15, 21, 1);
+        m_scan->clicked().connect(this, &WifiWirelessSettingsSTA::doScan);
     }
 
+
+    void doScan()
+    {
+        notifyslot = wsys__subscribesystemevent(this, &WifiWirelessSettingsSTA::systemEvent);
+
+        int r = m_scanner.scan();
+
+        if (r==0) {
+            m_scanmessage = new MessageBox("Scanning WiFi", 22, 6);
+            m_scanmessage->setText("Scanning WiFi...");
+            m_scanmessage->setButtonText("Cancel [ENTER]");
+            m_scanmessage->exec();
+        } else {
+            wsys__unsubscribesystemevent(notifyslot);
+            // notifyslot
+            MessageBox::show("Cannot start scan");
+        }
+    }
+
+    int notifyslot;
+
+    void systemEvent(const systemevent_t &event)
+    {
+        if (event.type == SYSTEMEVENT_TYPE_WIFI && event.event==SYSTEMEVENT_WIFI_SCAN_COMPLETED) {
+            WSYS_LOGI("SYSTEM EVENT");
+            if (m_scanmessage) {
+                scanCompleted();
+            }
+        }
+    }
+
+
+    virtual void drawImpl()  {
+        parentDrawImpl();
+        screenptr_t screenptr = m_screenptr;
+        screenptr.drawstring("WiFi settings");
+        screenptr.nextcharline(2);
+        screenptr.drawstring("Connected to:");
+        screenptr.nextcharline(3);
+        screenptr.drawstring("Current status:");
+        screenptr.nextcharline(11);
+        drawthumbstring(screenptr, "Press [ENTER] to scan network");
+        updateStatus();
+    }
+
+    void updateStatus()
+    {
+        char ssid[32];
+        wifi_status_t status = wifi__get_status();
+        m_status->setText( wifi__status_string(status));
+        switch(status) {
+        case WIFI_WAIT_IP_ADDRESS:
+            /* Fall-through */
+        case WIFI_CONNECTED:
+            /* Fall-through */
+            wifi__get_sta_ssid(ssid, sizeof(ssid));
+            m_ssid->setText( ssid );
+            break;
+        case WIFI_CONNECTING:
+            m_ssid->setText("");
+            break;
+        default:
+            break;
+        }
+    }
+
+    void scanCompleted()
+    {
+        WSYS_LOGI("scan Completed, showing list (%d)", m_scanner.aplist().size());
+        m_scanmessage->destroy();
+        m_scanmessage = NULL;
+
+        if (m_scanner.aplist().size()==0) {
+            MessageBox::show("No access points found");
+        } else {
+            m_apchooser = new MenuWindowIndexed("Choose WiFi", 30, 16);
+            m_apchooser->setEntries( Menu::allocEntryList(
+                                                          m_scanner.aplist().begin(),
+                                                          m_scanner.aplist().end(),
+                                                          m_apchooserdata)
+                                   );
+            m_apchooser->setWindowHelpText("Press SPACE to go back");
+            m_apchooser->selected().connect(this, &WifiWirelessSettingsSTA::apSelected);
+            screen__addWindowCentered(m_apchooser);
+        }
+    }
+
+    void apSelected(uint8_t index)
+    {
+        screen__removeWindow(m_apchooser);
+
+        if (index==0xff){
+            return;
+        }
+
+        WSYS_LOGI("Connecting to AP '%s'", m_scanner.aplist()[index].ssid().c_str());
+        WSYS_LOGI(" Auth mode: %d", m_scanner.aplist()[index].auth());
+
+        // If we need a password, ask for it
+        if (m_scanner.aplist()[index].auth() != WIFI_AUTH_OPEN) {
+            m_pwdchooser = new InputDialog("Enter password", 24, 6);
+            m_pwdchooser->setLabel("Enter WiFi password:");
+            if (m_pwdchooser->exec()==0) {
+                WSYS_LOGI("Connecting to AP with password");
+                wifi__config_sta(m_scanner.aplist()[index].ssid().c_str(), m_pwdchooser->getText());
+
+            }
+            m_pwdchooser->destroy();
+        } else {
+            wifi__config_sta(m_scanner.aplist()[index].ssid().c_str(), NULL);
+        }
+
+        //screen__removeWindow(this);
+    }
+
+    Label *m_ssid;
+    Label *m_status;
+    Label *m_rssi;
+    Button *m_scan;
+    MessageBox *m_scanmessage;
+    WifiScanner m_scanner;
+    MenuWindowIndexed *m_apchooser;
+    InputDialog *m_pwdchooser;
+    void *m_apchooserdata;
 };
 
 class WifiWirelessSettings: public StackedWidget
@@ -287,8 +426,7 @@ WifiMenu::WifiMenu(): Window("Wifi settings", 32, 20)
     m_hl->addChild(m_stack, LAYOUT_FLAG_HEXPAND);
     m_menu->setEntries(&wifimenu_entries);
 
-    m_menu->selectionChanged().connect( this, &WifiMenu::selected ) ;
-    m_menu->selected().connect( this, &WifiMenu::activated ) ;
+    m_menu->selectionChanged().connect( this, &WifiMenu::selected ) ;    m_menu->selected().connect( this, &WifiMenu::activated ) ;
     m_mode->modechanged().connect( this, &WifiMenu::modechanged);
 }
 
@@ -416,7 +554,7 @@ void WifiModeText::drawImpl()
 WifiMode::WifiMode(Widget *parent): VLayout(parent)
 {
     m_text = new WifiModeText();
-    m_button = new Button(NULL,"Change mode");
+    m_button = new Button("Change mode");
     addChild(m_text, LAYOUT_FLAG_VEXPAND);
     addChild(m_button);
     m_button->clicked().connect( this, &WifiMode::changeMode );

@@ -66,10 +66,10 @@ void nmimenu__show()
     nmimenu->setVisible(true);
 }
 
-static void do_load_snapshot(void *data, int status)
+static void do_load_snapshot(FileChooserDialog *d, int status)
 {
     if (status==0) {
-        FileChooserDialog *d = static_cast<FileChooserDialog*>(data);
+        //FileChooserDialog *d = static_cast<FileChooserDialog*>(data);
         WSYS_LOGI("Snapshot is: %s", d->getSelection());
         int ret = sna__load_sna_extram(d->getSelection());
         WSYS_LOGI("Load Snapshot %d", ret);
@@ -88,13 +88,17 @@ static void cb_load_snapshot()
     FileChooserDialog *dialog = new FileChooserDialog("Load snapshot", 24, 18);
     dialog->setWindowHelpText("Use Q/A to move, ENTER selects");
     dialog->setFilter(FILE_FILTER_SNAPSHOTS);
-    dialog->exec(&do_load_snapshot, dialog);
+    if (dialog->exec()>=0) {
+        do_load_snapshot(dialog, dialog->result());
+    }
+    dialog->destroy();
+    //&do_load_snapshot, dialog);
+    
 }
 
-static void do_load_tape(void *data, int status)
+static void do_load_tape(FileChooserDialog *d, int status)
 {
     if (status==0) {
-        FileChooserDialog *d = static_cast<FileChooserDialog*>(data);
         WSYS_LOGI("Tape is: %s", d->getSelection());
         tapeplayer__play(d->getSelection());
         screen__destroyAll();
@@ -109,7 +113,10 @@ static void cb_load_tape()
     FileChooserDialog *dialog = new FileChooserDialog("Load tape", 24, 18);
     dialog->setWindowHelpText("Use Q/A to move, ENTER selects");
     dialog->setFilter(FILE_FILTER_TAPES);
-    dialog->exec(&do_load_tape, dialog);
+    if (dialog->exec()>=0) {
+        do_load_tape(dialog, dialog->result());
+    }
+    dialog->destroy();
 }
 
 
@@ -122,7 +129,7 @@ static void cb_exit_nmi()
 {
     wsys__send_command(0xFF);
 }
-
+#include "inputdialog.h"
 static void cb_reset()
 {
     screen__destroyAll();

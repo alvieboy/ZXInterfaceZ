@@ -10,6 +10,7 @@
 #include "strtoint.h"
 #include "sna_relocs.h"
 #include "fpga.h"
+#include "res.h"
 
 static int res__chunk(command_t *cmdt);
 

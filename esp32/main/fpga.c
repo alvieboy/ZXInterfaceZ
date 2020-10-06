@@ -496,7 +496,7 @@ int fpga__read_command_fifo()
     return buf[1];
 }
 
-uint16_t fpga__get_tap_fifo_usage()
+static uint16_t fpga__get_tap_fifo_usage()
 {
     uint8_t buf[2];
     ESP_ERROR_CHECK(fpga__issue_read(FPGA_SPI_CMD_READ_TAPFIFO_USAGE, buf, sizeof(buf)));

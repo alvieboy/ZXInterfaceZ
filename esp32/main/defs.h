@@ -49,7 +49,7 @@
 #define BUFFER_PORT 8003
 
 
-void request_restart();
+void request_restart(void);
 
 
 #endif

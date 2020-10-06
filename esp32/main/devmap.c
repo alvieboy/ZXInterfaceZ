@@ -85,7 +85,7 @@ static const devmap_d_t devmap[] = {
 #define DEVMAP_JSON_FILENAME "/config/devmap.jsn"
 #define TAG "Devmap"
 
-int devmap__parse_usb_id(const char *str, uint32_t *target_device)
+static int devmap__parse_usb_id(const char *str, uint32_t *target_device)
 {
     char hex[5];
     char *end = NULL;
@@ -118,7 +118,7 @@ int devmap__parse_usb_id(const char *str, uint32_t *target_device)
     return 0;
 }
 
-void devmap__free_d(devmap_d_t *d)
+static void devmap__free_d(devmap_d_t *d)
 {
     if (d->serial)
         free(d->serial);
@@ -171,7 +171,7 @@ void devmap__init()
 }
 
             
-const char *devmap__map_name_from_type(enum map_type type)
+static const char *devmap__map_name_from_type(enum map_type type)
 {
     switch (type) {
     case MAP_KEYBOARD: return "keyboard";
@@ -182,7 +182,7 @@ const char *devmap__map_name_from_type(enum map_type type)
     }
 }
 
-int devmap__save_to_file(const char *filename, const devmap_d_t *devmap)
+static int devmap__save_to_file(const char *filename, const devmap_d_t *devmap)
 {
     char did[10];
 
@@ -325,7 +325,7 @@ void hid__field_entry_changed_callback(const hid_device_t *dev, const struct hid
 //    ESP_LOGW("DEVMAP", "Cannot find handle for index %d", entry_index);
 }
 
-bool devmap__is_connected(const devmap_d_t *d)
+static bool devmap__is_connected(const devmap_d_t *d)
 {
     hid_device_t devs[DEVMAP_MAX_DEVICES];
     unsigned num_devices;

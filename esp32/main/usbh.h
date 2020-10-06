@@ -1,6 +1,7 @@
 #ifndef __USBH_H__
 #define __USBH_H__
 
+#include "esp_attr.h"
 #include "usb_ll.h"
 #include "usb_defs.h"
 
@@ -77,12 +78,14 @@ int usbh__get_descriptor(struct usb_device *dev,
 
 int usbh__claim_interface(struct usb_device *dev, struct usb_interface *intf);
 int usbh__set_configuration(struct usb_device *dev, uint8_t configidx);
-void usbh__dump_info();
+void usbh__dump_info(void);
 void usbh__submit_request(struct usb_request *req);
 int usbh__wait_completion(struct usb_request *req);
 uint32_t usbh__get_device_id(const struct usb_device*dev);
 
-const struct usb_device_entry *usbh__get_devices();
+const struct usb_device_entry *usbh__get_devices(void);
 uint32_t usbh__get_device_id(const struct usb_device *dev);
+
+void IRAM_ATTR usb__isr_handler(void* arg);
 
 #endif

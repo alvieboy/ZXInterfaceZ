@@ -17,6 +17,7 @@ int nvs__fetch_u8(const char *key, uint8_t *value, uint8_t def);
 int nvs__fetch_float(const char *key, float *value, float def);
 
 uint32_t nvs__u32(const char *key, uint32_t def);
+int32_t nvs__i32(const char *key, int32_t def);
 uint8_t nvs__u8(const char *key, uint8_t def);
 uint16_t nvs__u16(const char *key, uint8_t def);
 float nvs__float(const char *key, float def);
@@ -28,9 +29,9 @@ int nvs__set_u16(const char *key, uint16_t val);
 int nvs__set_str(const char *key, const char* val);
 int nvs__set_float(const char *key, float val);
 
-int nvs__commit();
+int nvs__commit(void);
 
-void nvs__close();
+void nvs__close(void);
 
 
 

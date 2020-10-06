@@ -2,6 +2,7 @@
 #include "onchip_nvs.h"
 #include <math.h>
 #include "esp_log.h"
+#include "audio.h"
 
 typedef union {
     struct {

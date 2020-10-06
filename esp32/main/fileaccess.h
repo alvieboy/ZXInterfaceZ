@@ -29,9 +29,9 @@ int __chdir(const char *dir);
 DIR *__opendir(const char *path);
 struct dirent *__readdir(DIR*dir);
 
-const char *__getcwd_const();
+const char *__getcwd_const(void);
 char *__getcwd(char *dest, int maxlen);
-int __in_rootdir();
+int __in_rootdir(void);
 
 
 static inline const char *get_file_extension(const char *src)
@@ -60,7 +60,7 @@ int __open(const char *path, int flags, ...);
 int __lstat(const char *path, struct stat *st);
 void *readfile(const char *path, int *size);
 
-const struct mountpoints *__get_mountpoints();
+const struct mountpoints *__get_mountpoints(void);
 
 typedef enum {
     TYPE_INVALID,

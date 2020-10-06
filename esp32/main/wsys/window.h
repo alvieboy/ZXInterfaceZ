@@ -8,7 +8,6 @@ class Window: public Bin, public HelpDisplayer
 {
 public:
     Window(const char *title, uint8_t w, uint8_t h);
-    ~Window();
     // Virtual methods
     virtual void resizeEvent() override;
     void setTitle(const char *title);
@@ -21,7 +20,13 @@ public:
     virtual void draw(bool force=false) override;
     void clearChildArea(uint8_t x, uint8_t y, uint8_t w, uint8_t h);
 
+    void destroy() {
+        screen__removeWindow(this);
+    }
+
 protected:
+    friend void screen__check_redraw();
+    ~Window();
     void fillHeaderLine(attrptr_t attr);
     void setBackground();
     virtual void drawImpl() override;

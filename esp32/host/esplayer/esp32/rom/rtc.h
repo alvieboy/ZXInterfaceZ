@@ -1,0 +1,1 @@
+typedef uint8_t RESET_REASON;

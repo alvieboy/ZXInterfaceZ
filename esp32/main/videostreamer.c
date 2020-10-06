@@ -20,6 +20,7 @@
 #include "usb_ll.h"
 // Target needs extra 4 bytes at start
 #include <arpa/inet.h>
+#include "videostreamer.h"
 
 volatile int client_socket = -1;
 static volatile unsigned interrupt_count = 0;

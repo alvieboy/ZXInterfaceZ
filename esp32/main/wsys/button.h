@@ -8,7 +8,7 @@
 class Button: public Widget
 {
 public:
-    Button(Widget *parent=NULL, const char *text=NULL);
+    Button(const char *text, Widget *parent=NULL);
     virtual void drawImpl();
     void setText(const char *text) { m_text=text; m_textlen=strlen(text); redraw(); }
     virtual bool handleEvent(uint8_t type, u16_8_t code);

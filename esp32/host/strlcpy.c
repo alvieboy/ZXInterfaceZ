@@ -24,6 +24,7 @@
 
 #include <sys/types.h>
 #include <string.h>
+#include "strlcpy.h"
 //#include "strlcpycat.h"
 
 /*
