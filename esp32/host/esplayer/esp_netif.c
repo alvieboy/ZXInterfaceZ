@@ -37,3 +37,12 @@ esp_err_t esp_netif_dhcps_start(esp_netif_t *netif)
 {
     return 0;
 }
+
+esp_err_t esp_netif_get_ip_info(esp_netif_t *netif, esp_netif_ip_info_t *info)
+{
+    info->ip.addr = 0x8a8a8a8a;
+    info->netmask.addr = 0x00ffffff;
+    info->gw.addr = 0x018a8a8a;
+    return 0;
+}
+

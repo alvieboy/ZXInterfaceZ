@@ -64,6 +64,7 @@ int wifi__scan_json(void);
 
 int wifi__config_sta(const char *ssid, const char *pwd);
 int wifi__config_ap(const char *ssid, const char *pwd, uint8_t channel);
+int wifi__set_mode(wifi_mode_t mode);
 
 extern char wifi_ssid[33];
 

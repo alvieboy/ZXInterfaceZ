@@ -19,18 +19,28 @@ void screen__init()
 
 void screen__add_to_cleanup(Window *s)
 {
-    if (std::find(window_cleanup.begin(), window_cleanup.end(), s)!=window_cleanup.end())
+    if (std::find(window_cleanup.begin(), window_cleanup.end(), s)==window_cleanup.end())
         window_cleanup.push_back(s);
 }
 
 void screen__destroyAll()
 {
-    WSYS_LOGI( "Destroying all windows");
+    WSYS_LOGI( "Destroying all windows (%d)", windows.size());
     for (auto i:windows) {
         screen__add_to_cleanup(i);
     }
     windows.clear();
     screen__damage(NULL);
+
+    WSYS_LOGI( "Cleanup windows (%d)", window_cleanup.size());
+    while (window_cleanup.size()) {
+        Window *w = window_cleanup.back();
+        window_cleanup.pop_back();
+        delete(w);
+    }
+
+
+    WSYSObject::report_alloc();
 }
 
 
@@ -204,6 +214,7 @@ void screen__check_redraw()
     while (window_cleanup.size()) {
         Window *w = window_cleanup.back();
         window_cleanup.pop_back();
+        WSYS_LOGI("Deleting %p\n", w);
         delete(w);
     }
 }

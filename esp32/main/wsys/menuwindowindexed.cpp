@@ -2,7 +2,7 @@
 
 MenuWindowIndexed::MenuWindowIndexed(const char *title, uint8_t w, uint8_t h): Window(title, w, h)
 {
-    m_menu = new IndexedMenu();
+    m_menu = create<IndexedMenu>();
     setChild(m_menu);
 }
 

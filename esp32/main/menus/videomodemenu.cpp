@@ -37,7 +37,7 @@ VideoModeWindow::VideoModeWindow(): MenuWindowIndexed("Video mode", 22, 7)
 
 void videomodemenu__show()
 {
-    videomode_window = new VideoModeWindow();
+    videomode_window = WSYSObject::create<VideoModeWindow>();
     screen__addWindowCentered(videomode_window);
     videomode_window->setVisible(true);
 }

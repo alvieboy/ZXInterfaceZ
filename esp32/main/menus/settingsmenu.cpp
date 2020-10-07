@@ -35,7 +35,7 @@ static const CallbackMenu::Function settings_functions[] =
 
 void settings__show()
 {
-    settings_window = new MenuWindow("Settings", 20, 8);
+    settings_window = WSYSObject::create<MenuWindow>("Settings", 20, 8);
     settings_window->setEntries( &settingsmenu );
     settings_window->setCallbackTable( settings_functions );
     screen__addWindowCentered(settings_window);
@@ -44,7 +44,7 @@ void settings__show()
 
 static void settings__wifi()
 {
-    WifiMenu *wifimenu = new WifiMenu();
+    WifiMenu *wifimenu = WSYSObject::create<WifiMenu>();
     screen__addWindowCentered(wifimenu);
     wifimenu->setVisible(true);
 }
@@ -58,5 +58,5 @@ static void settings__video()
 }
 static void settings__back()
 {
-    delete(settings_window);
+    screen__removeWindow(settings_window);
 }

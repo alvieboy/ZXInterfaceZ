@@ -55,7 +55,7 @@ static const CallbackMenu::Function nmimenu_functions[] =
 
 void nmimenu__show()
 {
-    nmimenu = new MenuWindow("ZX Interface Z", 24, 13);
+    nmimenu = WSYSObject::create<MenuWindow>("ZX Interface Z", 24, 13);
 
     nmimenu->setEntries( &nmimenu_entries );
     nmimenu->setCallbackTable( nmimenu_functions );
@@ -85,7 +85,7 @@ static void do_load_snapshot(FileChooserDialog *d, int status)
 
 static void cb_load_snapshot()
 {
-    FileChooserDialog *dialog = new FileChooserDialog("Load snapshot", 24, 18);
+    FileChooserDialog *dialog = WSYSObject::create<FileChooserDialog>("Load snapshot", 24, 18);
     dialog->setWindowHelpText("Use Q/A to move, ENTER selects");
     dialog->setFilter(FILE_FILTER_SNAPSHOTS);
     if (dialog->exec()>=0) {
@@ -110,7 +110,7 @@ static void do_load_tape(FileChooserDialog *d, int status)
 
 static void cb_load_tape()
 {
-    FileChooserDialog *dialog = new FileChooserDialog("Load tape", 24, 18);
+    FileChooserDialog *dialog = WSYSObject::create<FileChooserDialog>("Load tape", 24, 18);
     dialog->setWindowHelpText("Use Q/A to move, ENTER selects");
     dialog->setFilter(FILE_FILTER_TAPES);
     if (dialog->exec()>=0) {

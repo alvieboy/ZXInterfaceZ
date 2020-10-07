@@ -2,7 +2,7 @@
 
 MenuWindow::MenuWindow(const char *title, uint8_t w, uint8_t h): Window(title, w, h)
 {
-    m_menu = new CallbackMenu();
+    m_menu = create<CallbackMenu>();
     setChild(m_menu);
 }
 

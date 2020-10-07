@@ -111,3 +111,10 @@ int esp_wifi_scan_get_ap_records(uint16_t *number, wifi_ap_record_t *ap_records)
     *number = 1;
     return 0;
 }
+
+esp_err_t esp_wifi_ap_get_sta_list(wifi_sta_list_t *sta)
+{
+    sta->num = 0;
+    return 0;
+}
+

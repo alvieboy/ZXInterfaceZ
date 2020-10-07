@@ -166,10 +166,66 @@ private:
     u16_8_t off;
 };
 
+#ifdef __linux__
+#include <map>
 class WSYSObject
 {
+public:
+    static void *allocate_memory(size_t size, const char *file, int line);
+    static void release_memory(void *data, const char *file, int line);
+    static void report_alloc();
+    void operator delete(void*) noexcept;
+    void operator delete(void*,size_t) noexcept;
+    void operator delete[](void*) noexcept;
+    template<typename T, typename... Args>
+    static T *create(Args... a) {
+        T* object = new T(a...);
+
+        struct alloc_info info;
+        info.file = typeid(T).name();
+        info.line = 0;
+        info.size = sizeof(T);
+
+        m_allocations[(void*)object] = info;
+
+        return object;
+    }
+
 private:
+    //    void *operator new(size_t);
+    void *operator new(size_t size) { void *a = malloc(size); return a; }
+    struct alloc_info {
+        const char *file;
+        int line;
+        size_t size;
+    };
+    static std::map<void*, alloc_info> m_allocations;
 };
+
+#define ALLOC(x) (WSYSObject::allocate_memory((x), __PRETTY_FUNCTION__, __LINE__))
+#define FREE(x) (WSYSObject::release_memory((x), __PRETTY_FUNCTION__, __LINE__))
+
+#else
+
+#define ALLOC(x) (WSYSObject::allocate_memory((x)))
+#define FREE(x) (WSYSObject::release_memory((x)))
+
+class WSYSObject
+{
+public:
+    template<typename T, typename... Args>
+        static T *create(Args... a)
+    {
+        T* object = new T(a...);
+        return object;
+    }
+    static void *allocate_memory(size_t size) { return malloc(size); }
+    static void release_memory(void *data) { free(data); }
+    static void report_alloc() {}
+private:
+    void *operator new(size_t size) { void *a = malloc(size); return a; }
+};
+#endif
 
 
 screenptr_t drawthumbchar(screenptr_t screenptr, unsigned &bit_offset, char c);
