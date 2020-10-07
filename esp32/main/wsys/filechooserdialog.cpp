@@ -7,7 +7,7 @@
 
 FileChooserDialog::FileChooserDialog(const char*title, uint8_t w, uint8_t h): Dialog(title, w,h)
 {
-    m_menu = new IndexedMenu();
+    m_menu = create<IndexedMenu>();
     setChild(m_menu);
     m_menu->selected().connect( this, &FileChooserDialog::activate );
     m_menudata = NULL;

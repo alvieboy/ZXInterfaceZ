@@ -765,3 +765,18 @@ int wifi__get_ip_info(uint32_t *addr, uint32_t *netmask, uint32_t *gw)
     return 0;
 }
 
+int wifi__set_mode(wifi_mode_t mode)
+{
+    switch (mode) {
+    case WIFI_MODE_AP:
+        wifi__init_softap();
+        break;
+    case WIFI_MODE_STA:
+        wifi__init_wpa2();
+        break;
+    default:
+        break;
+    }
+
+    return 0;
+}

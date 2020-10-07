@@ -53,8 +53,10 @@ void Bin::draw(bool force)
 
 Bin::~Bin()
 {
-    if (m_child)
+    if (m_child) {
+        WSYS_LOGI("Deleting child %p", m_child);
         delete(m_child);
+    }
 }
 
 void Bin::removeChild(Widget *c)

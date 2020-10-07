@@ -167,3 +167,75 @@ void wsys__propagatesystemevent(const systemevent_t &event)
         (i.second)(event);
     }
 }
+
+#ifdef __linux__
+
+void *WSYSObject::allocate_memory(size_t size, const char *file, int line)
+{
+    struct alloc_info info;
+    info.file = file;
+    info.line = line;
+    info.size = size;
+    void *mem = ::malloc(size);
+    if (!mem)
+        return mem;
+
+    m_allocations[mem] = info;
+    return mem;
+}
+
+void WSYSObject::release_memory(void *data, const char *file, int line)
+{
+    std::map<void*, alloc_info>::iterator i = m_allocations.find(data);
+    if (i==m_allocations.end()) {
+        WSYS_LOGE("Attempt to free non-allocated pointer!");
+    } else {
+        m_allocations.erase(i);
+    }
+    WSYS_LOGI("Freed %p", data);
+    ::free(data);
+}
+
+std::map<void*, WSYSObject::alloc_info> WSYSObject::m_allocations;
+
+#include <new>
+
+
+/*void* WSYSObject::operator new(std::size_t sz) {
+    void *ret = ALLOC(sz);
+
+    if (!ret)
+        throw std::bad_alloc{};
+    return ret;
+}
+*/
+
+void WSYSObject::operator delete(void* ptr) noexcept
+{
+    FREE(ptr);
+}
+
+void WSYSObject::operator delete(void* ptr, std::size_t) noexcept
+{
+    throw std::bad_alloc{};
+        //WSYSObject::deallocate_memory(ptr);
+}
+
+void WSYSObject::report_alloc()
+{
+    printf("********* Allocation report *************\n");
+    printf(" Slots in use: %ld\n", m_allocations.size());
+    std::map<void*, alloc_info>::const_iterator i;
+
+    for (i=m_allocations.begin(); i!=m_allocations.end(); i++) {
+        printf("  %p: Alloc %ld bytes at %s %d\n", i->first,
+               i->second.size,
+               i->second.file,
+               i->second.line);
+    }
+    printf("*****************************************\n");
+
+}
+
+#endif
+

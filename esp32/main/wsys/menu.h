@@ -45,7 +45,7 @@ public:
             uint8_t *menudatabuf;
             char *cdata;
             // First, allocate full list.
-            menudatabuf = (uint8_t*)malloc( sizeof(MenuEntryList) + count * sizeof(MenuEntry));
+            menudatabuf = (uint8_t*)ALLOC( sizeof(MenuEntryList) + count * sizeof(MenuEntry));
 
             if (!menudatabuf) {
                 WSYS_LOGE("Menu: cannot allocate memory? %d items", count);
@@ -67,13 +67,13 @@ public:
 
             // Allocate strings
 
-            cdata = (char*)malloc(strsize);
+            cdata = (char*)ALLOC(strsize);
 
             data = cdata;
 
             if (cdata==NULL) {
                 WSYS_LOGE("Menu: cannot allocate cdata");
-                free(menudatabuf);
+                FREE(menudatabuf);
                 return NULL;
             }
 

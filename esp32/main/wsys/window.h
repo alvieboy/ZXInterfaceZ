@@ -25,8 +25,9 @@ public:
     }
 
 protected:
+    virtual ~Window();
     friend void screen__check_redraw();
-    ~Window();
+    friend void screen__destroyAll();
     void fillHeaderLine(attrptr_t attr);
     void setBackground();
     virtual void drawImpl() override;

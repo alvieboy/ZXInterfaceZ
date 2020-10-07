@@ -11,13 +11,13 @@
 #include "inputdialog.h"
 
 static const MenuEntryList wifimenu_entries = {
-    .sz = 6,
+    .sz = 4,
     .entries = {
         { .flags = 1, .string = "Status" },
         { .flags = 1, .string = "Mode" },
         { .flags = 1, .string = "Wireless" },
-        { .flags = 1, .string = "Network" },
-        { .flags = 1, .string = "Advanced" },
+//        { .flags = 1, .string = "Network" },
+//        { .flags = 1, .string = "Advanced" },
         { .flags = 0, .string = "Back" },
     }
 };
@@ -40,12 +40,12 @@ public:
         m_channel = wifi__get_ap_channel();
 
         wifi__get_ap_ssid(temp,sizeof(temp));
-        m_ssid = new EditBox(temp);
+        m_ssid = create<EditBox>(temp);
 
         wifi__get_ap_pwd(temp,sizeof(temp));
-        m_password = new EditBox(temp);
+        m_password = create<EditBox>(temp);
 
-        m_chan = new Label("");
+        m_chan = create<Label>("");
 
         updateChannelText();
 
@@ -64,7 +64,7 @@ public:
     {
         if(m_channellist) {
             delete(m_channellist);
-            free(m_chandata);
+            FREE(m_chandata);
         }
     }
 
@@ -204,7 +204,7 @@ public:
             buildChannelList();
         }
 
-        m_chanmenu = new MenuWindowIndexed("Channel", 16, 10);
+        m_chanmenu = create<MenuWindowIndexed>("Channel", 16, 10);
 
         m_chanmenu->setEntries(m_channellist);
         m_chanmenu->selected().connect( this, &WifiWirelessSettingsAP:: channelSelected);
@@ -234,18 +234,20 @@ class WifiWirelessSettingsSTA: public FixedLayout
 public:
     WifiWirelessSettingsSTA()
     {
-        m_ssid = new Label("");
-        m_status = new Label("");
-        m_rssi = new Label("");
-        m_scan = new Button("Scan WiFi network");
+        m_ssid = create<Label>("");
+        m_status = create<Label>("");
+        m_rssi = create<Label>("");
+        m_scan = create<Button>("Scan WiFi network");
 
         m_ssid->setBackground( MAKECOLOR(WHITE, BLUE) );
 
         addChild(m_ssid, 0, 3, 21, 1);
-        addChild(m_status, 1, 7, 21, 1);
-        addChild(m_rssi, 11, 9, 11, 1);
+        addChild(m_status, 1, 7, 20, 1);
+        addChild(m_rssi, 11, 9, 10, 1);
         addChild(m_scan, 0, 15, 21, 1);
         m_scan->clicked().connect(this, &WifiWirelessSettingsSTA::doScan);
+        m_apentries = NULL;
+        m_apchooserdata = NULL;
     }
 
 
@@ -256,7 +258,7 @@ public:
         int r = m_scanner.scan();
 
         if (r==0) {
-            m_scanmessage = new MessageBox("Scanning WiFi", 22, 6);
+            m_scanmessage = create<MessageBox>("Scanning WiFi", 22, 6);
             m_scanmessage->setText("Scanning WiFi...");
             m_scanmessage->setButtonText("Cancel [ENTER]");
             m_scanmessage->exec();
@@ -323,21 +325,41 @@ public:
         if (m_scanner.aplist().size()==0) {
             MessageBox::show("No access points found");
         } else {
-            m_apchooser = new MenuWindowIndexed("Choose WiFi", 30, 16);
-            m_apchooser->setEntries( Menu::allocEntryList(
-                                                          m_scanner.aplist().begin(),
-                                                          m_scanner.aplist().end(),
-                                                          m_apchooserdata)
-                                   );
+            m_apchooser = create<MenuWindowIndexed>("Choose WiFi", 30, 16);
+            m_apentries = Menu::allocEntryList(
+                                               m_scanner.aplist().begin(),
+                                               m_scanner.aplist().end(),
+                                               m_apchooserdata);
+
+            m_apchooser->setEntries(m_apentries);
             m_apchooser->setWindowHelpText("Press SPACE to go back");
             m_apchooser->selected().connect(this, &WifiWirelessSettingsSTA::apSelected);
             screen__addWindowCentered(m_apchooser);
         }
     }
 
+    MenuEntryList *m_apentries;
+
+    virtual ~WifiWirelessSettingsSTA()
+    {
+        freeResources();
+    }
+
+    void freeResources()
+    {
+        if (m_apchooserdata)
+            FREE(m_apchooserdata);
+        m_apchooserdata =NULL;
+        if (m_apentries)
+            FREE(m_apentries);
+        m_apentries = NULL;
+    }
+
     void apSelected(uint8_t index)
     {
         screen__removeWindow(m_apchooser);
+
+        freeResources();
 
         if (index==0xff){
             return;
@@ -348,7 +370,7 @@ public:
 
         // If we need a password, ask for it
         if (m_scanner.aplist()[index].auth() != WIFI_AUTH_OPEN) {
-            m_pwdchooser = new InputDialog("Enter password", 24, 6);
+            m_pwdchooser = create<InputDialog>("Enter password", 24, 6);
             m_pwdchooser->setLabel("Enter WiFi password:");
             if (m_pwdchooser->exec()==0) {
                 WSYS_LOGI("Connecting to AP with password");
@@ -378,8 +400,8 @@ class WifiWirelessSettings: public StackedWidget
 {
 public:
     WifiWirelessSettings() {
-        m_sta = new WifiWirelessSettingsSTA();
-        m_ap = new WifiWirelessSettingsAP();
+        m_sta = create<WifiWirelessSettingsSTA>();
+        m_ap = create<WifiWirelessSettingsAP>();
         addChild(m_sta);
         addChild(m_ap);
     }
@@ -402,25 +424,25 @@ private:
 
 WifiMenu::WifiMenu(): Window("Wifi settings", 32, 20)
 {
-    m_hl = new HLayout();
+    m_hl = create<HLayout>();
     setChild(m_hl);
-    m_menu = new IndexedMenu();
+    m_menu = create<IndexedMenu>();
     m_hl->addChild(m_menu);
 
-    m_hl->addChild( new VBar() );
+    m_hl->addChild( create<VBar>() );
 
-    m_stack = new StackedWidget();
+    m_stack = create<StackedWidget>();
 
-    m_status = new WifiStatus();
-    m_mode   = new WifiMode();
-    m_wifisettings = new WifiWirelessSettings();
+    m_status = create<WifiStatus>();
+    m_mode   = create<WifiMode>();
+    m_wifisettings = create<WifiWirelessSettings>();
 
     m_stack->addChild(m_status);
     m_stack->addChild(m_mode);
     m_stack->addChild(m_wifisettings);
-    m_stack->addChild(new Label("Opt3"));
-    m_stack->addChild(new Label("Opt4"));
-    m_stack->addChild(new Label(""));
+    //m_stack->addChild(new Label("Opt3"));
+    //m_stack->addChild(new Label("Opt4"));
+    m_stack->addChild(create<Label>(""));
 
 
     m_hl->addChild(m_stack, LAYOUT_FLAG_HEXPAND);
@@ -444,7 +466,7 @@ void WifiMenu::selected(uint8_t index)
 void WifiMenu::activated(uint8_t index)
 {
     switch(index) {
-    case 5:
+    case 3:
         screen__removeWindow(this);
         break;
     }
@@ -553,8 +575,8 @@ void WifiModeText::drawImpl()
 
 WifiMode::WifiMode(Widget *parent): VLayout(parent)
 {
-    m_text = new WifiModeText();
-    m_button = new Button("Change mode");
+    m_text = create<WifiModeText>();
+    m_button = create<Button>("Change mode");
     addChild(m_text, LAYOUT_FLAG_VEXPAND);
     addChild(m_button);
     m_button->clicked().connect( this, &WifiMode::changeMode );
@@ -563,7 +585,7 @@ WifiMode::WifiMode(Widget *parent): VLayout(parent)
 }
 
 void WifiMode::changeMode() {
-    m_modeselwindow = new MenuWindowIndexed("WiFi mode", 20, 6);
+    m_modeselwindow = create<MenuWindowIndexed>("WiFi mode", 20, 6);
     m_modeselwindow->selected().connect( this, &WifiMode::modeSelected );
     m_modeselwindow->setEntries(&wifimodeselectormenu);
     screen__addWindowCentered(m_modeselwindow);
@@ -582,12 +604,16 @@ void WifiMode::modeSelected(uint8_t val)
     bool needreload = false;
     switch (val) {
     case 0:
-        if (wifi__issta())
+        if (wifi__issta()) {
             needreload=true;
+            wifi__set_mode(WIFI_MODE_AP);
+        }
         break;
     case 1:
-        if (!wifi__issta())
+        if (!wifi__issta()) {
             needreload=true;
+            wifi__set_mode(WIFI_MODE_STA);
+        }
         break;
     default:
         break;
