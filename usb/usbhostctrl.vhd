@@ -1039,6 +1039,7 @@ BEGIN
   int_async_o <= int_s;
   pwren_o     <= not r.sr.poweron;
   dat_o <= hep_dat_s when addr_i(10)='1' else read_data_sync_s;
+  mode_o      <= '1';
 
   deb: block
     signal fs: std_logic;
