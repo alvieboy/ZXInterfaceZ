@@ -41,6 +41,11 @@ esp_err_t esp_wifi_set_mode(wifi_mode_t mode)
     return 0;
 }
 
+esp_err_t esp_wifi_disconnect()
+{
+    return 0;
+}
+
 
 esp_err_t esp_wifi_start()
 {

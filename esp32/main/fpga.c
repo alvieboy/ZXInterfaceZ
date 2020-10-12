@@ -243,13 +243,13 @@ int fpga__upload_rom_chunk(uint32_t baseaddress, uint16_t offset, uint8_t *buffe
     return len;
 }
 
-int fpga__reset_to_custom_rom(bool activate_retn_hook)
+int fpga__reset_to_custom_rom(int romno, bool activate_retn_hook)
 {
     ESP_LOGI(TAG, "Resetting spectrum (to custom ROM)");
 
     fpga__set_flags(FPGA_FLAG_RSTSPECT | FPGA_FLAG_CAPCLR);
 
-    fpga__set_rom(2);
+    fpga__set_rom(romno);
 
     fpga__set_trigger(FPGA_FLAG_TRIG_FORCEROMCS_ON);
 

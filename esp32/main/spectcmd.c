@@ -304,6 +304,20 @@ static int spectcmd__leavenmi(const uint8_t *cmdbuf, unsigned len)
     return 0;
 }
 
+static int spectcmd__detect(const uint8_t *cmdbuf, unsigned len)
+{
+    uint8_t model;
+
+    NEED(1);
+
+    model = *cmdbuf++;
+
+    spectrum_model_detected(model);
+
+    spectcmd__removedata();
+    return 0;
+}
+
 static const spectcmd_handler_t spectcmd_handlers[] = {
     &spectcmd__load_resource, // 00 SPECTCMD_CMD_GETRESOURCE
     &spectcmd__setwifi,       // 01 SPECTCMD_CMD_SETWIFI
@@ -320,8 +334,9 @@ static const spectcmd_handler_t spectcmd_handlers[] = {
     &spectcmd__setvideomode,  // 0C SPECTCMD_CMD_SETVIDEOMODE
     &spectcmd__reset,         // 0D SPECTCMD_CMD_RESET
     &spectcmd__kbddata,       // 0E SPECTCMD_CMD_KBDDATA
-    &spectcmd__nmiready,      // 0E SPECTCMD_CMD_NMIREADY
-    &spectcmd__leavenmi,      // 0E SPECTCMD_CMD_LEAVENMI
+    &spectcmd__nmiready,      // 0F SPECTCMD_CMD_NMIREADY
+    &spectcmd__leavenmi,      // 10 SPECTCMD_CMD_LEAVENMI
+    &spectcmd__detect,        // 11 SPECTCMD_CMD_SPECTRUM_DETECT
     // FOPEN
     // FCLOSE
     // FREAD

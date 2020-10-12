@@ -86,6 +86,9 @@ typedef uint8_t fpga_status_t;
 #define FPGA_RESOURCE_FIFO_SIZE 1024 /* Should be 1024 */
 #define FPGA_TAP_FIFO_SIZE 1023 /* Should be 1024 */
 
+#define ROM_0 0
+#define ROM_1 1
+#define ROM_2 2
 
 
 int fpga__init(void);
@@ -103,7 +106,7 @@ int fpga__upload_rom_chunk(const uint32_t baseaddress, uint16_t offset, uint8_t 
 int fpga__upload_rom(const uint32_t baseaddress, const uint8_t *buffer, unsigned len);
 
 
-int fpga__reset_to_custom_rom(bool activate_retn_hook);
+int fpga__reset_to_custom_rom(int romno, bool activate_retn_hook);
 
 int fpga__load_resource_fifo(const uint8_t *data, unsigned len, int timeout);
 

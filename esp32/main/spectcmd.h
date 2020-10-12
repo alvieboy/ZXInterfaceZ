@@ -1,6 +1,8 @@
 #ifndef __SPECTCMD_H__
 #define __SPECTCMD_H__
 
+#include <inttypes.h>
+
 #define SPECTCMD_CMD_GETRESOURCE (0x00)
 #define SPECTCMD_CMD_SETWIFI (0x01)
 #define SPECTCMD_CMD_STARTSCAN (0x02)
@@ -16,14 +18,18 @@
 #define SPECTCMD_CMD_KBDDATA (0x0E)
 #define SPECTCMD_CMD_NMIREADY (0x0F)
 #define SPECTCMD_CMD_LEAVENMI (0x10)
+#define SPECTCMD_CMD_DETECTSPECTRUM (0x11)
 
 
 // System calls
-#define SPECTCMD_CMD_SYSCALL_OPEN (0x10)
+#define SPECTCMD_CMD_SYSCALL_OPEN (0x20)
 
 
 
 void spectcmd__request(void);
 void spectcmd__init(void);
+
+
+void spectrum_model_detected(uint8_t);
 
 #endif
