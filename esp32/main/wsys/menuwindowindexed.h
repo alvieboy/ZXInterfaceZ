@@ -13,6 +13,12 @@ public:
     void setHelpStrings(const char *help[]);
     Signal<uint8_t> &selected() { return m_menu->selected(); }
     void setActiveEntry(uint8_t entry);
+    void setHelp(const char *helpstrings[]) {
+        m_menu->setHelp(helpstrings, this);
+    }
+    void setHelp(const std::function<const char*(uint8_t)> fun) {
+        m_menu->setHelp(fun,this);
+    }
 
 private:
     IndexedMenu *m_menu;

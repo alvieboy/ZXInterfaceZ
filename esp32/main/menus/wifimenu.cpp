@@ -213,7 +213,6 @@ public:
         if (index>=0) {
             m_chanmenu->setActiveEntry(index);
         }
-
         screen__addWindowCentered(m_chanmenu);
 
     }
@@ -330,10 +329,13 @@ public:
                                                m_scanner.aplist().begin(),
                                                m_scanner.aplist().end(),
                                                m_apchooserdata);
-
+            m_apchooser->setStatusLines(1);
             m_apchooser->setEntries(m_apentries);
             m_apchooser->setWindowHelpText("Press SPACE to go back");
             m_apchooser->selected().connect(this, &WifiWirelessSettingsSTA::apSelected);
+            m_apchooser->setHelp(
+                                 [=](uint8_t v) { return m_scanner.aplist()[v].getDescription(); }
+                                );
             screen__addWindowCentered(m_apchooser);
         }
     }
