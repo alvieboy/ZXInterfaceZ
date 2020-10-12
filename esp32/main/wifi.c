@@ -139,8 +139,7 @@ int wifi__get_sta_ssid(char *dest, unsigned size)
 }
 
 
-
-#if 1
+static void wifi__init_core(void);
 
 static bool issta = false;
 char wifi_ssid[33];
@@ -297,10 +296,17 @@ static void wifi__teardown()
 
 static void wifi__init_softap()
 {
+    esp_wifi_disconnect();
+    esp_wifi_stop();
+    esp_wifi_deinit();
 
-    wifi__teardown();
+    if (netif) {
+        esp_netif_destroy(netif);
+    }
 
     netif = esp_netif_create_default_wifi_ap();
+
+    wifi__init_core();
 
     ESP_ERROR_CHECK(esp_netif_dhcps_stop(netif));
 
@@ -364,13 +370,22 @@ static void wifi__init_core()
 
 static void wifi__init_wpa2()
 {
-    wifi__teardown();
-
-    issta = true;
+    esp_wifi_disconnect();
+    esp_wifi_stop();
+    esp_wifi_deinit();
 
     mdns_free();
 
+    if (netif) {
+        esp_netif_destroy(netif);
+    }
+
+
+    issta = true;
+
     netif = esp_netif_create_default_wifi_sta();
+
+    wifi__init_core();
     //ESP_ERROR_CHECK(esp_netif_dhcps_stop(netif));
 
     wifi_config_t wifi_config;
@@ -401,26 +416,15 @@ void wifi__init()
 {
     s_wifi_event_group = xEventGroupCreate();
 
-    ESP_LOGI(TAG, "t1");
-
     esp_netif_init();
-
-    ESP_LOGI(TAG, "t2");
 
     ESP_ERROR_CHECK(esp_event_loop_create_default());
 
-    ESP_LOGI(TAG, "t3");
-
     wifi__init_core();
-    ESP_LOGI(TAG, "t4");
 
     if (nvs__u8("wifi", WIFI_MODE_AP)==WIFI_MODE_STA) {
-        ESP_LOGI(TAG, "wpa");
-
         wifi__init_wpa2();
     } else {
-        ESP_LOGI(TAG, "ap");
-
         wifi__init_softap();
     }
 
@@ -428,6 +432,7 @@ void wifi__init()
 
 int wifi__start_scan()
 {
+    esp_wifi_disconnect();
     int r = esp_wifi_scan_start(&scan_config, false);
     if (r<0) {
         ESP_LOGE(TAG, "Cannot start scan process: %s", esp_err_to_name(r));
@@ -445,70 +450,6 @@ int wifi__get_rssi()
     }
     return -1;
 }
-
-
-#endif
-#if 0// __linux__
-
-#include <stdbool.h>
-#include "json.h"
-#include <inttypes.h>
-#include "wifi.h"
-#include "esp_wifi.h"
-
-void wifi__end_scan()
-{
-    ESP_LOGI(TAG,"WiFI scan finished");
-    wifi__parse_scan();
-    xEventGroupClearBits(s_wifi_event_group, WIFI_SCANNING_BIT);
-    wifi__emit_scan_finished();
-}
-
-void wifi__init()
-{
-    s_wifi_event_group = xEventGroupCreate();
-    wifi_status = WIFI_DISCONNECTED;
-}
-
-bool wifi__isconnected()
-{
-    return false;
-}
-
-bool wifi__scanning()
-{
-    return xEventGroupGetBits(s_wifi_event_group) & WIFI_SCANNING_BIT;
-}
-
-bool wifi__issta()
-{
-    return true;
-}
-
-void wifi__init_softap()
-{
-}
-
-void wifi__init_wpa2()
-{
-}
-
-char wifi_ssid[33] = {0} ;
-
-static uint32_t wifi__config_get_ip() { return nvs__u32("ip", U32_IP_ADDR(192, 168, 120, 1)); }
-static uint32_t wifi__config_get_gw() { return nvs__u32("gw", U32_IP_ADDR(0,0,0,0)); }
-static uint32_t wifi__config_get_netmask() { return nvs__u32("mask", U32_IP_ADDR(255,255,255,0)); }
-
-extern int do_hw_wifi_scan(void);
-
-int wifi__start_scan()
-{
-    xEventGroupSetBits(s_wifi_event_group, WIFI_SCANNING_BIT);
-
-    return do_hw_wifi_scan();
-}
-
-#endif
 
 void wifi__get_conf_json(cJSON *node)
 {
@@ -550,7 +491,6 @@ void wifi__get_conf_json(cJSON *node)
     }
 }
 
-
 static void wifi__ap_json_entry(void *user, uint8_t auth, uint8_t channel, int8_t rssi, const char *ssid, size_t ssidlen)
 {
     cJSON *e = cJSON_CreateObject();
@@ -562,6 +502,7 @@ static void wifi__ap_json_entry(void *user, uint8_t auth, uint8_t channel, int8_
     cJSON_AddNumberToObject(e, "rssi", rssi);
     cJSON_AddItemToArray(array, e);
 }
+
 
 static cJSON *scan_array = NULL;
 
@@ -600,14 +541,21 @@ int wifi__scan_json()
 void wifi__parse_scan()
 {
     uint16_t ap_num = MAX_AP;
-    wifi_ap_record_t ap_records[MAX_AP];
-    // TBD: check if this fits on stack.
-    if (esp_wifi_scan_get_ap_records(&ap_num, ap_records)<0) {
+    wifi_ap_record_t *ap_records = malloc(sizeof(wifi_ap_record_t)*MAX_AP);
+    if (!ap_records) {
+        ESP_LOGE(TAG,"Cannot allocate memory for AP records");
         return;
     }
 
-    if (scan_parser==NULL)
+    if (esp_wifi_scan_get_ap_records(&ap_num, ap_records)<0) {
+        free(ap_records);
         return;
+    }
+
+    if (scan_parser==NULL) {
+        free(ap_records);
+        return;
+    }
 
     int required_len = 0; // Number of APs found
 
@@ -634,12 +582,10 @@ void wifi__parse_scan()
     // Fill in AP resource.
     if (scan_parser->reset)
         scan_parser->reset(scan_parser_data);
-//    aplist_resource__clear(&aplistresource);
-    //    aplist_resource__resize(&aplistresource, required_len);
+
     if (scan_parser->apcount)
         scan_parser->apcount(scan_parser_data, ap_num, required_len);
 
-    //aplist_resource__setnumaps(&aplistresource, ap_num );
     for (int i=0;i<ap_num; i++) {
         scan_parser->ap(scan_parser_data,
                         ap_records[i].authmode,
@@ -649,10 +595,13 @@ void wifi__parse_scan()
                         strlen((char*)ap_records[i].ssid)
                        );
     }
+
     if (scan_parser->finish)
         scan_parser->finish(scan_parser_data);
 
     scan_parser = NULL;
+
+    free(ap_records);
 }
 
 int wifi__scan( const wifi_scan_parser_t *parser, void *data )
@@ -769,9 +718,13 @@ int wifi__set_mode(wifi_mode_t mode)
 {
     switch (mode) {
     case WIFI_MODE_AP:
+        nvs__set_u8("wifi", WIFI_MODE_AP);
+        nvs__commit();
         wifi__init_softap();
         break;
     case WIFI_MODE_STA:
+        nvs__set_u8("wifi", WIFI_MODE_STA);
+        nvs__commit();
         wifi__init_wpa2();
         break;
     default:

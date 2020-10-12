@@ -89,7 +89,7 @@ static void io0_long_press()
     }
 
     ESP_LOGI(TAG, "Resetting to custom ROM");
-    if (fpga__reset_to_custom_rom(false)<0) {
+    if (fpga__reset_to_custom_rom(ROM_2, false)<0) {
         ESP_LOGE(TAG, "Cannot reset");
     }
 }
@@ -134,6 +134,50 @@ static void process_buttons()
         }
     }
 }
+
+static uint8_t spectrum_model = 0xff;
+
+
+void spectrum_model_detected(uint8_t model)
+{
+    spectrum_model = model;
+}
+
+const char *spectrum_model_str(uint8_t model)
+{
+    const char *modelstr = "Unknown";
+    switch (model) {
+    case 0xfe:
+        modelstr = "Unknown (detection error)";
+        break;
+    case 0x00:
+        modelstr = "16/48K";
+        break;
+    case 0x01:
+        modelstr = "+2,+2A,+3";
+        break;
+    }
+    return modelstr;
+}
+
+static void detect_spectrum()
+{
+    spectrum_model = 0xfe;
+    int timeout = 50;
+    fpga__reset_to_custom_rom(ROM_0, false);
+    // We need to wait for 500ms,
+    do {
+        if (spectrum_model !=0xfe)
+            break;
+        vTaskDelay(100 / portTICK_RATE_MS);
+    } while (--timeout);
+
+    fpga__reset_spectrum();
+
+    ESP_LOGI(TAG,"Spectrum model: %s", spectrum_model_str(spectrum_model));
+}
+
+
 
 void app_main(void);
 
@@ -205,6 +249,7 @@ void app_main()
     ESP_LOGI(TAG, "InterfaceZ version: %s %s", version, gitversion);
     ESP_LOGI(TAG, "  built %s", builddate);
 
+    detect_spectrum();
 
     // Start capture
     //start_capture();
