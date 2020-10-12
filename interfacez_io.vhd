@@ -254,13 +254,13 @@ begin
             --testdata_r <= testdata_r + 1;
 
           when SPECT_PORT_RAM_ADDR_LOW =>
-            dataread_r <= ram_addr_r(7 downto 0);
+            dataread_r <= std_logic_vector(ram_addr_r(7 downto 0));
 
           when SPECT_PORT_RAM_ADDR_MIDDLE =>
-            dataread_r <= ram_addr_r(15 downto 8);
+            dataread_r <= std_logic_vector(ram_addr_r(15 downto 8));
 
           when SPECT_PORT_RAM_ADDR_HIGH =>
-            dataread_r <= ram_addr_r(23 downto 16);
+            dataread_r <= std_logic_vector(ram_addr_r(23 downto 16));
 
           when SPECT_PORT_RAM_DATA => -- RAM read
             ram_rd_r <= '1';
