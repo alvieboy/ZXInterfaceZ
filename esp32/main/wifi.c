@@ -85,26 +85,17 @@ int wifi__get_ap_pwd( char *dest, unsigned size)
 static void wifi__set_status(wifi_status_t status)
 {
     wifi_status = status;
-    systemevent_t event;
-    event.type = SYSTEMEVENT_TYPE_WIFI;
-    event.event = SYSTEMEVENT_WIFI_STATUS_CHANGED;
-    systemevent__send(&event);
+    systemevent__send(SYSTEMEVENT_TYPE_WIFI, SYSTEMEVENT_WIFI_STATUS_CHANGED);
 }
 
 static void wifi__emit_network_changed()
 {
-    systemevent_t event;
-    event.type = SYSTEMEVENT_TYPE_NETWORK;
-    event.event = SYSTEMEVENT_NETWORK_STATUS_CHANGED;
-    systemevent__send(&event);
+    systemevent__send(SYSTEMEVENT_TYPE_NETWORK, SYSTEMEVENT_NETWORK_STATUS_CHANGED);
 }
 
 static void wifi__emit_scan_finished()
 {
-    systemevent_t event;
-    event.type = SYSTEMEVENT_TYPE_WIFI;
-    event.event = SYSTEMEVENT_WIFI_SCAN_COMPLETED;
-    systemevent__send(&event);
+    systemevent__send(SYSTEMEVENT_TYPE_WIFI, SYSTEMEVENT_WIFI_SCAN_COMPLETED);
 }
 
 wifi_status_t wifi__get_status()
@@ -173,11 +164,11 @@ static void setup_mdns()
 
     ESP_ERROR_CHECK(mdns_hostname_set("interfacez"));
 
-    ESP_ERROR_CHECK(mdns_service_add(NULL, "_http", "_tcp", 80, NULL, 0));
-    ESP_ERROR_CHECK(mdns_service_instance_name_set("_http", "_tcp", "XZ InterfaceZ Web Interface"));
+    mdns_service_add(NULL, "_http", "_tcp", 80, NULL, 0);
+    mdns_service_instance_name_set("_http", "_tcp", "XZ InterfaceZ Web Interface");
 
-    ESP_ERROR_CHECK(mdns_service_add(NULL, "_zxictrl", "_tcp", BUFFER_PORT, NULL, 0));
-    ESP_ERROR_CHECK(mdns_service_instance_name_set("_zxictrl", "_tcp", "XZ InterfaceZ Control Interface"));
+    mdns_service_add(NULL, "_zxictrl", "_tcp", BUFFER_PORT, NULL, 0);
+    mdns_service_instance_name_set("_zxictrl", "_tcp", "XZ InterfaceZ Control Interface");
 }
 
 static void ip_event_handler(void* arg, esp_event_base_t event_base,
@@ -281,24 +272,15 @@ static const wifi_scan_config_t scan_config = {
 
 static void wifi__teardown()
 {
-    if (netif) {
-        esp_err_t err = esp_wifi_stop();
-        if (err == ESP_ERR_WIFI_NOT_INIT) {
-            return;
-        }
-        ESP_ERROR_CHECK(err);
-        ESP_ERROR_CHECK(esp_wifi_deinit());
-        ESP_ERROR_CHECK(esp_wifi_clear_default_wifi_driver_and_handlers(netif));
-        esp_netif_destroy(netif);
-        netif = NULL;
-    }
+    esp_wifi_disconnect();
+    esp_wifi_stop();
+    mdns_free();
+    esp_wifi_deinit();
 }
 
 static void wifi__init_softap()
 {
-    esp_wifi_disconnect();
-    esp_wifi_stop();
-    esp_wifi_deinit();
+    wifi__teardown();
 
     if (netif) {
         esp_netif_destroy(netif);
@@ -314,8 +296,6 @@ static void wifi__init_softap()
     memset(&info, 0, sizeof(info));
 
     issta = false;
-
-    mdns_free();
 
     info.ip.addr = wifi__config_get_ip();
     info.gw.addr = wifi__config_get_gw();
@@ -370,11 +350,7 @@ static void wifi__init_core()
 
 static void wifi__init_wpa2()
 {
-    esp_wifi_disconnect();
-    esp_wifi_stop();
-    esp_wifi_deinit();
-
-    mdns_free();
+    wifi__teardown();
 
     if (netif) {
         esp_netif_destroy(netif);

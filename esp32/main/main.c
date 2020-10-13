@@ -135,7 +135,7 @@ static void process_buttons()
     }
 }
 
-static uint8_t spectrum_model = 0xff;
+static volatile uint8_t spectrum_model = 0xff;
 
 
 void spectrum_model_detected(uint8_t model)
@@ -163,9 +163,9 @@ const char *spectrum_model_str(uint8_t model)
 static void detect_spectrum()
 {
     spectrum_model = 0xfe;
-    int timeout = 50;
+    int timeout = 100;
     fpga__reset_to_custom_rom(ROM_0, false);
-    // We need to wait for 500ms,
+    // We need to wait for 1000ms,
     do {
         if (spectrum_model !=0xfe)
             break;
@@ -174,7 +174,7 @@ static void detect_spectrum()
 
     fpga__reset_spectrum();
 
-    ESP_LOGI(TAG,"Spectrum model: %s", spectrum_model_str(spectrum_model));
+    ESP_LOGI(TAG,"Spectrum model: %s (0x%02x)", spectrum_model_str(spectrum_model), spectrum_model);
 }
 
 
