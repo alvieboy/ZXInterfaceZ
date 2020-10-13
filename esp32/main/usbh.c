@@ -11,6 +11,7 @@
 #include <string.h>
 #include "log.h"
 #include "esp_system.h"
+#include "systemevent.h"
 
 #define USBHTAG "USBH"
 #define USBHDEBUG(x...) LOG_DEBUG(DEBUG_ZONE_USBH, USBHTAG ,x)
@@ -67,6 +68,9 @@ static void usbh__add_device(struct usb_device *dev)
     e->dev = dev;
     e->next = usb_devices;
     usb_devices = e;
+
+    systemevent__send(SYSTEMEVENT_TYPE_USB, SYSTEMEVENT_USB_DEVICE_CHANGED);
+
 }
 
 static void usbh__remove_device(struct usb_device *dev)
@@ -826,6 +830,7 @@ void usb_ll__disconnected_callback()
 void usb_ll__overcurrent_callback()
 {
     ESP_LOGE(USBHTAG, "Overcurrent");
+    systemevent__send(SYSTEMEVENT_TYPE_USB, SYSTEMEVENT_USB_OVERCURRENT);
 }
 
 static void usbh__request_completed(struct usb_request *req)
