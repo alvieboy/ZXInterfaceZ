@@ -1,5 +1,6 @@
 import { BrowserModule } from '@angular/platform-browser';
 import { NgModule } from '@angular/core';
+import { HttpClientModule } from '@angular/common/http';
 
 import { AppRoutingModule } from './app-routing.module';
 import { MaterialModule } from './material.module';
@@ -13,6 +14,8 @@ import { AboutComponent } from './about/about.component';
 import { HomeComponent } from './home/home.component';
 import { NotfoundComponent } from './notfound/notfound.component';
 
+import { VersionService } from './services/version.service';
+
 @NgModule({
   declarations: [
     AppComponent,
@@ -22,15 +25,16 @@ import { NotfoundComponent } from './notfound/notfound.component';
     DevicesComponent,
     AboutComponent,
     HomeComponent,
-    NotfoundComponent
+    NotfoundComponent,
   ],
   imports: [
     BrowserModule,
     AppRoutingModule,
     BrowserAnimationsModule,
     MaterialModule,
+    HttpClientModule,
   ],
-  providers: [],
+  providers: [VersionService],
   bootstrap: [AppComponent]
 })
 export class AppModule { }
