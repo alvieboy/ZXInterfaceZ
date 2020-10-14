@@ -1,8 +1,9 @@
 use work.tbc_device_p.all;
 use work.tappkg.all;
+use work.logger.all;
 library ieee;
-use ieee.math_real.all;
 
+use ieee.math_real.all;
 architecture t011 of tbc_device is
 
   signal spiPayload_in_s  : spiPayload_type;
@@ -13,7 +14,7 @@ begin
   process
     variable data: std_logic_vector(7 downto 0);
   begin
-    report "T006: TZX play";
+    logger_start("T011","TZX play");
 
     Spimaster_Cmd <= Cmd_Spimaster_Defaults;
 
@@ -119,6 +120,8 @@ begin
       SysClk_Cmd,
       SpectClk_Cmd
     );
+
+    logger_end;
 
   end process;
 
