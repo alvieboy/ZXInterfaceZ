@@ -45,4 +45,6 @@ begin
     end if;
   end process;
 
+  Data_o.Audio <= audio_i;
+
 end sim;

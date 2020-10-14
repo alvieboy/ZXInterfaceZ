@@ -14,6 +14,7 @@ package bfm_audiocap_p is
     Trans     : natural;
     Delta     : time;
     Polarity  : std_logic;
+    Audio     : std_logic;
   end record;
 
   type Cmd_Audiocap_type is record
