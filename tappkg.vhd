@@ -31,8 +31,8 @@ package tappkg is
   constant TAPCMD_GAP             : std_logic_vector(7 downto 0) := "10000010";
   constant TAPCMD_CHUNK_SIZE_LSB  : std_logic_vector(7 downto 0) := "10000011";
   constant TAPCMD_CHUNK_SIZE_MSB  : std_logic_vector(7 downto 0) := "10000100";
-  constant TAPCMD_PLAY_PULSE      : std_logic_vector(7 downto 0) := "10000101";
-  constant TAPCMD_SET_REPEAT      : std_logic_vector(7 downto 0) := "10000110";
+  constant TAPCMD_SET_REPEAT      : std_logic_vector(7 downto 0) := "10000101";
+  constant TAPCMD_PLAY_PULSE      : std_logic_vector(7 downto 0) := "10000110";
   constant TAPCMD_FLUSH           : std_logic_vector(7 downto 0) := "10000111";
 
 
