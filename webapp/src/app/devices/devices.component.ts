@@ -2,6 +2,9 @@ import { Component, OnInit, AfterViewInit, ViewChild } from '@angular/core';
 import { MatPaginator } from '@angular/material/paginator';
 import { MatTableDataSource } from '@angular/material/table';
 
+import { DeviceService } from '../services/device.service';
+import { Device } from '../models/Device';
+
 @Component({
   selector: 'app-devices',
   templateUrl: './devices.component.html',
@@ -10,7 +13,7 @@ import { MatTableDataSource } from '@angular/material/table';
 export class DevicesComponent implements OnInit, AfterViewInit {
 
   displayedColumns: string[] = ['id', 'vendor', 'product', 'connected'];
-  devices = new MatTableDataSource<DeviceElement>(ELEMENT_DATA);
+  devices = new MatTableDataSource<Device>([]);
 
   @ViewChild(MatPaginator) paginator: MatPaginator;
 
@@ -18,20 +21,11 @@ export class DevicesComponent implements OnInit, AfterViewInit {
     this.devices.paginator = this.paginator;
   }
 
-  constructor(
-  ) { }
+  constructor(private deviceService: DeviceService) { }
 
   ngOnInit(): void {
+    this.deviceService.getDevices().subscribe(devices => {
+      this.devices = new MatTableDataSource<Device>(devices);
+    })
   }
 }
-
-export interface DeviceElement {
-    id: string;
-    vendor: string;
-    product: string;
-    connected: string; // TODO Data types
-}
-
-const ELEMENT_DATA: DeviceElement[] = [
-  { id: "2345:a872", vendor: "Laaa", product: "Plcd", connected: "Yes" },
-]; // TODO Todo call API

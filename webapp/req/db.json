@@ -10,5 +10,42 @@
     "fpga_version": "a5.10 r3",
     "git_version": "TAG_V01-286-g461b41e-dirty",
     "build_date": "Tue 11 Aug 09:38:31 UTC 2020"
+  },
+  "devlist": {
+    "devices": [
+      {
+        "bus" : "usb",
+        "driver": "usb_mouse",
+        "id": "0adf:2342",
+        "vendor": "Vendor name here",
+        "product": "Product name here",
+        "serial" : "Serial here",
+        "class": "mouse,pointer",
+        "connected": "true",
+        "use": "mouse"
+      },
+      {
+        "bus" : "usb",
+        "driver": "usb_keyboard",
+        "id": "0adf:2342",
+        "vendor": "Vendor name here",
+        "product": "Product name here",
+        "serial" : "Serial here",
+        "class": "keyboard",
+        "connected": "true",
+        "use": "keyboard"
+      },
+      {
+        "bus" : "usb",
+        "driver": "usb_joystick",
+        "id": "0adf:2342",
+        "vendor": "Vendor name here",
+        "product": "Product name here",
+        "serial" : "Serial here",
+        "class": "joystick",
+        "connected": "true",
+        "use": "kempston_joystick"
+      }
+    ]
   }
 }

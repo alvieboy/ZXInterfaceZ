@@ -15,6 +15,7 @@ import { HomeComponent } from './home/home.component';
 import { NotfoundComponent } from './notfound/notfound.component';
 
 import { VersionService } from './services/version.service';
+import { DeviceService } from './services/device.service';
 
 @NgModule({
   declarations: [
@@ -34,7 +35,7 @@ import { VersionService } from './services/version.service';
     MaterialModule,
     HttpClientModule,
   ],
-  providers: [VersionService],
+  providers: [VersionService, DeviceService],
   bootstrap: [AppComponent]
 })
 export class AppModule { }
