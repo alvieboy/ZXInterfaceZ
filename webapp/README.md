@@ -32,3 +32,34 @@ To get more help on the Angular CLI use `ng help` or go check out the [Angular C
 - To generate output artefacts `gulp`.
 - To run the webapp in a Nginx docker container on port 8080:
 `docker run -v $PWD/dist/webapp-gzip:/var/webapp -v $PWD/nginx-webapp.conf:/etc/nginx/conf.d/webapp.conf -p 8080:8080 nginx:stable`
+
+## Local Development
+
+### Prerequisites
+
+- [NodeJS](https://nodejs.org/en/) 12.x or later (including `npm`)
+- [Gulp](https://gulpjs.com/) `npm install --gloabal gulp-cli`
+
+To install NodeJS on Debian/Ubuntu don't use the provided packages since they are for NodeJS  8.11.
+
+To install the required NPM modules do:
+
+```
+npm install
+```
+
+### Mock Backend
+
+To start the _mock backend_ run:
+
+```
+npm run mock-backend
+```
+
+### Run the Development Server
+
+To start the auto reloading development server do:
+
+```
+ng serve -o
+```
