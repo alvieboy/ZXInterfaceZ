@@ -15,6 +15,7 @@ entity tap_engine is
     fwr_i     : in std_logic;
     ffull_o   : out std_logic;
     fused_o   : out std_logic_vector(9 downto 0);
+    tstate_o  : out std_logic;
 
     audio_o   : out std_logic
 );
@@ -93,6 +94,8 @@ begin
 
     audio_o   => audio_o
   );
+
+  tstate_o  <= tstate_s;
 
 end beh;
 
