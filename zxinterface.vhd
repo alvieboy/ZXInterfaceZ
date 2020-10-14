@@ -4,7 +4,9 @@ use IEEE.numeric_std.all;
 library work;
 use work.zxinterfacepkg.all;
 use work.ahbpkg.all;
-
+-- synthesis translate_off
+use work.txt_util.all;
+-- synthesis translate_on
 entity zxinterface is
   port (
     clk_i         : in std_logic;
@@ -764,12 +766,17 @@ begin
       if forcenmi_off_s='1' then
         nmi_r <= '0';
         in_nmi_rom_r <='0';
-      elsif (in_nmi_rom_r='0') and (forcenmi_on_s='1' or (keyb_trigger_s='1' and spect_forceromcs_bussync_s='0')) then
+      elsif (in_nmi_rom_r='0') and (forcenmi_on_s='1' or keyb_trigger_s='1') then
         nmi_r <= '1';
         -- Force ROMCS
       end if;
 
+      -- Alternate: if we spot an M1 cycle after we triggered the NMI, then
+      -- we assume we entered the handler. This is to avoid using the old ROM as
+      -- the first instruction.
+
       if nmi_access_s='1' then -- Entered NMI.
+      --if nmi_r='1' and XM1_sync_s='0' and XRD_sync_s='0' and XMREQ_sync_s='0'then
         in_nmi_rom_r    <= nmi_r;
         -- Force ROM to index 0. This allows us to use NMI in other ROMs
         --nmi_saved_rom   <= romsel_s;
@@ -852,8 +859,8 @@ begin
     if arst_i='1' then
       spect_forceromcs_bussync_s <= '0';
     elsif rising_edge(clk_i) then
-      if bus_idle_s='1' then
-        spect_forceromcs_bussync_s <= spect_forceromcs_s or in_nmi_rom_r;  -- Also force ROM on NMI.
+      if (XM1_sync_s='0' and XMREQ_sync_s='0' and XRD_sync_s='0') then
+        spect_forceromcs_bussync_s <= spect_forceromcs_s or (in_nmi_rom_r or nmi_r);  -- Also force ROM on NMI.
       end if;
     end if;
   end process;

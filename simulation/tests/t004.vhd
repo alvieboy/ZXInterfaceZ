@@ -6,9 +6,11 @@ architecture t004 of tbc_device is
   signal spiPayload_in_s  : spiPayload_type;
   signal spiPayload_out_s : spiPayload_type;
 
+
 begin
 
   process
+    variable data_v           : std_logic_vector(7 downto 0);
   begin
     logger_start("T004","NMI/RETN/ROMCS tests");
 
@@ -43,7 +45,14 @@ begin
 
     Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 4, spiPayload_in_s, spiPayload_out_s);
 
+    -- ROMCS forces only after it sees an M1.
+
+    Check("1.1 ROMCS is not forced (no M1)", CtrlPins_Data.ROMCS, '0');
+
+    SpectrumReadOpcode(Spectrum_Cmd, Spectrum_Data, x"0067", data_v);
+
     Check("2 ROMCS is forced", CtrlPins_Data.ROMCS, '1');
+    Check("2.1 ROM returned correct data", data_v, x"45");
 
     Spectrum_Cmd.Address  <= x"0066";
     Spectrum_Cmd.Cmd      <= READOPCODE;
@@ -157,7 +166,12 @@ begin
     spiPayload_in_s(2) <= "00000100"; -- ForceROMCS
     spiPayload_in_s(3) <= x"00";
     Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 4, spiPayload_in_s, spiPayload_out_s);
+
+    SpectrumReadOpcode(Spectrum_Cmd, Spectrum_Data, x"0067", data_v);
+
     Check("10 ROMCS is forced", CtrlPins_Data.ROMCS, '1');
+
+
     wait for 1 us;
     -- De-activate ROMCS
     spiPayload_in_s(0) <= x"EC";
@@ -166,6 +180,8 @@ begin
     spiPayload_in_s(3) <= x"00";
 
     Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 4, spiPayload_in_s, spiPayload_out_s);
+
+    SpectrumReadOpcode(Spectrum_Cmd, Spectrum_Data, x"0067", data_v);
 
     Check("11 ROMCS is not forced", CtrlPins_Data.ROMCS, '0');
 
