@@ -137,7 +137,6 @@ static void process_buttons()
 
 static volatile uint8_t spectrum_model = 0xff;
 
-
 void spectrum_model_detected(uint8_t model)
 {
     spectrum_model = model;

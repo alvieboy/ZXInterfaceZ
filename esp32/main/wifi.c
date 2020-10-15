@@ -129,6 +129,12 @@ int wifi__get_sta_ssid(char *dest, unsigned size)
     return nvs__fetch_str("sta_ssid", dest, size, "");
 }
 
+wifi_status_t wifi__get_status()
+{
+    if (wifi__scanning())
+        return WIFI_SCANNING;
+    return wifi_status;
+}
 
 static void wifi__init_core(void);
 
