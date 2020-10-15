@@ -6,7 +6,9 @@
 #include <functional>
 #include <map>
 #include "systemevent.h"
+#ifdef __linux__
 #include <execinfo.h>
+#endif
 
 extern "C" {
     struct framebuffer spectrum_framebuffer;
