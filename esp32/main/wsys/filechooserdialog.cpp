@@ -73,7 +73,10 @@ bool FileChooserDialog::buildMountpointList()
         l_entries.push_back(entry);
     }
 
-    m_menu->setEntries( Menu::allocEntryList(l_entries.begin(), l_entries.end(), m_menudata) );
+    releaseResources();
+
+    m_menulistdata = Menu::allocEntryList(l_entries.begin(), l_entries.end(), m_menudata);
+    m_menu->setEntries( m_menulistdata );
 
     return true;
 }
@@ -155,6 +158,8 @@ bool FileChooserDialog::buildDirectoryList()
 
     std::sort( l_entries.begin(), l_entries.end(), filecompare);
 
+    releaseResources();
+
     m_menulistdata = Menu::allocEntryList(l_entries.begin(), l_entries.end(), m_menudata);
     m_menu->setEntries( m_menulistdata );
     return true;
@@ -163,11 +168,11 @@ bool FileChooserDialog::buildDirectoryList()
 void FileChooserDialog::releaseResources()
 {
     if (m_menudata) {
-        free(m_menudata);
+        FREE(m_menudata);
         m_menudata = NULL;
     }
     if (m_menulistdata) {
-        free(m_menulistdata);
+        FREE(m_menulistdata);
         m_menulistdata = NULL;
     }
 }
@@ -204,6 +209,7 @@ int FileChooserDialog::exec()
 
 FileChooserDialog::~FileChooserDialog()
 {
+    WSYS_LOGI("Destroying FileChooserDialog");
     releaseResources();
 }
 
