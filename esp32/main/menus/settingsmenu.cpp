@@ -8,12 +8,13 @@
 static MenuWindow *settings_window;
 
 static const MenuEntryList settingsmenu = {
-    .sz = 5,
+    .sz = 6,
     .entries = {
         { .flags = 0, .string = "Wifi..." },
         { .flags = 1, .string = "Bluetooth..." },
         { .flags = 0, .string = "USB..." },
         { .flags = 0, .string = "Video..." },
+        { .flags = 1, .string = "Audio..." },
         { .flags = 0, .string = "Back" }
     }
 };
@@ -21,6 +22,7 @@ static const MenuEntryList settingsmenu = {
 static void settings__wifi();
 static void settings__usb();
 static void settings__video();
+static void settings__audio();
 static void settings__back();
 
 static const CallbackMenu::Function settings_functions[] =
@@ -29,6 +31,7 @@ static const CallbackMenu::Function settings_functions[] =
     NULL,
     &settings__usb,
     &settings__video,
+    &settings__audio,
     &settings__back
 };
 
@@ -52,11 +55,18 @@ static void settings__wifi()
 static void settings__usb()
 {
 }
+
 static void settings__video()
 {
     videomodemenu__show();
 }
+
 static void settings__back()
 {
     screen__removeWindow(settings_window);
+}
+
+static void settings__audio()
+{
+
 }
