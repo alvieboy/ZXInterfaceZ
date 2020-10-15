@@ -5,7 +5,7 @@ snaloader.rom: snaloader-rom.asm
 	xxd -i $@ > snaloader_rom.c
 	#./pad $@ 16384
 
-intz.rom: menu.asm pad
+intz.rom: pad
 
 intz.rom: interfacez-rom.asm \
 	keyboard.asm \
