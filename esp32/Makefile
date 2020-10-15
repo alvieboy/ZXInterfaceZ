@@ -16,9 +16,17 @@ flash: spiffs/fpga0.rbf spiffs/intz.rom
 #filesize: filesize.c
 #	$(HOSTCC) -O2 filesize.c -o filesize
 
+DEFAULTRBF=interfacez-r2.2-patch1.rbf
 
-spiffs/fpga0.rbf: ../output_files/interfacez.rbf 
-	$(CP) ../output_files/interfacez.rbf spiffs/fpga0.rbf
+.PHONY: spiffs/fpga0.rbf
+spiffs/fpga0.rbf:
+	if [ -e ../output_files/interfacez.rbf ]; then                          \
+		echo Using development interfacez.rbf as FPGA firmware;        \
+		$(CP) ../output_files/interfacez.rbf spiffs/fpga0.rbf;          \
+	else                                                                    \
+		echo Using $(DEFAULTRBF) as FPGA firmware;                      \
+		$(CP) ../output_files/$(DEFAULTRBF) spiffs/fpga0.rbf;            \
+	fi
 
 SPIFFS_IMAGE_FLASH_IN_PROJECT := 1
 SPIFFS_IMAGE_DEPENDS := spiffs/fpga0.rbf spiffs/intz.rom
