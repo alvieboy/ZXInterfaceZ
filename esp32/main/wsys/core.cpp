@@ -6,6 +6,7 @@
 #include <functional>
 #include <map>
 #include "systemevent.h"
+#include <execinfo.h>
 
 extern "C" {
     struct framebuffer spectrum_framebuffer;
@@ -179,7 +180,8 @@ void *WSYSObject::allocate_memory(size_t size, const char *file, int line)
     void *mem = ::malloc(size);
     if (!mem)
         return mem;
-
+    WSYS_LOGI("Alloc %d bytes at %p\n", size, mem);
+    info.trace_size = backtrace(info.trace, sizeof(info.trace)/sizeof(info.trace[0]));
     m_allocations[mem] = info;
     return mem;
 }
@@ -232,6 +234,16 @@ void WSYSObject::report_alloc()
                i->second.size,
                i->second.file,
                i->second.line);
+        if (i->second.trace_size>0) {
+            char **messages = backtrace_symbols(i->second.trace, i->second.trace_size);
+            /* skip first stack frame (points here) */
+            for (int j=1; j<i->second.trace_size; ++j)
+            {
+                printf("[] #%d %s\n", j, messages[j]);
+            }
+            if (messages)
+                free(messages);
+        }
     }
     printf("*****************************************\n");
 

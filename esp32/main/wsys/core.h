@@ -198,6 +198,8 @@ private:
         const char *file;
         int line;
         size_t size;
+        void *trace[16];
+        int trace_size;
     };
     static std::map<void*, alloc_info> m_allocations;
 };
