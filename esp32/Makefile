@@ -1,5 +1,7 @@
 PROJECT_NAME := esp32_interfacez
 
+DEFAULTRBF=interfacez-r2.2-patch1.rbf
+
 IDF_PATH ?=/home/alvieboy/Temp/esp-idf
 CP:=cp
 
@@ -16,7 +18,6 @@ flash: spiffs/fpga0.rbf spiffs/intz.rom
 #filesize: filesize.c
 #	$(HOSTCC) -O2 filesize.c -o filesize
 
-DEFAULTRBF=interfacez-r2.2-patch1.rbf
 
 .PHONY: spiffs/fpga0.rbf
 spiffs/fpga0.rbf:
@@ -35,8 +36,13 @@ SPIFFS_IMAGE_DEPENDS := spiffs/fpga0.rbf spiffs/intz.rom
 $(eval $(call spiffs_create_partition_image,resources,spiffs))
 
 #ESPTOOL_ALL_FLASH_ARGS+=0x310000 fpga.bin 0x36A000 ../roms/intz.rom
+.PHONY: spiffs/intz.rom
+
 spiffs/intz.rom: ../roms/intz.rom
 	$(CP) ../roms/intz.rom spiffs/intz.rom
+
+../roms/intz.rom:
+	$(MAKE) -C ../roms/ intz.rom
 
 
 all: GENVERSION
