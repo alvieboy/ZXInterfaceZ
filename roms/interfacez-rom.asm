@@ -127,7 +127,6 @@ _endl1: HALT
 	JR _endl1
 
 	include "debug.asm"
-	include "menu_defs.asm"
         include "string.asm"
         include "keyboard.asm"
 	include	"charmap.asm"
