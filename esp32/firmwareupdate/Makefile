@@ -15,7 +15,8 @@ resources.rle: ../build/resources.bin $(RLE)
 upgrade.tar: MANIFEST.json ../fpga.bin intz.rle resources.rle ../build//esp32_interfacez.bin
 	tar cfv upgrade.tar --transform="s/.*\///" \
 	MANIFEST.json \
-	../fpga.bin \
-	intz.rle \
 	resources.rle \
 	../build//esp32_interfacez.bin
+
+clean:
+	rm upgrade.tar resources.rle
