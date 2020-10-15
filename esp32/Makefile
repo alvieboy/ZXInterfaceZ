@@ -42,7 +42,7 @@ spiffs/intz.rom: ../roms/intz.rom
 	$(CP) ../roms/intz.rom spiffs/intz.rom
 
 ../roms/intz.rom:
-	$(MAKE) -C ../roms/ intz.rom
+	CC=gcc $(MAKE) -C ../roms/ intz.rom
 
 
 all: GENVERSION
