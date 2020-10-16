@@ -8,6 +8,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTableModule } from '@angular/material/table';
 import { MatTreeModule } from '@angular/material/tree';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
 @NgModule({
   declarations: [],
@@ -19,7 +20,8 @@ import { MatTooltipModule } from '@angular/material/tooltip';
     MatIconModule,
     MatTableModule,
     MatTreeModule,
-    MatTooltipModule
+    MatTooltipModule,
+    MatProgressSpinnerModule,
   ],
   exports: [
     MatButtonModule,
@@ -28,7 +30,8 @@ import { MatTooltipModule } from '@angular/material/tooltip';
     MatIconModule,
     MatTableModule,
     MatTreeModule,
-    MatTooltipModule
+    MatTooltipModule,
+    MatProgressSpinnerModule,
   ]
 })
 export class MaterialModule { }

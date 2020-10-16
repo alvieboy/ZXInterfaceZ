@@ -16,6 +16,7 @@ import { NotfoundComponent } from './notfound/notfound.component';
 
 import { VersionService } from './services/version.service';
 import { DeviceService } from './services/device.service';
+import { UploadService } from './services/upload.service';
 
 @NgModule({
   declarations: [
@@ -35,7 +36,11 @@ import { DeviceService } from './services/device.service';
     MaterialModule,
     HttpClientModule,
   ],
-  providers: [VersionService, DeviceService],
+  providers: [
+    VersionService,
+    DeviceService,
+    UploadService,
+  ],
   bootstrap: [AppComponent]
 })
 export class AppModule { }

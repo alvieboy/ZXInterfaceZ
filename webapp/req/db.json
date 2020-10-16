@@ -14,38 +14,39 @@
   "devlist": {
     "devices": [
       {
-        "bus" : "usb",
+        "bus": "usb",
         "driver": "usb_mouse",
         "id": "0adf:2342",
         "vendor": "Vendor name here",
         "product": "Product name here",
-        "serial" : "Serial here",
+        "serial": "Serial here",
         "class": "mouse,pointer",
         "connected": "true",
         "use": "mouse"
       },
       {
-        "bus" : "usb",
+        "bus": "usb",
         "driver": "usb_keyboard",
         "id": "0adf:2342",
         "vendor": "Vendor name here",
         "product": "Product name here",
-        "serial" : "Serial here",
+        "serial": "Serial here",
         "class": "keyboard",
         "connected": "true",
         "use": "keyboard"
       },
       {
-        "bus" : "usb",
+        "bus": "usb",
         "driver": "usb_joystick",
         "id": "0adf:2342",
         "vendor": "Vendor name here",
         "product": "Product name here",
-        "serial" : "Serial here",
+        "serial": "Serial here",
         "class": "joystick",
         "connected": "true",
         "use": "kempston_joystick"
       }
     ]
-  }
+  },
+  "fwupgrade": {}
 }
