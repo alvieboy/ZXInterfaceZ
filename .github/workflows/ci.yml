@@ -45,6 +45,7 @@ jobs:
       uses: actions/download-artifact@v2
       with:
         name: spectrum-roms
+        path: roms
     - name: Checkout the code
       uses: actions/checkout@v1
       with:
