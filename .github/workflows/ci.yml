@@ -41,15 +41,15 @@ jobs:
 
     steps:
     # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+    - name: Checkout the code
+      uses: actions/checkout@v1
+      with:
+        submodules: true
     - name: Fetch ROM
       uses: actions/download-artifact@v2
       with:
         name: spectrum-roms
         path: roms
-    - name: Checkout the code
-      uses: actions/checkout@v1
-      with:
-        submodules: true
     - name: Build esp32 host-mode firmware
       run: |
         apt-get update
