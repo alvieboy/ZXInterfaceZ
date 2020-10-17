@@ -1,5 +1,6 @@
 #include "about.h"
 #include "vlayout.h"
+#include "hlayout.h"
 #include "button.h"
 #include "version.h"
 #include "fpga.h"
@@ -47,18 +48,26 @@ void AboutWidget::drawImpl()
     t.printf("%08x", id);
 }
 
-AboutWindow::AboutWindow(): Window("About", 30, 18)
+AboutWindow::AboutWindow(): Window("About", 32, 18)
 {
     m_layout = WSYSObject::create<VLayout>();
-    m_button = WSYSObject::create<Button>("Close [ENTER]");
+    m_buttonlayout = WSYSObject::create<HLayout>();
+    m_closebutton =    WSYSObject::create<Button>("Close [ENTER]");
+    m_firmwarebutton = WSYSObject::create<Button>("Update [F]");
     m_about =  WSYSObject::create<AboutWidget>();
     m_layout->addChild(m_about, LAYOUT_FLAG_VEXPAND);
-    m_layout->addChild(m_button);
-    m_button->clicked().connect(this, &AboutWindow::buttonClicked );
+    m_buttonlayout->addChild(m_firmwarebutton);
+    m_buttonlayout->addChild(m_closebutton);
+    m_layout->addChild(m_buttonlayout);
+    m_firmwarebutton->setSpacing(1);
+    m_firmwarebutton->setAccelKey('f');
+    m_closebutton->setSpacing(1);
+
+    m_closebutton->clicked().connect(this, &AboutWindow::closeButtonClicked );
     setChild(m_layout);
 }
 
-void AboutWindow::buttonClicked()
+void AboutWindow::closeButtonClicked()
 {
     destroy();
 }
