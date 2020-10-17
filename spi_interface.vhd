@@ -96,6 +96,10 @@ entity spi_interface is
     mouse_x_o             : out std_logic_vector(7 downto 0);
     mouse_y_o             : out std_logic_vector(7 downto 0);
     mouse_buttons_o       : out std_logic_vector(1 downto 0);
+    -- AY
+    ay_en_o               : out std_logic;
+    ay_en_reads_o         : out std_logic;
+    -- Volume settings
     volume_o              : out std_logic_vector(63 downto 0);
     memromsel_o           : out std_logic_vector(2 downto 0);
     memsel_we_o           : out std_logic;
@@ -803,6 +807,8 @@ begin
   kbd_en_o              <= regs32_r(2)(0);
   joy_en_o              <= regs32_r(2)(1);
   mouse_en_o            <= regs32_r(2)(2);
+  ay_en_o               <= regs32_r(2)(3);
+  ay_en_reads_o         <= regs32_r(2)(4);
 
   kbd_force_press_o     <= regs32_r(4)(7 downto 0) & regs32_r(3);
 

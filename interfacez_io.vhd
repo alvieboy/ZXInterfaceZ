@@ -70,6 +70,8 @@ entity interfacez_io is
     mouse_y_i             : in std_logic_vector(7 downto 0);
     mouse_buttons_i       : in std_logic_vector(1 downto 0);
     -- AY interface
+    ay_en_i               : in std_logic; -- Global AY enable
+    ay_en_reads_i         : in std_logic; -- AY read enable. Only for models *WITHOUT* AY, otherwise conflicts.
     ay_wr_o               : out std_logic;
     ay_din_i              : in std_logic_vector(7 downto 0);
     ay_adr_o              : out std_logic_vector(3 downto 0);
@@ -155,7 +157,7 @@ begin
       if kempston_mouse_sel_s='1' then -- We always reply even if disabled.
         addr_match_s <= '1';
       end if;
-      if ay_register_sel_s='1' or ay_data_sel_s='1' then -- We always reply even if disabled.
+      if (ay_register_sel_s='1' or ay_data_sel_s='1') and ay_en_reads_i='1' and ay_en_i='1' then -- We only reply if enabled
         addr_match_s <= '1';
       end if;
 		end if;
@@ -226,7 +228,7 @@ begin
         end if;
 
         if ay_data_sel_s='1' then
-          ay_wr_o   <= '1';
+          ay_wr_o   <= ay_en_i; --'1';
           ay_dout_o <= dat_i;
         end if;
 

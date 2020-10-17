@@ -8,7 +8,7 @@ include "macros.asm"
 START:	DI			; disable interrupts.
 	;LD	DE,$FFFF	; top of possible physical RAM.
 	;JP	ROM_CHECK	; jump forward to common code at START_NEW.
-        JP	DETECT
+        JP	DELAY
         ;JP	REGTEST
 
 	ORG	$0008
@@ -27,7 +27,15 @@ NMIH:	PUSH 	AF
 
 
 	ORG 	$0080
-
+DELAY:
+	; Delay for 200ms, because the reset might be asserted quick enough.
+        LD	BC, $4E20
+_dlyloop: ; (T=35), 10us
+        NOP                     ; T=4
+        DEC 	BC              ; T=6
+        LD 	A,B             ; T=9
+        OR 	C               ; T=4
+        JR 	NZ, _dlyloop    ; T=12
 DETECT:
 	; Attempt to detect machine type.
  	LD	A, CMD_SPECTRUMDETECT
@@ -52,17 +60,46 @@ DETECT:
         ; at this point, a 128K or similar
         LD	A, $01
         CALL 	WRITECMDFIFO
-        ENDLESS
+        JR	DETECT_YM
 _is_16k_48k:
         LD	A, $00
         CALL 	WRITECMDFIFO
-        ENDLESS
+        JR	DETECT_YM
 _memoryerror:
         LD	A, $FF
         CALL 	WRITECMDFIFO
+        CALL 	WRITECMDFIFO
         ENDLESS
 
-        
+DETECT_YM:
+	LD	BC, $C001
+        LD	A, $07	; Volume register
+        OUT	(C), A
+        LD	B, $80
+        LD	A, $3F  ; Channel audio disabled, IO ports as input.
+        OUT	(C), A
+        IN	D, (C)  ; For +2A and beyond, this will also report the register contents
+        LD	B, $C0
+        IN	A, (C)  ; Read back
+        CP	$3F
+        LD	A, $01
+        JR	Z, _ymfound
+        DEC	A
+_ymfound:
+	LD	C, A
+        ; Now, check if D also holds 3F
+        LD	A, D
+        CP	$3F
+        LD	A, C
+        JR	NZ, _2plus
+        ; Same value from both ports, it's a 2A+, 3 series
+        SET	1, A
+_2plus:
+
+	CALL	WRITECMDFIFO
+
+        ENDLESS
+
         
 	
 ROM_CHECK:

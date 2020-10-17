@@ -326,6 +326,10 @@ architecture beh of zxinterface is
   signal memsel_we_s            : std_logic;
   signal romsel_we_s            : std_logic;
 
+  signal tstate_s               : std_logic;
+  signal ay_en_s                : std_logic;
+  signal ay_en_reads_s          : std_logic;
+
   function genvolume(vol: in std_logic_vector(7 downto 0)) return std_logic_vector is
   begin
     return x"00" & vol;
@@ -478,10 +482,12 @@ begin
       mouse_y_i       => mouse_y_s,
       mouse_buttons_i => mouse_buttons_s,
 
-      ay_wr_o          => ay_we_s,
-      ay_din_i         => ay_din_s,
-      ay_adr_o         => ay_adr_s,
-      ay_dout_o        => ay_dout_s,
+      ay_en_i         => ay_en_s,
+      ay_en_reads_i   => ay_en_reads_s,
+      ay_wr_o         => ay_we_s,
+      ay_din_i        => ay_din_s,
+      ay_adr_o        => ay_adr_s,
+      ay_dout_o       => ay_dout_s,
 
       romsel_o        => romsel_s,
       memsel_o        => memsel_s,
@@ -662,6 +668,8 @@ begin
     mouse_x_o             => mouse_x_s,
     mouse_y_o             => mouse_y_s,
     mouse_buttons_o       => mouse_buttons_s,
+    ay_en_o               => ay_en_s,
+    ay_en_reads_o         => ay_en_reads_s,
     volume_o              => volume_s,
     memromsel_o           => memromsel_s,
     memsel_we_o           => memsel_we_s,
@@ -731,6 +739,7 @@ begin
     fwr_i     => tapfifo_wr_s,
     ffull_o   => tapfifo_full_s,
     fused_o   => tapfifo_used_s,
+    tstate_o  => tstate_s,
 
     audio_o   => tap_audio_s
   );
@@ -1036,6 +1045,28 @@ begin
         );
     end block;
   end generate capinst;
+
+--  ainst: entity work.audiorec
+--  port map (
+--    clk_i       => clk_i,
+--    arst_i      => arst_i,
+--  
+--    tick_i      => tstate_s,
+--  
+--    enable_i    => '1',
+--    reset_i     => '0',
+--  
+--    idle_o      => open,
+--    err_o       => open,
+--
+--    -- FIFO interface
+--    rd_i        => '0',
+--    data_o      => open,
+--    empty_o     => open,
+--    used_o      => open,
+--    audio_i     => tap_audio_s
+--  );
+
 
   mosi_s          <= SPI_MOSI_i;
   SPI_MISO_o      <= miso_s;
