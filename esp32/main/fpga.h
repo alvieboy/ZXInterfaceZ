@@ -77,6 +77,8 @@ typedef uint8_t fpga_status_t;
 # define CONFIG1_KBD_ENABLE (1<<0)
 # define CONFIG1_JOY_ENABLE (1<<1)
 # define CONFIG1_MOUSE_ENABLE (1<<2)
+# define CONFIG1_AY_ENABLE (1<<3)
+# define CONFIG1_AY_READ_ENABLE (1<<4)
 #define REG_KEYB1_DATA      0x03
 #define REG_KEYB2_DATA      0x04
 #define REG_JOY_DATA        0x05

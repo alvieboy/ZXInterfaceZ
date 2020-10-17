@@ -307,12 +307,14 @@ static int spectcmd__leavenmi(const uint8_t *cmdbuf, unsigned len)
 static int spectcmd__detect(const uint8_t *cmdbuf, unsigned len)
 {
     uint8_t model;
+    uint8_t flags;
 
-    NEED(1);
+    NEED(2);
 
     model = *cmdbuf++;
+    flags = *cmdbuf++;
 
-    spectrum_model_detected(model);
+    spectrum_model_detected(model, flags);
 
     spectcmd__removedata();
     return 0;

@@ -30,6 +30,6 @@ void spectcmd__request(void);
 void spectcmd__init(void);
 
 
-void spectrum_model_detected(uint8_t);
+void spectrum_model_detected(uint8_t model, uint8_t flags);
 
 #endif

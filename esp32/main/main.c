@@ -44,6 +44,9 @@ static int8_t videomode = 0;
 uint32_t loglevel;
 
 volatile int restart_requested = 0;
+static volatile uint8_t spectrum_model = 0xff;
+static volatile uint8_t spectrum_flags = 0x00;
+
 
 #if 0
 static void start_capture2()
@@ -135,11 +138,10 @@ static void process_buttons()
     }
 }
 
-static volatile uint8_t spectrum_model = 0xff;
-
-void spectrum_model_detected(uint8_t model)
+void spectrum_model_detected(uint8_t model, uint8_t flags)
 {
     spectrum_model = model;
+    spectrum_flags = flags;
 }
 
 const char *spectrum_model_str(uint8_t model)
@@ -159,6 +161,14 @@ const char *spectrum_model_str(uint8_t model)
     return modelstr;
 }
 
+const char *get_spectrum_model(void)
+{
+    return spectrum_model_str(spectrum_model);
+}
+
+
+#define SPECTRUM_FLAGS_AY (1<<0)
+
 static void detect_spectrum()
 {
     spectrum_model = 0xfe;
@@ -174,6 +184,18 @@ static void detect_spectrum()
     fpga__reset_spectrum();
 
     ESP_LOGI(TAG,"Spectrum model: %s (0x%02x)", spectrum_model_str(spectrum_model), spectrum_model);
+
+    ESP_LOGI(TAG," AY-3-8912: %s", spectrum_flags& SPECTRUM_FLAGS_AY ? "PRESENT": "absent");
+
+    if (nvs__u8("ay",1)) {
+        uint32_t bits = CONFIG1_AY_ENABLE;
+        // Enable reads from internal AY only and only if there is no
+        // external (inside spectrum) AY chip.
+        if (!(spectrum_flags & SPECTRUM_FLAGS_AY)) {
+            bits |= CONFIG1_AY_READ_ENABLE;
+        }
+        fpga__set_config1_bits(bits);
+    }
 }
 
 
