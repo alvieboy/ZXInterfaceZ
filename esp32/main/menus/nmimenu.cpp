@@ -9,11 +9,12 @@
 #include "sna.h"
 #include "wsys/messagebox.h"
 #include "tapeplayer.h"
+#include "about.h"
 
 static MenuWindow *nmimenu;
 
 static const MenuEntryList nmimenu_entries = {
-    .sz = 7,
+    .sz = 8,
     .entries = {
         { .flags = 0, .string = "Load snapshot..." },
         { .flags = 1, .string = "Save snapshot..." },
@@ -21,6 +22,7 @@ static const MenuEntryList nmimenu_entries = {
         { .flags = 1, .string = "Poke..." },
         { .flags = 0, .string = "Settings..." },
         { .flags = 0, .string = "Reset" },
+        { .flags = 0, .string = "About..." },
         { .flags = 0, .string = "Exit" },
     }
 };
@@ -32,12 +34,14 @@ static const char *nmimenu_help[] = {
     "Pokes stuff around",
     "Change wireless, bluetooth, usb settings",
     "Reset the ZX spectrum",
+    "About the ZX spectrum",
     "Exit to ZX spectrum"
 };
 
 static void cb_load_snapshot();
 static void cb_load_tape();
 static void cb_exit_nmi();
+static void cb_about();
 static void cb_reset();
 static void cb_settings();
 
@@ -49,13 +53,21 @@ static const CallbackMenu::Function nmimenu_functions[] =
     NULL,
     &cb_settings,
     &cb_reset,
+    &cb_about,
     &cb_exit_nmi,
 };
 
 
+static void about__show()
+{
+    AboutWindow *about = WSYSObject::create<AboutWindow>();
+    screen__addWindowCentered(about);
+    about->setVisible(true);
+}
+
 void nmimenu__show()
 {
-    nmimenu = WSYSObject::create<MenuWindow>("ZX Interface Z", 24, 13);
+    nmimenu = WSYSObject::create<MenuWindow>("ZX Interface Z", 24, 14);
 
     nmimenu->setEntries( &nmimenu_entries );
     nmimenu->setCallbackTable( nmimenu_functions );
@@ -136,3 +148,7 @@ static void cb_reset()
     fpga__reset_spectrum();
 }
 
+static void cb_about(void)
+{
+    about__show();
+}
