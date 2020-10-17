@@ -4,6 +4,8 @@
 
 Button::Button(const char *text, Widget *parent): Widget(parent), m_text(text)
 {
+    m_accel = KEY_ENTER;
+    m_spacing = 0;
     if (text) {
         m_textlen=strlen(text);
         redraw();
@@ -19,8 +21,14 @@ void Button::drawImpl()
         screenptr += (width()/2) - (m_textlen/2);
         screenptr.drawstring(m_text);
     }
-    for (int i=0;i<width();i++) {
-        *attrptr++ = 0x68;
+    for (unsigned i=0;i<width();i++) {
+        uint8_t attrval = 0x68;
+        if (i<m_spacing)
+            attrval = 0x78;
+        if (i >= width()-m_spacing)
+            attrval = 0x78;
+
+        *attrptr++ = attrval;
     }
 }
 
@@ -30,7 +38,7 @@ bool Button::handleEvent(uint8_t type, u16_8_t code)
         return false;
 
     char c = spectrum_kbd__to_ascii(code.v);
-    if (c==KEY_ENTER) {
+    if ((m_accel != 0xff) && (c==m_accel)) {
         m_clicked.emit();
         return true;
     }
