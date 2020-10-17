@@ -38,6 +38,8 @@
 #include "memlayout.h"
 #include "wsys.h"
 #include "memlayout.h"
+#include "adc.h"
+#include "board.h"
 
 static int8_t videomode = 0;
 
@@ -199,7 +201,6 @@ static void detect_spectrum()
 }
 
 
-
 void app_main(void);
 
 void app_main()
@@ -208,6 +209,9 @@ void app_main()
     int do_restart = 0;
 
     gpio__init();
+    adc__init();
+    board__init();
+
     led__set(LED1, 1);
     led__set(LED2, 0);
     spi__init_bus();

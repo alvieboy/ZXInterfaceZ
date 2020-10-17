@@ -48,7 +48,9 @@ CFLAGS= -fpic -DPIC -Wall -Wextra \
        -I$(ESP_IDF)/components/nghttp/port/include/ \
        -I$(ESP_IDF)/components/nvs_flash/include/ \
        -I$(ESP_IDF)/components/tcpip_adapter/include/ \
+       -I$(ESP_IDF)/components/esp_adc_cal/include/ \
        -I$(ESP_IDF)/components/driver/include/ \
+       -I$(ESP_IDF)/components/driver/esp32/include/ \
        -I$(ESP_IDF)/components/mdns/include/ \
        -I$(SRCPATH)/wsys/ \
        -I$(SRCPATH)/menus/ 
@@ -132,6 +134,8 @@ console.c             \
 firmware.c            \
 rle.c                 \
 vga.c                 \
+adc.c                 \
+board.c               \
 spectrum_kbd.c        \
 systemevent.c 	      \
 wsys/charmap.c        \
@@ -196,8 +200,10 @@ OBJS:=$(FREERTOS_OBJS) $(COBJ) $(CXXOBJ) \
 	esplayer/driver/gpio.o \
 	esplayer/driver/spi_master.o \
 	esplayer/driver/wifi.o \
+	esplayer/driver/adc.o \
 	esplayer/esp_netif.o \
 	esplayer/esp_wifi.o \
+	esplayer/esp_adc_cal.o \
 	$(ESP_IDF)/components/esp_http_server/src/httpd_parse.o \
 	$(ESP_IDF)/components/esp_http_server/src/httpd_txrx.o  \
 	$(ESP_IDF)/components/esp_http_server/src/httpd_sess.o  \
