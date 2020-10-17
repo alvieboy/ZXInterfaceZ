@@ -64,10 +64,17 @@ AboutWindow::AboutWindow(): Window("About", 32, 18)
     m_closebutton->setSpacing(1);
 
     m_closebutton->clicked().connect(this, &AboutWindow::closeButtonClicked );
+    m_firmwarebutton->clicked().connect(this, &AboutWindow::firmwareButtonClicked );
+
     setChild(m_layout);
 }
 
 void AboutWindow::closeButtonClicked()
+{
+    destroy();
+}
+
+void AboutWindow::firmwareButtonClicked()
 {
     destroy();
 }
