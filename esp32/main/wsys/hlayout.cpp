@@ -45,7 +45,7 @@ void HLayout::resizeEvent()
         unsigned dx = Widget::width() / m_numchilds;
 
         for (int i=0;i<m_numchilds;i++) {
-            m_childs[i]->resize(mx, m_y, m_w, dx);
+            m_childs[i]->resize(mx, m_y, dx, m_w);
             mx+=dx;
 
         }
