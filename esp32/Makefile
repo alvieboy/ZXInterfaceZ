@@ -39,6 +39,7 @@ $(eval $(call spiffs_create_partition_image,resources,spiffs))
 .PHONY: spiffs/intz.rom
 
 spiffs/intz.rom: ../roms/intz.rom
+	@echo Copying ROM into spifss/intz.rom
 	$(CP) ../roms/intz.rom spiffs/intz.rom
 
 ../roms/intz.rom:
