@@ -3,6 +3,10 @@
 
 #include "inttypes.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define STORAGE_NAMESPACE "intz"
 
 #define NVS_NO_HANDLE (0xFFFFFFFF)
@@ -33,6 +37,9 @@ int nvs__commit(void);
 
 void nvs__close(void);
 
+#ifdef __cplusplus
+}
+#endif
 
 
 #endif
