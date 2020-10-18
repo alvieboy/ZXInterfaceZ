@@ -157,7 +157,13 @@ const char *spectrum_model_str(uint8_t model)
         modelstr = "16/48K";
         break;
     case 0x01:
-        modelstr = "+2,+2A,+3";
+        if (board__is9Vsupply()) {
+            modelstr = "+2(128K)";
+        } else if (board__is5Vsupply()) {
+            modelstr = "+2A,+3";
+        } else {
+            modelstr = "+2(128K),+2A,+3";
+        }
         break;
     }
     return modelstr;
