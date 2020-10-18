@@ -4,6 +4,7 @@
 #include "wsys/screen.h"
 #include "videomodemenu.h"
 #include "wifimenu.h"
+#include "audiowindow.h"
 
 static MenuWindow *settings_window;
 
@@ -14,7 +15,7 @@ static const MenuEntryList settingsmenu = {
         { .flags = 1, .string = "Bluetooth..." },
         { .flags = 0, .string = "USB..." },
         { .flags = 0, .string = "Video..." },
-        { .flags = 1, .string = "Audio..." },
+        { .flags = 0, .string = "Audio..." },
         { .flags = 0, .string = "Back" }
     }
 };
@@ -38,7 +39,7 @@ static const CallbackMenu::Function settings_functions[] =
 
 void settings__show()
 {
-    settings_window = WSYSObject::create<MenuWindow>("Settings", 20, 8);
+    settings_window = WSYSObject::create<MenuWindow>("Settings", 20, 9);
     settings_window->setEntries( &settingsmenu );
     settings_window->setCallbackTable( settings_functions );
     screen__addWindowCentered(settings_window);
@@ -68,5 +69,8 @@ static void settings__back()
 
 static void settings__audio()
 {
-
+    WSYS_LOGI("Showitn audio");
+    AudioWindow *audio_window = WSYSObject::create<AudioWindow>();
+    screen__addWindowCentered(audio_window);
+    audio_window->setVisible(true);
 }
