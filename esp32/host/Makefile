@@ -73,6 +73,7 @@ SRCPATH:=../main
 CSRC=aplist_resource.c \
 config.c              \
 devmap.c              \
+bitrev.c              \
 directory_resource.c  \
 dump.c                \
 fileaccess.c          \
@@ -168,11 +169,13 @@ wsys/fixedlayout.cpp \
 wsys/editbox.cpp \
 wsys/wifiscanner.cpp \
 wsys/inputdialog.cpp \
+wsys/slider.cpp \
 menus/nmimenu.cpp \
 menus/settingsmenu.cpp \
 menus/videomodemenu.cpp \
 menus/wifimenu.cpp \
-menus/about.cpp
+menus/about.cpp \
+menus/audiowindow.cpp
 
 
 
