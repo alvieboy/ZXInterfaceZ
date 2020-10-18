@@ -121,3 +121,13 @@ void audio__set_volume_f(uint8_t chan, float volume, float balance)
 
 }
 
+void audio__get_volume_f(uint8_t chan, float *volume, float *balance)
+{
+    char vol_key[8] = "vol_chX";
+    char bal_key[8] = "bal_chX";
+
+    vol_key[6] = '0' + chan;
+    bal_key[6] = '0' + chan;
+    *volume = nvs__float(vol_key, 1.0F);
+    *balance = nvs__float(bal_key, 0.0F);
+}
