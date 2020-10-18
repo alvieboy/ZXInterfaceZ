@@ -63,6 +63,7 @@ Widget::Widget(Widget *parent): m_parent(parent)
     m_y = 0;
     m_w = 0;
     m_h = 0;
+    redraw();
 }
 
 void Widget::setdamage(uint8_t mask)

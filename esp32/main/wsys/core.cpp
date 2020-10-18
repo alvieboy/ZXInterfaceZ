@@ -29,6 +29,14 @@ screenptr_t screenptr_t::drawchar(const uint8_t *data)
     return temp;
 }
 
+screenptr_t screenptr_t::drawvalue(const uint8_t data)
+{
+    screenptr_t temp = *this;
+    spectrum_framebuffer.screen[off] = data;
+    temp++;
+    return temp;
+}
+
 void screenptr_t::nextpixelline()
 {
     // Increment Y by 1 (Y0)
@@ -101,11 +109,38 @@ screenptr_t drawthumbchar(screenptr_t screenptr, unsigned &bit_offset, char c)
     return screenptr;
 }
 
-screenptr_t drawthumbstring(screenptr_t screenptr, const char *s)
+screenptr_t drawthumbcharxor(screenptr_t screenptr, unsigned &bit_offset, char c)
 {
-    unsigned off = 0;
+    c-=32;
+    int i;
+    screenptr_t tmp = screenptr;
+
+    uint8_t *charptr = &__tomthumb_bitmap__[c*6];
+
+    for (i=0;i<6;i++) {
+        pixel__draw8xor(tmp, bit_offset, 4, *charptr++);
+        tmp.nextpixelline();
+    }
+    bit_offset+=4;
+    if (bit_offset>7) {
+        bit_offset-=8;
+        screenptr++;
+    }
+    return screenptr;
+}
+
+screenptr_t drawthumbstring(screenptr_t screenptr, const char *s, unsigned off)
+{
     while (*s) {
         screenptr = drawthumbchar(screenptr, off, *s++);
+    }
+    return screenptr;
+}
+
+screenptr_t drawthumbstringxor(screenptr_t screenptr, const char *s, unsigned off)
+{
+    while (*s) {
+        screenptr = drawthumbcharxor(screenptr, off, *s++);
     }
     return screenptr;
 }
@@ -131,8 +166,8 @@ screenptr_t screenptr_t::drawhline(int len)
 {
     screenptr_t temp = *this;
     while (len--) {
-        CHECK_BOUNDS_SCREEN(off);
-        spectrum_framebuffer.screen[off++] = 0xFF;
+        CHECK_BOUNDS_SCREEN(temp.off);
+        spectrum_framebuffer.screen[temp.off++] = 0xFF;
     }
     return temp;
 }

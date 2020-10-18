@@ -3,7 +3,7 @@
 
 #include "widgetgroup.h"
 
-#define MULTIWIDGET_MAX_CHILDS 8
+#define MULTIWIDGET_MAX_CHILDS 12
 
 class MultiWidget: public WidgetGroup
 {

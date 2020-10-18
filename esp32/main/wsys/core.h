@@ -146,6 +146,7 @@ struct screenptr_t {
     screenptr_t printf(const char *fmt,...) __attribute__ ((format (printf, 2, 3)));
     screenptr_t drawstringpad(const char *, int len);
     screenptr_t drawhline(int len);
+    screenptr_t drawvalue(const uint8_t data);
     screenptr_t &operator++() { off++; return *this; }
     screenptr_t operator++(int delta  __attribute__((unused))) { screenptr_t s = *this; off++;return s; }
     screenptr_t &operator+=(int delta) { off+=delta; return *this; }
@@ -231,7 +232,11 @@ private:
 
 
 screenptr_t drawthumbchar(screenptr_t screenptr, unsigned &bit_offset, char c);
-screenptr_t drawthumbstring(screenptr_t screenptr, const char *s);
+screenptr_t drawthumbstring(screenptr_t screenptr, const char *s, unsigned off=0);
+screenptr_t drawthumbcharxor(screenptr_t screenptr, unsigned &bit_offset, char c);
+screenptr_t drawthumbstringxor(screenptr_t screenptr, const char *s, unsigned off=0);
+
+
 
 int wsys__subscribesystemeventfun(std::function<void(const systemevent_t&)> handler);
 
