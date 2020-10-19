@@ -48,5 +48,9 @@
       }
     ]
   },
-  "fwupgrade": {}
+  "fwupgrade": {},
+  "startscan": {
+    "success": "true",
+    "error": ""
+  }
 }
