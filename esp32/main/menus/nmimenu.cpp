@@ -83,14 +83,18 @@ static void do_load_snapshot(FileChooserDialog *d, int status)
     if (status==0) {
         //FileChooserDialog *d = static_cast<FileChooserDialog*>(data);
         WSYS_LOGI("Snapshot is: %s", d->getSelection());
-        int ret = sna__load_sna_extram(d->getSelection());
+        snatype_t ret = sna__load_snapshot_extram(d->getSelection());
         WSYS_LOGI("Load Snapshot %d", ret);
-        if (ret==0) {
-            WSYS_LOGI("Starting SNA");
-            wsys__send_command(0xFE);
-        } else {
+        if (ret == SNAPSHOT_ERROR) {
             WSYS_LOGE("Error loading SNA");
             MessageBox::show("Cannot load SNA");
+        } else {
+            WSYS_LOGI("Starting SNA");
+            if (ret==SNAPSHOT_SNA) {
+                wsys__send_command(0xFE);
+            } else {
+                wsys__send_command(0xFD); // Z80 snapshot
+            }
         }
     }
 }

@@ -1,3 +1,4 @@
+ORG ROM_PATCHED_SNALOAD
 RESTOREREGS:
 ; This is the register restore routine.
         LD	HL, (P_TEMP)	; Save P_TEMP
@@ -28,7 +29,11 @@ RESTOREREGS:
         LD	IY, $FFFF       ; FILL register: IY
         LD	(P_TEMP), HL    ; Restore P_TEMP
         LD	SP, $FFFF       ; FILL register : SP
-	LD	HL, $FFFF       ; FILL register : HL
+	NOP
+        NOP
+        NOP     ; LD HL, xxxx	: 21xxxx ; NOTE: this will be changed into (LD HL,XXXX) for Z80 snapshots
+        NOP	; PUSH	HL	: E5     ; NOTE: this will be changed into (PUSH HL) for Z80 snapshots
+        LD	HL, $FFFF       ; FILL register : HL
         IM	0		; FILL IM X
         EI			; FILL EI or DI, depending. We should time this so that no interrupt can come before JP
 RETINST:RETN

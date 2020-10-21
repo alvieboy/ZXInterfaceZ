@@ -167,7 +167,7 @@ static int spectcmd__loadsna(const uint8_t *cmdbuf, unsigned len)
     memcpy(filename, &cmdbuf[1], filenamelen);
     filename[filenamelen] = '\0';
 
-    ret = sna__load_sna_extram(filename);
+    ret = sna__load_snapshot_extram(filename);
 
     if (ret==0) {
         ESP_LOGI(TAG, "Snapshot loaded into RAM");

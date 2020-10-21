@@ -175,6 +175,7 @@ _endl1: HALT
         include "utils.asm"
 	include "nmihandler.asm"
 	include "snaram.asm"
+        include "z80restore.asm"
        
                ; 00000000001111111111222222222233
                ; 01234567890123456789012345678901
@@ -188,5 +189,4 @@ SCANNING:	DB	"Scanning...", 0
 
 
 ; THIS MUST BE THE LAST ENTRY!!!!
-	ORG ROM_PATCHED_SNALOAD
 	include "snarestore.asm"

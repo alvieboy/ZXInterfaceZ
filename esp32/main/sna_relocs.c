@@ -3,12 +3,15 @@
 #include <stdio.h>
 #include "sna_relocs.h"
 #include "fpga.h"
+#include "sna_z80.h"
+#include "esp_log.h"
 
 typedef enum {
     RELOC_16,
     RELOC_8,
     RELOC_IM,
-    RELOC_EIDI
+    RELOC_EIDI,
+    RELOC_PUSHPC
 } reloctype_t;
 
 struct relocentry
@@ -33,9 +36,11 @@ const struct relocentry relocmap[] = {
     { "IX",   0x0039, RELOC_16 },
     { "IY",   0x003D, RELOC_16 },
     { "SP",   0x0043, RELOC_16 },
-    { "HL",   0x0046, RELOC_16 },
-    { "IM",   0x0049, RELOC_IM },  // 0x46, 0x56, 0x5E,
-    { "INT",  0x004A, RELOC_EIDI},  // EI: 0xFB, DI: 0xF3
+    { "HL",   0x004A, RELOC_16 },
+    { "IM",   0x004D, RELOC_IM },  // 0x46, 0x56, 0x5E,
+    { "INT",  0x004E, RELOC_EIDI},  // EI: 0xFB, DI: 0xF3,
+//    { "EXC",  0x004B, RELOC_EXECINSN}, // Exec instruction (RETN or JP)
+    { "PC",   0x0045, RELOC_PUSHPC }, // Jump PC for JP in EXC
 };
 
 static const struct relocentry *findreloc(const char *name)
@@ -54,10 +59,11 @@ static const struct relocentry *findreloc(const char *name)
 
 // Offset shall be 0x0080 for the "old" method, and 0x1F00 for the in-main-rom method
 
-static int apply_single_reloc(const char *name, const uint8_t *src, sna_writefun fun, void *userdata, uint16_t offset)
+static int apply_single_reloc(const char *name, const void *srcv, sna_writefun fun, void *userdata, uint16_t offset)
 {
     const struct relocentry *e = findreloc(name);
     uint8_t v;
+    const uint8_t *src = (const uint8_t *)srcv;
 
     if (!e)
         return -1;
@@ -79,6 +85,19 @@ static int apply_single_reloc(const char *name, const uint8_t *src, sna_writefun
             return -1;
         }
         fun(userdata, offset + e->offset, v);
+        break;
+    case RELOC_PUSHPC:
+        if (src[0]==0 && src[1]==0) {
+            fun(userdata, offset + e->offset, 0x00);  // NOP
+            fun(userdata, offset + e->offset+1, 0x00);  // NOP
+            fun(userdata, offset + e->offset+2, 0x00);  // NOP
+            fun(userdata, offset + e->offset+3, 0x00);  // NOP
+        } else {
+            fun(userdata, offset + e->offset, 0x21);  // LD HL, xxxx
+            fun(userdata, offset + e->offset+1, src[0]);  // LD HL, xxxx
+            fun(userdata, offset + e->offset+2, src[1]);  // LD HL, xxxx
+            fun(userdata, offset + e->offset+3, 0xE5);  // PUSH HL
+        }
         break;
     case RELOC_EIDI:
         if (src[0]&4) {
@@ -125,8 +144,17 @@ void sna_apply_relocs_fpgarom(const uint8_t *sna, uint16_t offset)
     sna_apply_relocs(sna, offset, &writefun_fpgarom, (void*)NULL);
 }
 
+void sna_z80_apply_relocs_fpgarom(const sna_z80_main_header_t *main,
+                                  const sna_z80_ext_header_t *ext,
+                                  uint16_t offset)
+{
+    sna_z80_apply_relocs(main, ext, offset, &writefun_fpgarom, (void*)NULL);
+}
+
+
 void sna_apply_relocs(const uint8_t *sna, uint16_t offset, sna_writefun fun, void *userdata)
 {
+    uint16_t zero  = 0;
     apply_single_reloc("I", &sna[0], fun, userdata, offset);
     apply_single_reloc("HL'", &sna[1], fun, userdata, offset);
     apply_single_reloc("DE'", &sna[3], fun, userdata, offset);
@@ -143,7 +171,7 @@ void sna_apply_relocs(const uint8_t *sna, uint16_t offset, sna_writefun fun, voi
     apply_single_reloc("SP", &sna[23], fun, userdata, offset);
     apply_single_reloc("IM", &sna[25], fun, userdata, offset);
     apply_single_reloc("BORDER", &sna[26], fun, userdata, offset);
-
+    apply_single_reloc("PC", &zero, fun, userdata, offset);
 /*
 ;   ------------------------------------------------------------------------
 ;   0        1      byte   I                                      Check
@@ -157,5 +185,52 @@ void sna_apply_relocs(const uint8_t *sna, uint16_t offset, sna_writefun fun, voi
 ;   27       49152  bytes  RAM dump 16384..65535
 ;   ------------------------------------------------------------------------
 */
+
+}
+
+void sna_z80_apply_relocs(const sna_z80_main_header_t *main,
+                      const sna_z80_ext_header_t *ext,
+                      uint16_t offset,
+                      sna_writefun fun,
+                      void *userdata)
+{
+    uint8_t imval = main->im;
+    uint8_t border = main->border;
+
+    apply_single_reloc("I", &main->i, fun, userdata, offset);
+    apply_single_reloc("HL'", &main->hl_alt, fun, userdata, offset);
+    apply_single_reloc("DE'", &main->de_alt, fun, userdata, offset);
+    apply_single_reloc("BC'", &main->bc_alt, fun, userdata, offset);
+    apply_single_reloc("AF'", &main->a_alt, fun, userdata, offset); // CHECK AF!
+    apply_single_reloc("HL", &main->hl, fun, userdata, offset);
+    apply_single_reloc("DE", &main->de, fun, userdata, offset);
+    apply_single_reloc("BC", &main->bc, fun, userdata, offset);
+    apply_single_reloc("IY", &main->iy, fun, userdata, offset);
+    apply_single_reloc("IX", &main->ix, fun, userdata, offset);
+    apply_single_reloc("INT", &main->iff1, fun, userdata, offset);
+    apply_single_reloc("R", &main->r, fun, userdata, offset);
+    apply_single_reloc("AF", &main->a, fun, userdata, offset); // Check AF!
+    apply_single_reloc("SP", &main->sp, fun, userdata, offset);
+    apply_single_reloc("IM", &imval, fun, userdata, offset);
+    apply_single_reloc("BORDER", &border, fun, userdata, offset);
+
+    if (main->pc!=0) {
+        ESP_LOGI("Z80","Using PC %04x", main->pc);
+        apply_single_reloc("PC", &main->pc, fun, userdata, offset);
+    } else {
+        ESP_LOGI("Z80","Using PC (ext) %04x", ext->pc);
+        apply_single_reloc("PC", &ext->pc, fun, userdata, offset);
+    }
+
+    // Dump ROM
+#ifdef __linux__
+    {
+        uint8_t buf[256];
+        int f = open("Z80.bin", O_WRONLY|O_CREAT|O_TRUNC, 0667);
+        fpga__read_extram_block(offset, buf, sizeof(buf));
+        write(f, buf, sizeof(buf));
+        close(f);
+    }
+#endif
 
 }

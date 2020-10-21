@@ -11,11 +11,13 @@
 #include "sna_relocs.h"
 #include "fpga.h"
 #include "sna.h"
+#include "sna_z80.h"
 #include "dump.h"
 #include "sna_defs.h"
 #include <stdlib.h>
 #include "fileaccess.h"
 #include "minmax.h"
+#include <assert.h>
 
 #define TEST_WRITES
 
@@ -28,6 +30,10 @@ extern unsigned int snaloader_rom_len;
 extern unsigned char INTZ_ROM[];
 extern unsigned int INTZ_ROM_len;
 #endif
+
+
+int sna__z80_handle_block_compress(int fd, int len, unsigned memaddress);
+int sna__z80_handle_block_v2(int fd);
 
 
 static void sna__prepare(void);
@@ -316,8 +322,6 @@ int sna__save_from_extram(const char *file)
     return ret;
 }
 
-#define SNA_EXTRAM_ADDRESS 0x010000
-
 #undef LOCAL_CHUNK_SIZE
 #ifdef __linux__
 #define LOCAL_CHUNK_SIZE 2048
@@ -325,28 +329,17 @@ int sna__save_from_extram(const char *file)
 #define LOCAL_CHUNK_SIZE 64
 #endif
 
-int sna__load_sna_extram(const char *file)
+int sna__load_sna_extram(int fd)
 {
-    char fullfile[128];
     uint8_t chunk[LOCAL_CHUNK_SIZE];
-
     uint8_t header[SNA_HEADER_SIZE];
 
     unsigned togo = 0xC000; // 48KB
     unsigned extram_address = SNA_EXTRAM_ADDRESS;
 
-    fullpath(file, fullfile, sizeof(fullfile)-1);
-
-    int fd = __open(fullfile, O_RDONLY);
-    if (fd<0) {
-        ESP_LOGE(TAG,"Cannot open '%s': %s", fullfile, strerror(errno));
-        return -1;
-    }
-
     // Read in SNA header
     if (read(fd, header, sizeof(header))!=sizeof(header)) {
         ESP_LOGE(TAG,"Cannot read SNA header: %s", strerror(errno));
-        close(fd);
         return -1;
     }
 
@@ -362,7 +355,6 @@ int sna__load_sna_extram(const char *file)
         int r = read(fd, chunk, chunksize);
         if (r!=chunksize) {
             ESP_LOGE(TAG, "Short read from file: %s", strerror(errno));
-            close(fd);
             return -1;
         }
 #ifdef TEST_WRITES
@@ -372,13 +364,11 @@ int sna__load_sna_extram(const char *file)
 #endif
         if (fpga__write_extram_block(extram_address, chunk, chunksize)<0) {
             ESP_LOGE(TAG, "Error writing to external FPGA RAM");
-            close(fd);
             return -1;
         }
 #ifdef TEST_WRITES
         if (fpga__read_extram_block(extram_address, chunk, chunksize)<0) {
             ESP_LOGE(TAG, "Error reading from external FPGA RAM");
-            close(fd);
             return -1;
         }
         if (memcmp(rdc,chunk,chunksize)!=0) {
@@ -389,7 +379,6 @@ int sna__load_sna_extram(const char *file)
             memcpy(chunk, rdc, sizeof(chunk) );
             if (fpga__write_extram_block(extram_address, chunk, chunksize)<0) {
                 ESP_LOGE(TAG, "Error writing to external FPGA RAM");
-                close(fd);
                 return -1;
             }
             return -1;
@@ -401,5 +390,460 @@ int sna__load_sna_extram(const char *file)
     }
 
     return 0;
-
 }
+
+static int sna__z80_init_pages()
+{
+    const uint8_t pagevals[9] = {0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
+
+    return fpga__write_extram_block(SNA_Z80_EXTRAM_PAGE_ALLOCATION_ADDRESS,
+                                    pagevals,
+                                    sizeof(pagevals));
+}
+
+static int sna__z80_set_page_at_index(int index, uint8_t page)
+{
+    return fpga__write_extram(SNA_Z80_EXTRAM_PAGE_ALLOCATION_ADDRESS + index,
+                              page);
+}
+
+static int sna__z80_set_block_at_index(int index, uint8_t block)
+{
+    if (block<3)
+        return -1;
+    block-=3;
+    if (block>7)
+        return -1;
+    return sna__z80_set_page_at_index(index, block);
+}
+
+static int sna__z80_apply_ext_data(sna_z80_ext_header_t *ext)
+{
+    int r = -1;
+    do {
+        r = fpga__write_extram(SNA_Z80_EXTRAM_LAST7FFD_ADDRESS, ext->out1);
+        if (r<0)
+            break;
+        r = fpga__write_extram_block(SNA_Z80_EXTRAM_YM_REGISTERCONTENT_ADDRESS,
+                                     &ext->soundchipregs[0],
+                                     sizeof(ext->soundchipregs)
+                                    );
+        if (r<0)
+            break;
+        r = fpga__write_extram(SNA_Z80_EXTRAM_YM_LASTREGISTER_ADDRESS, ext->soundchipregno);
+    } while (0);
+    return r;
+}
+
+
+
+snatype_t sna__load_z80_extram(int fd)
+{
+    //char fullfile[128];
+    //uint8_t chunk[LOCAL_CHUNK_SIZE];
+    sna_z80_main_header_t header;
+    sna_z80_ext_header_t ext;
+
+    snatype_t type = SNAPSHOT_ERROR;
+
+    //unsigned togo = 0xC000; // 48KB
+    //unsigned extram_address = SNA_EXTRAM_ADDRESS;
+
+    ESP_LOGI(TAG, "Inspecting Z80 snapshot %d", sizeof(header));
+#ifdef __linux__
+    assert( sizeof(header)==30 );
+#endif
+
+    // Read in Z80 header
+    if (read(fd, &header, sizeof(header))!=sizeof(header)) {
+        ESP_LOGE(TAG,"Cannot read Z80 header: %s", strerror(errno));
+        return -1;
+    }
+    // Check if PC is zero. If yes, we have more data
+    if (header.pc == 0x0000) {
+        // Read LEN first.
+        if (read(fd, &ext, sizeof(ext.len))!=sizeof(ext.len)) {
+            ESP_LOGE(TAG,"Cannot read Z80 ext header: %s", strerror(errno));
+            return -1;
+        }
+        // Read remaing
+        // Sanity check: we support v1, v2 and v3 only.
+        unsigned toread = ext.len;
+        switch (toread) {
+        case 23:
+            type = SNAPSHOT_Z80_V2;
+            ESP_LOGI(TAG, "Loading Z80 snapshot V2");
+            break;
+        case 54: /* Fall-through */
+            type = SNAPSHOT_Z80_V3;
+            ESP_LOGI(TAG, "Loading Z80 snapshot V3");
+            break;
+        case 55:
+            type = SNAPSHOT_Z80_V3PLUS;
+            ESP_LOGI(TAG, "Loading Z80 snapshot V3+");
+            break;
+        default:
+            ESP_LOGE(TAG,"Unknown Z80 ext header len: %04x",toread);
+            break;
+        }
+        if (type!=SNAPSHOT_ERROR) {
+            if (read(fd, &ext.pc, toread)!=toread) {
+                ESP_LOGE(TAG,"Cannot read Z80 ext2 header: %s", strerror(errno));
+                return -1;
+            }
+            // Apply ext data.
+            sna__z80_apply_ext_data(&ext);
+        }
+    } else {
+        type = SNAPSHOT_Z80_V1;
+        ESP_LOGI(TAG, "Loading Z80 snapshot V1");
+    }
+
+    if (type==SNAPSHOT_ERROR)
+        return type;
+
+    sna__z80_init_pages();
+
+    sna_z80_apply_relocs_fpgarom(&header,
+                                 &ext,
+                                 ROM_PATCHED_SNALOAD_ADDRESS);
+
+
+    switch (type) {
+    case SNAPSHOT_Z80_V1:
+        if (header.compressed) {
+            ESP_LOGI(TAG, "Compressed Z80 snapshot V1");
+            if (sna__z80_handle_block_compress(fd, -1, SNA_Z80_EXTRAM_BASE_PAGE_ADDRESS)<0)
+                type = SNAPSHOT_ERROR;
+            // Set up page pointers.
+
+            /*
+                    48K             128K
+             3      -               page 0   
+             4      8000-bfff       page 1   
+             5      c000-ffff       page 2   
+             6      -               page 3   
+             7      -               page 4   
+             8      4000-7fff       page 5   
+             9      -               page 6   
+             10     -               page 7
+              */
+            sna__z80_set_page_at_index(0, 5);
+            sna__z80_set_page_at_index(1, 1);
+            sna__z80_set_page_at_index(2, 2);
+        } else {                       
+            type = SNAPSHOT_ERROR; // TBD
+        }
+        break;
+    case SNAPSHOT_Z80_V2:    /* Fall-through */
+    case SNAPSHOT_Z80_V3:    /* Fall-through */
+    case SNAPSHOT_Z80_V3PLUS:
+        if (sna__z80_handle_block_v2(fd)<0)
+            type = SNAPSHOT_ERROR;
+        break;
+    default:
+        break;
+    }
+
+    return type;
+}
+
+snatype_t sna__load_snapshot_extram(const char *file)
+{
+    char fullfile[128];
+    snatype_t type = SNAPSHOT_ERROR;
+
+    fullpath(file, fullfile, sizeof(fullfile)-1);
+
+    const char *ext = get_file_extension(file);
+
+    if (!ext)
+        return type;
+
+    if (ext_match(ext,"sna")) {
+        type = SNAPSHOT_SNA;
+    } else if (ext_match(ext,"z80")) {
+        type = SNAPSHOT_Z80_V1;  // Will be updated later
+    }
+
+    if (type==SNAPSHOT_ERROR)
+        return type;
+
+    int fd = __open(fullfile, O_RDONLY);
+    if (fd<0) {
+        ESP_LOGE(TAG,"Cannot open '%s': %s", fullfile, strerror(errno));
+        return -1;
+    }
+
+    switch (type) {
+    case SNAPSHOT_SNA:
+        type = sna__load_sna_extram(fd);
+        break;
+    case SNAPSHOT_Z80_V1:
+        type = sna__load_z80_extram(fd);
+        break;
+    default:
+        break;
+    }
+    close(fd);
+
+    return type;
+}
+
+
+
+void z80_decomp_init(z80_decomp_t *decomp, uint8_t version,
+                     int (*writer)(void *arg, uint8_t val),
+                     void *writer_arg)
+{
+    ESP_LOGI(TAG,"Z80 decomp init for v%d", version);
+    decomp->state = Z80D_RAW;
+    decomp->bytes_output = 0;
+    decomp->version = version;
+    decomp->writer = writer;
+    decomp->writer_arg = writer_arg;
+}
+
+
+
+int z80_decompress(z80_decomp_t *decomp, uint8_t *source, int len)
+{
+#define OUTPUT(x) do { decomp->bytes_output++; \
+    decomp->writer(decomp->writer_arg, x); \
+} while (0)
+
+    while (len--) {
+        uint8_t v = *source++;
+        switch (decomp->state) {
+        case Z80D_RAW:
+            if (v==0xED) {
+                decomp->state = Z80D_ED0;
+                break;
+            }
+            // Check EOB marker
+            if ((decomp->version==1) && v==0x00) {
+                decomp->state = Z80D_ZERO;
+                break;
+            }
+            //ESP_LOGI("Z80", "RAW %02x %d", v, decomp->bytes_output);
+            OUTPUT(v);
+            break;
+        case Z80D_ED0:
+            if (v==0xED) {
+                decomp->state = Z80D_ED1;
+                break;
+            }
+            //ESP_LOGI("Z80", "RAW 0xED ! %d", decomp->bytes_output);
+            OUTPUT(0xED);
+            //ESP_LOGI("Z80", "RAW %02x %d", v, decomp->bytes_output);
+            OUTPUT(v);
+            decomp->state = Z80D_RAW;
+            break;
+
+        case Z80D_ED1:
+            decomp->repcnt = v;
+            decomp->state = Z80D_LEN;
+            break;
+
+        case Z80D_ZERO:
+            if (v==0xED) {
+                decomp->state = Z80D_ZED0;
+                break;
+            }
+            OUTPUT(0x0);
+            OUTPUT(v);
+            decomp->state = Z80D_RAW;
+            break;
+
+        case Z80D_ZED0:
+            if (v==0xED) {
+                decomp->state = Z80D_ZED1;
+                break;
+            }
+            OUTPUT(0x0);
+            OUTPUT(0xED);
+            OUTPUT(v);
+            decomp->state = Z80D_RAW;
+            break;
+
+        case Z80D_ZED1:
+            if (v==0x00) {
+                decomp->state = Z80D_EOF;  // Finshed
+                break;
+            }
+            // This is a repeat.
+            OUTPUT(0x0);
+            decomp->repcnt = v;
+            decomp->state = Z80D_LEN;
+            break;
+
+        case Z80D_LEN:
+            //ESP_LOGI("Z80", "REP %02x %d %d", v, decomp->repcnt, decomp->bytes_output);
+
+            while (decomp->repcnt--)
+                OUTPUT(v);
+            decomp->state = Z80D_RAW;
+            break;
+
+        case Z80D_EOF:
+            ESP_LOGI(TAG,"Z80: data post EOF");
+            return -1; // Error
+        }
+    }
+    return 0;
+}
+
+static int z80_decompress_is_eof(z80_decomp_t *decomp)
+{
+    return decomp->state == Z80D_EOF;
+}
+
+static int z80_decompress_is_idle(z80_decomp_t *decomp)
+{
+    return decomp->state == Z80D_RAW;
+}
+
+
+int sna__z80_handle_block_v2(int fd)
+{
+    sna_z80_block_header_t hdr;
+    unsigned address = SNA_Z80_EXTRAM_BASE_PAGE_ADDRESS;
+    int index = 0;
+    do {
+        // TBC: we do not know how many blocks we have. So read until EOF.
+        assert(sizeof(hdr)==3);
+
+        int r = read(fd, &hdr, sizeof(hdr));
+
+        if (r==0)
+            break;
+
+        if (r!=sizeof(hdr)) {
+            ESP_LOGE(TAG,"Cannot read Z80 block header: %s", strerror(errno));
+            return -1;
+        }
+
+        if (hdr.len == 0xffff) {
+            // Not compressed.  TODO
+            return -1;
+        } else {
+            r = sna__z80_handle_block_compress(fd, hdr.len, address);
+
+            if (r<0)
+                return r;
+
+            if (r!=16384) {
+                ESP_LOGI(TAG,"Z80: short block %d (original len %d for block %d)",r, hdr.len, hdr.block);
+                return -1;
+            }
+
+            // Set up page.
+
+            r = sna__z80_set_block_at_index(index, hdr.block);
+            if (r<0)
+                return r;
+            // increment address
+            address += 16384; // TBC: should we check for actual size?
+            //
+
+        }
+        index++;
+
+    } while (1);
+    return 0;
+}
+
+struct z80writebuffer {
+    uint8_t buffer[128];
+    unsigned memaddress;
+//    unsigned size;
+    unsigned off;
+};
+
+
+int sna__z80_buffered_flush(struct z80writebuffer *wbuf)
+{
+    if (wbuf->off) {
+        if (fpga__write_extram_block(wbuf->memaddress, wbuf->buffer, wbuf->off)<0)
+            return -1;
+        wbuf->memaddress+=wbuf->off;
+        wbuf->off = 0;
+    }
+    return 0;
+}
+
+int sna__z80_buffered_writer(void *arg, uint8_t val)
+{
+    struct z80writebuffer *wbuf = (struct z80writebuffer*)arg;
+
+    wbuf->buffer[wbuf->off++] = val;
+
+    if (wbuf->off==sizeof(wbuf->buffer)) {
+        return sna__z80_buffered_flush(wbuf);
+    }
+    return 0;
+}
+
+int sna__z80_handle_block_compress(int fd, int len, unsigned memaddress)
+{
+    uint8_t chunk[LOCAL_CHUNK_SIZE];
+    z80_decomp_t decomp;
+    unsigned toread;
+    struct z80writebuffer wbuf;
+
+    wbuf.off = 0;
+    wbuf.memaddress = memaddress;
+
+    ESP_LOGI(TAG,"Z80: handling block compress len %d", len);
+
+    if (len<0) {
+        z80_decomp_init(&decomp, 1, &sna__z80_buffered_writer, &wbuf);
+    } else {
+        z80_decomp_init(&decomp, 2, &sna__z80_buffered_writer, &wbuf);
+    }
+
+    do {
+        if (len>0) {
+            toread = len > LOCAL_CHUNK_SIZE ? LOCAL_CHUNK_SIZE: len;
+
+
+            if (read(fd, chunk, toread)!=toread) {
+                ESP_LOGE(TAG,"Cannot read Z80 block: %s", strerror(errno));
+                return -1;
+            }
+        } else {
+            toread = LOCAL_CHUNK_SIZE;
+            toread = read(fd, chunk, toread);
+        }
+
+        if (z80_decompress(&decomp, chunk, toread)<0) {
+            ESP_LOGE(TAG,"Z80: error decompressing");
+            return -1;
+        }
+
+        if (len>0)
+            len -= toread;
+        // Check if EOF for V1
+        if (z80_decompress_is_eof(&decomp)) {
+            break;
+        }
+
+    } while (len || len==-1);
+
+    sna__z80_buffered_flush(&wbuf);
+
+
+    ESP_LOGI(TAG,"Z80: decompressed %d", decomp.bytes_output);
+
+    if (len<0) {
+    } else {
+        if (!z80_decompress_is_idle(&decomp)) {
+            ESP_LOGE(TAG, "Z80: Decompressor not idle!");
+            return -1;
+        }
+    }
+
+    return decomp.bytes_output;
+}
+
+

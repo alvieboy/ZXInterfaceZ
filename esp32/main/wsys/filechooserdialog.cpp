@@ -25,9 +25,10 @@ static bool filter_match(uint8_t filter, struct dirent *e)
             return true;
 
         ext = get_file_extension(e->d_name);
+        /* THIS IS DUPLICATED. Move into separate module */
         switch(filter) {
         case FILE_FILTER_SNAPSHOTS:
-            return ext_match(ext, "sna");
+            return ext_match(ext, "sna") | ext_match(ext,"z80");
             break;
         case FILE_FILTER_ROMS:
             return ext_match(ext, "rom");

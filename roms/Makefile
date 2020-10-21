@@ -16,6 +16,7 @@ intz.rom: interfacez-rom.asm \
 	resource.asm    \
 	debug.asm \
 	port_defs.asm    \
+	z80restore.asm \
 	interfacez-sysvars.asm
 
 	pasmo -d --alocal interfacez-rom.asm $@ > $@.out

@@ -21,7 +21,7 @@ static bool filter_match(struct directory_resource *res, struct dirent *e)
         ext = get_file_extension(e->d_name);
         switch(res->filter) {
         case FILE_FILTER_SNAPSHOTS:
-            return ext_match(ext, "sna");
+            return ext_match(ext, "sna") || ext_match(ext,"z80");
             break;
         case FILE_FILTER_ROMS:
             return ext_match(ext, "rom");
