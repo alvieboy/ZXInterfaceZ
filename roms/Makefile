@@ -1,4 +1,4 @@
-all: snaloader.rom intz.rom loadscr.rom
+all: intz.rom loadscr.rom
 
 snaloader.rom: snaloader-rom.asm
 	pasmo -d $+ $@ > $@.out

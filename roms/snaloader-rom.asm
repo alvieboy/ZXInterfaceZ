@@ -46,8 +46,9 @@ NMIH:	RETN
 ;   27       49152  bytes  RAM dump 16384..65535
 ;   ------------------------------------------------------------------------
 
-include "snarestore.asm"
-        
+ROM_PATCHED_SNALOAD              equ $1F00
+include "snarestore.asm"        
+
 RAM_DONE:
 	LD	HL, $5F00
         LD	SP, HL  	; TBD: do we need stack?
