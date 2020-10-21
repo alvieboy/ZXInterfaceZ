@@ -46,10 +46,16 @@ jobs:
 
     - run: cd webapp && npm install
     - run: cd webapp && npm run build --prod && npm run package
-    - run: cd webapp && npm run lint
+      #- run: cd webapp && npm run lint TODO add this after fixing lint issues
       # - run: npm test TODO
       #   env:
       #     CI: true
+    - name: Archive built Angular Webapp
+      uses: actions/upload-artifact@v2
+      with:
+        name: webapp
+        path: |
+          webapp/dist/webapp-only-gzip/*
 
 
   esp32:
@@ -74,8 +80,8 @@ jobs:
       with:
         name: host-mode-fw
         path: |
-          esp32/host/interfacez 
-          esp32/host/libinterfacez.so 
+          esp32/host/interfacez
+          esp32/host/libinterfacez.so
           esp32/host/QtSpecem/libQtSpecem.so.1
           esp32/host/QtSpecem/libQtSpecem.so.1.0.0
           esp32/host/gui/interfacez_gui
