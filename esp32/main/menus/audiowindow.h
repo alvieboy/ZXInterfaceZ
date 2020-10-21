@@ -7,6 +7,8 @@ class AudioWindow: public Window
 {
 public:
     AudioWindow();
+protected:
+    void saveAndClose();
 private:
     AudioWidget *m_audiowidget;
 };

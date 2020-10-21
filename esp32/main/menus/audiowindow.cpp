@@ -10,6 +10,8 @@ class AudioWidget: public FixedLayout
 public:
     AudioWidget();
     virtual void drawImpl();
+    void apply();
+    Signal<> &clicked() { return m_button->clicked(); }
 private:
     FloatSlider *m_volume[4];
     FloatSlider *m_balance[4];
@@ -21,7 +23,15 @@ AudioWindow::AudioWindow(): Window("Audio settings", 22, 22)
 {
     m_audiowidget = WSYSObject::create<AudioWidget>();
     setChild(m_audiowidget);
-    setWindowHelpText("Use upper key for fine-tuning");
+    setWindowHelpText("Use CAPS key for fine-tuning");
+
+    m_audiowidget->clicked().connect(this , &AudioWindow::saveAndClose);
+}
+
+void AudioWindow::saveAndClose()
+{
+    m_audiowidget->apply();
+    destroy();
 }
 
 AudioWidget::AudioWidget()
@@ -29,16 +39,16 @@ AudioWidget::AudioWidget()
     float v, b;
     unsigned i;
     const char accels[4][4] = {
-        { 'w','e','r','t' },
-        { 'y','u','i','o' },
-        { 's','d','f','g' },
-        { 'h','j','k','l' },
+        { 'a','q','s','w' },
+        { 'd','e','f','r' },
+        { 'g','t','h','y' },
+        { 'j','u','k','i' },
     };
     const char uaccels[4][4] = {
-        { 'W','E','R','T' },
-        { 'Y','U','I','O' },
-        { 'S','D','F','G' },
-        { 'H','J','K','L' },
+        { 'A','Q','S','W' },
+        { 'D','E','F','R' },
+        { 'G','T','H','Y' },
+        { 'J','U','K','I' },
     };
 
     for (i=0;i<4; i++) {
@@ -63,8 +73,8 @@ AudioWidget::AudioWidget()
     m_button = WSYSObject::create<Button>("Close");
 
     addChild(m_button, 0, 17, 20, 1);
-
 }
+
 
 void AudioWidget::drawImpl()
 {
@@ -94,3 +104,12 @@ void AudioWidget::drawImpl()
     ptr.drawstring("AY Ch2 balance:");
 }
 
+void AudioWidget::apply()
+{
+    unsigned i;
+    for (i=0;i<4; i++) {
+        float volume = m_volume[i]->getValue();
+        float balance = m_balance[i]->getValue();
+        audio__set_volume_f(i, volume, balance);
+    }
+}
