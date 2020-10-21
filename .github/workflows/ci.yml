@@ -19,7 +19,7 @@ jobs:
 
     steps:
     # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-    - name: Checkout the code
+    - name: checkout the code
       uses: actions/checkout@v2
 
     - name: Build ZX Spectrum ROM
@@ -33,6 +33,24 @@ jobs:
         name: spectrum-roms
         path: |
           roms/*.rom
+
+  webapp:
+    runs-on: ubunu-latest
+    steps:
+    - name: checkout the code
+      uses: actions/checkout@v2
+    - name: Build Webapp with Node.js 12.x
+      uses: actions/setup-node@v1
+      with:
+        node-version: 12.x
+
+    - run: cd webapp && npm install
+    - run: cd webapp && npm run build --prod && npm run package
+    - run: cd webapp && npm run lint
+      # - run: npm test TODO
+      #   env:
+      #     CI: true
+
 
   esp32:
     runs-on: ubuntu-latest
