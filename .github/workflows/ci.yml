@@ -35,7 +35,7 @@ jobs:
           roms/*.rom
 
   webapp:
-    runs-on: ubunu-latest
+    runs-on: ubuntu-latest
     steps:
     - name: checkout the code
       uses: actions/checkout@v2
