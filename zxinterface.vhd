@@ -329,6 +329,10 @@ architecture beh of zxinterface is
   signal tstate_s               : std_logic;
   signal ay_en_s                : std_logic;
   signal ay_en_reads_s          : std_logic;
+  
+  signal mode2a_s               : std_logic;
+  signal page128_pmc_s          : std_logic_vector(7 downto 0);
+  signal page128_smc_s          : std_logic_vector(7 downto 0);
 
   function genvolume(vol: in std_logic_vector(7 downto 0)) return std_logic_vector is
   begin
@@ -496,6 +500,10 @@ begin
       memsel_i        => memromsel_s(2 downto 0),
       memsel_we_i     => memsel_we_s,
       romsel_we_i     => romsel_we_s,
+      mode2a_i        => mode2a_s,
+
+      page128_pmc_o   => page128_pmc_s,
+      page128_smc_o   => page128_smc_s,
 
 
       dbg_o           => dbg_o(15 downto 8)
@@ -611,6 +619,8 @@ begin
     rstspect_o    => spect_reset_s,
     intenable_o   => spect_inten_s,
     frameend_o    => framecmplt_s,
+    mode2a_o      => mode2a_s,
+
 
     resfifo_reset_o => resfifo_reset_s,
     resfifo_wr_o    => resfifo_wr_s,

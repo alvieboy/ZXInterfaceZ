@@ -52,6 +52,15 @@ package zxinterfacepkg is
   constant SPECT_PORT_AY_DATA                 : std_logic_vector(15 downto 0) := "10000000" & "00000001";
   constant SPECT_PORT_AY_DATA_MASK            : std_logic_vector(15 downto 0) := "11000000" & "00000011";
 
+  constant SPECT_PORT_128PAGE_REGISTER        : std_logic_vector(15 downto 0) := "00000000" & "00000001"; -- AKA 7ffd port
+  constant SPECT_PORT_128PAGE_REGISTER_MASK   : std_logic_vector(15 downto 0) := "10000000" & "00000011";
+
+  constant SPECT_PORT_2A_PMC_REGISTER         : std_logic_vector(15 downto 0) := "01000000" & "00000001";  -- Conflicts with 128K page
+  constant SPECT_PORT_2A_PMC_REGISTER_MASK    : std_logic_vector(15 downto 0) := "11000000" & "00000011";
+
+  constant SPECT_PORT_2A_SMC_REGISTER         : std_logic_vector(15 downto 0) := "00010000" & "00000001";  -- Conflicts with 128K page
+  constant SPECT_PORT_2A_SMC_REGISTER_MASK    : std_logic_vector(15 downto 0) := "10000000" & "00000011";  -- AKA 1ffd port
+
 end package;
 
 --package body zxinterfacepkg is

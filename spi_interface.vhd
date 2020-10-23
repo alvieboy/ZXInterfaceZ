@@ -27,6 +27,7 @@ entity spi_interface is
     intenable_o           : out std_logic;
     capsyncen_o           : out std_logic;
     frameend_o            : out std_logic;
+    mode2a_o              : out std_logic;
 
     vidmode_o             : out std_logic_vector(1 downto 0);
     ulahack_o             : out std_logic;
@@ -784,6 +785,7 @@ begin
 
   vidmode_o(0)          <= flags_r(11); --
   vidmode_o(1)          <= flags_r(12); --
+  mode2a_o              <= flags_r(13); --
 
   resfifo_wr_o          <= '1' when state_r=WRRESFIFO and dat_valid_s='1' else '0';
   resfifo_write_o       <= dat_s;

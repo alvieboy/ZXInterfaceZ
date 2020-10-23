@@ -20,6 +20,7 @@ entity interfacez_io is
     rdp_dly_i : in std_logic;
     active_i  : in std_logic;
     ulahack_i : in std_logic;
+    mode2a_i  : in std_logic;
 
     -- NMI reason
     nmireason_i: in std_logic_vector(7 downto 0);
@@ -87,6 +88,9 @@ entity interfacez_io is
     romsel_we_i           : in std_logic;
     memsel_we_i           : in std_logic;
 
+    page128_pmc_o         : out std_logic_vector(7 downto 0);
+    page128_smc_o         : out std_logic_vector(7 downto 0);
+
     dbg_o                 : out std_logic_vector(7 downto 0)
   );
 
@@ -131,6 +135,13 @@ architecture beh of interfacez_io is
   signal romsel_r               : std_logic_vector(1 downto 0);
   signal memsel_r               : std_logic_vector(2 downto 0);
 
+  signal page128_sel_s          : std_logic;
+  signal page2a_pmc_sel_s       : std_logic;
+  signal page2a_smc_sel_s       : std_logic;
+
+  signal page128_pmc_r          : std_logic_vector(7 downto 0); -- Reused in 128K mode
+  signal page128_smc_r          : std_logic_vector(7 downto 0);
+
 begin
 
   kempston_joy_sel_s    <= '1' when ((adr_i AND SPECT_PORT_KEMPSTON_JOYSTICK_MASK) = SPECT_PORT_KEMPSTON_JOYSTICK) else '0';
@@ -142,7 +153,11 @@ begin
   ay_register_sel_s     <= '1' when ((adr_i AND SPECT_PORT_AY_REGISTER_MASK) = SPECT_PORT_AY_REGISTER) else '0';
   ay_data_sel_s         <= '1' when ((adr_i AND SPECT_PORT_AY_DATA_MASK) = SPECT_PORT_AY_DATA) else '0';
 
-  ay_adr_o <= ayreg_r;
+  page128_sel_s         <= '1' when ((adr_i AND SPECT_PORT_128PAGE_REGISTER_MASK) = SPECT_PORT_128PAGE_REGISTER) and mode2a_i='0' else '0';
+  page2a_pmc_sel_s      <= '1' when ((adr_i AND SPECT_PORT_2A_PMC_REGISTER_MASK) = SPECT_PORT_2A_PMC_REGISTER) and mode2a_i='1' else '0';
+  page2a_smc_sel_s      <= '1' when ((adr_i AND SPECT_PORT_2A_SMC_REGISTER_MASK) = SPECT_PORT_2A_SMC_REGISTER) and mode2a_i='1' else '0';
+
+  ay_adr_o <= ayreg_r;       
 
   -- Address match for reads
   process (adr_i, joy_en_i, mouse_en_i, ay_register_sel_s, ay_data_sel_s)
@@ -160,6 +175,7 @@ begin
       if (ay_register_sel_s='1' or ay_data_sel_s='1') and ay_en_reads_i='1' and ay_en_i='1' then -- We only reply if enabled
         addr_match_s <= '1';
       end if;
+      -- We don't reply to PMC/SMC registers.
 		end if;
   end process;
 
@@ -230,6 +246,14 @@ begin
         if ay_data_sel_s='1' then
           ay_wr_o   <= ay_en_i; --'1';
           ay_dout_o <= dat_i;
+        end if;
+
+        if page128_sel_s='1' or page2a_pmc_sel_s='1' then
+          page128_pmc_r <= dat_i;
+        end if;
+
+        if page2a_smc_sel_s='1' then
+          page128_smc_r <= dat_i;
         end if;
 
       end if;
@@ -420,5 +444,6 @@ begin
   mic_o           <= audio_i xor (port_fe_r(3) or port_fe_r(4));
   romsel_o        <= romsel_r;
   memsel_o        <= memsel_r;
- 
+  page128_pmc_o   <= page128_pmc_r;
+  page128_smc_o   <= page128_smc_r;
 end beh;
