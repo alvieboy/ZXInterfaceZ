@@ -1,5 +1,6 @@
 PROJECT_NAME := esp32_interfacez
 
+RBFLOC=../fpga/r2.2/output_files/
 DEFAULTRBF=interfacez-r2.2-patch1.rbf
 
 IDF_PATH ?=/home/alvieboy/Temp/esp-idf
@@ -21,12 +22,12 @@ flash: spiffs/fpga0.rbf spiffs/intz.rom
 
 .PHONY: spiffs/fpga0.rbf
 spiffs/fpga0.rbf:
-	if [ -e ../output_files/interfacez.rbf ]; then                          \
-		echo Using development interfacez.rbf as FPGA firmware;        \
-		$(CP) ../output_files/interfacez.rbf spiffs/fpga0.rbf;          \
+	if [ -e $(RBFLOC)/interfacez.rbf ]; then                          \
+		echo Using development $(RBFLOC)/interfacez.rbf as FPGA firmware;        \
+		$(CP) $(RBFLOC)/interfacez.rbf spiffs/fpga0.rbf;          \
 	else                                                                    \
-		echo Using $(DEFAULTRBF) as FPGA firmware;                      \
-		$(CP) ../output_files/$(DEFAULTRBF) spiffs/fpga0.rbf;            \
+		echo Using $(RBFLOC)/$(DEFAULTRBF) as FPGA firmware;                      \
+		$(CP) $(RBFLOC)/$(DEFAULTRBF) spiffs/fpga0.rbf;            \
 	fi
 
 SPIFFS_IMAGE_FLASH_IN_PROJECT := 1
