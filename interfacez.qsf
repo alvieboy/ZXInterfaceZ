@@ -71,54 +71,92 @@ set_global_assignment -name OUTPUT_IO_TIMING_NEAR_END_VMEAS "HALF VCCIO" -rise
 set_global_assignment -name OUTPUT_IO_TIMING_NEAR_END_VMEAS "HALF VCCIO" -fall
 set_global_assignment -name OUTPUT_IO_TIMING_FAR_END_VMEAS "HALF SIGNAL SWING" -rise
 set_global_assignment -name OUTPUT_IO_TIMING_FAR_END_VMEAS "HALF SIGNAL SWING" -fall
-set_location_assignment PIN_10 -to A_BUS_OE_o
-set_location_assignment PIN_24 -to CLK_i
-set_location_assignment PIN_129 -to CTRL_OE_o
-set_location_assignment PIN_11 -to D_BUS_DIR_o
-set_location_assignment PIN_7 -to D_BUS_OE_o
-set_location_assignment PIN_138 -to ESP_IO26_o
-set_location_assignment PIN_141 -to ESP_IO27_o
-set_location_assignment PIN_6 -to ESP_MISO_io
-set_location_assignment PIN_13 -to ESP_MOSI_io
-set_location_assignment PIN_3 -to ESP_NCSO_i
 set_location_assignment PIN_1 -to ESP_QHD_io
-set_location_assignment PIN_143 -to ESP_QWP_io
+set_location_assignment PIN_2 -to LED2_o
+set_location_assignment PIN_3 -to ESP_NCSO_i
+set_location_assignment PIN_6 -to ESP_MISO_io
+set_location_assignment PIN_7 -to D_BUS_OE_o
+set_location_assignment PIN_8 -to TP4_o
+set_location_assignment PIN_10 -to A_BUS_OE_o
+set_location_assignment PIN_11 -to D_BUS_DIR_o
+set_location_assignment PIN_13 -to ESP_MOSI_io
 set_location_assignment PIN_23 -to ESP_SCK_i
-set_location_assignment PIN_53 -to FORCE_WAIT_o
-set_location_assignment PIN_67 -to FORCE_RESET_o
-set_location_assignment PIN_132 -to FORCE_ROMCS_o
+set_location_assignment PIN_24 -to CLK_i
 set_location_assignment PIN_28 -to XA_i[15]
 set_location_assignment PIN_30 -to XA_i[14]
 set_location_assignment PIN_31 -to XA_i[13]
 set_location_assignment PIN_32 -to XA_i[12]
-set_location_assignment PIN_75 -to XA_i[11]
-set_location_assignment PIN_74 -to XA_i[10]
-set_location_assignment PIN_73 -to XA_i[9]
-set_location_assignment PIN_72 -to XA_i[8]
+set_location_assignment PIN_33 -to XA_i[0]
+set_location_assignment PIN_34 -to XA_i[1]
+set_location_assignment PIN_38 -to XA_i[2]
+set_location_assignment PIN_39 -to XA_i[3]
+set_location_assignment PIN_42 -to XD_io[7]
+set_location_assignment PIN_43 -to XD_io[0]
+set_location_assignment PIN_44 -to XD_io[1]
+set_location_assignment PIN_46 -to XD_io[2]
+set_location_assignment PIN_49 -to XD_io[6]
+set_location_assignment PIN_50 -to XD_io[5]
+set_location_assignment PIN_51 -to XD_io[3]
+set_location_assignment PIN_52 -to XD_io[4]
+set_location_assignment PIN_53 -to FORCE_WAIT_o
+set_location_assignment PIN_54 -to XCK_i
+set_location_assignment PIN_55 -to XINT_i
+set_location_assignment PIN_58 -to XMREQ_i
+set_location_assignment PIN_59 -to XIORQ_i
+set_location_assignment PIN_60 -to XRD_i
+set_location_assignment PIN_64 -to XWR_i
+set_location_assignment PIN_65 -to XM1_i
+set_location_assignment PIN_66 -to XRFSH_i
+set_location_assignment PIN_67 -to FORCE_RESET_o
 set_location_assignment PIN_68 -to XA_i[7]
 set_location_assignment PIN_69 -to XA_i[6]
 set_location_assignment PIN_70 -to XA_i[5]
 set_location_assignment PIN_71 -to XA_i[4]
-set_location_assignment PIN_39 -to XA_i[3]
-set_location_assignment PIN_38 -to XA_i[2]
-set_location_assignment PIN_34 -to XA_i[1]
-set_location_assignment PIN_33 -to XA_i[0]
-set_location_assignment PIN_42 -to XD_io[7]
-set_location_assignment PIN_49 -to XD_io[6]
-set_location_assignment PIN_50 -to XD_io[5]
-set_location_assignment PIN_52 -to XD_io[4]
-set_location_assignment PIN_51 -to XD_io[3]
-set_location_assignment PIN_46 -to XD_io[2]
-set_location_assignment PIN_44 -to XD_io[1]
-set_location_assignment PIN_43 -to XD_io[0]
-set_location_assignment PIN_54 -to XCK_i
-set_location_assignment PIN_55 -to XINT_i
-set_location_assignment PIN_59 -to XIORQ_i
-set_location_assignment PIN_65 -to XM1_i
-set_location_assignment PIN_58 -to XMREQ_i
-set_location_assignment PIN_60 -to XRD_i
-set_location_assignment PIN_66 -to XRFSH_i
-set_location_assignment PIN_64 -to XWR_i
+set_location_assignment PIN_72 -to XA_i[8]
+set_location_assignment PIN_73 -to XA_i[9]
+set_location_assignment PIN_74 -to XA_i[10]
+set_location_assignment PIN_75 -to XA_i[11]
+set_location_assignment PIN_76 -to FLED_o[0]
+set_location_assignment PIN_77 -to FLED_o[1]
+set_location_assignment PIN_80 -to FLED_o[2]
+set_location_assignment PIN_83 -to RAMD_io[0]
+set_location_assignment PIN_84 -to RAMCLK_o
+set_location_assignment PIN_85 -to RAMD_io[3]
+set_location_assignment PIN_86 -to RAMD_io[2]
+set_location_assignment PIN_87 -to RAMD_io[1]
+set_location_assignment PIN_98 -to RAMNCS_o
+set_location_assignment PIN_99 -to USB_SUSPEND_o
+set_location_assignment PIN_100 -to USB_VM_i
+set_location_assignment PIN_101 -to USB_VP_i
+set_location_assignment PIN_103 -to USB_RCV_i
+set_location_assignment PIN_104 -to USB_OE_o
+set_location_assignment PIN_105 -to USB_MODE_o
+set_location_assignment PIN_106 -to USB_SPEED_o
+set_location_assignment PIN_110 -to USB_VPO_o
+set_location_assignment PIN_111 -to USB_VMO_o
+set_location_assignment PIN_112 -to USB_FLT_i
+set_location_assignment PIN_113 -to USB_PWREN_o
+set_location_assignment PIN_114 -to EXT_io[8]
+set_location_assignment PIN_115 -to EXT_io[9]
+set_location_assignment PIN_119 -to EXT_io[10]
+set_location_assignment PIN_120 -to EXT_io[11]
+set_location_assignment PIN_121 -to EXT_io[7]
+set_location_assignment PIN_124 -to EXT_io[6]
+set_location_assignment PIN_125 -to EXT_io[5]
+set_location_assignment PIN_126 -to EXT_io[4]
+set_location_assignment PIN_127 -to EXT_io[3]
+set_location_assignment PIN_128 -to EXT_io[2]
+set_location_assignment PIN_129 -to CTRL_OE_o
+set_location_assignment PIN_132 -to FORCE_ROMCS_o
+set_location_assignment PIN_133 -to EXT_io[1]
+set_location_assignment PIN_135 -to EXT_io[0]
+set_location_assignment PIN_136 -to FORCE_IORQULA_o
+set_location_assignment PIN_137 -to FORCE_NMI_o
+set_location_assignment PIN_138 -to ESP_IO26_o
+set_location_assignment PIN_141 -to ESP_IO27_o
+set_location_assignment PIN_142 -to EXT_io[12]
+set_location_assignment PIN_143 -to ESP_QWP_io
+set_location_assignment PIN_144 -to EXT_io[13]
 set_global_assignment -name CYCLONEII_RESERVE_NCEO_AFTER_CONFIGURATION "USE AS REGULAR IO"
 set_global_assignment -name RESERVE_DATA0_AFTER_CONFIGURATION "USE AS REGULAR IO"
 set_global_assignment -name RESERVE_DATA1_AFTER_CONFIGURATION "USE AS REGULAR IO"
@@ -164,46 +202,7 @@ set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to XMREQ_i
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to XM1_i
 set_global_assignment -name ENABLE_INIT_DONE_OUTPUT OFF
 set_global_assignment -name ON_CHIP_BITSTREAM_DECOMPRESSION ON
-set_location_assignment PIN_144 -to EXT_io[13]
-set_location_assignment PIN_142 -to EXT_io[12]
-
-set_location_assignment PIN_120 -to EXT_io[11]
-set_location_assignment PIN_119 -to EXT_io[10]
-set_location_assignment PIN_115 -to EXT_io[9]
-set_location_assignment PIN_114 -to EXT_io[8]
-
-set_location_assignment PIN_121 -to EXT_io[7]
-set_location_assignment PIN_124 -to EXT_io[6]
-set_location_assignment PIN_125 -to EXT_io[5]
-set_location_assignment PIN_126 -to EXT_io[4]
-set_location_assignment PIN_127 -to EXT_io[3]
-set_location_assignment PIN_128 -to EXT_io[2]
-set_location_assignment PIN_133 -to EXT_io[1]
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to EXT_io[*]
-set_location_assignment PIN_137 -to FORCE_NMI_o
-set_location_assignment PIN_76 -to FLED_o[0]
-set_location_assignment PIN_77 -to FLED_o[1]
-set_location_assignment PIN_80 -to FLED_o[2]
-set_location_assignment PIN_135 -to EXT_io[0]
-set_location_assignment PIN_136 -to FORCE_IORQULA_o
-set_location_assignment PIN_2 -to LED2_o
-set_location_assignment PIN_84 -to RAMCLK_o
-set_location_assignment PIN_83 -to RAMD_io[0]
-set_location_assignment PIN_87 -to RAMD_io[1]
-set_location_assignment PIN_86 -to RAMD_io[2]
-set_location_assignment PIN_85 -to RAMD_io[3]
-set_location_assignment PIN_98 -to RAMNCS_o
-set_location_assignment PIN_112 -to USB_FLT_i
-set_location_assignment PIN_104 -to USB_OE_o
-set_location_assignment PIN_113 -to USB_PWREN_o
-set_location_assignment PIN_105 -to USB_MODE_o
-set_location_assignment PIN_106 -to USB_SPEED_o
-set_location_assignment PIN_100 -to USB_VM_i
-set_location_assignment PIN_111 -to USB_VMO_o
-set_location_assignment PIN_101 -to USB_VP_i
-set_location_assignment PIN_110 -to USB_VPO_o
-set_location_assignment PIN_103 -to USB_RCV_i
-set_location_assignment PIN_8 -to TP4_o
 set_global_assignment -name CYCLONEIII_CONFIGURATION_SCHEME "PASSIVE SERIAL"
 #set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to RAMCLK_o
 set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to RAMNCS_o
@@ -261,7 +260,6 @@ set_global_assignment -name EDA_TEST_BENCH_FILE simulation/tests/t003.vhd -secti
 set_global_assignment -name EDA_TEST_BENCH_FILE simulation/tests/t004.vhd -section_id t006
 set_global_assignment -name EDA_TEST_BENCH_FILE simulation/tests/t005.vhd -section_id t006
 set_global_assignment -name EDA_TEST_BENCH_FILE simulation/tests/t001.vhd -section_id t006
-set_location_assignment PIN_99 -to USB_SUSPEND_o
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to RAMCLK_o
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to RAMD_IO[*]
 set_global_assignment -name VHDL_FILE swfifo.vhd
