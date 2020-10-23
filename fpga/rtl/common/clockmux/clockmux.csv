@@ -1,0 +1,18 @@
+# system info clockmux on 2020.05.14.11:05:56
+system_info:
+name,value
+DEVICE,EP4CE6E22C8
+DEVICE_FAMILY,Cyclone IV E
+GENERATION_ID,1589450756
+#
+#
+# Files generated for clockmux on 2020.05.14.11:05:56
+files:
+filepath,kind,attributes,module,is_top
+simulation/clockmux.vhd,VHDL,,clockmux,true
+simulation/submodules/clockmux_altclkctrl_0.vhd,VHDL,,clockmux_altclkctrl_0,false
+#
+# Map from instance-path to kind of module
+instances:
+instancePath,module
+clockmux.altclkctrl_0,clockmux_altclkctrl_0

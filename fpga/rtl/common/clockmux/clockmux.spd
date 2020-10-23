@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<simPackage>
+ <file
+   path="simulation/submodules/clockmux_altclkctrl_0.vhd"
+   type="VHDL"
+   library="altclkctrl_0" />
+ <file path="simulation/clockmux.vhd" type="VHDL" />
+ <topLevel name="clockmux" />
+ <deviceFamily name="cycloneive" />
+</simPackage>

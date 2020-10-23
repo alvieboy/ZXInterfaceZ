@@ -1,0 +1,12 @@
+
+WORK > DEFAULT
+DEFAULT:      ./libraries/work/        
+work:         ./libraries/work/        
+altclkctrl_0: ./libraries/altclkctrl_0/
+altera:       ./libraries/altera/      
+lpm:          ./libraries/lpm/         
+sgate:        ./libraries/sgate/       
+altera_mf:    ./libraries/altera_mf/   
+altera_lnsim: ./libraries/altera_lnsim/
+cycloneive:   ./libraries/cycloneive/  
+LIBRARY_SCAN = TRUE
