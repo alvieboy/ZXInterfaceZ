@@ -157,6 +157,26 @@ gulp.task("copy-only-gzip", () => {
         .pipe(gulp.dest("./dist/webapp-only-gzip"));
 });
 
+gulp.task("clear-files-in-spiffs", () => {
+    return gulp
+        .src("../esp32/spiffs/*")
+        .pipe(filter(["**/main.*..js.gz", "**/polyfills.*.js.gz", "**/runtime.*.js.gz", "styles.*.css.gz", "favicon.ico"]))
+        .pipe(clean({ force: true }));
+});
+
+gulp.task("copy-into-spiffs", () => {
+    return gulp
+        .src("./dist/webapp-only-gzip/*")
+        .pipe(gulp.dest("../esp32/spiffs/"));
+});
+
+exports.installIntoSpiffs = series(
+  "clear-files-in-spiffs",
+  "copy-into-spiffs"
+);
+
+exports.installIntoSpiffs.displayName = 'install-into-spiffs';
+
 /*
  ### Order of Tasks ###
  * Optimize the styles generated from ng build
