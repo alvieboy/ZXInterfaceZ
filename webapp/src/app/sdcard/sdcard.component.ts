@@ -23,7 +23,7 @@ export class SdcardComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    console.log(this.route.snapshot.queryParamMap);
+    console.log(this.route.snapshot.firstChild.url.join('/'));
   }
 }
 
