@@ -1,4 +1,5 @@
 {
+  "/req/list\\?path=:path": "/req/list/:path",
   "/req/*": "/$1",
   "/upload/*": "/$1"
 }

@@ -9,7 +9,7 @@
     "lint": "ng lint",
     "e2e": "ng e2e",
     "package": "gulp",
-    "mock-backend": "json-server req/db.json  --routes req/routes.json --no-cors=true"
+    "mock-backend": "json-server --watch req/db.json  --routes req/routes.json --no-cors=true"
   },
   "private": true,
   "dependencies": {

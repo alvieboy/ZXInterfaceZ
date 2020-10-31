@@ -17,6 +17,7 @@ import { NotfoundComponent } from './notfound/notfound.component';
 import { VersionService } from './services/version.service';
 import { DeviceService } from './services/device.service';
 import { UploadService } from './services/upload.service';
+import { SdcardService } from './services/sdcard.service';
 import { WifiService } from './services/wifi.service';
 
 @NgModule({
@@ -41,6 +42,7 @@ import { WifiService } from './services/wifi.service';
     VersionService,
     DeviceService,
     UploadService,
+    SdcardService,
     WifiService,
   ],
   bootstrap: [AppComponent]
