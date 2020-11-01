@@ -403,7 +403,8 @@ begin
 
       uladly_r <= uladly_r(ULA_HACK_DLY-2 downto 0) & rdp_dly_i;
 
-      if rdp_dly_i='1' and ulahack_i='1' and adr_i(0)='0' then
+      -- Do not allow ULA hack if we are in mode2a.
+      if rdp_dly_i='1' and (ulahack_i='1' and mode2a_i='0') and adr_i(0)='0' then
         -- ULA read. Capture ULA data
         uladata_r <= dat_i(7) & audio_i & dat_i(5) & dat_i(4 downto 0);--keyb_data_s;
         -- Start delay. Force IRQULA immediatly

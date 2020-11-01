@@ -22,8 +22,9 @@ entity zxinterface is
     A_BUS_OE_o    : out std_logic;
 
     FORCE_ROMCS_o : out std_logic;
+    FORCE_2AROMCS_o : out std_logic;
     FORCE_RESET_o : out std_logic;
-    --FORCE_INT_o   : out std_logic;
+    FORCE_INT_o   : out std_logic;
     FORCE_WAIT_o  : out std_logic;
     FORCE_NMI_o   : out std_logic;
     FORCE_IORQULA_o   : out std_logic;
@@ -1081,7 +1082,8 @@ begin
   mosi_s          <= SPI_MOSI_i;
   SPI_MISO_o      <= miso_s;
 
-  FORCE_ROMCS_o <= spect_forceromcs_bussync_s;
+  FORCE_ROMCS_o <= spect_forceromcs_bussync_s and not mode2a_s;
+  FORCE_2AROMCS_o <= spect_forceromcs_bussync_s and mode2a_s;
   FORCE_RESET_o <= spect_reset_s;
   FORCE_WAIT_o  <= wait_s;
   FORCE_NMI_o   <= nmi_r;
@@ -1097,6 +1099,7 @@ begin
   audio_l_o <= audio_left_s;
   audio_r_o <= audio_right_s;
 
+  FORCE_INT_o     <= '0';
   
 end beh;
 

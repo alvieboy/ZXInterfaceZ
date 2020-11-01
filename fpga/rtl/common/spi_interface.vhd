@@ -772,7 +772,17 @@ begin
     end if; -- rising_edge
   end process;
 
-
+  -- Force mode2a to stay ON once asserted
+  process(clk_i, arst_i)
+  begin
+    if arst_i='1' then
+      mode2a_o <= '0';
+    elsif rising_edge(clk_i) then
+      if flags_r(13)='1' then
+        mode2a_o <= '1';
+      end if;
+    end if;
+  end process;
 
   rstfifo_o             <= flags_r(0);
   rstspect_o            <= flags_r(1);
@@ -785,7 +795,7 @@ begin
 
   vidmode_o(0)          <= flags_r(11); --
   vidmode_o(1)          <= flags_r(12); --
-  mode2a_o              <= flags_r(13); --
+  --mode2a_o              <= flags_r(13); --
 
   resfifo_wr_o          <= '1' when state_r=WRRESFIFO and dat_valid_s='1' else '0';
   resfifo_write_o       <= dat_s;

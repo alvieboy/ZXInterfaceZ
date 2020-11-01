@@ -77,7 +77,7 @@ set_location_assignment PIN_3 -to ESP_NCSO_i
 set_location_assignment PIN_6 -to ESP_MISO_io
 set_location_assignment PIN_7 -to D_BUS_OE_o
 set_location_assignment PIN_8 -to TP4_o
-set_location_assignment PIN_10 -to A_BUS_OE_o
+set_location_assignment PIN_10 -to FORCE_2AROMCS_o
 set_location_assignment PIN_11 -to D_BUS_DIR_o
 set_location_assignment PIN_13 -to ESP_MOSI_io
 set_location_assignment PIN_23 -to ESP_SCK_i
@@ -98,7 +98,7 @@ set_location_assignment PIN_49 -to XD_io[6]
 set_location_assignment PIN_50 -to XD_io[5]
 set_location_assignment PIN_51 -to XD_io[3]
 set_location_assignment PIN_52 -to XD_io[4]
-set_location_assignment PIN_53 -to FORCE_WAIT_o
+set_location_assignment PIN_53 -to FORCE_INT_o
 set_location_assignment PIN_54 -to XCK_i
 set_location_assignment PIN_55 -to XINT_i
 set_location_assignment PIN_58 -to XMREQ_i
@@ -146,7 +146,7 @@ set_location_assignment PIN_125 -to EXT_io[5]
 set_location_assignment PIN_126 -to EXT_io[4]
 set_location_assignment PIN_127 -to EXT_io[3]
 set_location_assignment PIN_128 -to EXT_io[2]
-set_location_assignment PIN_129 -to CTRL_OE_o
+set_location_assignment PIN_129 -to FORCE_WAIT_o
 set_location_assignment PIN_132 -to FORCE_ROMCS_o
 set_location_assignment PIN_133 -to EXT_io[1]
 set_location_assignment PIN_135 -to EXT_io[0]
