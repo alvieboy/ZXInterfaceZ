@@ -262,6 +262,16 @@ set_global_assignment -name EDA_TEST_BENCH_FILE simulation/tests/t005.vhd -secti
 set_global_assignment -name EDA_TEST_BENCH_FILE simulation/tests/t001.vhd -section_id t006
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to RAMCLK_o
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to RAMD_IO[*]
+#set_global_assignment -name SOURCE_FILE db/interfacez.cmp.rdb
+set_global_assignment -name VHDL_FILE ../rtl/common/testuart.vhd
+set_global_assignment -name VHDL_FILE ../rtl/common/uart_rx.vhd
+set_global_assignment -name VHDL_FILE ../rtl/common/uart_mv_filter.vhd
+set_global_assignment -name VHDL_FILE ../rtl/common/tx_unit.vhd
+set_global_assignment -name VHDL_FILE ../rtl/common/uart_brgen.vhd
+set_global_assignment -name VHDL_FILE ../rtl/common/BIT/bit_out.vhd
+set_global_assignment -name VHDL_FILE ../rtl/common/BIT/bit_in.vhd
+set_global_assignment -name VHDL_FILE ../rtl/common/BIT/bit_detect.vhd
+set_global_assignment -name VHDL_FILE ../rtl/common/BIT/bit_ctrl.vhd
 set_global_assignment -name VHDL_FILE ../rtl/common/swfifo.vhd
 set_global_assignment -name VHDL_FILE ../rtl/common/spi_slave_fifo.vhd
 set_global_assignment -name VHDL_FILE ../rtl/common/command_fifo_single.vhd
@@ -343,7 +353,6 @@ set_global_assignment -name VHDL_FILE ../rtl/common/syncv.vhd
 set_global_assignment -name VHDL_FILE ../rtl/common/sync.vhd
 set_global_assignment -name VHDL_FILE ../rtl/common/zxinterface.vhd
 set_global_assignment -name VHDL_FILE ../rtl/common/busopdet.vhd
-#set_global_assignment -name SOURCE_FILE db/interfacez.cmp.rdb
 set_global_assignment -name QIP_FILE ../rtl/common/videopll.qip
 set_global_assignment -name QIP_FILE ../rtl/common/videopllreconfig.qip
 set_global_assignment -name QIP_FILE ../rtl/common/videoram.qip

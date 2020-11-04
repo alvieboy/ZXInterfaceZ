@@ -17,7 +17,9 @@ entity bfm_spectrum is
     m1_o    : out std_logic;
     rfsh_o  : out std_logic;
     ioreq_o : out std_logic;
+    int_o   : out std_logic;
     wait_i  : in  std_logic;
+    nmi_i   : in  std_logic;
     a_o     : out std_logic_vector(15 downto 0);
     d_io    : inout std_logic_vector(7 downto 0)
   );
@@ -46,7 +48,7 @@ architecture sim of bfm_spectrum is
   signal SPECT_RFSH_n          : std_logic;
   signal SPECT_A               : std_logic_vector(15 downto 0);
 
-  signal local_INT_n           : std_logic;
+  signal local_INT_n           : std_logic := '1';
   signal local_NMI_n           : std_logic;
   signal local_M1_n            : std_logic;
   signal local_MREQ_n          : std_logic;
@@ -54,13 +56,14 @@ architecture sim of bfm_spectrum is
   signal local_RD_n            : std_logic;
   signal local_WR_n            : std_logic;
   signal local_RFSH_n          : std_logic;
+  signal local_CLK             : std_logic := '1';
   signal local_A               : std_logic_vector(15 downto 0);
 
   signal device_sel           : std_logic := '1';
   signal z80_enable           : std_logic := '0';
 begin
 
-  ck_o <= clk_i;
+  SPECT_NMI_n <= to_X01(nmi_i);
 
   realz80_inst: entity work.z80_top
   port map (
@@ -87,8 +90,11 @@ begin
     rfsh_o  <= SPECT_RFSH_n   when device_sel='0' else local_RFSH_n;
     ioreq_o <= SPECT_IORQ_n   when device_sel='0' else local_IORQ_n;
     a_o     <= SPECT_A        when device_sel='0' else local_A;
+    ck_o    <= SPECT_CLK_n    when device_sel='0' else local_CLK;
 
     SPECT_CLK_n <= not clk_i when device_sel='0' else '1';
+
+    int_o   <= local_INT_n;
 
   process
   begin
@@ -119,7 +125,7 @@ begin
 
     l1: loop
       --report "Wait cmd";
-      d_io      <= (others => 'Z');
+      --d_io      <= (others => 'Z');
 
       wait on Cmd_i.Cmd;
       --report "Got cmd";
@@ -211,6 +217,26 @@ begin
           wait for 0 ps;
         when STOPZ80 =>
           z80_enable <= '0';
+          wait for 0 ps;
+
+        when SETPIN =>
+          z80_enable <= '0';
+          case Cmd_i.Pin is
+            when PIN_ADDRESS  => local_A      <= Cmd_i.Address;
+            when PIN_DATA     => d_io         <= Cmd_i.Data;
+            when PIN_CLK      => local_CLK    <= Cmd_i.Data(0);
+            when PIN_M1       => local_M1_n   <= Cmd_i.Data(0);
+            when PIN_MREQ     => local_MREQ_n <= Cmd_i.Data(0);
+            when PIN_IORQ     => local_IORQ_n <= Cmd_i.Data(0);
+            when PIN_RD       => local_RD_n   <= Cmd_i.Data(0);
+            when PIN_WR       => local_WR_n   <= Cmd_i.Data(0);
+            when PIN_INT      => local_INT_n  <= Cmd_i.Data(0);
+            when PIN_RFSH     => local_RFSH_n <= Cmd_i.Data(0);
+          end case;
+          wait for 0 ps;
+        when SAMPLEPINS =>
+          Data_o.Data <= d_io;
+          Data_o.WaitPin <= wait_i;
           wait for 0 ps;
 
         when others =>

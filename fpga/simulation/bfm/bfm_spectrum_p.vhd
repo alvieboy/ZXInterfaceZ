@@ -5,6 +5,19 @@ use work.txt_util.all;
 
 package bfm_spectrum_p is
 
+  type Pin_type is (
+    PIN_ADDRESS,
+    PIN_DATA,
+    PIN_CLK,
+		PIN_M1,
+		PIN_MREQ,
+		PIN_IORQ,
+		PIN_RD,
+		PIN_WR,
+    PIN_INT,
+		PIN_RFSH
+  );
+
   type SpectrumCmd is (
     NONE,
     WRITEIO,
@@ -13,12 +26,15 @@ package bfm_spectrum_p is
     READMEM,
     READOPCODE,
     RUNZ80,
-    STOPZ80
+    STOPZ80,
+    SETPIN,
+    SAMPLEPINS
   );
 
   type Data_Spectrum_type is record
     Busy      : boolean;
     Data      : std_logic_vector(7 downto 0);
+    WaitPin   : std_logic;
   end record;
 
   type Cmd_Spectrum_type is record
@@ -26,6 +42,7 @@ package bfm_spectrum_p is
     Refresh   : std_logic_vector(15 downto 0);
     Address   : std_logic_vector(15 downto 0);
     Data      : std_logic_vector(7 downto 0);
+    Pin       : Pin_type;
   end record;
 
   component bfm_spectrum is
@@ -50,7 +67,8 @@ package bfm_spectrum_p is
     Cmd     => NONE,
     Refresh => x"0000",
     Address => x"0000",
-    Data    => x"00"
+    Data    => x"00",
+    Pin     => PIN_ADDRESS
   );
 
   procedure SpectrumReadIO(signal Cmd: out Cmd_Spectrum_type; signal Data: in Data_Spectrum_type;
@@ -64,6 +82,17 @@ package bfm_spectrum_p is
     Address: in std_logic_vector(15 downto 0); Din: in std_logic_vector(7 downto 0));
   procedure SpectrumReadOpcode(signal Cmd: out Cmd_Spectrum_type; signal Data: in Data_Spectrum_type;
     Address: in std_logic_vector(15 downto 0); Dout: out std_logic_vector(7 downto 0));
+
+  procedure SpectrumSetAddress(signal Cmd: out Cmd_Spectrum_type; signal Data: in Data_Spectrum_type;
+    A: std_logic_vector(15 downto 0));
+
+  procedure SpectrumSetData(signal Cmd: out Cmd_Spectrum_type; signal Data: in Data_Spectrum_type;
+    D: std_logic_vector(7 downto 0));
+
+  procedure SpectrumSetPin(signal Cmd: out Cmd_Spectrum_type; signal Data: in Data_Spectrum_type;
+    Pin: Pin_type; V: std_logic);
+
+  procedure SpectrumSamplePins(signal Cmd: out Cmd_Spectrum_type; signal Data: in Data_Spectrum_type);
 
 end package;
 
@@ -125,4 +154,42 @@ package body bfm_spectrum_p is
     wait for 0 ps;
     --Dout := Data.Data;
   end procedure;
+
+  procedure SpectrumSetAddress(signal Cmd: out Cmd_Spectrum_type; signal Data: in Data_Spectrum_type; A: std_logic_vector(15 downto 0)) is
+  begin
+    Cmd.Address  <= A;
+    Cmd.Cmd      <= SETPIN;
+    Cmd.Pin      <= PIN_ADDRESS;
+    wait until Data.Busy = false;
+    Cmd.Cmd      <= NONE;
+    wait for 0 ps;
+  end procedure;
+
+  procedure SpectrumSetData(signal Cmd: out Cmd_Spectrum_type; signal Data: in Data_Spectrum_type; D: std_logic_vector(7 downto 0)) is
+  begin
+    Cmd.Data     <= D;
+    Cmd.Cmd      <= SETPIN;
+    Cmd.Pin      <= PIN_DATA;
+    wait until Data.Busy = false;
+    Cmd.Cmd      <= NONE;
+    wait for 0 ps;
+  end procedure;
+
+  procedure SpectrumSetPin(signal Cmd: out Cmd_Spectrum_type; signal Data: in Data_Spectrum_type; Pin: Pin_type; V: std_logic) is
+  begin
+    Cmd.Data(0)     <= V;
+    Cmd.Cmd      <= SETPIN;
+    Cmd.Pin      <= Pin;
+    wait until Data.Busy = false;
+    Cmd.Cmd      <= NONE;
+    wait for 0 ps;
+  end procedure;
+
+  procedure SpectrumSamplePins(signal Cmd: out Cmd_Spectrum_type; signal Data: in Data_Spectrum_type) is
+  begin
+    Cmd.Cmd      <= SAMPLEPINS;
+    wait until Data.Busy = false;
+    Cmd.Cmd      <= NONE;
+  end procedure;
+
 end package body;

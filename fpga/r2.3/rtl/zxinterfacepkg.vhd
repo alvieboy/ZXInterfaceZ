@@ -61,6 +61,26 @@ package zxinterfacepkg is
   constant SPECT_PORT_2A_SMC_REGISTER         : std_logic_vector(15 downto 0) := "00010000" & "00000001";  -- Conflicts with 128K page
   constant SPECT_PORT_2A_SMC_REGISTER_MASK    : std_logic_vector(15 downto 0) := "10000000" & "00000011";  -- AKA 1ffd port
 
+
+  type bit_to_cpu_t is record
+    bit_request   : std_logic;
+    rx_data       : std_logic_vector(7 downto 0);
+    --rx_data_valid : std_logic;
+    rx_avail_size : std_logic_vector(1 downto 0);
+    rx_avail      : std_logic;
+    tx_busy       : std_logic;
+    bit_data      : std_logic_vector(31 downto 0);
+  end record;
+
+  type bit_from_cpu_t is record
+    bit_enable    : std_logic;
+    tx_data       : std_logic_vector(7 downto 0);
+    tx_data_valid : std_logic;
+    rx_read       : std_logic;
+    bit_data      : std_logic_vector(31 downto 0);
+  end record;
+
+
 end package;
 
 --package body zxinterfacepkg is

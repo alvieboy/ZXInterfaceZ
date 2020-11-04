@@ -14,6 +14,7 @@ package bfm_ctrlpins_p is
     IO27      : std_logic;
     RESET     : std_logic;
     ROMCS     : std_logic;
+    ROMCS2A   : std_logic;
     NMI       : std_logic;
     IORQULA   : std_logic;
     USB_INTn  : std_logic;
@@ -36,6 +37,7 @@ package bfm_ctrlpins_p is
       IO27_i          : in std_logic;
       FORCE_RESET_i   : in std_logic;
       FORCE_ROMCS_i   : in std_logic;
+      FORCE_ROMCS2A_i : in std_logic;
       fORCE_NMI_i     : in std_logic;
       FORCE_IORQULA_i : in std_logic
     );

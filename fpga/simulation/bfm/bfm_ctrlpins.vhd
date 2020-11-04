@@ -14,6 +14,7 @@ entity bfm_ctrlpins is
       USB_INTn_i      : in std_logic;
       FORCE_RESET_i   : in std_logic;
       FORCE_ROMCS_i   : in std_logic;
+      FORCE_ROMCS2A_i : in std_logic;
       fORCE_NMI_i     : in std_logic;
       FORCE_IORQULA_i : in std_logic
     );
@@ -28,6 +29,7 @@ begin
   Data_o.USB_INTn <= USB_INTn_i;
   Data_o.RESET    <= FORCE_RESET_i;
   Data_o.ROMCS    <= FORCE_ROMCS_i;
+  Data_o.ROMCS2A    <= FORCE_ROMCS2A_i;
   Data_o.NMI      <= FORCE_NMI_i;
   Data_o.IORQULA  <= FORCE_IORQULA_i;
 

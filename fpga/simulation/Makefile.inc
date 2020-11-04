@@ -13,6 +13,8 @@ tests/t013.vhd                              \
 tests/t010.vhd                              \
 tests/t007.vhd                              \
 tests/t003.vhd                              \
+tests/t015.vhd                              \
+tests/t016.vhd                              \
 bfm/bfm_usbdevice_p.vhd                     \
 bfm/bfm_qspiram.vhd                         \
 bfm/bfm_audiocap.vhd                        \
@@ -65,8 +67,6 @@ tbc_device_e.vhd                            \
 videoram_sim.vhd                            \
 tb_tap_player.vhd                           \
 usbxcvr_sim.vhd                             \
-
-LOCALSIMFILES=
 
 DESIGNFILES=                                           \
 usb/usb1_crc16.vhd                                  \

@@ -43,7 +43,8 @@ architecture sim of tb_top is
     Ula_Data        : in Data_Ula_type;
     Audiocap_Data   : in Data_Audiocap_type;
     Usbdevice_Data  : in Data_Usbdevice_type;
-    QSPIRam0_Data   : in Data_QSPIRam_type
+    QSPIRam0_Data   : in Data_QSPIRam_type;
+    EXT_io          : inout std_logic_vector(13 downto 0)
   );
   end component;
 
@@ -69,10 +70,10 @@ architecture sim of tb_top is
   signal Usbdevice_Data_s : Data_Usbdevice_type;
   signal QSPIRam0_Data_s  : Data_QSPIRam_type;
 
-  SIGNAL A_BUS_OE_s : STD_LOGIC;
+  --SIGNAL A_BUS_OE_s : STD_LOGIC;
   SIGNAL ASDO_s: STD_LOGIC;
   SIGNAL CLK_s : STD_LOGIC;
-  SIGNAL CTRL_OE_s : STD_LOGIC;
+ -- SIGNAL CTRL_OE_s : STD_LOGIC;
   SIGNAL D_BUS_DIR_s : STD_LOGIC;
   SIGNAL D_BUS_OE_s : STD_LOGIC;
   SIGNAL DATA0_s : STD_LOGIC;
@@ -91,6 +92,7 @@ architecture sim of tb_top is
   SIGNAL FORCE_WAIT_s : STD_LOGIC;
   SIGNAL FORCE_RESET_s : STD_LOGIC;
   SIGNAL FORCE_ROMCS_s : STD_LOGIC;
+  SIGNAL FORCE_ROMCS2A_s : STD_LOGIC;
   SIGNAL FORCE_NMI_s : STD_LOGIC;
   SIGNAL FORCE_IORQULA_s : STD_LOGIC;
   SIGNAL NCSO_o : STD_LOGIC;
@@ -142,6 +144,7 @@ architecture sim of tb_top is
   signal audio_s      : std_logic;
   signal USB_dm_s     : std_logic;
   signal USB_dp_s     : std_logic;
+  signal NMI_s        : std_logic;
 
 begin
 
@@ -166,7 +169,8 @@ begin
       Ula_Data        => Ula_Data_s,
       Audiocap_Data   => Audiocap_Data_s,
       Usbdevice_Data  => Usbdevice_Data_s,
-      QSPIRam0_Data   => QSPIRam0_Data_s
+      QSPIRam0_Data   => QSPIRam0_Data_s,
+      EXT_io          => EXT_s
     );
 
   sysclk_inst: entity work.bfm_clock
@@ -207,7 +211,9 @@ begin
       d_io    => XD_io,
       m1_o    => XM1_s,
       wait_i  => WAIT_s,
-      rfsh_o  => XRFSH_s
+      rfsh_o  => XRFSH_s,
+      int_o   => XINT_s,
+      nmi_i   => NMI_s
     );
 
   ula_inst: entity work.bfm_ula
@@ -232,6 +238,7 @@ begin
       IO27_i        => ESP_IO27_s,
       FORCE_RESET_i => FORCE_RESET_s,
       FORCE_ROMCS_i => FORCE_ROMCS_s,
+      FORCE_ROMCS2A_i => FORCE_ROMCS2A_s,
       FORCE_NMI_i   => FORCE_NMI_s,
       FORCE_IORQULA_i => FORCE_IORQULA_s
 
@@ -287,12 +294,14 @@ begin
   --      D_io            => RAMD_s(7 downto 4)
   --  );
 
+  FORCE_ROMCS2A_s <= FORCE_ROMCS_s;
+
   DUT: entity work.interfacez_top
 	PORT MAP (
     -- list connections between master ports and signals
-    A_BUS_OE_o => A_BUS_OE_s,
+    --A_BUS_OE_o => A_BUS_OE_s,
     CLK_i => CLK_s,
-    CTRL_OE_o => CTRL_OE_s,
+    --CTRL_OE_o => CTRL_OE_s,
     D_BUS_DIR_o => D_BUS_DIR_s,
     D_BUS_OE_o => D_BUS_OE_s,
     ESP_IO26_o => ESP_IO26_s,
@@ -303,10 +312,11 @@ begin
     ESP_QHD_io => ESP_QHD_io,
     ESP_QWP_io => ESP_QWP_s,
     ESP_SCK_i => ESP_SCK_s,
-    --FORCE_INT_o => FORCE_INT_s,
+    FORCE_INT_o => FORCE_INT_s,
     FORCE_WAIT_o => FORCE_WAIT_s,
     FORCE_RESET_o => FORCE_RESET_s,
     FORCE_ROMCS_o => FORCE_ROMCS_s,
+    --FORCE_ROMCS2A_o => FORCE_ROMCS2A_s,
     FORCE_NMI_o   => FORCE_NMI_s,
     FORCE_IORQULA_o => FORCE_IORQULA_s,
 
@@ -342,6 +352,7 @@ begin
     XWR_i => XWR_s
 	);
 
-  WAIT_s <= '0' when FORCE_WAIT_s='1' else '1';
-  
+  WAIT_s <= '0' when FORCE_WAIT_s='1' else 'H';
+  NMI_s <= '0' when FORCE_NMI_s='1' else 'H';
+
 end sim;

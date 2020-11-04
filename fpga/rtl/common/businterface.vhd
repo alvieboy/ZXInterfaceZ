@@ -8,6 +8,7 @@ entity businterface is
   port (
     clk_i         : in std_logic;
     arst_i        : in std_logic;
+    bit_i         : in std_logic; -- BIT mode for OE control
 
     -- ZX Spectrum address bus
     XA_i          : in std_logic_vector(15 downto 0);
@@ -38,7 +39,7 @@ entity businterface is
     d_o           : out std_logic_vector(7 downto 0);  -- Data from spectrum
     d_unlatched_o : out std_logic_vector(7 downto 0);  -- Data from spectrum (unlatched)
     a_o           : out std_logic_vector(15 downto 0);  -- Address from spectrum
-
+    a_unlatched_o : out std_logic_vector(15 downto 0);  -- Address from spectrum (unlatched)
     -- Resynchronized signals from ZX Spectrum
     XCK_sync_o         : out std_logic;
     XINT_sync_o        : out std_logic;
@@ -144,6 +145,9 @@ begin
   wr_sync: entity work.sync generic map (RESET => '1')
     port map ( clk_i => clk_i, arst_i => arst_i, din_i => XWR_i, dout_o => XWR_sync_s );
 
+  rfsh_sync: entity work.sync generic map (RESET => '1')
+    port map ( clk_i => clk_i, arst_i => arst_i, din_i => XRFSH_i, dout_o => XRFSH_sync_s );
+
   a_sync: entity work.syncv generic map (RESET => '0', WIDTH => 16)
     port map ( clk_i => clk_i, arst_i => arst_i, din_i => XA_i, dout_o => XA_sync_s );
 
@@ -242,7 +246,18 @@ begin
   XD_io         <= (others =>'Z') when dbus_oe_s='0' or dbus_oe_q_r='0' else d_i;
   D_BUS_DIR_o   <= '1' when dbus_oe_s='0' else '0';
 
-  dbus_oe_s     <= '0' when rd_dly_s='0' or oe_i='0' else '1';
+  process(rd_dly_s, oe_i, bit_i)
+  begin
+    if bit_i='0' then
+      if rd_dly_s='0' or oe_i='0' then
+        dbus_oe_s <= '0';
+      else
+        dbus_oe_s <= '1';
+      end if;
+    else
+      dbus_oe_s <= oe_i;
+    end if;
+  end process;
 
   process(arst_i, clk_i)
   begin
@@ -289,6 +304,7 @@ begin
         d_r <= XD_sync_s;
       end if;
       d_unlatched_o <= XD_sync_s;
+      a_unlatched_o <= XA_sync_s;
     end if;
   end process;
 

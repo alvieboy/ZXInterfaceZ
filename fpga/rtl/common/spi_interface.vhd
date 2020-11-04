@@ -18,6 +18,10 @@ entity spi_interface is
 
     pc_i                  : in std_logic_vector(15 downto 0);
 
+
+    bit_to_cpu_i          : in bit_to_cpu_t;
+    bit_from_cpu_o        : out bit_from_cpu_t;
+
     vidmem_en_o           : out std_logic;
     vidmem_adr_o          : out std_logic_vector(12 downto 0);
     vidmem_data_i         : in std_logic_vector(7 downto 0);
@@ -102,6 +106,7 @@ entity spi_interface is
     ay_en_reads_o         : out std_logic;
     -- Volume settings
     volume_o              : out std_logic_vector(63 downto 0);
+    audio_enable_o        : out std_logic;
     memromsel_o           : out std_logic_vector(2 downto 0);
     memsel_we_o           : out std_logic;
     romsel_we_o           : out std_logic
@@ -162,7 +167,10 @@ architecture beh of spi_interface is
     GENERICADDR1,
     GENERICADDR2,
     GENERICREADDATA,
-    GENERICWRITEDATA
+    GENERICWRITEDATA,
+    WRUART,
+    BITWRITE,
+    BITREAD
   );
 
   signal state_r      : state_type;
@@ -212,7 +220,28 @@ architecture beh of spi_interface is
   signal csn_s        : std_logic;
   signal vidmem_en_r  : std_logic;
   signal vidmem_data_r: std_logic_vector(7 downto 0);
+
+  signal bit_index_r  : natural range 0 to 7;
+  signal bit_we_s     : std_logic;
+  signal bit_data_s   : std_logic_vector(7 downto 0);
+
 begin
+
+  -- TODO: move this outside SPI
+
+  bit_ctrl_inst: entity work.bit_ctrl
+    port map (
+      clk_i         => clk_i,
+      arst_i        => arst_i,
+      bit_enable_i  => flags_r(14),
+      bit_data_i    => bit_to_cpu_i.bit_data,
+      bit_data_o    => bit_from_cpu_o.bit_data,
+      bit_we_i      => bit_we_s,
+      bit_index_i   => bit_index_r,
+      bit_din_i     => dat_s,
+      bit_dout_o    => bit_data_s
+    );
+
 
   vidmem_adr_o <= std_logic_vector(vid_addr_r);
   frameend_o <= frame_end_r;
@@ -313,6 +342,7 @@ begin
       cmdfifo_read_issued_r <= '0';
 
       memromsel_r   <= (others => 'X');
+      bit_index_r   <= 0;
 
     elsif rising_edge(clk_i) then
 
@@ -332,9 +362,37 @@ begin
         --capmem_adr_r <= (others => '0');
 
         case dat_s is
+          when x"DA" => -- Read Test UART status
+            txload_s  <= '1';
+            txdat_s   <= "0000" & bit_to_cpu_i.rx_avail_size & bit_to_cpu_i.rx_avail &
+              bit_to_cpu_i.tx_busy;
+            state_r   <= UNKNOWN;
+
+          when x"D8" => -- Write UART data
+            txload_s  <= '1';
+            txdat_s   <= "00000000";
+            state_r   <= WRUART;
+
+          when x"D9" => -- Read UART data
+            txload_s  <= '1';
+            txdat_s   <= bit_to_cpu_i.rx_data;
+            state_r   <= UNKNOWN;
+
+          when x"D7" => -- Read BIT
+            txload_s  <= '1';
+            txdat_s   <= bit_data_s;
+            bit_index_r <= bit_index_r + 1;
+            state_r   <= BITREAD;
+
+          when x"D6" => -- Write BIT
+            txload_s  <= '1';
+            txdat_s   <= bit_data_s;
+            --bit_index_r <= bit_index_r + 1;
+            state_r   <= BITWRITE;
+
           when x"DE" => -- Read status
             txload_s  <= '1';
-            txdat_s   <= "00" & cmdfifo_empty_i & resfifo_full_i & '0';--fifo_empty_i;
+            txdat_s   <= bit_to_cpu_i.bit_request & '0' & cmdfifo_empty_i & resfifo_full_i & '0';--fifo_empty_i;
             state_r   <= READSTATUS;
 
           when x"DF" => -- Read video memory
@@ -473,6 +531,15 @@ begin
       -- Non command data
       case state_r is
         when IDLE =>
+
+        when BITREAD | BITWRITE =>
+          txload_s  <= dat_valid_s;
+          txdat_s   <= bit_data_s;
+          if dat_valid_s='1' then
+            if bit_index_r/=3 then
+              bit_index_r <= bit_index_r + 1;
+            end if;
+          end if;
 
         when RDPC1 =>
 
@@ -744,6 +811,9 @@ begin
               txdat_s   <= capture_dat_i;
           end case;
 
+        when WRUART =>
+
+
         when UNKNOWN =>
           -- Leave TXDEN.
 
@@ -796,6 +866,8 @@ begin
   vidmode_o(0)          <= flags_r(11); --
   vidmode_o(1)          <= flags_r(12); --
   --mode2a_o              <= flags_r(13); --
+  bit_from_cpu_o.bit_enable <= flags_r(14); -- BIT enabled
+  audio_enable_o        <= flags_r(15);
 
   resfifo_wr_o          <= '1' when state_r=WRRESFIFO and dat_valid_s='1' else '0';
   resfifo_write_o       <= dat_s;
@@ -803,6 +875,10 @@ begin
   tapfifo_wr_o          <= '1' when state_r=WRTAPFIFO and dat_valid_s='1' else '0';
   tapfifo_write_o       <= tapcmd_r & dat_s;
   usb_rd_o              <= usb_rd_r;
+
+  bit_from_cpu_o.tx_data_valid <= '1' when state_r=WRUART and dat_valid_s='1' else '0';
+  bit_from_cpu_o.tx_data  <= dat_s;
+  bit_we_s              <= '1' when state_r=BITWRITE and dat_valid_s='1' else '0';
 
   usb_wr_o              <= '1' when state_r=GENERICWRITEDATA and dat_valid_s='1' and generic_access_r=GENERIC_USB else '0';
   capture_wr_o          <= '1' when state_r=GENERICWRITEDATA and dat_valid_s='1' and generic_access_r=GENERIC_CAPTURE else '0';

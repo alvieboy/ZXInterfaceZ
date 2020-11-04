@@ -110,3 +110,19 @@ configuration t014 of tb_top is
         end for;
     end for;
 end t014;
+
+configuration t015 of tb_top is
+    for sim
+        for tbc: tbc_device
+            use entity work.tbc_device(t015);
+        end for;
+    end for;
+end t015;
+
+configuration t016 of tb_top is
+    for sim
+        for tbc: tbc_device
+            use entity work.tbc_device(t016);
+        end for;
+    end for;
+end t016;

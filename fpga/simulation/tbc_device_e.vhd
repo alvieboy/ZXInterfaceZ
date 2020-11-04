@@ -39,6 +39,8 @@ entity tbc_device is
     Ula_Data        : in Data_Ula_type;
     Audiocap_Data   : in Data_Audiocap_type;
     Usbdevice_Data  : in Data_Usbdevice_type;
-    QSPIRam0_Data   : in Data_QSPIRam_type
+    QSPIRam0_Data   : in Data_QSPIRam_type;
+    -- Ext, direct access
+    EXT_io          : inout std_logic_vector(13 downto 0)
   );
 end tbc_device;

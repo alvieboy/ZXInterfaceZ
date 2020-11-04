@@ -43,7 +43,8 @@ architecture sim of tb_top is
     Ula_Data        : in Data_Ula_type;
     Audiocap_Data   : in Data_Audiocap_type;
     Usbdevice_Data  : in Data_Usbdevice_type;
-    QSPIRam0_Data   : in Data_QSPIRam_type
+    QSPIRam0_Data   : in Data_QSPIRam_type;
+    EXT_io          : inout std_logic_vector(13 downto 0)
   );
   end component;
 
@@ -142,6 +143,7 @@ architecture sim of tb_top is
   signal audio_s      : std_logic;
   signal USB_dm_s     : std_logic;
   signal USB_dp_s     : std_logic;
+  signal NMI_s        : std_logic;
 
 begin
 
@@ -166,7 +168,8 @@ begin
       Ula_Data        => Ula_Data_s,
       Audiocap_Data   => Audiocap_Data_s,
       Usbdevice_Data  => Usbdevice_Data_s,
-      QSPIRam0_Data   => QSPIRam0_Data_s
+      QSPIRam0_Data   => QSPIRam0_Data_s,
+      EXT_io          => EXT_s
     );
 
   sysclk_inst: entity work.bfm_clock
@@ -207,7 +210,9 @@ begin
       d_io    => XD_io,
       m1_o    => XM1_s,
       wait_i  => WAIT_s,
-      rfsh_o  => XRFSH_s
+      rfsh_o  => XRFSH_s,
+      int_o   => XINT_s,
+      nmi_i   => NMI_s
     );
 
   ula_inst: entity work.bfm_ula
@@ -232,6 +237,7 @@ begin
       IO27_i        => ESP_IO27_s,
       FORCE_RESET_i => FORCE_RESET_s,
       FORCE_ROMCS_i => FORCE_ROMCS_s,
+      FORCE_ROMCS2A_i => FORCE_ROMCS2A_s,
       FORCE_NMI_i   => FORCE_NMI_s,
       FORCE_IORQULA_i => FORCE_IORQULA_s
 
@@ -286,6 +292,8 @@ begin
   --      CSn_i           => RAMNCS_s,
   --      D_io            => RAMD_s(7 downto 4)
   --  );
+
+  FORCE_ROMCS2A_s <= FORCE_ROMCS_s;
 
   DUT: entity work.interfacez_top
 	PORT MAP (
@@ -342,6 +350,7 @@ begin
     XWR_i => XWR_s
 	);
 
-  WAIT_s <= '0' when FORCE_WAIT_s='1' else '1';
-  
+  WAIT_s <= '0' when FORCE_WAIT_s='1' else 'H';
+  NMI_s <= '0' when FORCE_NMI_s='1' else 'H';
+
 end sim;

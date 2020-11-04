@@ -55,6 +55,7 @@ entity zxinterface is
     TP5           : out std_logic;
     TP4           : out std_logic;
     dbg_o         : out std_logic_vector(15 downto 0);
+    bit_i         : in std_logic;
     --
 
     -- USB PHY
@@ -90,8 +91,12 @@ entity zxinterface is
     grb_o         : out std_logic_vector(2 downto 0);
     -- Audio
     audio_l_o     : out std_logic;
-    audio_r_o     : out std_logic
-
+    audio_r_o     : out std_logic;
+    audio_enable_o: out std_logic;
+    -- Test UART
+    testuart_tx_o : out std_logic;
+    testuart_rx_i : in std_logic;
+    bit_o         : out bit_from_cpu_t
   );
 
 end entity zxinterface;
@@ -148,11 +153,14 @@ architecture beh of zxinterface is
   signal bus_idle_s             : std_logic;
 
   signal a_s                    : std_logic_vector(15 downto 0); -- Latched address
+  signal a_unlatched_s          : std_logic_vector(15 downto 0); -- Un-Latched address
   signal d_s                    : std_logic_vector(7 downto 0); -- Latched data (read). Read accesses from CPU
   signal d_unlatched_s          : std_logic_vector(7 downto 0); -- Un-latched data (read). Read accesses from CPU
 
   signal data_o_s               : std_logic_vector(7 downto 0); -- Data to Spectrum, multiplexed
   signal data_o_valid_s         : std_logic;
+  signal data_o_postbit_s       : std_logic_vector(7 downto 0); -- Data to Spectrum, post-BIT
+  signal data_o_postbit_valid_s : std_logic;
 
   signal io_rd_p_s              : std_logic; -- IO read pulse
   signal io_wr_p_s              : std_logic; -- IO write pulse
@@ -340,6 +348,13 @@ architecture beh of zxinterface is
     return x"00" & vol;
   end function;
 
+  signal bit_to_cpu_s           : bit_to_cpu_t;
+  signal bit_from_cpu_s         : bit_from_cpu_t;
+
+  signal testuart_rx_empty      : std_logic;
+  signal bit_control_in_s       : std_logic_vector(7 downto 0);
+  signal force_iorqula_s        : std_logic;
+
 begin
 
   rst48_inst: entity work.rstgen
@@ -387,6 +402,7 @@ begin
     port map (
       clk_i         => clk_i,
       arst_i        => arst_i,
+      bit_i         => bit_from_cpu_s.bit_enable,
       XA_i          => XA_i,
       XD_io         => XD_io,
       XCK_i         => XCK_i,
@@ -403,12 +419,13 @@ begin
       CTRL_OE_o     => CTRL_OE_o,
       A_BUS_OE_o    => A_BUS_OE_o,
   
-      d_i           => data_o_s,
-      oe_i          => data_o_valid_s,
+      d_i           => data_o_postbit_s,
+      oe_i          => data_o_postbit_valid_s,
   
       d_o           => d_s,
       d_unlatched_o => d_unlatched_s,
       a_o           => a_s,
+      a_unlatched_o => a_unlatched_s,
   
       io_rd_p_o     => io_rd_p_s,
       io_rd_p_dly_o => io_rd_p_dly_s,
@@ -440,6 +457,28 @@ begin
   rom_enable_s  <= mem_active_s and not (a_s(15) or a_s(14));
 
 
+  -- BIT
+  bit_a:    entity work.bit_in generic map ( WIDTH=>16, START=>0 )
+              port map ( clk_i=>clk_i, data_i=>a_unlatched_s, bit_to_cpu_o => bit_to_cpu_s);
+  bit_d:    entity work.bit_in generic map ( WIDTH=>8, START=>16 )
+              port map ( clk_i=>clk_i, data_i=>d_unlatched_s, bit_to_cpu_o => bit_to_cpu_s);
+
+  bit_control_in_s <= XCK_sync_s & XRFSH_sync_s & XM1_sync_s & XWR_sync_s & XRD_sync_s & XIORQ_sync_s &
+    XMREQ_sync_s & XINT_sync_s;
+
+  bit_c:    entity work.bit_in generic map ( WIDTH=>8, START=>24 )
+              port map ( clk_i=>clk_i, data_i=>bit_control_in_s, bit_to_cpu_o => bit_to_cpu_s);
+
+  -- BIT output
+
+  bit_do:   entity work.bit_out generic map ( WIDTH=>8, START=>0)
+              port map ( data_i => data_o_s, data_o => data_o_postbit_s, bit_from_cpu_i => bit_from_cpu_s );
+
+  bit_doe:  entity work.bit_out generic map ( WIDTH=>1, START=>8)
+              port map ( data_i(0) => data_o_valid_s, data_o(0) => data_o_postbit_valid_s, bit_from_cpu_i => bit_from_cpu_s );
+
+
+
   io_inst: entity work.interfacez_io
     port map (
       clk_i           => clk_i,
@@ -453,7 +492,7 @@ begin
       dat_i           => d_unlatched_s,
       dat_o           => iodata_s,
       enable_o        => io_enable_s,
-      forceiorqula_o  => FORCE_IORQULA_o,
+      forceiorqula_o  => force_iorqula_s,
       nmireason_i     => nmireason_s,
       keyb_trigger_o  => keyb_trigger_s,
       audio_i         => tap_audio_s,
@@ -595,6 +634,7 @@ begin
   );
 
 
+  bit_to_cpu_s.bit_request <= bit_i;
 
 
   qspi_inst: entity work.spi_interface
@@ -608,6 +648,8 @@ begin
 
     pc_i          => pc_r,
     nmireason_o   => nmireason_s,
+    bit_to_cpu_i  => bit_to_cpu_s,
+    bit_from_cpu_o=> bit_from_cpu_s,
 
     vidmem_en_o   => vidmem_en_s,
     vidmem_adr_o  => vidmem_adr_s,
@@ -682,6 +724,7 @@ begin
     ay_en_o               => ay_en_s,
     ay_en_reads_o         => ay_en_reads_s,
     volume_o              => volume_s,
+    audio_enable_o        => audio_enable_o,
     memromsel_o           => memromsel_s,
     memsel_we_o           => memsel_we_s,
     romsel_we_o           => romsel_we_s
@@ -1079,14 +1122,63 @@ begin
 --  );
 
 
+
+  testuart_inst: entity work.testuart
+  port map (
+    clk_i           => clk_i,
+    arst_i          => arst_i,
+    rx_i            => testuart_rx_i,
+    tx_o            => testuart_tx_o,
+    -- RX fifo access
+    fifo_used_o     => bit_to_cpu_s.rx_avail_size,
+    fifo_empty_o    => testuart_rx_empty,
+    fifo_rd_i       => bit_from_cpu_s.rx_read,
+    fifo_data_o     => bit_to_cpu_s.rx_data,
+    -- TX fifo
+    uart_tx_en_i    => bit_from_cpu_s.tx_data_valid,
+    uart_tx_data_i  => bit_from_cpu_s.tx_data,
+    uart_tx_busy_o  => bit_to_cpu_s.tx_busy
+  );
+
+  bit_to_cpu_s.rx_avail <= not testuart_rx_empty;
+
+
   mosi_s          <= SPI_MOSI_i;
   SPI_MISO_o      <= miso_s;
 
-  FORCE_ROMCS_o <= spect_forceromcs_bussync_s and not mode2a_s;
-  FORCE_2AROMCS_o <= spect_forceromcs_bussync_s and mode2a_s;
-  FORCE_RESET_o <= spect_reset_s;
-  FORCE_WAIT_o  <= wait_s;
-  FORCE_NMI_o   <= nmi_r;
+  force_block: block
+    signal force_romcs_s    : std_logic;
+    signal force_2aromcs_s  : std_logic;
+  begin
+
+    force_romcs_s   <= spect_forceromcs_bussync_s and not mode2a_s;
+    force_2aromcs_s <= spect_forceromcs_bussync_s and mode2a_s;
+
+    bit_int: entity work.bit_out generic map ( WIDTH=>1, START=>9)
+              port map ( data_i(0) => '0', data_o(0) => FORCE_INT_o, bit_from_cpu_i => bit_from_cpu_s );
+
+    bit_nmi: entity work.bit_out generic map ( WIDTH=>1, START=>10)
+              port map ( data_i(0) => nmi_r, data_o(0) => FORCE_NMI_o, bit_from_cpu_i => bit_from_cpu_s );
+
+    bit_wait: entity work.bit_out generic map ( WIDTH=>1, START=>11)
+              port map ( data_i(0) => wait_s, data_o(0) => FORCE_WAIT_o, bit_from_cpu_i => bit_from_cpu_s );
+
+    bit_romcs: entity work.bit_out generic map ( WIDTH=>1, START=>12)
+              port map ( data_i(0) => force_romcs_s, data_o(0) => FORCE_ROMCS_o, bit_from_cpu_i => bit_from_cpu_s );
+
+    bit_2aromcs: entity work.bit_out generic map ( WIDTH=>1, START=>13)
+              port map ( data_i(0) => force_2aromcs_s, data_o(0) => FORCE_2AROMCS_o, bit_from_cpu_i => bit_from_cpu_s );
+
+    bit_iorqula: entity work.bit_out generic map ( WIDTH=>1, START=>14)
+              port map ( data_i(0) => force_iorqula_s, data_o(0) => FORCE_IORQULA_o, bit_from_cpu_i => bit_from_cpu_s );
+
+    bit_rst: entity work.bit_out generic map ( WIDTH=>1, START=>15)
+              port map ( data_i(0) => spect_reset_s, data_o(0) => FORCE_RESET_o, bit_from_cpu_i => bit_from_cpu_s );
+
+   bit_o <= bit_from_cpu_s;
+
+  end block;
+
 
   TP5 <= tap_audio_s;
 
@@ -1099,7 +1191,6 @@ begin
   audio_l_o <= audio_left_s;
   audio_r_o <= audio_right_s;
 
-  FORCE_INT_o     <= '0';
   
 end beh;
 

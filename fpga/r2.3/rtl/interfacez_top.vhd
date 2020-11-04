@@ -118,6 +118,7 @@ architecture str of interfacez_top is
   signal audio_l_s  : std_logic;
 
   signal dbg_s      : std_logic_vector(15 downto 0);
+  signal bit_s      : std_logic; -- BIT mode
 
   alias EXT_VGA_HSYNC   : std_logic is EXT_io(0);
   alias EXT_VGA_VSYNC   : std_logic is EXT_io(1);
@@ -131,6 +132,13 @@ architecture str of interfacez_top is
   alias EXT_VGA_RED2    : std_logic is EXT_io(9);
   alias EXT_VGA_GREEN2  : std_logic is EXT_io(10);
 
+  signal testuart_rx_s  : std_logic;
+  signal testuart_tx_s  : std_logic;
+  --signal audio_l_sel_s  : std_logic;
+  --signal audio_r_sel_s  : std_logic;
+  signal audio_enable_s : std_logic;
+  signal bit_from_cpu_s : bit_from_cpu_t;
+  signal led_s          : std_logic_vector(3 downto 0);
 begin
 
   rstgen_inst: entity work.rstgen
@@ -213,6 +221,8 @@ begin
       -- Debug
       TP4           => TP4_o,
       dbg_o         => dbg_s,
+      -- BIT mode
+      bit_i         => bit_s,
       -- Interrupts
 
       spec_int_o    => ESP_IO26_o,
@@ -223,7 +233,12 @@ begin
       bright_o      => bright_s,
       grb_o         => grb_s,
       audio_l_o     => audio_l_s,
-      audio_r_o     => audio_r_s
+      audio_r_o     => audio_r_s,
+      audio_enable_o=> audio_enable_s,
+      -- TEST uart
+      testuart_tx_o => testuart_tx_s,
+      testuart_rx_i => testuart_rx_s,
+      bit_o         => bit_from_cpu_s
     );
 
   FORCE_ROMCS_o <= FORCE_ROMCS_s;
@@ -251,8 +266,23 @@ begin
     EXT_io(7 downto 0)     <= dbg_s(7 downto 0);
   end generate;
 
-  EXT_io(11) <= audio_l_s;
-  EXT_io(12) <= audio_r_s;
+  process(audio_enable_s, bit_s, audio_l_s, audio_r_s)
+  begin
+    if bit_s='1' then
+      EXT_io(11) <= 'Z';
+      EXT_io(12) <= testuart_tx_s;
+    else
+      if audio_enable_s='1' then
+        EXT_io(11) <= audio_l_s;
+        EXT_io(12) <= audio_r_s;
+      else
+        EXT_io(11) <= 'Z';
+        EXT_io(12) <= 'Z';
+      end if;
+    end if;
+  end process;
+
+  testuart_rx_s <= EXT_io(11);
 
   EXT_io(13) <= 'Z';
 
@@ -264,10 +294,23 @@ begin
 
   ESP_IO27_o     <= spec_nreq_s;
 
-  FLED_o(0)     <= dbg_s(8);
-  FLED_o(1)     <= not FORCE_IORQULA_s;
-  FLED_o(2)     <= not FORCE_ROMCS_s;
-  LED2_o        <= '1';
+  bit_l0: entity work.bit_out generic map ( WIDTH=>1, START=>17)
+              port map ( data_i(0) => dbg_s(8)       , data_o(0) => led_s(0), bit_from_cpu_i => bit_from_cpu_s );
+
+  bit_l1: entity work.bit_out generic map ( WIDTH=>1, START=>18)
+              port map ( data_i(0) => FORCE_IORQULA_s, data_o(0) => led_s(1), bit_from_cpu_i => bit_from_cpu_s );
+
+  bit_l2: entity work.bit_out generic map ( WIDTH=>1, START=>19)
+              port map ( data_i(0) => FORCE_ROMCS_s  , data_o(0) => led_s(2), bit_from_cpu_i => bit_from_cpu_s );
+
+  bit_l3: entity work.bit_out generic map ( WIDTH=>1, START=>19)
+              port map ( data_i(0) => '0',             data_o(0) => led_s(3), bit_from_cpu_i => bit_from_cpu_s );
+
+
+  FLED_o(0)     <= not led_s(0);
+  FLED_o(1)     <= not led_s(1);--not FORCE_IORQULA_s;
+  FLED_o(2)     <= not led_s(2);--not FORCE_ROMCS_s;
+  LED2_o        <= not led_s(3); --'1';
 
   -- The delays are only used for simulation
   ram_buf: entity work.iobuf
@@ -295,6 +338,15 @@ begin
     i_i(1)    => RAMNCS_s,
     pad_o(0)  => RAMCLK_o,
     pad_o(1)  => RAMNCS_o
+  );
+
+  -- BIT
+  bit_det: entity work.bit_detect
+  port map (
+    clk_i       => sysclk_s,
+    arst_i      => sysrst_s,
+    det_i       => EXT_io(13),
+    bit_o       => bit_s
   );
 
 
