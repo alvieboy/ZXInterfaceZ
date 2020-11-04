@@ -40,6 +40,7 @@
 #include "memlayout.h"
 #include "adc.h"
 #include "board.h"
+#include "bit.h"
 
 static int8_t videomode = 0;
 
@@ -241,9 +242,30 @@ void app_main()
             vTaskDelay(100 / portTICK_RATE_MS);
             led__set(LED1, 0);
             vTaskDelay(100 / portTICK_RATE_MS);
-
         }
     }
+    if (fpga__isBITmode()) {
+        bit__run();
+    }
+
+    // Set mode if we are using a 2A/3 spectrum;
+
+    if (board__is5Vsupply()) {
+        // Check if FPGA supports mode
+        if ((fpga__id() >>16)!=0xA610) {
+            ESP_LOGE(TAG, "Detected +2A/+3 but FPGA binary does not support it (%08x)", fpga__id());
+            while (1) {
+                led__set(LED1, 1);
+                vTaskDelay(100 / portTICK_RATE_MS);
+                led__set(LED1, 0);
+                vTaskDelay(100 / portTICK_RATE_MS);
+            }
+        }
+        fpga__set_clear_flags(FPGA_FLAG_MODE2A, 0);
+        ESP_LOGI(TAG, "Switched to +2A/+3 mode");
+    }
+
+
     ESP_LOGI(TAG, "Init spectrum");
 
 

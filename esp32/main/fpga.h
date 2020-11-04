@@ -35,13 +35,18 @@ typedef uint8_t fpga_status_t;
 #define FPGA_SPI_CMD_READ_USB (0x60)
 #define FPGA_SPI_CMD_WRITE_USB (0x61)
 #define FPGA_SPI_CMD_SET_ROMRAM (0xEB)
+#define FPGA_SPI_CMD_READ_UART_STATUS (0xDA)
+#define FPGA_SPI_CMD_WRITE_UART_DATA (0xD8)
+#define FPGA_SPI_CMD_READ_UART_DATA (0xD9)
+#define FPGA_SPI_CMD_READ_BIT (0xD7)
+#define FPGA_SPI_CMD_WRITE_BIT (0xD6)
 
 /* Status bits */
 #define FPGA_STATUS_RESFIFO_FULL   (1<<1)
 #define FPGA_STATUS_RESFIFO_QFULL  (1<<2)
 #define FPGA_STATUS_RESFIFO_HFULL  (1<<3)
 #define FPGA_STATUS_RESFIFO_QQQFULL  (1<<4)
-
+#define FPGA_STATUS_BITMODE_REQUESTED  (1<<7)
 /* Flags */
 
 #define FPGA_FLAG_RSTFIFO (1<<0)
@@ -58,6 +63,8 @@ typedef uint8_t fpga_status_t;
 
 #define FPGA_FLAG_VIDMODE0 (1<<11)
 #define FPGA_FLAG_VIDMODE1 (1<<12)
+#define FPGA_FLAG_MODE2A (1<<13)
+#define FPGA_FLAG_BITMODE (1<<14)
 
 
 
@@ -69,6 +76,10 @@ typedef uint8_t fpga_status_t;
 #define FPGA_FLAG_TRIG_CMDFIFO_RESET      (1<<5)
 #define FPGA_FLAG_TRIG_FORCENMI_ON        (1<<6)
 #define FPGA_FLAG_TRIG_FORCENMI_OFF       (1<<7)
+
+/* UART BIT */
+#define FPGA_UART_STATUS_BUSY (1<<0)
+#define FPGA_UART_STATUS_RX_AVAIL (1<<1)
 
 /* Registers */
 
@@ -100,13 +111,14 @@ void fpga__set_trigger(uint8_t trig);
 void fpga__get_framebuffer(uint8_t *target);
 void fpga__set_register(uint8_t reg, uint32_t value);
 uint32_t fpga__get_register(uint8_t reg);
-uint32_t fpga__read_id(void);
+uint32_t fpga__id(void);
 void fpga__set_capture_mask(uint32_t mask);
 void fpga__set_capture_value(uint32_t value);
 int fpga__get_captures(uint8_t *target);
 int fpga__upload_rom_chunk(const uint32_t baseaddress, uint16_t offset, uint8_t *buffer_sub3, unsigned len);
 int fpga__upload_rom(const uint32_t baseaddress, const uint8_t *buffer, unsigned len);
 
+int fpga__isBITmode(void);
 
 int fpga__reset_to_custom_rom(int romno, bool activate_retn_hook);
 
@@ -161,6 +173,12 @@ void fpga__clear_config1_bits(uint32_t bits);
 int fpga__set_rom(uint8_t rom);
 int fpga__set_ram(uint8_t ram);
 int fpga__reset_spectrum(void);
+
+int fpga__read_uart_status(void);
+int fpga__read_uart_data(void);
+int fpga__write_uart_data(uint8_t);
+int fpga__write_bit_data(const uint8_t *data, unsigned len);
+int fpga__read_bit_data(uint8_t *data, unsigned len);
 
 #ifdef __cplusplus
 }

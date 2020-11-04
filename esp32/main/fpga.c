@@ -23,8 +23,13 @@ static spi_device_handle_t spi0_fpga;
 
 static fpga_flags_t latched_flags = 0;
 static uint32_t config1_latch = 0;
+static uint32_t fpga_id;
 
 
+uint32_t fpga__id(void)
+{
+    return fpga_id;
+}
 
 static void fpga__init_spi()
 {
@@ -66,7 +71,7 @@ static int fpga__issue_write_addr16(uint8_t cmd, uint16_t address, const uint8_t
     return spi__transmit_cmd8_addr16(spi0_fpga, cmd, address, buf, size);
 }
 
-unsigned fpga__read_id()
+static unsigned fpga__read_id()
 {
     uint8_t idbuf[4];
 
@@ -112,16 +117,16 @@ static int fpga__configurefromflash()
 #endif
 }
 
+
 int fpga__init()
 {
-    uint32_t id;
     fpga__init_spi();
 
     if (fpga__configurefromflash()<0)
         return -1;
     do {
-        id = fpga__read_id();
-    } while ((id & 0xff) == 0xff);
+        fpga_id = fpga__read_id();
+    } while ((fpga_id & 0xff) == 0xff);
     fpga__set_trigger(FPGA_FLAG_TRIG_CMDFIFO_RESET | FPGA_FLAG_TRIG_RESOURCEFIFO_RESET);
     fpga__set_trigger(FPGA_FLAG_TRIG_INTACK);
     fpga__set_clear_flags(FPGA_FLAG_ENABLE_INTERRUPT, FPGA_FLAG_RSTSPECT);
@@ -692,3 +697,41 @@ int fpga__write_extram_block_from_file(uint32_t address, int fd, int size, bool 
     }
     return 0;
 }
+
+int fpga__isBITmode(void)
+{
+    int f = fpga__get_status();
+    return f & FPGA_STATUS_BITMODE_REQUESTED;
+}
+
+int fpga__read_uart_status(void)
+{
+    uint8_t stat;
+    if (fpga__issue_read(FPGA_SPI_CMD_READ_UART_STATUS, &stat, 1)<0)
+        return -1;
+    return stat;
+
+}
+int fpga__read_uart_data(void)
+{
+    uint8_t data;
+    if (fpga__issue_read(FPGA_SPI_CMD_READ_UART_DATA, &data, 1)<0)
+        return -1;
+    return data;
+}
+
+int fpga__write_uart_data(uint8_t v)
+{
+    return fpga__issue_write(FPGA_SPI_CMD_WRITE_UART_DATA, &v, 1);
+}
+
+int fpga__write_bit_data(const uint8_t *data, unsigned len)
+{
+    return fpga__issue_write(FPGA_SPI_CMD_WRITE_BIT, data, len);
+}
+
+int fpga__read_bit_data(uint8_t *data, unsigned len)
+{
+    return fpga__issue_write(FPGA_SPI_CMD_READ_BIT, data, len);
+}
+

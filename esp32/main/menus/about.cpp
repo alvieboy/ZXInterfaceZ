@@ -43,7 +43,7 @@ void AboutWidget::drawImpl()
     t = screenptr;
     t = t.drawstring("FPGA version: ");
 
-    unsigned id = fpga__read_id();
+    unsigned id = fpga__id();
 
     t.printf("%08x", id);
 }

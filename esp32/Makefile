@@ -1,7 +1,9 @@
 PROJECT_NAME := esp32_interfacez
 
-RBFLOC=../fpga/r2.2/output_files/
-DEFAULTRBF=interfacez-r2.2-patch1.rbf
+BOARDREV:=r2.2
+
+RBFLOC=../fpga/$(BOARDREV)/output_files/
+DEFAULTRBF=interfacez-$(BOARDREV)-patch1.rbf
 
 IDF_PATH ?=/home/alvieboy/Temp/esp-idf
 CP:=cp

@@ -58,7 +58,7 @@ static esp_err_t webserver_req__version(httpd_req_t *req, const char *querystrin
 
     char versionstring[64];
 
-    unsigned fpga_id = fpga__read_id();
+    unsigned fpga_id = fpga__id();
 
     sprintf(versionstring,"%02x.%02x r%d",
             (fpga_id>>16) & 0xff,

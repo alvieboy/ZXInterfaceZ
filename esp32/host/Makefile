@@ -194,6 +194,7 @@ OBJS:=$(FREERTOS_OBJS) $(COBJ) $(CXXOBJ) \
 	mdns.o \
 	partition.o \
 	ota.o \
+	bit.o \
 	strlcpy.o \
 	buttons.o \
 	cjson/cJSON.o \

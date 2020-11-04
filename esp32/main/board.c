@@ -12,7 +12,7 @@
  * 2.4   Compatible with 2.3
  */
 
-#define VOLTAGE_DELTA_MV 800
+#define VOLTAGE_DELTA_MV 1300
 
 static volatile uint32_t supply_rail_voltage;
 
@@ -27,6 +27,10 @@ void board__init()
 
 static bool board__inrail(unsigned mv)
 {
+    ESP_LOGI(TAG, "Check rails %d : %d %d\n",
+             supply_rail_voltage,
+             mv-VOLTAGE_DELTA_MV,
+             mv+VOLTAGE_DELTA_MV);
     return ( (supply_rail_voltage >= (mv-VOLTAGE_DELTA_MV)) &&
             (supply_rail_voltage <= (mv+VOLTAGE_DELTA_MV)));
 }

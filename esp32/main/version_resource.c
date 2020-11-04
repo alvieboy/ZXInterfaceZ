@@ -11,7 +11,7 @@ void version_resource__update(struct resource *res)
     char *p = (char*)&versionstring[1];
 
     // Reset transmit fifo
-    unsigned fpga_id = fpga__read_id();
+    unsigned fpga_id = fpga__id();
 
     int len = sprintf(p,"%s FPGA %02x.%02x r%d",
                       version,
