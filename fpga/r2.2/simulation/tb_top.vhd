@@ -145,6 +145,7 @@ architecture sim of tb_top is
   signal USB_dp_s     : std_logic;
   signal NMI_s        : std_logic;
 
+  signal FORCE_ROMCS2A_s : std_logic := '0';
 begin
 
    tbc: tbc_device

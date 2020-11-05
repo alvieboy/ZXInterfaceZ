@@ -148,7 +148,16 @@ usb/usbhostctrl.vhd                                 \
 usb/usb_phy.vhd                                     \
 usb/usb_rx_phy.vhd                                  \
 ahbreq.vhd                                          \
-ahbreq_sync.vhd
+ahbreq_sync.vhd                                     \
+BIT/bit_ctrl.vhd                                    \
+BIT/bit_detect.vhd                                  \
+BIT/bit_in.vhd                                      \
+BIT/bit_out.vhd                                     \
+testuart.vhd                                        \
+uart_brgen.vhd                                      \
+uart_mv_filter.vhd                                  \
+uart_rx.vhd                                         \
+tx_unit.vhd
 
 
 ALTERAFILES= \
