@@ -244,6 +244,10 @@ void app_main()
             vTaskDelay(100 / portTICK_RATE_MS);
         }
     }
+
+    // Wait for BIT mode detection.
+    vTaskDelay(20 / portTICK_RATE_MS);
+
     if (fpga__isBITmode()) {
         bit__run();
     }
