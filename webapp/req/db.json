@@ -53,9 +53,7 @@
     "success": "true",
     "error": ""
   },
-  "list": [
-    {
-      "id": "/",
+  "_sdcard_root": {
       "path": "/",
       "success":  true,
       "entries":  [
@@ -78,14 +76,12 @@
         }
       ]
     },
-    {
-      "id": "/a-b",
+    "_sdcard_a-b": {
       "path": "/a-b",
       "success":  true,
       "entries":  [ ]
     },
-    {
-      "id": "/c-d",
+    "_sdcard_c-d": {
       "path": "/c-d",
       "success":  true,
       "entries":  [
@@ -101,8 +97,7 @@
         }
       ]
     },
-    {
-      "id": "/e-f",
+    "_sdcard_e-f": {
       "path": "/e-f",
       "success":  true,
       "entries":  [
@@ -118,5 +113,4 @@
         }
       ]
     }
-  ]
 }

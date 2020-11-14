@@ -5,5 +5,5 @@ export interface Vnode {
   extension: string;
   ftype: string;
   size: number;
-  children?: Vnode[];
+  children?: Observable<Vnode[]>;
 }

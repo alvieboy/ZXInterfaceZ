@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Observable, pipe } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
+import { Observable, pipe, zip, of } from 'rxjs';
+import { map as mapTo } from 'rxjs/operators';
 
 import { Vnode } from '../models/Vnode';
 
@@ -10,25 +10,49 @@ export class SdcardService {
   listUrl: string = '/req/list';
   constructor(private http: HttpClient) { }
 
-  getDir(path: string): Observable<Vnode[]> {
+  getDir(path: string): Observable<Vnode> {
 
-    var options = { params: { path: path } };
+    const options = { params: { path: path }};
+    const res = this.http.get<ApiDir>(this.listUrl, options);
+    console.log(`GET ${this.listUrl}?path=${path}`);
+    res.subscribe(res => {
+      console.log(res);
+    });
+    return res.pipe(mapTo(dir => {
+      return {
+        name: dir.path,
+        ftype: 'd',
+        extension: '',
+        size: dir.entries.length,
+        children: zip(...this.getChildren(dir.entries, path)),
+      };
+    }));
+  }
 
-    return this.http.get<ApiDir>(this.listUrl, options).pipe(map(dirs => {
-      return dirs[0].entries.map( child => {
-        var nameParts = child.name.split('.');
-        var extension = '';
-        if (nameParts.length > 0) {
-          extension = extension[nameParts.length - 1];
-        }
-        return {
-           name: child.name,
-           extension: extension,
-           ftype: child.type[0],
-           size: child.size,
-        }
-      });
-    }))
+  getChildren(entries: ApiEntry[], path: string): Observable<Vnode>[] {
+    return entries.map(entry=> {
+      if (entry.type != 'dir') {
+        return this.getFileChild(entry);
+      } else {
+        return this.getDirChild(path, entry);
+      }
+    });
+  }
+
+  getFileChild(child: ApiEntry): Observable<Vnode> {
+    const nameParts = child.name.split('.');
+    const extension = nameParts.length > 1 ? nameParts[nameParts.length -1] : '';
+    const file: Vnode = {
+      name: child.name,
+      ftype: child.type[0],
+      extension: extension,
+      size: child.size,
+    };
+    return of(file);
+  }
+
+  getDirChild(path: string, child: ApiEntry): Observable<Vnode> {
+    return this.getDir(`${path}${child.name}`);
   }
 }
 

@@ -1,5 +1,6 @@
 {
-  "/req/list\\?path=:path": "/req/list/:path",
+  "/req/list\\?path=/": "/_sdcard_root",
+  "/req/list\\?path=/:path": "/_sdcard_:path",
   "/req/*": "/$1",
   "/upload/*": "/$1"
 }
