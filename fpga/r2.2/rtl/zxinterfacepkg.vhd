@@ -66,7 +66,7 @@ package zxinterfacepkg is
     bit_request   : std_logic;
     rx_data       : std_logic_vector(7 downto 0);
     --rx_data_valid : std_logic;
-    rx_avail_size : std_logic_vector(1 downto 0);
+    rx_avail_size : std_logic_vector(3 downto 0);
     rx_avail      : std_logic;
     tx_busy       : std_logic;
     bit_data      : std_logic_vector(31 downto 0);

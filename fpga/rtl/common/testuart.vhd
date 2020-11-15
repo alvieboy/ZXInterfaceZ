@@ -11,7 +11,7 @@ entity testuart is
     rx_i            : in std_logic;
     tx_o            : out std_logic;
     -- RX fifo access
-    fifo_used_o     : out std_logic_vector(1 downto 0);
+    fifo_used_o     : out std_logic_vector(3 downto 0);
     fifo_empty_o    : out std_logic;
     fifo_rd_i       : in std_logic;
     fifo_data_o     : out std_logic_vector(7 downto 0);
@@ -24,24 +24,23 @@ end entity testuart;
 
 architecture beh of testuart is
 
-  signal uart_data_s        : std_logic_vector(7 downto 0);
-  signal fifo_rd_s          : std_logic;
+  --signal fifo_rd_s          : std_logic;
   signal uart_data_valid_s  : std_logic;
   signal rxtick_s           : std_logic;
   signal txtick_s           : std_logic;
   signal fifo_full_s        : std_logic;
   signal uart_read_en_s     : std_logic;
-  signal uart_data_avail_s  : std_logic;
+  --signal uart_data_avail_s  : std_logic;
   signal uart_read_data_s   : std_logic_vector(7 downto 0);
 
 begin
 
-  rxfifo_inst: entity work.smallfifo
+  rxfifo_inst: entity work.uart_fifo_altera
 	  port map (
 		  aclr		=> arst_i,
 		  clock		=> clk_i,
-		  data		=> uart_data_s,
-		  rdreq		=> fifo_rd_s,
+		  data		=> uart_read_data_s,
+		  rdreq		=> fifo_rd_i,
 		  sclr		=> '0',
 		  wrreq		=> uart_data_valid_s,
 		  empty		=> fifo_empty_o,
@@ -80,8 +79,11 @@ begin
       rxclk     => rxtick_s,
       read      => uart_read_en_s,
       data      => uart_read_data_s,
-      data_av   => uart_data_avail_s
+      data_av   => uart_data_valid_s
   );
+
+  uart_read_en_s <= uart_data_valid_s
+    and not fifo_full_s;
 
   -- TX unit
 

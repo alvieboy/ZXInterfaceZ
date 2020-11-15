@@ -18,6 +18,8 @@ entity spi_slave_fifo is
     tx_we_i       : in std_logic;
     tx_wdata_i    : in std_logic_vector(7 downto 0);
     tx_full_o     : out std_logic;
+    -- TX accept
+    tx_accept_o   : out std_logic;
     -- RX fifo
     rx_rd_i       : in std_logic;
     rx_rdata_o    : out std_logic_vector(8 downto 0);
@@ -34,6 +36,8 @@ architecture beh of spi_slave_fifo is
   signal outreg_r   : std_logic_vector(7 downto 0);
   signal cnt_r      : unsigned(2 downto 0);
   signal first_rx_r : std_logic;
+  signal txout_s    : std_logic;
+  signal cnt_half_s : std_logic;
 
   signal last_bit_s : std_logic;
   signal tx_bit_s   : std_logic;
@@ -81,6 +85,20 @@ begin
   last_bit_s  <= '1' when cnt_r = "111" else '0';
   tx_bit_s    <= tx_dat_r(7-to_integer(cnt_r));
   rx_fifo_we_s <= last_bit_s and not CSN_i;
+
+
+  cnt_half_s <= '1' when cnt_r = "011" and first_rx_r='0' else '0';
+
+  tx_accept_inst: entity work.async_pulse2
+  generic map (
+    WIDTH => 3
+  ) port map (
+    clki_i  => SCK_i,
+    clko_i  => clk_i,
+    arst_i  => arst_i,
+    pulse_i => cnt_half_s,
+    pulse_o => tx_accept_o
+  );
 
 
   txfifo: entity work.swfifo

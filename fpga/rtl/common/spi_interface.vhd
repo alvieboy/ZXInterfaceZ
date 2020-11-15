@@ -119,6 +119,7 @@ architecture beh of spi_interface is
   signal txdat_s      : std_logic_vector(7 downto 0);
   signal dat_s        : std_logic_vector(7 downto 0);
   signal first_dat_s  : std_logic;
+  signal accept_s     : std_logic;
   signal wordindex_r  : unsigned(1 downto 0);
 
   signal vid_addr_r   : unsigned(12 downto 0);
@@ -169,6 +170,7 @@ architecture beh of spi_interface is
     GENERICREADDATA,
     GENERICWRITEDATA,
     WRUART,
+    RDUART,
     BITWRITE,
     BITREAD
   );
@@ -264,6 +266,7 @@ begin
     tx_we_i       => txload_s,
     tx_wdata_i    => txdat_s,
     tx_full_o     => tx_full_s,
+    tx_accept_o   => accept_s,
     -- RX fifo
     rx_rd_i       => rx_rd_s,
     rx_rdata_o(8)   => first_dat_s,
@@ -356,6 +359,7 @@ begin
       vidmem_en_r   <= '0';
 
       txload_s      <= '0';
+      bit_from_cpu_o.rx_read <= '0';
 
       if rx_empty_s='0' and first_dat_s='1' then
         -- Forcibly handle commands.
@@ -364,8 +368,10 @@ begin
         case dat_s is
           when x"DA" => -- Read Test UART status
             txload_s  <= '1';
-            txdat_s   <= "0000" & bit_to_cpu_i.rx_avail_size & bit_to_cpu_i.rx_avail &
-              bit_to_cpu_i.tx_busy;
+            txdat_s   <= "10" &
+                  bit_to_cpu_i.rx_avail_size &
+                  bit_to_cpu_i.rx_avail &
+                  bit_to_cpu_i.tx_busy;
             state_r   <= UNKNOWN;
 
           when x"D8" => -- Write UART data
@@ -376,8 +382,9 @@ begin
           when x"D9" => -- Read UART data
             txload_s  <= '1';
             txdat_s   <= bit_to_cpu_i.rx_data;
-            state_r   <= UNKNOWN;
-
+            bit_from_cpu_o.rx_read <= '1';
+            state_r   <= RDUART;
+            --state_r   <= UNKNOWN;
           when x"D7" => -- Read BIT
             txload_s  <= '1';
             txdat_s   <= bit_data_s;
@@ -813,6 +820,12 @@ begin
 
         when WRUART =>
 
+        when RDUART =>
+          if dat_valid_s='1' and dat_s=x"FF" then
+            txload_s  <= '1';
+            txdat_s   <= bit_to_cpu_i.rx_data;
+            bit_from_cpu_o.rx_read <= '1';
+          end if;
 
         when UNKNOWN =>
           -- Leave TXDEN.

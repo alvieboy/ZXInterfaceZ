@@ -298,6 +298,8 @@ begin
     if arst_i='1' then
       a_r <= (others => 'X');
       d_r <= (others => 'X');
+      d_unlatched_o <= (others => 'X');
+      a_unlatched_o <= (others => 'X');
     elsif rising_edge(clk_i) then
       if memrd_latch_s='1' or memwr_latch_s='1' or iord_latch_s='1' or iowr_latch_s='1' then
         a_r <= XA_sync_s;

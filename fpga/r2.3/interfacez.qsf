@@ -268,6 +268,7 @@ set_global_assignment -name VHDL_FILE ../rtl/common/uart_rx.vhd
 set_global_assignment -name VHDL_FILE ../rtl/common/uart_mv_filter.vhd
 set_global_assignment -name VHDL_FILE ../rtl/common/tx_unit.vhd
 set_global_assignment -name VHDL_FILE ../rtl/common/uart_brgen.vhd
+set_global_assignment -name VHDL_FILE ../rtl/common/uart_fifo_altera.vhd
 set_global_assignment -name VHDL_FILE ../rtl/common/BIT/bit_out.vhd
 set_global_assignment -name VHDL_FILE ../rtl/common/BIT/bit_in.vhd
 set_global_assignment -name VHDL_FILE ../rtl/common/BIT/bit_detect.vhd
