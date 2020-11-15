@@ -229,8 +229,6 @@ void app_main()
 
     ESP_LOGI(TAG, "Init wifi");
 
-    wifi__init();
-
     resource__init();
 
     ESP_LOGI(TAG, "Init FPGA");
@@ -251,6 +249,8 @@ void app_main()
     if (fpga__isBITmode()) {
         bit__run();
     }
+
+    wifi__init();
 
     // Set mode if we are using a 2A/3 spectrum;
 
