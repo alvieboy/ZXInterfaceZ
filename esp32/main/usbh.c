@@ -302,8 +302,10 @@ static int usbh__detect_and_assign_address()
 
     dev.ep0_size = dev.device_descriptor.bMaxPacketSize;
 
-    if (usbh__assign_address(&dev)<0)
+    if (usbh__assign_address(&dev)<0) {
+
         return -1;
+    }
 
     USBHDEBUG(" assigned address %d", dev.address);
 

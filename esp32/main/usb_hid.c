@@ -219,6 +219,7 @@ static int usb_hid__probe(struct usb_device *dev, struct usb_interface *i)
 
     int index = 0;
     usb_endpoint_descriptor_t *ep = NULL;
+
     do {
         ep = (usb_endpoint_descriptor_t*)usb__find_descriptor( intf, intf_len, USB_DESC_TYPE_ENDPOINT, index);
         if (ep) {
