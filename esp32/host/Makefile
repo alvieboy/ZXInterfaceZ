@@ -118,6 +118,7 @@ usb_driver.c          \
 usb_driver_list.c     \
 usbh.c                \
 usb_hid.c             \
+usb_block.c           \
 hid.c                 \
 usb_ll.c              \
 usb_mouse.c           \
