@@ -10,6 +10,7 @@
 #include "wifi.h"
 #include "rom.h"
 #include "memlayout.h"
+#include "log.h"
 
 char cmd[256];
 uint8_t cmdptr = 0;
@@ -163,6 +164,14 @@ static int console__reset(int argc, char **argv)
     return 0;
 }
 
+static int console__debug(int argc, char **argv)
+{
+    ESP_LOGI(CTAG, "Enabling ALL debug");
+    loglevel = 0xffffffff;
+    return 0;
+}
+
+
 static struct {
     const char *cmd;
     int (*handler)(int, char**);
@@ -173,6 +182,7 @@ static struct {
     { "wifi", &console__wifi },
     { "loadrom", &console__loadrom },
     { "reset", &console__reset },
+    { "debug", &console__debug },
 };
 
 static int console__parse_string(char *cmd);
