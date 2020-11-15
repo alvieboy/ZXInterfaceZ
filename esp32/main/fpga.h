@@ -175,7 +175,7 @@ int fpga__set_ram(uint8_t ram);
 int fpga__reset_spectrum(void);
 
 int fpga__read_uart_status(void);
-int fpga__read_uart_data(void);
+int fpga__read_uart_data(uint8_t *buf, int len);
 int fpga__write_uart_data(uint8_t);
 int fpga__write_bit_data(const uint8_t *data, unsigned len);
 int fpga__read_bit_data(uint8_t *data, unsigned len);

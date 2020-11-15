@@ -712,12 +712,25 @@ int fpga__read_uart_status(void)
     return stat;
 
 }
-int fpga__read_uart_data(void)
+int fpga__read_uart_data(uint8_t *buf, int len)
 {
-    uint8_t data;
-    if (fpga__issue_read(FPGA_SPI_CMD_READ_UART_DATA, &data, 1)<0)
-        return -1;
-    return data;
+    uint8_t fv = 0x00;
+
+    if (len>1)
+        fv = 0xFF;
+
+    int toset = len - 2;
+
+    for (int i = 0; i<len; i++) {
+        if (toset>0) {
+            buf[i] = 0xFF;
+            toset-=1;
+        } else {
+            buf[i] = 0x00;
+        }
+    }
+
+    return spi__transceive_cmd8_addr8(spi0_fpga, FPGA_SPI_CMD_READ_UART_DATA, fv, buf, len);
 }
 
 int fpga__write_uart_data(uint8_t v)
@@ -730,8 +743,9 @@ int fpga__write_bit_data(const uint8_t *data, unsigned len)
     return fpga__issue_write(FPGA_SPI_CMD_WRITE_BIT, data, len);
 }
 
-int fpga__read_bit_data(uint8_t *data, unsigned len)
+int fpga__read_bit_data(uint8_t *buf, unsigned len)
 {
-    return fpga__issue_write(FPGA_SPI_CMD_READ_BIT, data, len);
+    return fpga__issue_read(FPGA_SPI_CMD_READ_BIT, buf, len);
+
 }
 
