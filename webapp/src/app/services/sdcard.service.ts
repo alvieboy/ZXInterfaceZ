@@ -52,7 +52,7 @@ export class SdcardService {
   }
 
   getDirChild(path: string, child: ApiEntry): Observable<Vnode> {
-    return this.getDir(`${path}${child.name}`);
+    return this.getDir(`${path == '/' ? '' : path}/${child.name}`);
   }
 }
 
