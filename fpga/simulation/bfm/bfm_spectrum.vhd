@@ -119,13 +119,13 @@ begin
     local_IORQ_n    <= '1';
     local_M1_n      <= '1';
     local_RFSH_n    <= '1';
+    d_io      <= (others => 'Z');
 
 
 
 
     l1: loop
       --report "Wait cmd";
-      --d_io      <= (others => 'Z');
 
       wait on Cmd_i.Cmd;
       --report "Got cmd";

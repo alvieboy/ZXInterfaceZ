@@ -355,6 +355,18 @@ architecture beh of zxinterface is
   signal bit_control_in_s       : std_logic_vector(7 downto 0);
   signal force_iorqula_s        : std_logic;
 
+  signal ahb_spi_m2s_s          : AHB_M2S;
+  signal ahb_spi_s2m_s          : AHB_S2M;
+  signal ahb_vram_m2s_s         : AHB_M2S;
+  signal ahb_vram_s2m_s         : AHB_S2M;
+  signal ahb_systemctrl_m2s_s   : AHB_M2S;
+  signal ahb_systemctrl_s2m_s   : AHB_S2M;
+  signal ahb_usb_m2s_s          : AHB_M2S;
+  signal ahb_usb_s2m_s          : AHB_S2M;
+  signal ahb_usb_clk48_m2s_s    : AHB_M2S;
+  signal ahb_usb_clk48_s2m_s    : AHB_S2M;
+
+  
 begin
 
   rst48_inst: entity work.rstgen
@@ -646,6 +658,19 @@ begin
     MOSI_i        => mosi_s,
     MISO_o        => miso_s,
 
+    ahb_m2s_o     => ahb_spi_m2s_s,
+    ahb_s2m_i     => ahb_spi_s2m_s
+  );
+
+  -- System controller
+  systemctrl_inst: entity work.systemctrl
+  port map (
+    clk_i                 => clk_i,
+    arst_i                => arst_i,
+  
+    ahb_m2s_i             => ahb_systemctrl_m2s_s,
+    ahb_s2m_o             => ahb_systemctrl_s2m_s,
+
     pc_i          => pc_r,
     nmireason_o   => nmireason_s,
     bit_to_cpu_i  => bit_to_cpu_s,
@@ -729,6 +754,50 @@ begin
     memsel_we_o           => memsel_we_s,
     romsel_we_o           => romsel_we_s
   );
+
+  -- Main AHB intercon.
+  intercon_inst: entity work.ahb_intercon4
+    generic map (
+      -- Video RAM 
+      S0_ADDR_MASK    => "00000001000000000010000000000000",
+      S0_ADDR_VALUE   => "00000000000000000000000000000000",
+      -- System controller
+      S1_ADDR_MASK    => "00000001000000000011000000000000",
+      S1_ADDR_VALUE   => "00000000000000000010000000000000",
+      -- USB controller
+      S2_ADDR_MASK    => "00000001000000000011000000000000",
+      S2_ADDR_VALUE   => "00000000000000000011000000000000",
+      -- PSRAM
+      S3_ADDR_MASK    => "00000001000000000000000000000000",
+      S3_ADDR_VALUE   => "00000001000000000000000000000000"
+    )
+    port map (
+      clk_i     => clk_i,
+      arst_i    => arst_i,
+      -- Master: SPI
+      HMAST_I   => ahb_spi_m2s_s,
+      HMAST_O   => ahb_spi_s2m_s,
+      -- S0: Video RAM
+      HSLAV0_I  => ahb_vram_s2m_s,
+      HSLAV0_O  => ahb_vram_m2s_s,
+      -- S1: System controller
+      HSLAV1_I  => ahb_systemctrl_s2m_s,
+      HSLAV1_O  => ahb_systemctrl_m2s_s,
+      -- S2: USB controller
+      HSLAV2_I  => ahb_usb_s2m_s,
+      HSLAV2_O  => ahb_usb_m2s_s,
+      -- S3: PSRAM
+      HSLAV3_I  => psram_ahb_s2m,
+      HSLAV3_O  => psram_ahb_m2s
+    );
+
+
+
+
+
+
+
+
 
   -- Interrupt generation for command FIFO
   process(clk_i, arst_i)
@@ -887,11 +956,12 @@ begin
       fifo_rd_o     => fifo_rd_s,
       fifo_data_i   => fifo_read_s,
 
-      vidmem_clk_i  => SPI_SCK_i,
-      vidmem_en_i   => vidmem_en_s,
-      vidmem_adr_i  => vidmem_adr_s,
-      vidmem_data_o => vidmem_data_s,
-
+      vidmem_clk_i  => clk_i,--SPI_SCK_i,
+      --vidmem_en_i   => vidmem_en_s,
+      --vidmem_adr_i  => vidmem_adr_s,
+      --vidmem_data_o => vidmem_data_s,
+      ahb_m2s_i     => ahb_vram_m2s_s,
+      ahb_s2m_o     => ahb_vram_s2m_s,
       capsyncen_i   => spect_capsyncen_s,
       intr_i        => intr_p_s,
       framecmplt_i  => framecmplt_s,
@@ -981,65 +1051,39 @@ begin
   psram_hp_ahb_m2s    <= ahb_spect_m2s;
   ahb_spect_s2m       <= psram_hp_ahb_s2m;
 
-  arb_inst: entity work.ahb_arb
-    port map (
-      CLK         => clk_i,
-      RST         => arst_i,
-
-      HMAST0_I    => ahb_spi_m2s,
-      HMAST0_O    => ahb_spi_s2m,
-
-      HMAST1_I    => ahb_null_m2s,
-      HMAST1_O    => ahb_null_s2m,
-
-      HMAST2_I    => ahb_null_m2s,
-      HMAST2_O    => ahb_null_s2m,
-
-      HMAST3_I    => ahb_null_m2s,
-      HMAST3_O    => ahb_null_s2m,
-
-      HSLAV_I     => psram_ahb_s2m,
-      HSLAV_O     => psram_ahb_m2s
-    );
-
-
-  ahbr_inst: entity work.ahbreq
+  -- AHB cross-clock
+  usbahbintercon_inst: entity work.ahb2ahb
   generic map (
-    MODE => "LEVEL"
+    AWIDTH  => 12,
+    DWIDTH  => 8
   )
   port map (
-    clk_i    => clk_i,
-    arst_i   => arst_i,
-
-    --sclk_i    => clk_i,
-    --sarst_i   => '0', -- TODO
-
-    addr_i    => extram_addr_s,
-    trans_i   => extram_req_s,
-    we_i      => extram_we_s,
-    valid_o   => extram_valid_s,
-    data_o    => extram_dat_s,
-    data_i    => extram_dat_write_s,
-
-    m_i       => ahb_spi_s2m,
-    m_o       => ahb_spi_m2s
+    -- Master
+    mclk_i  => clk_i,
+    arst_i  => arst_i,
+    m2s_i   => ahb_usb_m2s_s,
+    s2m_o   => ahb_usb_s2m_s,
+    -- Slave
+    sclk_i  => clk48_i,
+    m2s_o   => ahb_usb_clk48_m2s_s,
+    s2m_i   => ahb_usb_clk48_s2m_s
   );
+
 
   usb_inst: ENTITY work.usbhostctrl
   PORT map (
     usbclk_i      => clk48_i,
     ausbrst_i     => rst48_s,
 
-    clk_i         => clk_i,--SPI_SCK_i,
-    arst_i        => arst_i,
+    ahb_m2s_i     => ahb_usb_clk48_m2s_s,
+    ahb_s2m_o     => ahb_usb_clk48_s2m_s,
 
-    rd_i          => usb_rd_s,
-    wr_i          => usb_wr_s,
-    addr_i        => generic_addr_s,
-    dat_i         => generic_wdat_s,
-    dat_o         => usb_rdat_s,
+    -- Clk/reset for interrupt sync
+    clk_i         => clk_i,
+    arst_i        => arst_i,
     int_o         => usb_int_s,
     int_async_o   => usb_int_async_s,
+
     -- Interface to transceiver
     softcon_o     => USB_SOFTCON_o,
     noe_o         => USB_OE_o,

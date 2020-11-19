@@ -30,9 +30,9 @@ begin
 
     Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 5, spiPayload_in_s, spiPayload_out_s);
 
-    Check("(9E) command 1st byte", spiPayload_out_s(2), x"A5");
+    Check("(9E) command 1st byte", spiPayload_out_s(2), x"A6");
     Check("(9E) command 2nd byte", spiPayload_out_s(3), x"10");
-    Check("(9E) command 3rd byte", spiPayload_out_s(4), x"03");
+    Check("(9E) command 3rd byte", spiPayload_out_s(4), x"04");
 
     spiPayload_in_s(0) <= x"9F";
     spiPayload_in_s(1) <= x"FF";
@@ -42,9 +42,9 @@ begin
 
     Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 5, spiPayload_in_s, spiPayload_out_s);
 
-    Check("(9F) command 1st byte", spiPayload_out_s(2), x"A5");
+    Check("(9F) command 1st byte", spiPayload_out_s(2), x"A6");
     Check("(9F) command 2nd byte", spiPayload_out_s(3), x"10");
-    Check("(9F) command 3rd byte", spiPayload_out_s(4), x"03");
+    Check("(9F) command 3rd byte", spiPayload_out_s(4), x"04");
     
 
     FinishTest(

@@ -352,6 +352,9 @@ begin
     XWR_i => XWR_s
 	);
 
+  -- Pull-up data bus
+  XD_io <= (others => 'H');
+
   WAIT_s <= '0' when FORCE_WAIT_s='1' else 'H';
   NMI_s <= '0' when FORCE_NMI_s='1' else 'H';
 

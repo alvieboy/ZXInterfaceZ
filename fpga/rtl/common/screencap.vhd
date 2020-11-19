@@ -1,8 +1,9 @@
 library IEEE;
 use IEEE.STD_LOGIC_1164.all;
 use IEEE.numeric_std.all;
--- synthesis translate_off
 library work;
+use work.ahbpkg.all;
+-- synthesis translate_off
 use work.txt_util.all;
 -- synthesis translate_on
 
@@ -17,9 +18,11 @@ entity screencap is
 
     -- Video mem access
     vidmem_clk_i  : in std_logic;
-    vidmem_en_i   : in std_logic;
-    vidmem_adr_i  : in std_logic_vector(12 downto 0);
-    vidmem_data_o : out std_logic_vector(7 downto 0);
+    ahb_m2s_i     : in AHB_M2S;
+    ahb_s2m_o     : out AHB_S2M;
+    --vidmem_en_i   : in std_logic;
+    --vidmem_adr_i  : in std_logic_vector(12 downto 0);
+    --vidmem_data_o : out std_logic_vector(7 downto 0);
 
     capsyncen_i   : in std_logic;
     intr_i        : in std_logic;
@@ -75,7 +78,32 @@ architecture beh of screencap is
     );
   end component;
 
+
+  signal vidmem_rd_s      : std_logic;
+  signal vidmem_addr_s    : std_logic_vector(12 downto 0);
+  signal vidmem_dat_in_s  : std_logic_vector(7 downto 0);
+  signal vidmem_dat_out_s : std_logic_vector(7 downto 0);
+
 begin
+
+  ahb2rdwr_inst: entity work.ahb2rdwr
+    generic map (
+      AWIDTH => 13, DWIDTH => 8
+    )
+    port map (
+      clk_i     => vidmem_clk_i,
+      arst_i    => rst_i,
+      ahb_m2s_i => ahb_m2s_i,
+      ahb_s2m_o => ahb_s2m_o,
+
+      addr_o    => vidmem_addr_s,
+      dat_o     => vidmem_dat_in_s,
+      dat_i     => vidmem_dat_out_s,
+      rd_o      => vidmem_rd_s,
+      wr_o      => open--vidmem_wr_s
+    );
+
+
 
   -- Spectrum video memory addressing
   -- Bitmap starts at 0x4000.
@@ -96,11 +124,11 @@ begin
     q_a       => vgen_vdata_s,  -- for video gen
 
     clock_b   => vidmem_clk_i,
-    rden_b    => vidmem_en_i,
+    rden_b    => vidmem_rd_s, --vidmem_en_i,
     wren_b    => '0',
     data_b    => x"00",
-    address_b => vidmem_adr_i,
-    q_b       => vidmem_data_o
+    address_b => vidmem_addr_s,--vidmem_adr_i,
+    q_b       => vidmem_dat_out_s--vidmem_data_o
   );
 
   fifo_rd_o <= (not fifo_empty_i) and run_r;

@@ -81,8 +81,26 @@ package zxinterfacepkg is
   end record;
 
 
+  function to_01(a: in std_logic_vector) return std_logic_vector;
+
 end package;
 
---package body zxinterfacepkg is
+package body zxinterfacepkg is
 
---end package body;
+  function to_01(a: in std_logic_vector) return std_logic_vector is
+    variable l: std_logic_vector(a'range);
+  begin
+    l:=a;
+    -- synthesis translate_off
+    l1: for i in a'low to a'high loop
+      if a(i)='H' or a(i)='1' then
+        l(i):='1';
+      else
+        l(i):='0';
+      end if;
+    end loop;
+    -- synthesis translate_on
+    return l;
+  end function;
+
+end package body;

@@ -36,7 +36,7 @@ begin
     spiPayload_in_s(4) <= x"00"; -- data
     Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 5, spiPayload_in_s, spiPayload_out_s);
     Check("001: Nothing on USB bus", spiPayload_out_s(4)(0), '0');
-    Check("002: No connection event on USB bus", spiPayload_out_s(4)(1), '0');
+    --Check("002: No connection event on USB bus", spiPayload_out_s(4)(1), '0');
 
     -- Activate interrupts
 
@@ -65,7 +65,7 @@ begin
     spiPayload_in_s(2) <= x"03"; -- Address
     spiPayload_in_s(3) <= x"FF"; -- Clear all interrupts
     Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 4, spiPayload_in_s, spiPayload_out_s);
-    
+    wait for 200 ns;
     Check("104: USB interrupt", CtrlPins_Data.USB_INTn, '1');
 
     spiPayload_in_s(0) <= x"60"; -- USB read
@@ -79,14 +79,14 @@ begin
 
 
     Check("002: Device on USB bus", spiPayload_out_s(4)(0), '1');
-    Check("003: Connection event on USB bus", spiPayload_out_s(4)(1), '1');
+    --Check("003: Connection event on USB bus", spiPayload_out_s(4)(1), '1');
     Check("004: Full-speed operation", spiPayload_out_s(4)(6), '1');
 
-    spiPayload_in_s(0) <= x"61"; -- USB write
-    spiPayload_in_s(1) <= x"00";
-    spiPayload_in_s(2) <= x"00"; -- Adresss
-    spiPayload_in_s(3) <= "00000010"; -- Clear connection event
-    Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 4, spiPayload_in_s, spiPayload_out_s);
+    --spiPayload_in_s(0) <= x"61"; -- USB write
+    --spiPayload_in_s(1) <= x"00";
+    --spiPayload_in_s(2) <= x"00"; -- Adresss
+    --spiPayload_in_s(3) <= "00000010"; -- Clear connection event
+    --Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 4, spiPayload_in_s, spiPayload_out_s);
 
     spiPayload_in_s(0) <= x"60"; -- USB read
     spiPayload_in_s(1) <= x"00";
@@ -95,7 +95,7 @@ begin
     spiPayload_in_s(4) <= x"00"; -- data
     Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 5, spiPayload_in_s, spiPayload_out_s);
 
-    Check("005: Connection event on USB bus", spiPayload_out_s(4)(1), '0');
+    --Check("005: Connection event on USB bus", spiPayload_out_s(4)(1), '0');
     Check("006: Device on USB bus", spiPayload_out_s(4)(0), '1');
 
     stamp := now;
@@ -104,7 +104,7 @@ begin
     spiPayload_in_s(0) <= x"61"; -- USB write
     spiPayload_in_s(1) <= x"00";
     spiPayload_in_s(2) <= x"00"; -- Adresss
-    spiPayload_in_s(3) <= "00010000"; -- RESET active
+    spiPayload_in_s(3) <= "00110000"; -- RESET active, power ON
     Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 4, spiPayload_in_s, spiPayload_out_s);
 
     --wait for 1 us;
@@ -116,7 +116,7 @@ begin
     spiPayload_in_s(4) <= x"00"; -- data
     Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 5, spiPayload_in_s, spiPayload_out_s);
 
-    Check("007: Connection event on USB bus", spiPayload_out_s(4)(1), '0');
+    --Check("007: Connection event on USB bus", spiPayload_out_s(4)(1), '0');
     Check("008: Device on USB bus", spiPayload_out_s(4)(0), '1');
     Check("009: USB in reset", spiPayload_out_s(4)(4), '1');
 
@@ -133,7 +133,7 @@ begin
     spiPayload_in_s(4) <= x"00"; -- data
     Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 5, spiPayload_in_s, spiPayload_out_s);
 
-    Check("011: Connection event on USB bus", spiPayload_out_s(4)(1), '0');
+    --Check("011: Connection event on USB bus", spiPayload_out_s(4)(1), '0');
     Check("012: Device on USB bus", spiPayload_out_s(4)(0), '1');
     Check("013: USB NOT in reset", spiPayload_out_s(4)(4), '0');
 
@@ -177,18 +177,24 @@ begin
 
     spiPayload_in_s(0) <= x"61"; -- USB write
     spiPayload_in_s(1) <= x"00";
-    spiPayload_in_s(2) <= x"40"; -- Adresss
+    spiPayload_in_s(2) <= x"80"; -- Adresss
 
     spiPayload_in_s(3) <= x"3F"; -- EPtype 0, max size 64
     spiPayload_in_s(4) <= x"20"; -- Ep 0, OUT
     spiPayload_in_s(5) <= x"9C"; -- Address 28, enabled
     spiPayload_in_s(6) <= x"FF"; -- All interrupts enabled
     spiPayload_in_s(7) <= x"FF"; -- All interrupt clear
-    spiPayload_in_s(8) <= x"03"; -- Transaction 1: dpid 11
-    spiPayload_in_s(9) <= x"00";  -- epaddr
-    spiPayload_in_s(10) <= x"86"; -- Transaction 1: size 6, count 1
 
-    Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 11, spiPayload_in_s, spiPayload_out_s);
+    spiPayload_in_s(8) <= x"01"; -- Interval
+    spiPayload_in_s(9) <= x"00"; -- unused
+    spiPayload_in_s(10) <= x"00"; -- unused
+
+
+    spiPayload_in_s(11) <= x"03"; -- Transaction 1: dpid 11
+    spiPayload_in_s(12) <= x"00";  -- epaddr
+    spiPayload_in_s(13) <= x"86"; -- Transaction 1: size 6, count 1
+
+    Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 14, spiPayload_in_s, spiPayload_out_s);
 
     wait on CtrlPins_Data.USB_INTn for 200 us;
 
@@ -199,7 +205,7 @@ begin
 
     spiPayload_in_s(0) <= x"60"; -- USB read
     spiPayload_in_s(1) <= x"00";
-    spiPayload_in_s(2) <= x"44"; -- Adresss
+    spiPayload_in_s(2) <= x"84"; -- Adresss
     spiPayload_in_s(3) <= x"00"; -- dummy
     spiPayload_in_s(4) <= x"00"; -- dummy
     Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 5, spiPayload_in_s, spiPayload_out_s);
@@ -208,14 +214,14 @@ begin
 
     spiPayload_in_s(0) <= x"61"; -- USB write
     spiPayload_in_s(1) <= x"00";
-    spiPayload_in_s(2) <= x"44"; -- Address
+    spiPayload_in_s(2) <= x"84"; -- Address
     spiPayload_in_s(3) <= x"FF";
     Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 4, spiPayload_in_s, spiPayload_out_s);
 
 
     spiPayload_in_s(0) <= x"60"; -- USB read
     spiPayload_in_s(1) <= x"00";
-    spiPayload_in_s(2) <= x"44"; -- Address
+    spiPayload_in_s(2) <= x"84"; -- Address
     spiPayload_in_s(3) <= x"00"; -- dummy
     spiPayload_in_s(4) <= x"00"; -- dummy
     Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 5, spiPayload_in_s, spiPayload_out_s);
@@ -230,14 +236,19 @@ begin
 
     spiPayload_in_s(0) <= x"61"; -- USB write
     spiPayload_in_s(1) <= x"00";
-    spiPayload_in_s(2) <= x"44"; -- Address+ep
+    spiPayload_in_s(2) <= x"84"; -- Address+ep
 
     spiPayload_in_s(3) <= x"FF"; -- All interrupt clear
-    spiPayload_in_s(4) <= x"00"; -- Transaction 1: dpid "00" : int
-    spiPayload_in_s(5) <= x"01"; -- Transaction 1: epaddr
-    spiPayload_in_s(6) <= x"80"; -- Transaction 1: size 0, count 1
 
-    Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 7, spiPayload_in_s, spiPayload_out_s);
+    spiPayload_in_s(4) <= x"01"; -- Interval
+    spiPayload_in_s(5) <= x"00"; -- unused
+    spiPayload_in_s(6) <= x"00"; -- unused
+
+    spiPayload_in_s(7) <= x"00"; -- Transaction 1: dpid "00" : int
+    spiPayload_in_s(8) <= x"01"; -- Transaction 1: epaddr
+    spiPayload_in_s(9) <= x"80"; -- Transaction 1: size 0, count 1
+
+    Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 10, spiPayload_in_s, spiPayload_out_s);
 
     wait on CtrlPins_Data.USB_INTn for 200 us;
 
@@ -245,7 +256,7 @@ begin
 
     spiPayload_in_s(0) <= x"60"; -- USB read
     spiPayload_in_s(1) <= x"00";
-    spiPayload_in_s(2) <= x"44"; -- Address
+    spiPayload_in_s(2) <= x"84"; -- Address
     spiPayload_in_s(3) <= x"00"; -- dummy
     spiPayload_in_s(4) <= x"00"; -- dummy
     Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 5, spiPayload_in_s, spiPayload_out_s);

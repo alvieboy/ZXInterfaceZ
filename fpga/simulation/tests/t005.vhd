@@ -1,4 +1,5 @@
 use work.tbc_device_p.all;
+use work.logger.all;
 
 architecture t005 of tbc_device is
 
@@ -10,7 +11,7 @@ begin
   process
     variable data: std_logic_vector(7 downto 0);
   begin
-    report "T005: ULA tests";
+    logger_start("T005","ULA tests");
 
     Spimaster_Cmd <= Cmd_Spimaster_Defaults;
 

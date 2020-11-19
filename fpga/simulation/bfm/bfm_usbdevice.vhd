@@ -408,7 +408,7 @@ begin
 
   end process;
 
-  vmo_dly_s <= transport vmo_s after 120 ns;
+  vmo_dly_s <= transport vmo_s after 20 ns;
   vpo_dly_s <= vpo_s;
 
 end sim;
