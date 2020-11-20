@@ -1167,8 +1167,8 @@ begin
     signal force_2aromcs_s  : std_logic;
   begin
 
-    force_romcs_s   <= spect_forceromcs_bussync_s and not mode2a_s;
-    force_2aromcs_s <= spect_forceromcs_bussync_s and mode2a_s;
+    force_romcs_s   <= spect_forceromcs_bussync_s; -- Always enabled -- and not mode2a_s;
+    force_2aromcs_s <= spect_forceromcs_bussync_s and mode2a_s; -- Only in 2A+ mode, due to VIDEO signal on same pin
 
     bit_int: entity work.bit_out generic map ( WIDTH=>1, START=>9)
               port map ( data_i(0) => '0', data_o(0) => FORCE_INT_o, bit_from_cpu_i => bit_from_cpu_s );
