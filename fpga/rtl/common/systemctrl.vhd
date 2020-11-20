@@ -64,26 +64,6 @@ entity systemctrl is
     cmdfifo_empty_i       : in std_logic;
     cmdfifo_intack_o      : out std_logic; -- Interrupt acknowledge
 
-    -- External RAM access
-    extram_addr_o         : out std_logic_vector(31 downto 0);
-    extram_dat_i          : in std_logic_vector(31 downto 0);
-    extram_dat_o          : out std_logic_vector(31 downto 0);
-    extram_req_o          : out std_logic;
-    extram_we_o           : out std_logic;
-    --extram_rd_o           : out std_logic;
-    extram_valid_i        : in std_logic;
-
-    -- Generic address/data
-    generic_addr_o        : out std_logic_vector(10 downto 0);
-    generic_dat_o         : out std_logic_vector(7 downto 0);
-
-    -- USB access
-
-    usb_rd_o              : out std_logic;
-    usb_wr_o              : out std_logic;
-    usb_dat_i             : in std_logic_vector(7 downto 0);
-    usb_int_i             : in std_logic; -- USB interrupt
-
     -- Capture access
     capture_rd_o          : out std_logic;
     capture_wr_o          : out std_logic;

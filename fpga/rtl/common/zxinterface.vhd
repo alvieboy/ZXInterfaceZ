@@ -279,22 +279,10 @@ architecture beh of zxinterface is
   signal ahb_null_m2s           : AHB_M2S;
   signal ahb_null_s2m           : AHB_S2M;
 
-  signal extram_addr_s          : std_logic_vector(31 downto 0);
-  signal extram_dat_s           : std_logic_vector(31 downto 0);
-  signal extram_dat_write_s     : std_logic_vector(31 downto 0);
-  signal extram_req_s           : std_logic;
-  signal extram_we_s            : std_logic;
-  signal extram_valid_s         : std_logic;
-
   signal rst48_s                : std_logic;
 
-  signal usb_rd_s               : std_logic;
-  signal usb_wr_s               : std_logic;
   signal usb_int_s              : std_logic;
   signal usb_int_async_s        : std_logic;
-  signal generic_addr_s         : std_logic_vector(10 downto 0);
-  signal generic_wdat_s         : std_logic_vector(7 downto 0);
-  signal usb_rdat_s             : std_logic_vector(7 downto 0);
 
   signal keyb_trigger_s         : std_logic;
 
@@ -712,28 +700,12 @@ begin
     cmdfifo_intack_o      => cmdfifo_intack_s,
 
 
-    extram_addr_o         => extram_addr_s,
-    extram_dat_i          => extram_dat_s,
-    extram_dat_o          => extram_dat_write_s,
-    extram_req_o          => extram_req_s,
-    extram_we_o           => extram_we_s,
-    extram_valid_i        => extram_valid_s,
-
     forceromonretn_trig_o => forceromonretn_trig_s,
     forceromcs_trig_on_o  => forceromcs_on_s,
     forceromcs_trig_off_o => forceromcs_off_s,
     forcenmi_trig_on_o    => forcenmi_on_s,
     forcenmi_trig_off_o    => forcenmi_off_s,
     -- USB
-    usb_rd_o              => usb_rd_s,
-    usb_wr_o              => usb_wr_s,
-
-    generic_addr_o        => generic_addr_s,
-    generic_dat_o         => generic_wdat_s,
-
-    usb_dat_i             => usb_rdat_s,
-    usb_int_i             => usb_int_s,
-
     capture_rd_o          => capture_rd_s,
     capture_wr_o          => capture_wr_s,
     capture_dat_i         => capture_dat_s,
@@ -1122,25 +1094,25 @@ begin
 
 
 
-      scope_inst: entity work.scope
-        generic map (
-          NONTRIGGERABLE_WIDTH  => 8,
-          TRIGGERABLE_WIDTH     => 28,
-          WIDTH_BITS            => 10
-        )
-        port map (
-          clk_i         => clk_i,
-          arst_i        => arst_i,
-      
-          nontrig_i     => d_unlatched_s,
-          trig_i        => trig_s,
-      
-          rd_i          => capture_rd_s,
-          wr_i          => capture_wr_s,
-          addr_i        => generic_addr_s,
-          din_i         => generic_wdat_s,
-          dout_o        => capture_dat_s
-        );
+      --scope_inst: entity work.scope
+      --  generic map (
+      --    NONTRIGGERABLE_WIDTH  => 8,
+      --    TRIGGERABLE_WIDTH     => 28,
+      --    WIDTH_BITS            => 10
+      --  )
+      --  port map (
+      --    clk_i         => clk_i,
+      --    arst_i        => arst_i,
+      --
+      --    nontrig_i     => d_unlatched_s,
+      --    trig_i        => trig_s,
+      --
+      --    rd_i          => capture_rd_s,
+      --    wr_i          => capture_wr_s,
+      --    addr_i        => generic_addr_s,
+      --    din_i         => generic_wdat_s,
+      --    dout_o        => capture_dat_s
+      --  );
     end block;
   end generate capinst;
 

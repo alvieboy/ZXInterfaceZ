@@ -108,6 +108,16 @@ ARCHITECTURE rtl OF usbhostctrl is
 
 
   signal dbg_rx_data_done_s : std_logic;
+  signal dbg_trans_state_s  : std_logic_vector(4 downto 0);
+  signal cnt_ack_s       : std_logic_vector(7 downto 0);
+  signal cnt_nack_s      : std_logic_vector(7 downto 0);
+  signal cnt_babble_s    : std_logic_vector(7 downto 0);
+  signal cnt_stall_s     : std_logic_vector(7 downto 0);
+  signal cnt_crcerror_s  : std_logic_vector(7 downto 0);
+  signal cnt_timeout_s   : std_logic_vector(7 downto 0);
+  signal cnt_errorpid_s  : std_logic_vector(7 downto 0);
+  signal cnt_cplt_s      : std_logic_vector(7 downto 0);
+
 
   constant C_SOF_TIMEOUT: natural   := altsim(48000, 4800); -- 1ms synth, 100us simulation
   constant C_ATTACH_DELAY: natural  := altsim(480000, 4);-- 48000; -- 10 ms
@@ -459,7 +469,9 @@ BEGIN
           when "0000010" =>
             --  interrupt status reg
             read_data_s <= interrupt_v;
-          when others =>
+
+          when "0000011" =>
+
             case trans_status_s is
               when IDLE       =>  read_data_s <= x"00";
               when BUSY       =>  read_data_s <= x"01";
@@ -470,10 +482,47 @@ BEGIN
               when STALL      =>  read_data_s <= x"06";
               when CRCERROR   =>  read_data_s <= x"07";
               when COMPLETED  =>  read_data_s <= x"08";
-              when others     =>  read_data_s <= x"FF";
+              when others     =>  read_data_s <= x"0F";
             end case;
+
+          when "0000100" =>
+            case r.host_state is
+              when DETACHED   =>  read_data_s <= x"00";
+              when ATTACHED   =>  read_data_s <= x"01";
+              when IDLE       =>  read_data_s <= x"02";
+              when RESET1     =>  read_data_s <= x"03";
+              when RESET2     =>  read_data_s <= x"04";
+              when WAIT_SOF   =>  read_data_s <= x"05";
+              when IN1        =>  read_data_s <= x"06";
+              when OUT1       =>  read_data_s <= x"07";
+              when SETUP1     =>  read_data_s <= x"08";
+              when SOF1       =>  read_data_s <= x"09";
+              when others     =>  read_data_s <= x"0F";
+            end case;
+          when "0000101" =>
+
+            read_data_s <= "000" & dbg_trans_state_s ;
+
+          when "0000110" =>
+              read_data_s <= cnt_ack_s;
+          when "0000111" =>
+              read_data_s <= cnt_nack_s;
+          when "0001000" =>
+              read_data_s <= cnt_babble_s;
+          when "0001001" =>
+              read_data_s <= cnt_stall_s;
+          when "0001010" =>
+              read_data_s <= cnt_crcerror_s;
+          when "0001011" =>
+              read_data_s <= cnt_timeout_s;
+          when "0001100" =>
+              read_data_s <= cnt_errorpid_s;
+          when "0001101" =>
+              read_data_s <= cnt_cplt_s;
+          when others =>
+            read_data_s <= (others =>'X');
         end case;
-  
+
       elsif addr_s(10 downto 7) = "0001" then
         wch_u := unsigned(addr_s(6 downto 4));
         wch := to_integer(wch_u);
@@ -523,6 +572,8 @@ BEGIN
           when others =>
             read_data_s <= (others => 'X');
           end case;
+      else
+        read_data_s <= (others => 'X');
       end if;
     else
       read_data_s <= (others => 'X');
@@ -1009,8 +1060,19 @@ BEGIN
     udata_o           => epmem_data_in_s,
 
     dbg_rx_data_done_o => dbg_rx_data_done_s,
-    status_o          => trans_status_s
+    dbg_state_o        => dbg_trans_state_s,
+    status_o            => trans_status_s,
+
+    cnt_ack_o         =>  cnt_ack_s,
+    cnt_nack_o        =>  cnt_nack_s,
+    cnt_babble_o      =>  cnt_babble_s,
+    cnt_stall_o       =>  cnt_stall_s ,
+    cnt_crcerror_o    =>  cnt_crcerror_s,
+    cnt_timeout_o     =>  cnt_timeout_s,
+    cnt_errorpid_o    =>  cnt_errorpid_s,
+    cnt_cplt_o        =>  cnt_cplt_s
   );
+
   process(usbclk_i)
   begin
     if rising_edge(usbclk_i) then

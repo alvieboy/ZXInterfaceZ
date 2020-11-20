@@ -50,8 +50,19 @@ ENTITY usb_trans IS
     udata_o     : out std_logic_vector(7 downto 0);
 
     dbg_rx_data_done_o: out std_logic;
+    dbg_state_o  : out std_logic_vector(4 downto 0);
 
-    status_o    : out usb_transaction_status_type
+    status_o    : out usb_transaction_status_type;
+
+    cnt_ack_o       : out std_logic_vector(7 downto 0);
+    cnt_nack_o      : out std_logic_vector(7 downto 0);
+    cnt_babble_o    : out std_logic_vector(7 downto 0);
+    cnt_stall_o     : out std_logic_vector(7 downto 0);
+    cnt_crcerror_o  : out std_logic_vector(7 downto 0);
+    cnt_timeout_o   : out std_logic_vector(7 downto 0);
+    cnt_errorpid_o  : out std_logic_vector(7 downto 0);
+    cnt_cplt_o      : out std_logic_vector(7 downto 0)
+
   );
 
 end entity usb_trans;
@@ -82,6 +93,8 @@ architecture beh of usb_trans is
     COMPLETE
   );
 
+  -- Debug counters
+
   constant C_DEFAULT_ITG : natural := 4; --((3)*4); -- 3 bit times
   constant C_RX_TIMEOUT  : natural := 7+8+8+8; --((7+8)*4); -- 7+8 bit times
 
@@ -94,8 +107,17 @@ architecture beh of usb_trans is
     txcrc16     : std_logic_vector(15 downto 0);
     rxtimeout   : natural range 0 to C_RX_TIMEOUT-1;
     seq         : std_logic;
-    seq_valid    : std_logic;
-    pd_resetn   : std_logic;
+    seq_valid     : std_logic;
+    pd_resetn     : std_logic;
+    cnt_ack       : unsigned(7 downto 0);
+    cnt_nack      : unsigned(7 downto 0);
+    cnt_babble    : unsigned(7 downto 0);
+    cnt_stall     : unsigned(7 downto 0);
+    cnt_crcerror  : unsigned(7 downto 0);
+    cnt_timeout   : unsigned(7 downto 0);
+    cnt_errorpid  : unsigned(7 downto 0);
+    cnt_cplt      : unsigned(7 downto 0);
+ 
   end record;
 
   signal  r             : regs_type;
@@ -494,6 +516,7 @@ begin
         if itg_zero_s then
           status_o          <= ACK;
           w.state   := IDLE;
+          w.cnt_ack   := r.cnt_ack + 1;
         end if;
 
       when STALL =>
@@ -502,6 +525,7 @@ begin
         if itg_zero_s then
           status_o          <= STALL;
           w.state   := IDLE;
+          w.cnt_stall   := r.cnt_stall + 1;
         end if;
 
       when NACK =>
@@ -510,6 +534,8 @@ begin
         if itg_zero_s then
           status_o          <= NACK;
           w.state   := IDLE;
+          w.cnt_nack   := r.cnt_nack + 1;
+
         end if;
 
       when CRCERROR =>
@@ -518,6 +544,8 @@ begin
         if itg_zero_s then
           status_o          <= CRCERROR;
           w.state   := IDLE;
+          w.cnt_crcerror   := r.cnt_crcerror + 1;
+
         end if;
 
       when COMPLETE =>
@@ -526,15 +554,22 @@ begin
         if itg_zero_s then
           status_o          <= COMPLETED;
           w.state   := IDLE;
+          w.cnt_cplt   := r.cnt_cplt + 1;
+
         end if;
 
       when SEND_NACK=>
       when ERRORPID =>
+        w.cnt_errorpid   := r.cnt_errorpid + 1;
+          w.state := IDLE;
+
 
       when BABBLE =>
         if itg_zero_s then
           status_o          <= BABBLE;
           w.state := IDLE;
+          w.cnt_babble   := r.cnt_babble + 1;
+
         end if;
 
     end case;
@@ -545,6 +580,15 @@ begin
       r.token_data  <= (others => 'X');
       r.pd_resetn   <= '0';
       r.seq_valid   <= '0';
+
+      r.cnt_ack         <= (others => '0');
+      r.cnt_nack        <= (others => '0');
+      r.cnt_stall       <= (others => '0');
+      r.cnt_crcerror    <= (others => '0');
+      r.cnt_timeout     <= (others => '0');
+      r.cnt_errorpid    <= (others => '0');
+  
+
     elsif rising_edge(usbclk_i) then
       r <= w;
     end if;
@@ -585,6 +629,41 @@ begin
   dbg_rx_data_done_o <= rx_data_done;
   data_seq_valid_o <= r.seq_valid;
 
+  process(r.state)
+  begin
+    case r.state is
+      when IDLE =>           dbg_state_o <= "00000";
+      when SENDPID =>        dbg_state_o <= "00001";
+      when TOKEN1 =>         dbg_state_o <= "00010";
+      when TOKEN2 =>         dbg_state_o <= "00011";
+      when DATA1 =>          dbg_state_o <= "00100";
+      when CRC1 =>           dbg_state_o <= "00101";
+      when CRC2 =>           dbg_state_o <= "00110";
+      when FLUSH =>          dbg_state_o <= "00111";
+      when ERRORPID =>       dbg_state_o <= "01000";
+      when BABBLE =>         dbg_state_o <= "01001";
+      when TIMEOUT =>        dbg_state_o <= "01010";
+      when WAIT_RX =>        dbg_state_o <= "01011";
+      when WAIT_DATA =>      dbg_state_o <= "01100";
+      when WAIT_ACK_NACK =>  dbg_state_o <= "01101";
+      when ACK =>            dbg_state_o <= "01111";
+      when NACK =>           dbg_state_o <= "10000";
+      when STALL =>          dbg_state_o <= "10001";
+      when SEND_ACK =>       dbg_state_o <= "10010";
+      when SEND_NACK =>      dbg_state_o <= "10011";
+      when CRCERROR =>       dbg_state_o <= "10100";
+      when COMPLETE =>       dbg_state_o <= "10101";
+      when others =>         dbg_state_o <= "10110";
+    end case;
+  end process;
+
+  cnt_ack_o      <= std_logic_vector(r.cnt_ack);
+  cnt_nack_o     <= std_logic_vector(r.cnt_nack);
+  cnt_babble_o   <= std_logic_vector(r.cnt_babble);
+  cnt_stall_o    <= std_logic_vector(r.cnt_stall);
+  cnt_crcerror_o <= std_logic_vector(r.cnt_crcerror);
+  cnt_timeout_o  <= std_logic_vector(r.cnt_timeout);
+  cnt_errorpid_o <= std_logic_vector(r.cnt_errorpid);
+  cnt_cplt_o     <= std_logic_vector(r.cnt_cplt);
+
 end beh;
-
-
