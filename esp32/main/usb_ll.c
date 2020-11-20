@@ -288,12 +288,25 @@ void usb_ll__dump_info()
 {
     uint8_t regs[16];
     int i;
-    fpga__read_usb_block(USB_REG_STATUS, regs, 4);
+    fpga__read_usb_block(USB_REG_STATUS, regs, 16);
     USBLLDEBUG("FPGA register information:");
     USBLLDEBUG("  Status   : 0x%02x", regs[0]);
     USBLLDEBUG("  Intpend1 : 0x%02x", regs[1]);
     USBLLDEBUG("  Intpend2 : 0x%02x", regs[2]);
-    USBLLDEBUG("  TStatus  : 0x%02x", regs[3]);
+
+    USBLLDEBUG(" USB debug registers:");
+    USBLLDEBUG("  dbg0   : 0x%02x", regs[3]);
+    USBLLDEBUG("  dbg1   : 0x%02x", regs[4]);
+    USBLLDEBUG("  dbg2   : 0x%02x", regs[5]);
+    USBLLDEBUG(" USB counters:");
+    USBLLDEBUG("  ack    : 0x%02x", regs[6]);
+    USBLLDEBUG("  nack   : 0x%02x", regs[7]);
+    USBLLDEBUG("  babble : 0x%02x", regs[8]);
+    USBLLDEBUG("  stall  : 0x%02x", regs[9]);
+    USBLLDEBUG("  crcerr : 0x%02x", regs[10]);
+    USBLLDEBUG("  timeout: 0x%02x", regs[11]);
+    USBLLDEBUG("  errpid : 0x%02x", regs[12]);
+    USBLLDEBUG("  cplt   : 0x%02x", regs[13]);
 
     for (i=0;i<MAX_USB_CHANNELS;i++) {
         fpga__read_usb_block(USB_REG_CHAN_CONF1(i), regs, 11);

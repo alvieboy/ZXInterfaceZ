@@ -25,8 +25,33 @@ struct usb_block
     uint8_t out_epchan:7;
     uint8_t out_seq:1;
     uint8_t cbw_queued;
-};
+} __attribute__((packed));
 
+// Command Block Wrapper
+struct usb_block_cbw {
+    le_uint32_t dCBWSignature;
+    le_uint32_t dCBWTag;
+    le_uint32_t dCBWDataTransferLength;
+    uint8_t bmCBWFlags;
+    uint8_t bCBWLUN:4;
+    uint8_t rsvd:4;
+    uint8_t bCBWCBLength:5;
+    uint8_t rsvd:3;
+    uint8_t CBWCB[15];
+} __attribute__((packed));
+
+// Command status wrapper
+struct usb_block_csw {
+    le_uint32_t dCSWSignature;
+    le_uint32_t dCSWTag;
+    le_uint32_t dCSWDataResidue;
+    uint8_t bCSWStatus;
+} __attribute__((packed));
+
+
+#define CBWSIGNATURE (0x43425355)
+#define CBW_FLAG_DEVICE_TO_HOST (0x80)
+#define CBW_FLAG_HOST_TO_DEVICE (0x00)
 
 #define USB_BLOCK_REQ_RESET (0xFF)
 #define USB_BLOCK_REQ_GET_MAX_LUN (0xFE)
@@ -108,21 +133,28 @@ static int usb_block__probe(struct usb_device *dev, struct usb_interface *i)
     usb_endpoint_descriptor_t *ep_out = NULL;
 
 
-    USBBLOCKDEBUG("     ***** PROBING INTERFACE %d altSetting %d **** class=%02x\n",
-          intf->bInterfaceNumber,
-          intf->bAlternateSetting,
-          intf->bInterfaceClass);
+    USBBLOCKDEBUG("     ***** PROBING INTERFACE %d altSetting %d **** class=%02x subclass=%02x proto=%02x\n",
+                  intf->bInterfaceNumber,
+                  intf->bAlternateSetting,
+                  intf->bInterfaceClass,
+                  intf->bInterfaceSubClass,
+                  intf->bInterfaceProtocol
+                 );
 
     if (intf->bInterfaceClass == 0x08) {
-        if (intf->bInterfaceSubClass == 0x00) { // Not boot
+        if ((intf->bInterfaceSubClass == 0x00)|
+            (intf->bInterfaceSubClass == 0x06))
+        {
             if (intf->bInterfaceProtocol == 0x50) { 
                 valid = true;
             }
         }
     }
 
-    if (!valid)
+    if (!valid) {
+        USBBLOCKDEBUG("Not USB block device");
         return false;
+    }
 
     int index = 0;
     usb_endpoint_descriptor_t *ep = NULL;
@@ -199,6 +231,7 @@ static void usb_block__disconnect(struct usb_device *dev, struct usb_interface *
     intf->drvdata = NULL;
 
 }
+
 
 
 const struct usb_driver usb_block_driver = {

@@ -38,3 +38,6 @@
 #define USB_REG_CHAN_TRANS3(chan) ((USB_REG_CHAN_BASE) + (((uint16_t)chan)<<4) + 0x0A)
 
 #define USB_REG_DATA(address) ((address) | 0x0400)
+
+#define USB_REG_DEBUG_BASE (2U<<7)
+

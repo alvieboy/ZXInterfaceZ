@@ -72,6 +72,8 @@ static int console__usb(int argc, char **argv)
     } else if (strcmp(argv[0],"off")==0) {
         ESP_LOGI(CTAG, "Powering OFF USB");
         usb_ll__set_power(0);
+    } else if (strcmp(argv[0],"info")==0) {
+        usbh__dump_info();
     } else {
         ESP_LOGE(CTAG, "Unrecognised USB command %s", argv[0]);
     }

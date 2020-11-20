@@ -303,7 +303,6 @@ static int usbh__detect_and_assign_address()
     dev.ep0_size = dev.device_descriptor.bMaxPacketSize;
 
     if (usbh__assign_address(&dev)<0) {
-
         return -1;
     }
 
@@ -499,8 +498,10 @@ static void usbh__request_failed(struct usb_request *req)
     taskYIELD();
 }
 
-static inline int usbh__request_data_remain(const struct usb_request*req)
+static inline int usbh__request_data_remain(const struct usb_request*req, unsigned last_transaction)
 {
+    // If we got a short packet, then we are done.
+
     // TODO: ensure this is smaller than EP size
     int remain = req->length - req->size_transferred;
 
@@ -511,6 +512,12 @@ static inline int usbh__request_data_remain(const struct usb_request*req)
               remain,
               req->length,
               req->size_transferred);
+
+    if (remain>0 && (last_transaction < req->epsize)) {
+        USBHDEBUG("Chan %d: Short response (%d epsize %d), returning 0", req->channel,
+                  last_transaction, req->epsize);
+        return 0;
+    }
 
     return remain;
 }
@@ -543,7 +550,7 @@ static int usbh__wait_ack(struct usb_request *req)
 
 static int usbh__issue_setup_data_request(struct usb_request *req)
 {
-    int remain = usbh__request_data_remain(req);
+    int remain = usbh__request_data_remain(req, req->epsize);
 
     if (req->direction==REQ_DEVICE_TO_HOST) {
         // send IN request.
@@ -640,7 +647,7 @@ static int usbh__control_request_completed_reply(uint8_t chan, uint8_t stat, str
 
             // IN request
             if (req->direction==REQ_DEVICE_TO_HOST) {
-                rxlen = usbh__request_data_remain(req);
+                rxlen = usbh__request_data_remain(req, req->epsize);
                 usb_ll__read_in_block(chan, req->rptr, &rxlen);
             } else {
 
@@ -649,7 +656,7 @@ static int usbh__control_request_completed_reply(uint8_t chan, uint8_t stat, str
             req->size_transferred += rxlen;
             req->seq = !req->seq;
 
-            if (usbh__request_data_remain(req)>0) {
+            if (usbh__request_data_remain(req, rxlen)>0) {
                 USBHDEBUG("Still data to go");
                 return usbh__issue_setup_data_request(req);
             } else {
