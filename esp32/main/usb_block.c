@@ -36,7 +36,7 @@ struct usb_block_cbw {
     uint8_t bCBWLUN:4;
     uint8_t rsvd:4;
     uint8_t bCBWCBLength:5;
-    uint8_t rsvd:3;
+    uint8_t rsvd2:3;
     uint8_t CBWCB[15];
 } __attribute__((packed));
 
