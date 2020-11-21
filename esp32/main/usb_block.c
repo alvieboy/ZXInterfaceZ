@@ -6,26 +6,15 @@
 #include "usb_block.h"
 #include "esp_log.h"
 #include "defs.h"
+#include <string.h>
 
 #define USBBLOCKTAG "USBBLOCK"
 #define USBBLOCKDEBUG(x...) ESP_LOGI(USBBLOCKTAG,x)
 
 typedef enum {
-    USB_BLOCK_STATE_IDLE
+    USB_BLOCK_STATE_GET_MAX_LUN,
+    USB_BLOCK_STATE_RUNNING,
 } usb_block_state_t;
-
-
-struct usb_block
-{
-    struct usb_device *dev;
-    struct usb_interface *intf;
-    uint8_t max_lun;
-    uint8_t in_epchan:7;
-    uint8_t in_seq:1;
-    uint8_t out_epchan:7;
-    uint8_t out_seq:1;
-    uint8_t cbw_queued;
-} __attribute__((packed));
 
 // Command Block Wrapper
 struct usb_block_cbw {
@@ -39,6 +28,21 @@ struct usb_block_cbw {
     uint8_t rsvd2:3;
     uint8_t CBWCB[15];
 } __attribute__((packed));
+
+struct usb_block
+{
+    struct usb_device *dev;
+    struct usb_interface *intf;
+    usb_block_state_t state;
+    uint8_t max_lun;
+    uint8_t in_epchan:7;
+    uint8_t in_seq:1;
+    uint8_t out_epchan:7;
+    uint8_t out_seq:1;
+    uint8_t cbw_queued;
+    struct usb_block_cbw cbw;
+} __attribute__((packed));
+
 
 // Command status wrapper
 struct usb_block_csw {
@@ -117,8 +121,9 @@ int usb_block__get_max_lun(struct usb_block *self)
     usbh__submit_request(&req);
 
     if (usbh__wait_completion(&req)<0) {
-        ESP_LOGE(USBBLOCKTAG,"Device not responding, assumming 1");
-        self->max_lun = 1;
+        ESP_LOGE(USBBLOCKTAG,"Device not responding");
+        self->max_lun = -1;
+        return -1;
     }
     return 0;
 }
@@ -215,6 +220,16 @@ static int usb_block__probe(struct usb_device *dev, struct usb_interface *i)
     usb_ll__channel_set_interval(self->in_epchan, ep_in->bInterval);
 
 
+    if (usb_block__get_max_lun(self)<0) {
+        ESP_LOGE(USBBLOCKTAG,"Cannot get max LUN from device");
+        free(self);
+        return -1;
+    }
+
+    // Register block device
+
+
+
     i->drvdata = self;
 
     return 0;
@@ -231,6 +246,50 @@ static void usb_block__disconnect(struct usb_device *dev, struct usb_interface *
     intf->drvdata = NULL;
 
 }
+
+int usb_block__command_transfer_completed(uint8_t channel, uint8_t status,void*self)
+{
+    struct usb_block *blk = (struct usb_block *)self;
+    if (channel == blk->out_epchan) {
+
+    } else if (channel == blk->in_epchan) {
+        
+    } else {
+        // error
+    }
+    return 0;
+}
+
+static int usb_block__send_command(struct usb_block *blk,
+                             uint8_t lun, const uint8_t *command_data,
+                             uint8_t command_len,
+                             unsigned datalen)
+{
+    blk->cbw.dCBWSignature = __le32(CBWSIGNATURE);
+    blk->cbw.dCBWTag = 0;
+    blk->cbw.dCBWDataTransferLength = __le32(datalen);
+
+    blk->cbw.bmCBWFlags = CBW_FLAG_HOST_TO_DEVICE;
+    blk->cbw.bCBWLUN = lun;
+    blk->cbw.rsvd = 0;
+    blk->cbw.bCBWCBLength = command_len;
+    blk->cbw.rsvd2=0;
+    memcpy(&blk->cbw.CBWCB[0], command_data, command_len);
+
+    // Send it over the wire
+
+    return usb_ll__submit_request(blk->out_epchan,
+                                  0x0080, // TBD - epmemaddr
+                                  PID_OUT,
+                                  blk->out_seq,      // TODO: Check seq.
+                                  (uint8_t*)&blk->cbw,
+                                  command_len,
+                                  usb_block__command_transfer_completed,
+                                  blk);
+}
+
+
+
 
 
 
