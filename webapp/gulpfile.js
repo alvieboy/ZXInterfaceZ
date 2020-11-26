@@ -160,7 +160,7 @@ gulp.task("copy-only-gzip", () => {
 gulp.task("clear-files-in-spiffs", () => {
     return gulp
         .src("../esp32/spiffs/*")
-        .pipe(filter(["**/main.*..js.gz", "**/polyfills.*.js.gz", "**/runtime.*.js.gz", "styles.*.css.gz", "favicon.ico"]))
+        .pipe(filter(["**/main.*.js.gz", "**/polyfills.*.js.gz", "**/runtime.*.js.gz", "**/styles.*.css.gz", "**/favicon.ico"]))
         .pipe(clean({ force: true }));
 });
 
