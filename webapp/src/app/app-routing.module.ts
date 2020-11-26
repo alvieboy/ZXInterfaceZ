@@ -11,8 +11,8 @@ import { NotfoundComponent } from './notfound/notfound.component';
 
 const routes: Routes = [
   { path: 'home', component: HomeComponent },
-  { path: 'sdcard', component: SdcardComponent },
-  { path: 'sdcard', component: SdcardComponent, children: [ { path: '**', component: SdcardComponent } ] },
+  // { path: 'sdcard', component: SdcardComponent },
+  // { path: 'sdcard', component: SdcardComponent, children: [ { path: '**', component: SdcardComponent } ] },
   { path: 'status', component: StatusComponent },
   { path: 'wifi', component: WifiComponent },
   { path: 'devices', component: DevicesComponent },
