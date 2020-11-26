@@ -33,7 +33,7 @@ To install NodeJS on Debian/Ubuntu don't use the provided packages since they ar
 cd $INTERFACE_Z/webapp
 npm install
 ng build --prod
-gulp
+gulp default
 gulp install-into-spiffs
 ```
 

@@ -29,9 +29,13 @@ To get more help on the Angular CLI use `ng help` or go check out the [Angular C
 
 # ZX Interface Z
 
-- To generate output artefacts `gulp`.
-- To run the webapp in a Nginx docker container on port 8080:
-`docker run -v $PWD/dist/webapp-gzip:/var/webapp -v $PWD/nginx-webapp.conf:/etc/nginx/conf.d/webapp.conf -p 8080:8080 nginx:stable`
+To build:
+
+```
+ng build --prod
+gulp default
+gulp install-into-spiffs
+```
 
 ## Local Development
 
