@@ -10,6 +10,41 @@ export class SdcardService {
   listUrl: string = '/req/list';
   constructor(private http: HttpClient) { }
 
+  getRoot(): Vnode[] {
+    return [{
+      name: '/',
+      fullPath: '/',
+      ftype: 'd',
+      extension: '',
+      size: 0, // TODO allow unknown for dirs
+    }];
+  }
+
+  getChildren(path: string): Observable<Vnode[]> {
+
+    const options = { params: { path: path }};
+    const res = this.http.get<ApiDir>(this.listUrl, options);
+    console.log(`GET ${this.listUrl}?path=${path}`);
+    res.subscribe(res => {
+      console.log(res);
+    });
+    return res.pipe(mapTo(dir => {
+      return dir.entries.map(child => {
+        const nameParts = child.name.split('.');
+        const extension = nameParts.length > 1 ? nameParts[nameParts.length -1] : '';
+        const fullPath = path == '/' ? `/${child.name}` : `${path}/${child.name}`;
+
+        return {
+          name: child.name,
+          fullPath: fullPath,
+          ftype: child.type[0],
+          extension: extension,
+          size: child.size,
+        }
+      })
+    }));
+  }
+
   getDir(path: string): Observable<Vnode> {
 
     const options = { params: { path: path }};
@@ -21,15 +56,16 @@ export class SdcardService {
     return res.pipe(mapTo(dir => {
       return {
         name: dir.path,
+        fullPath: 'TODO',
         ftype: 'd',
         extension: '',
         size: dir.entries.length,
-        children: zip(...this.getChildren(dir.entries, path)),
+        children: zip(...this.getChildren2(dir.entries, path)),
       };
     }));
   }
 
-  getChildren(entries: ApiEntry[], path: string): Observable<Vnode>[] {
+  getChildren2(entries: ApiEntry[], path: string): Observable<Vnode>[] {
     return entries.map(entry=> {
       if (entry.type != 'dir') {
         return this.getFileChild(entry);
@@ -44,6 +80,7 @@ export class SdcardService {
     const extension = nameParts.length > 1 ? nameParts[nameParts.length -1] : '';
     const file: Vnode = {
       name: child.name,
+      fullPath: 'TODO',
       ftype: child.type[0],
       extension: extension,
       size: child.size,

@@ -15,10 +15,16 @@ import { Vnode } from '../models/Vnode';
 export class SdcardComponent implements OnInit {
 
   currentPath = '/';
-  treeControl = new NestedTreeControl<Vnode>(node => node.children);
+  treeControl = new NestedTreeControl<Vnode>(node => {
+    if (!node.children) {
+      node.children = this.sdcardService.getChildren(node.fullPath);
+      console.log(node.children);
+    }
+    return node.children;
+  });
   dataSource = new MatTreeNestedDataSource<Vnode>();
 
-  hasChild = (_: number, node: Vnode) => !!node.children && node.children.subscribe(children => children.length > 0);
+  hasChild = (_: number, node: Vnode) => node.ftype == 'd';
 
   constructor(
     private route: ActivatedRoute,
@@ -32,9 +38,7 @@ export class SdcardComponent implements OnInit {
     var path = this.route.snapshot.firstChild == null ?  '' : this.route.snapshot.firstChild.url.join('/');
     this.currentPath = `/${path}`;
     console.log(this.currentPath);
-    this.sdcardService.getDir('/').subscribe(d => {
-      this.dataSource.data = [d];
-    });
+    this.dataSource.data = this.sdcardService.getRoot();
   }
 
   fileIcon(extension: string): string {
