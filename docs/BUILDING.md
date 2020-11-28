@@ -1,6 +1,7 @@
 # Building Interface Z
 Here are the basic instructions to fully build the InterfaceZ. It is split into four parts:
 - [Building the FPGA binary file](#building-the-fpga-binary-file)
+- [Building Angular Webapp](#building-angular-webapp)
 - [Building ESP32 firmware](#building-esp32-firmware)
 - [Manually uploading the design](#manually-uploading-the-design)
 - [Building host-mode firmware](#building-host-mode-firmware)
@@ -17,6 +18,24 @@ You can download the Lite edition for free from [the Intel website](https://fpga
 ### Building the binary bitfile
 Launch Quartus and open the project file *interfacez.qpf* . Perform a full "Compile design" step. That should generate the output file (which is
 *output_files/interfacez.rbf*. No need to perform any programming of the FPGA at this point - uploading will be handled in [Manually uploading the design](#manually-uploading-the-design) .
+
+## Building Angular Webapp
+### Prerequisites
+
+- [NodeJS](https://nodejs.org/en/) 12.x or later (including `npm`)
+- [Gulp](https://gulpjs.com/) `npm install --gloabal gulp-cli`
+
+To install NodeJS on Debian/Ubuntu don't use the provided packages since they are for NodeJS  8.11
+
+### Building the Webapp
+
+```
+cd $INTERFACE_Z/webapp
+npm install
+ng build --prod
+gulp default
+gulp install-into-spiffs
+```
 
 ## Building ESP32 firmware
 ### Pre-requesites

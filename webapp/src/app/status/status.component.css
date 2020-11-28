@@ -1,0 +1,10 @@
+.mat-column-key {
+  word-wrap: break-word;
+  white-space: unset;
+  flex: 0 0 50%;
+  width: 50%;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-word;
+  hyphens: auto;
+}

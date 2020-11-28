@@ -1,0 +1,7 @@
+{
+  "/req/list\\?path=/": "/_sdcard_root",
+  "/req/list\\?path=/a-b/SCRSHOT": "/_sdcard_a-b_SCRSHOT",
+  "/req/list\\?path=/:path": "/_sdcard_:path",
+  "/req/*": "/$1",
+  "/upload/*": "/$1"
+}
