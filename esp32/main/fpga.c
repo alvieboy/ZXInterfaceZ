@@ -749,3 +749,18 @@ int fpga__read_bit_data(uint8_t *buf, unsigned len)
 
 }
 
+int fpga__read_capture_block(uint16_t address, uint8_t *dest, int size)
+{
+    return fpga__issue_read_addr16(FPGA_SPI_CMD_READ_CAP,
+                                   address,
+                                   dest,
+                                   size);
+}
+
+int fpga__write_capture_block(uint16_t address, const uint8_t *buffer, int size)
+{
+    return fpga__issue_write_addr16(FPGA_SPI_CMD_WRITE_CAP,
+                                   address,
+                                   buffer,
+                                   size);
+}

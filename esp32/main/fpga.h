@@ -40,6 +40,8 @@ typedef uint8_t fpga_status_t;
 #define FPGA_SPI_CMD_READ_UART_DATA (0xD9)
 #define FPGA_SPI_CMD_READ_BIT (0xD7)
 #define FPGA_SPI_CMD_WRITE_BIT (0xD6)
+#define FPGA_SPI_CMD_READ_CAP (0x62)
+#define FPGA_SPI_CMD_WRITE_CAP (0x63)
 
 /* Status bits */
 #define FPGA_STATUS_RESFIFO_FULL   (1<<1)
@@ -179,6 +181,9 @@ int fpga__read_uart_data(uint8_t *buf, int len);
 int fpga__write_uart_data(uint8_t);
 int fpga__write_bit_data(const uint8_t *data, unsigned len);
 int fpga__read_bit_data(uint8_t *data, unsigned len);
+
+int fpga__read_capture_block(uint16_t address, uint8_t *dest, int size);
+int fpga__write_capture_block(uint16_t address, const uint8_t *buffer, int size);
 
 #ifdef __cplusplus
 }

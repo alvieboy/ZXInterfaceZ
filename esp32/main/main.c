@@ -41,6 +41,8 @@
 #include "adc.h"
 #include "board.h"
 #include "bit.h"
+#include "hdlc_decoder.h"
+#include "scope.h"
 
 static int8_t videomode = 0;
 
@@ -49,29 +51,6 @@ uint32_t loglevel;
 volatile int restart_requested = 0;
 static volatile uint8_t spectrum_model = 0xff;
 static volatile uint8_t spectrum_flags = 0x00;
-
-
-#if 0
-static void start_capture2()
-{
-    // Stop, clear
-    fpga__set_clear_flags( FPGA_FLAG_CAPCLR, FPGA_FLAG_CAPRUN);
-    fpga__set_flags( FPGA_FLAG_CAPRUN);
-}
-
-static void start_capture()
-{
-    // Reset spectrum, stop capture
-    fpga__set_clear_flags( FPGA_FLAG_RSTSPECT, FPGA_FLAG_CAPRUN );
-    // Reset fifo, clear capture
-    fpga__set_flags( FPGA_FLAG_CAPCLR | FPGA_FLAG_RSTFIFO);
-
-    // Remove resets, start capture
-    fpga__set_clear_flags( FPGA_FLAG_CAPRUN | FPGA_FLAG_ENABLE_INTERRUPT , FPGA_FLAG_RSTFIFO| FPGA_FLAG_RSTSPECT| FPGA_FLAG_CAPCLR );
-
-}
-#endif
-
 
 void request_restart(void)
 {
@@ -175,6 +154,67 @@ const char *get_spectrum_model(void)
     return spectrum_model_str(spectrum_model);
 }
 
+static void shift_lfsr(uint32_t *data, const uint32_t xorpat)
+{
+    uint32_t shifted = (*data)>>1;
+    if ((*data)&1) {
+        shifted ^= xorpat;
+    }
+    *data=shifted;
+}
+
+static bool extram_test(bool simple_test)
+{
+    // 16MB. with 256-byte chunks, it gives 65536 iterations. 2080 bits for each row.
+    // Takes about 30 seconds to test all RAM at 10Mbit/s.
+#ifdef __linux__
+    const unsigned topram = 0x00080000;
+#else
+    const unsigned topram = 0x01000000;
+#endif
+
+
+    if (simple_test)
+    {
+        union {
+            uint32_t u32;
+            uint8_t u8[4];
+        } pat, readback;
+
+        unsigned address = 0;
+        pat.u32 = 0xDEADBEEF;
+        const uint32_t xorpat = (1<<31) | (1<<21) | (1<<1) || (1<<0);
+
+        ESP_LOGI(TAG, "Testing external RAM (simple)");
+
+
+        while (address < topram) {
+            fpga__write_extram_block(address, &pat.u8[0], sizeof(pat.u8));
+            shift_lfsr(&pat.u32, xorpat);
+            address += 0x1000;
+        }
+
+        // Read back
+        pat.u32 = 0xDEADBEEF;
+        address = 0;
+        while (address < topram) {
+            readback.u32 = 0;
+            fpga__read_extram_block(address, &readback.u8[0], sizeof(readback.u8));
+            if (readback.u32 != pat.u32) {
+                ESP_LOGE(TAG, "Read error at address %08x: expected %08x, got %08x",
+                         address,
+                         pat.u32,
+                         readback.u32);
+                return false;
+            }
+            shift_lfsr(&pat.u32, xorpat);
+            address += 0x1000;
+        }
+        ESP_LOGI(TAG, "External RAM test (simple) passed");
+        return true;
+    }
+    return false;
+}
 
 #define SPECTRUM_FLAGS_AY (1<<0)
 
@@ -207,6 +247,47 @@ static void detect_spectrum()
     }
 }
 
+static hdlc_decoder_t console_hdlc_decoder;
+static uint8_t console_hdlc_buf[64];
+
+static void console_char_data(void *user, uint8_t val)
+{
+    console__char(val);
+}
+
+static void console_hdlc_data(void *user, const uint8_t *data, unsigned len)
+{
+    //ESP_LOGI(TAG,"HDLC console data");
+    console__hdlc_data(data,len);
+}
+
+
+static void local_uart_init()
+{
+    hdlc_decoder__init(&console_hdlc_decoder,
+                       console_hdlc_buf,
+                       sizeof(console_hdlc_buf),
+                       &console_hdlc_data,
+                       &console_char_data,
+                       NULL
+                      );
+}
+
+static void uart_char(uint8_t c)
+{
+    hdlc_decoder__append(&console_hdlc_decoder, c);
+}
+
+
+static void  __attribute__((noreturn)) internal_error()
+{
+    while (1) {
+        led__set(LED1, 1);
+        vTaskDelay(100 / portTICK_RATE_MS);
+        led__set(LED1, 0);
+        vTaskDelay(100 / portTICK_RATE_MS);
+    }
+}
 
 void app_main(void);
 
@@ -216,6 +297,7 @@ void app_main()
     int do_restart = 0;
 
     gpio__init();
+    console__init();
     adc__init();
     board__init();
 
@@ -235,12 +317,7 @@ void app_main()
 
     if (fpga__init()<0) {
         ESP_LOGE(TAG, "Cannot proceed without FPGA!");
-        while (1) {
-            led__set(LED1, 1);
-            vTaskDelay(100 / portTICK_RATE_MS);
-            led__set(LED1, 0);
-            vTaskDelay(100 / portTICK_RATE_MS);
-        }
+        internal_error();
     }
 
     // Wait for BIT mode detection.
@@ -250,6 +327,14 @@ void app_main()
         bit__run();
     }
 
+    if (!extram_test(true)) {
+        ESP_LOGE(TAG,"Cannot proceed without external RAM!");
+        internal_error();
+    }
+
+    // Init local uart for console
+    local_uart_init();
+
     wifi__init();
 
     // Set mode if we are using a 2A/3 spectrum;
@@ -258,12 +343,7 @@ void app_main()
         // Check if FPGA supports mode
         if ((fpga__id() >>16)!=0xA610) {
             ESP_LOGE(TAG, "Detected +2A/+3 but FPGA binary does not support it (%08x)", fpga__id());
-            while (1) {
-                led__set(LED1, 1);
-                vTaskDelay(100 / portTICK_RATE_MS);
-                led__set(LED1, 0);
-                vTaskDelay(100 / portTICK_RATE_MS);
-            }
+            internal_error();
         }
         fpga__set_clear_flags(FPGA_FLAG_MODE2A, 0);
         ESP_LOGI(TAG, "Switched to +2A/+3 mode");
@@ -272,7 +352,7 @@ void app_main()
 
     ESP_LOGI(TAG, "Init spectrum");
 
-
+    
     spectint__init();
 
     resource__register( 0x00, &versionresource);
@@ -308,8 +388,11 @@ void app_main()
 
     detect_spectrum();
 
+
+
     // Start capture
-    //start_capture();
+//    scope__start();
+
     unsigned iter = 0;
     while(1) {
         uint8_t c;
@@ -348,7 +431,7 @@ void app_main()
         do {
             s = uart_rx_one_char(&c);
             if (s==OK) {
-                console__char(c);
+                uart_char(c);
             }
         } while (s==OK);
         // Process buttons
