@@ -14,13 +14,16 @@ static void hdlc_decoder__update_crc(hdlc_decoder_t *hdlc, uint8_t data)
 }
 
 void hdlc_decoder__init(hdlc_decoder_t *decoder, uint8_t *buffer, unsigned maxlen,
-                        hdlc_handler_t handler, void *handlerdata)
+                        hdlc_frame_handler_t handler,
+                        hdlc_invalid_char_handler_t invalid_handler,
+                        void *handlerdata)
 {
     decoder->escape = false;
     decoder->sync = false;
     decoder->buffer = buffer;
     decoder->buflen = maxlen;
-    decoder->handler = handler;
+    decoder->frame_handler = handler;
+    decoder->invalid_handler = invalid_handler;
     decoder->handlerdata = handlerdata;
     decoder->clen = 0;
 }
@@ -28,14 +31,14 @@ void hdlc_decoder__init(hdlc_decoder_t *decoder, uint8_t *buffer, unsigned maxle
 static void hdlc_decoder__process_frame(hdlc_decoder_t *decoder)
 {
     if (decoder->sync && decoder->clen>=2 && (decoder->crc==0)) {
-        decoder->handler(decoder->handlerdata,
-                         decoder->buffer,
-                         decoder->clen - 2);
+        decoder->frame_handler(decoder->handlerdata,
+                               decoder->buffer,
+                               decoder->clen - 2);
     } else {
-        decoder->handler(decoder->handlerdata,
-                         NULL,
-                         0
-                        );
+        decoder->frame_handler(decoder->handlerdata,
+                               NULL,
+                               0
+                              );
     }
 
 }
@@ -69,7 +72,10 @@ void hdlc_decoder__append(hdlc_decoder_t *decoder, uint8_t data)
             decoder->crc = 0xFFFF;
             decoder->sync=true;
             decoder->escape=false;
-        } 
+        } else {
+            if (decoder->invalid_handler)
+                decoder->invalid_handler(decoder->handlerdata, data);
+        }
     }
 }
 
