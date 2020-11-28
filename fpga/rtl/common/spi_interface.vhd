@@ -146,58 +146,58 @@ begin
         blocksize_active_r <= '0';
         case dat_s is
           when x"DA" => -- Read Test UART status
-            ahb_address_r   <= to_01("0XXXXXXXXXX10XXXXXX011100"); ahb_write_r <= '0'; ahb_inc_r <= '0';
+            ahb_address_r   <= to_01("00XXXXXXXXX10XXXXXX011100"); ahb_write_r <= '0'; ahb_inc_r <= '0';
             state_r         <= RDWR;
           when x"D8" => -- Write UART data
-            ahb_address_r   <= to_01("0XXXXXXXXXX10XXXXXX011101"); ahb_write_r <= '1'; ahb_inc_r <= '0';
+            ahb_address_r   <= to_01("00XXXXXXXXX10XXXXXX011101"); ahb_write_r <= '1'; ahb_inc_r <= '0';
             state_r         <= WRINC;
           when x"D9" => -- Read UART data
-            ahb_address_r   <= to_01("0XXXXXXXXXX10XXXXXX011101"); ahb_write_r <= '0'; ahb_inc_r <= '0';
+            ahb_address_r   <= to_01("00XXXXXXXXX10XXXXXX011101"); ahb_write_r <= '0'; ahb_inc_r <= '0';
             state_r         <= RDBLOCK;
           when x"D7" => -- Read BIT
-            ahb_address_r   <= to_01("0XXXXXXXXXX10XXXXXX001100"); ahb_write_r <= '0'; ahb_inc_r <= '1';
+            ahb_address_r   <= to_01("00XXXXXXXXX10XXXXXX001100"); ahb_write_r <= '0'; ahb_inc_r <= '1';
             state_r         <= RDWR;
           when x"D6" => -- Write BIT
-            ahb_address_r   <= to_01("0XXXXXXXXXX10XXXXXX001000"); ahb_write_r <= '1'; ahb_inc_r <= '1';
+            ahb_address_r   <= to_01("00XXXXXXXXX10XXXXXX001000"); ahb_write_r <= '1'; ahb_inc_r <= '1';
             state_r         <= WRINC;
           when x"DE" => -- Read status
-            ahb_address_r   <= to_01("0XXXXXXXXXX10XXXXXX000100"); ahb_write_r <= '0'; ahb_inc_r <= '0';
+            ahb_address_r   <= to_01("00XXXXXXXXX10XXXXXX000100"); ahb_write_r <= '0'; ahb_inc_r <= '0';
             state_r         <= RDWR;
           when x"40" => -- Read last PC
-            ahb_address_r   <= to_01("0XXXXXXXXXX10XXXXXX010000"); ahb_write_r <= '0'; ahb_inc_r <= '1';
+            ahb_address_r   <= to_01("00XXXXXXXXX10XXXXXX010000"); ahb_write_r <= '0'; ahb_inc_r <= '1';
             state_r         <= RDWR;
           when x"E3" => -- Write Resource FIFO contents
-            ahb_address_r   <= to_01("0XXXXXXXXXX10XXXXXX010100"); ahb_write_r <= '1'; ahb_inc_r <= '0';
+            ahb_address_r   <= to_01("00XXXXXXXXX10XXXXXX010100"); ahb_write_r <= '1'; ahb_inc_r <= '0';
             state_r         <= WRINC;
           when x"E4" => -- Write TAP FIFO contents
-            ahb_address_r   <= to_01("0XXXXXXXXXX10XXXXXX011000"); ahb_write_r <= '1'; ahb_inc_r <= '0';
+            ahb_address_r   <= to_01("00XXXXXXXXX10XXXXXX011000"); ahb_write_r <= '1'; ahb_inc_r <= '0';
             state_r         <= WRINC;
           when x"E6" => -- Write TAP command FIFO contents
-            ahb_address_r   <= to_01("0XXXXXXXXXX10XXXXXX011001"); ahb_write_r <= '1'; ahb_inc_r <= '0';
+            ahb_address_r   <= to_01("00XXXXXXXXX10XXXXXX011001"); ahb_write_r <= '1'; ahb_inc_r <= '0';
             state_r         <= WRINC;
           when x"E5" => -- Get TAP FIFO usage
-            ahb_address_r   <= to_01("0XXXXXXXXXX10XXXXXX011010"); ahb_write_r <= '0'; ahb_inc_r <= '1';
+            ahb_address_r   <= to_01("00XXXXXXXXX10XXXXXX011010"); ahb_write_r <= '0'; ahb_inc_r <= '1';
             state_r         <= RDWR; -- This might read UART status, but it's OK
           when x"EB" => -- Set mem/rom
-            ahb_address_r   <= to_01("0XXXXXXXXXX10XXXXXX010010"); ahb_write_r <= '1'; ahb_inc_r <= '0';
+            ahb_address_r   <= to_01("00XXXXXXXXX10XXXXXX010010"); ahb_write_r <= '1'; ahb_inc_r <= '0';
             state_r         <= WRINC;
           when x"EC" => -- Set flags
-            ahb_address_r   <= to_01("0XXXXXXXXXX10XXXXXX000101"); ahb_write_r <= '1'; ahb_inc_r <= '1';
+            ahb_address_r   <= to_01("00XXXXXXXXX10XXXXXX000101"); ahb_write_r <= '1'; ahb_inc_r <= '1';
             state_r         <= WRINC;
           when x"ED" => -- Get regs32
-            ahb_address_r   <= to_01("0XXXXXXXXXX10XXXXXX1XXX00"); ahb_write_r <= '0'; ahb_inc_r <= '1';
+            ahb_address_r   <= to_01("00XXXXXXXXX10XXXXXX1XXX00"); ahb_write_r <= '0'; ahb_inc_r <= '1';
             state_r         <= INDEXED_3;
           when x"EE" => -- Set regs32
-            ahb_address_r   <= to_01("0XXXXXXXXXX10XXXXXX1XXX00"); ahb_write_r <= '1'; ahb_inc_r <= '1';
+            ahb_address_r   <= to_01("00XXXXXXXXX10XXXXXX1XXX00"); ahb_write_r <= '1'; ahb_inc_r <= '1';
             state_r         <= INDEXED_3;
           when x"FB" => -- Read FIFO command data
-            ahb_address_r   <= to_01("0XXXXXXXXXX10XXXXXX010101"); ahb_write_r <= '0'; ahb_inc_r <= '1';
+            ahb_address_r   <= to_01("00XXXXXXXXX10XXXXXX010101"); ahb_write_r <= '0'; ahb_inc_r <= '1';
             state_r         <= RDWR;
           when x"9E" | x"9F" => -- Read ID
-            ahb_address_r   <= to_01("0XXXXXXXXXX10XXXXXX000000"); ahb_write_r <= '0'; ahb_inc_r <= '1';
+            ahb_address_r   <= to_01("00XXXXXXXXX10XXXXXX000000"); ahb_write_r <= '0'; ahb_inc_r <= '1';
             state_r         <= RDWR;
           when x"DF" => -- Read video memory
-            ahb_address_r   <= to_01("0XXXXXXXXXX0XXXXXXXXXXXXX"); ahb_write_r <= '0'; ahb_inc_r <= '1';
+            ahb_address_r   <= to_01("00XXXXXXXXX0XXXXXXXXXXXXX"); ahb_write_r <= '0'; ahb_inc_r <= '1';
             state_r         <= INDEXED_13;
           when x"50" => -- Read external RAM
             ahb_address_r   <= to_01("1XXXXXXXXXXXXXXXXXXXXXXXX"); ahb_write_r <= '0'; ahb_inc_r <= '1';
@@ -206,11 +206,17 @@ begin
             ahb_address_r   <= to_01("1XXXXXXXXXXXXXXXXXXXXXXXX"); ahb_write_r <= '1'; ahb_inc_r <= '1';
             state_r         <= INDEXED_24;
           when x"60" => -- USB read
-            ahb_address_r   <= to_01("0XXXXXXXXXX11XXXXXXXXXXXX"); ahb_write_r <= '0'; ahb_inc_r <= '1';
+            ahb_address_r   <= to_01("00XXXXXXXXX11XXXXXXXXXXXX"); ahb_write_r <= '0'; ahb_inc_r <= '1';
             state_r         <= INDEXED_12;
           when x"61" => -- USB write
-            ahb_address_r   <= to_01("0XXXXXXXXXX11XXXXXXXXXXXX"); ahb_write_r <= '1'; ahb_inc_r <= '1';
+            ahb_address_r   <= to_01("00XXXXXXXXX11XXXXXXXXXXXX"); ahb_write_r <= '1'; ahb_inc_r <= '1';
             state_r         <= INDEXED_12;
+          when x"62" => -- Capture read
+            ahb_address_r   <= to_01("01XXXXXXXXXXXXXXXXXXXXXXX"); ahb_write_r <= '0'; ahb_inc_r <= '1';
+            state_r         <= INDEXED_16;
+          when x"63" => -- Capture write
+            ahb_address_r   <= to_01("01XXXXXXXXXXXXXXXXXXXXXXX"); ahb_write_r <= '1'; ahb_inc_r <= '1';
+            state_r         <= INDEXED_16;
           when others =>
             -- Default: read status
             ahb_address_r   <= to_01("0XXXXXXXXXX10XXXXXX000100"); ahb_write_r <= '0'; ahb_inc_r <= '0';

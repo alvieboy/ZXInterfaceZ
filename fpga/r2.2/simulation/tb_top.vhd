@@ -353,7 +353,7 @@ begin
 
   XD_io <= (others => 'H');
 
-  WAIT_s <= '0' when FORCE_WAIT_s='1' else 'H';
-  NMI_s <= '0' when FORCE_NMI_s='1' else 'H';
+  WAIT_s <= '0' when FORCE_WAIT_s='1' else '1';
+  NMI_s <= '0' when FORCE_NMI_s='1' else '1';
 
 end sim;

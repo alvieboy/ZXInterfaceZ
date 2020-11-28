@@ -279,6 +279,9 @@ architecture beh of zxinterface is
   signal ahb_null_m2s           : AHB_M2S;
   signal ahb_null_s2m           : AHB_S2M;
 
+  signal scope_ahb_m2s_s        : AHB_M2S;
+  signal scope_ahb_s2m_s        : AHB_S2M;
+
   signal rst48_s                : std_logic;
 
   signal usb_int_s              : std_logic;
@@ -728,20 +731,23 @@ begin
   );
 
   -- Main AHB intercon.
-  intercon_inst: entity work.ahb_intercon4
+  intercon_inst: entity work.ahb_intercon5
     generic map (
       -- Video RAM 
-      S0_ADDR_MASK    => "00000001000000000010000000000000",
+      S0_ADDR_MASK    => "00000001100000000010000000000000",
       S0_ADDR_VALUE   => "00000000000000000000000000000000",
       -- System controller
-      S1_ADDR_MASK    => "00000001000000000011000000000000",
+      S1_ADDR_MASK    => "00000001100000000011000000000000",
       S1_ADDR_VALUE   => "00000000000000000010000000000000",
       -- USB controller
-      S2_ADDR_MASK    => "00000001000000000011000000000000",
+      S2_ADDR_MASK    => "00000001100000000011000000000000",
       S2_ADDR_VALUE   => "00000000000000000011000000000000",
       -- PSRAM
       S3_ADDR_MASK    => "00000001000000000000000000000000",
-      S3_ADDR_VALUE   => "00000001000000000000000000000000"
+      S3_ADDR_VALUE   => "00000001000000000000000000000000",
+      -- CAPTURE
+      S4_ADDR_MASK    => "00000001100000000000000000000000",
+      S4_ADDR_VALUE   => "00000000100000000000000000000000"
     )
     port map (
       clk_i     => clk_i,
@@ -760,7 +766,10 @@ begin
       HSLAV2_O  => ahb_usb_m2s_s,
       -- S3: PSRAM
       HSLAV3_I  => psram_ahb_s2m,
-      HSLAV3_O  => psram_ahb_m2s
+      HSLAV3_O  => psram_ahb_m2s,
+      -- S4: CAPTURE
+      HSLAV4_I  => scope_ahb_s2m_s,
+      HSLAV4_O  => scope_ahb_m2s_s
     );
 
 
@@ -1094,25 +1103,22 @@ begin
 
 
 
-      --scope_inst: entity work.scope
-      --  generic map (
-      --    NONTRIGGERABLE_WIDTH  => 8,
-      --    TRIGGERABLE_WIDTH     => 28,
-      --    WIDTH_BITS            => 10
-      --  )
-      --  port map (
-      --    clk_i         => clk_i,
-      --    arst_i        => arst_i,
-      --
-      --    nontrig_i     => d_unlatched_s,
-      --    trig_i        => trig_s,
-      --
-      --    rd_i          => capture_rd_s,
-      --    wr_i          => capture_wr_s,
-      --    addr_i        => generic_addr_s,
-      --    din_i         => generic_wdat_s,
-      --    dout_o        => capture_dat_s
-      --  );
+      scope_inst: entity work.scope
+        generic map (
+          NONTRIGGERABLE_WIDTH  => 8,
+          TRIGGERABLE_WIDTH     => 28,
+          WIDTH_BITS            => 10
+        )
+        port map (
+          clk_i         => clk_i,
+          arst_i        => arst_i,
+
+          nontrig_i     => d_unlatched_s,
+          trig_i        => trig_s,
+
+          ahb_m2s_i     => scope_ahb_m2s_s,
+          ahb_s2m_o     => scope_ahb_s2m_s
+       );
     end block;
   end generate capinst;
 

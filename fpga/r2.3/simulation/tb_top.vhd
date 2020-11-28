@@ -118,10 +118,12 @@ architecture sim of tb_top is
   SIGNAL XWR_s : STD_LOGIC := '1';
   SIGNAL WAIT_s : STD_LOGIC := '1';
 
+
   signal ZX_A_s:  std_logic_vector(15 downto 0);
   signal ZX_D_s:  std_logic_vector(7 downto 0);
 
   signal spect_clk_s: std_logic;
+  signal spect_reset_s : std_logic;
 
   signal RAMD_s       : std_logic_vector(3 downto 0);
   signal RAMCLK_s      : std_logic;
@@ -202,6 +204,7 @@ begin
       Data_o  => Spectrum_Data_s,
 
       clk_i   => spect_clk_s,
+      rstn_i  => spect_reset_s,
       ck_o    => XCK_s,
       wr_o    => XWR_s,
       rd_o    => XRD_s,
@@ -355,7 +358,9 @@ begin
   -- Pull-up data bus
   XD_io <= (others => 'H');
 
-  WAIT_s <= '0' when FORCE_WAIT_s='1' else 'H';
-  NMI_s <= '0' when FORCE_NMI_s='1' else 'H';
+  WAIT_s <= '0' when FORCE_WAIT_s='1' else '1';
+  NMI_s <= '0' when FORCE_NMI_s='1' else '1';
+
+  spect_reset_s <= not FORCE_RESET_s;
 
 end sim;
