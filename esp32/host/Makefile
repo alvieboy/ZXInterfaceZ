@@ -121,6 +121,7 @@ usb_hid.c             \
 hid.c                 \
 usb_ll.c              \
 usb_mouse.c           \
+usb_block.c           \
 version.c             \
 version_resource.c    \
 videostreamer.c       \
@@ -137,6 +138,7 @@ rle.c                 \
 vga.c                 \
 adc.c                 \
 board.c               \
+scope.c               \
 spectrum_kbd.c        \
 systemevent.c 	      \
 wsys/charmap.c        \
@@ -218,10 +220,10 @@ OBJS:=$(FREERTOS_OBJS) $(COBJ) $(CXXOBJ) \
 	$(ESP_IDF)/components/nghttp/nghttp2/third-party/http-parser/http_parser.o
 
 interfacez: libinterfacez.so main_standalone.o
-	$(CXX) -o interfacez main_standalone.o libinterfacez.so
+	$(CXX) -o interfacez main_standalone.o libinterfacez.so -lutil
 
 libinterfacez.so: $(OBJS) 
-	$(CXX) $(CFLAGS) -shared -o libinterfacez.so $(OBJS) -lpthread -lm $(shell pkg-config --libs glib-2.0)
+	$(CXX) $(CFLAGS) -shared -o libinterfacez.so $(OBJS) -lpthread -lutil  -lm $(shell pkg-config --libs glib-2.0)
 
 clean:
 	rm -f $(OBJS)

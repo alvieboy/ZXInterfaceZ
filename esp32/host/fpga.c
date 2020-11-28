@@ -90,7 +90,9 @@ int fpga_init(void)
     hdlc_decoder__init(&hdlc_decoder,
                        hdlcbuf,
                        sizeof(hdlcbuf),
-                       &hdlc_data, NULL);
+                       &hdlc_data,
+                       NULL,
+                       NULL);
 
     hdlc_encoder__init(&hdlc_encoder, &hdlc_writer, &hdlc_flusher, NULL);
     printf("Starting FPGA thread\n");

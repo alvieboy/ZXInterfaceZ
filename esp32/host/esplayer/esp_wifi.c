@@ -123,3 +123,7 @@ esp_err_t esp_wifi_ap_get_sta_list(wifi_sta_list_t *sta)
     return 0;
 }
 
+esp_err_t esp_wifi_set_max_tx_power(int8_t power)
+{
+    return 0;
+}
