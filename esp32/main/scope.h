@@ -7,7 +7,7 @@
 
 #define SCOPE_CAPTURE_LEN (((1<<SCOPE_WIDTH_BITS)-1) & ~0xF)
 
-void scope__start(void);
+void scope__start(uint8_t clockdiv);
 void scope__set_triggers(uint32_t mask,
                          uint32_t value,
                          uint32_t edge);

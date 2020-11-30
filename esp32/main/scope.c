@@ -3,10 +3,13 @@
 #include "fpga.h"
 #include "byteops.h"
 
-void scope__start()
+void scope__start(uint8_t clockdiv)
 {
-    uint8_t val = 0x80;
-    fpga__write_capture_block(0x0013, &val, 1);
+    uint8_t buf[4];
+
+    putle32(buf, 0x80000000 | (clockdiv & 7));
+
+    fpga__write_capture_block(0x0010, buf, 4);
 }
 
 void scope__set_triggers(uint32_t mask,

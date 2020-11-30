@@ -64,8 +64,8 @@ void console__hdlc_data(const uint8_t *d, unsigned len)
         hdlc_encoder__end(&enc);
     }
 
-    if (d[0]==0x03) {
-        scope__start();
+    if (d[0]==0x03 && len==2) {
+        scope__start(d[1]);
 
         reply = 0x83;
         hdlc_encoder__begin(&enc);
@@ -254,6 +254,13 @@ static int console__loadrom(int argc, char **argv)
 
 static int console__reset(int argc, char **argv)
 {
+    if (argc>0) {
+        if (strcmp(argv[0], "custom")==0) {
+            ESP_LOGI(CTAG, "Resetting to custom ROM0");
+            fpga__reset_to_custom_rom(ROM_0, false);
+            return 0;
+        }
+    }
     fpga__reset_spectrum();
     return 0;
 }
