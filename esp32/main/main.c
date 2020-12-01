@@ -254,24 +254,6 @@ void app_main()
     }
 
 
-    // TEST TEST
-    do {
-        uint8_t data[4];
-        data[0]  =0;
-        data[1]  =0;
-        data[2]  =0;
-        data[3]  =0;
-        fpga__set_clear_flags(FPGA_FLAG_BITMODE,0);
-
-        fpga__write_bit_data(data, sizeof(data));
-
-
-        while (1) {
-            vTaskDelay(20 / portTICK_RATE_MS);
-        }
-    } while (0);
-
-
     wifi__init();
 
     // Set mode if we are using a 2A/3 spectrum;
