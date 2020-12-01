@@ -9350,7 +9350,7 @@ design rules under a new name.</description>
 <attribute name="VALUE" x="52.15" y="14.075" size="0.05" layer="27" font="vector" ratio="0" rot="R90"/>
 <attribute name="VALUE" x="51" y="14.075" size="0.05" layer="27" font="vector" ratio="0" rot="R90"/>
 </element>
-<element name="RN3" library="resistor-dil" package="EXB28V" value="330R" x="34.99" y="10.12" smashed="yes" rot="R270">
+<element name="RN3" library="resistor-dil" package="EXB28V" value="33R" x="34.99" y="10.12" smashed="yes" rot="R270">
 <attribute name="OC_NEWARK" value="unknown" x="41.34" y="15.2" size="1.778" layer="27" rot="R270" display="off"/>
 <attribute name="MPN" value="" x="41.34" y="15.2" size="1.778" layer="27" rot="R270" display="off"/>
 <attribute name="MF" value="" x="41.34" y="15.2" size="1.778" layer="27" rot="R270" display="off"/>
@@ -9358,7 +9358,7 @@ design rules under a new name.</description>
 <attribute name="NAME" x="33.9575" y="9.3275" size="0.8128" layer="25" font="vector" ratio="16" rot="R90"/>
 <attribute name="VALUE" x="32.7675" y="11.0725" size="1.27" layer="27" rot="R270"/>
 </element>
-<element name="RN4" library="resistor-dil" package="EXB28V" value="330R" x="39.87" y="10.15" smashed="yes">
+<element name="RN4" library="resistor-dil" package="EXB28V" value="33R" x="39.87" y="10.15" smashed="yes">
 <attribute name="OC_NEWARK" value="unknown" x="39.87" y="10.15" size="1.778" layer="27" display="off"/>
 <attribute name="MPN" value="" x="39.87" y="10.15" size="1.778" layer="27" display="off"/>
 <attribute name="MF" value="" x="39.87" y="10.15" size="1.778" layer="27" display="off"/>
@@ -9366,7 +9366,7 @@ design rules under a new name.</description>
 <attribute name="NAME" x="41.0325" y="9.2475" size="0.8128" layer="25" font="vector" ratio="16" rot="R180"/>
 <attribute name="VALUE" x="38.9175" y="7.9275" size="1.27" layer="27"/>
 </element>
-<element name="RN5" library="resistor-dil" package="EXB28V" value="330R" x="76.34" y="9.6" smashed="yes">
+<element name="RN5" library="resistor-dil" package="EXB28V" value="33R" x="76.34" y="9.6" smashed="yes">
 <attribute name="OC_NEWARK" value="unknown" x="72.53" y="15.95" size="1.778" layer="27" display="off"/>
 <attribute name="MPN" value="" x="72.53" y="15.95" size="1.778" layer="27" display="off"/>
 <attribute name="MF" value="" x="72.53" y="15.95" size="1.778" layer="27" display="off"/>
@@ -9374,7 +9374,7 @@ design rules under a new name.</description>
 <attribute name="NAME" x="75.3875" y="10.8025" size="0.8128" layer="25" font="vector" ratio="16"/>
 <attribute name="VALUE" x="75.3875" y="7.3775" size="1.27" layer="27"/>
 </element>
-<element name="RN6" library="resistor-dil" package="EXB28V" value="330R" x="78.92" y="9.6" smashed="yes">
+<element name="RN6" library="resistor-dil" package="EXB28V" value="33R" x="78.92" y="9.6" smashed="yes">
 <attribute name="OC_NEWARK" value="unknown" x="67.49" y="15.95" size="1.778" layer="27" display="off"/>
 <attribute name="MPN" value="" x="67.49" y="15.95" size="1.778" layer="27" display="off"/>
 <attribute name="MF" value="" x="67.49" y="15.95" size="1.778" layer="27" display="off"/>

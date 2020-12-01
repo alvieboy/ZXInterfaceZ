@@ -46,6 +46,13 @@ static int fpga__issue_read_addr8(uint8_t cmd, uint8_t addr, uint8_t *buf, unsig
     return spi__transceive_cmd8_addr16(spi0_fpga, cmd, (uint16_t)addr<<8, buf, size);
 }
 
+static int fpga__issue_read_block(uint8_t cmd, uint8_t *buf, uint8_t size)
+{
+    // reuse addr16 as length indicator.
+    uint8_t addr = size;
+    return fpga__issue_read_addr8(cmd, addr, buf, size);
+}
+
 static int fpga__issue_read_addr16(uint8_t cmd, uint16_t addr, uint8_t *buf, unsigned size)
 {
     return spi__transceive_cmd8_addr24(spi0_fpga, cmd, (uint32_t)addr<<8, buf, size);
@@ -714,23 +721,7 @@ int fpga__read_uart_status(void)
 }
 int fpga__read_uart_data(uint8_t *buf, int len)
 {
-    uint8_t fv = 0x00;
-
-    if (len>1)
-        fv = 0xFF;
-
-    int toset = len - 2;
-
-    for (int i = 0; i<len; i++) {
-        if (toset>0) {
-            buf[i] = 0xFF;
-            toset-=1;
-        } else {
-            buf[i] = 0x00;
-        }
-    }
-
-    return spi__transceive_cmd8_addr8(spi0_fpga, FPGA_SPI_CMD_READ_UART_DATA, fv, buf, len);
+    return fpga__issue_read_block(FPGA_SPI_CMD_READ_UART_DATA, buf, len);
 }
 
 int fpga__write_uart_data(uint8_t v)

@@ -1,0 +1,278 @@
+{
+  "version": {
+    "success": "true",
+    "esp_chip": "ESP32",
+    "esp_version": "0.1",
+    "esp_revision": 4,
+    "esp_cores": 2,
+    "esp_flash": "Unknown",
+    "software_version": "v1.0 2020/03/30",
+    "fpga_version": "a5.10 r3",
+    "git_version": "TAG_V01-286-g461b41e-dirty",
+    "build_date": "Tue 11 Aug 09:38:31 UTC 2020"
+  },
+  "devlist": {
+    "devices": [
+      {
+        "bus": "usb",
+        "driver": "usb_mouse",
+        "id": "0adf:2342",
+        "vendor": "Vendor name here",
+        "product": "Product name here",
+        "serial": "Serial here",
+        "class": "mouse,pointer",
+        "connected": "true",
+        "use": "mouse"
+      },
+      {
+        "bus": "usb",
+        "driver": "usb_keyboard",
+        "id": "0adf:2342",
+        "vendor": "Vendor name here",
+        "product": "Product name here",
+        "serial": "Serial here",
+        "class": "keyboard",
+        "connected": "true",
+        "use": "keyboard"
+      },
+      {
+        "bus": "usb",
+        "driver": "usb_joystick",
+        "id": "0adf:2342",
+        "vendor": "Vendor name here",
+        "product": "Product name here",
+        "serial": "Serial here",
+        "class": "joystick",
+        "connected": "true",
+        "use": "kempston_joystick"
+      }
+    ]
+  },
+  "fwupgrade": {},
+  "startscan": {
+    "success": "true",
+    "error": ""
+  },
+  "_sdcard_root": {
+    "path": "/",
+    "entries": [
+      {
+        "type": "dir",
+        "name": "a-b",
+        "size": 0
+      },
+      {
+        "type": "dir",
+        "name": "c-d",
+        "size": 0
+      },
+      {
+        "type": "dir",
+        "name": "e-f",
+        "size": 0
+      },
+      {
+        "type": "file",
+        "name": "DiagROM-v50.sna",
+        "size": 16384
+      }
+    ]
+  },
+  "_sdcard_a-b": {
+    "path": "/a-b",
+    "entries": [
+      {
+        "type": "file",
+        "name": "AUFMONTY.TAP",
+        "size": 70498
+      },
+      {
+        "type": "file",
+        "name": "BATMAN2B.TAP",
+        "size": 47806
+      },
+      {
+        "type": "file",
+        "name": "BACKTOSK.TAP",
+        "size": 56266
+      },
+      {
+        "type": "file",
+        "name": "ACELENS.TAP",
+        "size": 39023
+      },
+      {
+        "type": "file",
+        "name": "AVALON.TAP",
+        "size": 39266
+      },
+      {
+        "type": "file",
+        "name": "Airborne Ranger.tap",
+        "size": 265864
+      },
+      {
+        "type": "file",
+        "name": "BAZBILL.TAP",
+        "size": 46151
+      },
+      {
+        "type": "file",
+        "name": "ACADEMY.TAP",
+        "size": 48967
+      },
+      {
+        "type": "file",
+        "name": "AMC2_ENG.TAP",
+        "size": 54392
+      },
+      {
+        "type": "file",
+        "name": "AMC1_ENG.TAP",
+        "size": 54392
+      },
+      {
+        "type": "file",
+        "name": "BOMBJAC1.TAP",
+        "size": 44642
+      },
+      {
+        "type": "file",
+        "name": "Batman - Release 2.tzx",
+        "size": 50106
+      },
+      {
+        "type": "file",
+        "name": "BRUCELEE.TAP",
+        "size": 40897
+      },
+      {
+        "type": "file",
+        "name": "ACE2.TAP",
+        "size": 46724
+      },
+      {
+        "type": "file",
+        "name": "Bugaboo The Flea.tap",
+        "size": 30368
+      },
+      {
+        "type": "file",
+        "name": "ANTATTCK.TAP",
+        "size": 41020
+      },
+      {
+        "type": "file",
+        "name": "Batman.tap",
+        "size": 125438
+      },
+      {
+        "type": "file",
+        "name": "BLASTER.TAP",
+        "size": 11180
+      },
+      {
+        "type": "file",
+        "name": "BATMAN2A.TAP",
+        "size": 48076
+      },
+      {
+        "type": "file",
+        "name": "Bruce Lee.tzx",
+        "size": 45418
+      },
+      {
+        "type": "file",
+        "name": "Arkanoid.tap",
+        "size": 47081
+      },
+      {
+        "type": "file",
+        "name": "ACE1.TAP",
+        "size": 35703
+      },
+      {
+        "type": "dir",
+        "name": "SCRSHOT",
+        "size": 0
+      }
+    ]
+  },
+  "_sdcard_a-b_SCRSHOT": {
+    "path": "/a-b/SCRSHOT",
+    "entries": [
+      {
+        "type": "file",
+        "name": "ACADEMY.SCR",
+        "size": 6912
+      },
+      {
+        "type": "file",
+        "name": "BATMAN2A.SCR",
+        "size": 6912
+      },
+      {
+        "type": "file",
+        "name": "BOMBJAC1.SCR",
+        "size": 6912
+      },
+      {
+        "type": "file",
+        "name": "BRUCELEE.SCR",
+        "size": 6912
+      },
+      {
+        "type": "file",
+        "name": "BACKTOSK.SCR",
+        "size": 6912
+      },
+      {
+        "type": "file",
+        "name": "ACE2.SCR",
+        "size": 6912
+      },
+      {
+        "type": "file",
+        "name": "BAZBILL.SCR",
+        "size": 6912
+      },
+      {
+        "type": "file",
+        "name": "BATMAN2B.SCR",
+        "size": 6912
+      }
+    ]
+  },
+  "_sdcard_c-d": {
+    "path": "/c-d",
+    "success":  true,
+    "entries":  [
+      {
+        "type":  "file",
+        "name":  "Cobble 2.tzx",
+        "size":  43
+      },
+      {
+        "type":  "file",
+        "name":  "Chessfire.tap",
+        "size":  143
+      }
+    ]
+  },
+  "_sdcard_e-f": {
+    "path": "/e-f",
+    "success":  true,
+    "entries":  [
+      {
+        "type":  "file",
+        "name":  "Enduro Racer.tzx",
+        "size":  434
+      },
+      {
+        "type":  "file",
+        "name":  "Fighter Bomper.sna",
+        "size":  243
+      }
+    ]
+  }
+}

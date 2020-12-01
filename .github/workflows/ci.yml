@@ -19,7 +19,7 @@ jobs:
 
     steps:
     # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-    - name: Checkout the code
+    - name: checkout the code
       uses: actions/checkout@v2
 
     - name: Build ZX Spectrum ROM
@@ -33,6 +33,30 @@ jobs:
         name: spectrum-roms
         path: |
           roms/*.rom
+
+  webapp:
+    runs-on: ubuntu-latest
+    steps:
+    - name: checkout the code
+      uses: actions/checkout@v2
+    - name: Build Webapp with Node.js 12.x
+      uses: actions/setup-node@v1
+      with:
+        node-version: 12.x
+
+    - run: cd webapp && npm install
+    - run: cd webapp && npm run build --prod && npm run package
+      #- run: cd webapp && npm run lint TODO add this after fixing lint issues
+      # - run: npm test TODO
+      #   env:
+      #     CI: true
+    - name: Archive built Angular Webapp
+      uses: actions/upload-artifact@v2
+      with:
+        name: webapp
+        path: |
+          webapp/dist/webapp-only-gzip/*
+
 
   esp32:
     runs-on: ubuntu-latest
@@ -61,8 +85,8 @@ jobs:
       with:
         name: host-mode-fw
         path: |
-          esp32/host/interfacez 
-          esp32/host/libinterfacez.so 
+          esp32/host/interfacez
+          esp32/host/libinterfacez.so
           esp32/host/QtSpecem/libQtSpecem.so.1
           esp32/host/QtSpecem/libQtSpecem.so.1.0.0
           esp32/host/gui/interfacez_gui

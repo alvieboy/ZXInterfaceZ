@@ -222,6 +222,7 @@ static void detect_spectrum()
 {
     spectrum_model = 0xfe;
     int timeout = 100;
+
     fpga__reset_to_custom_rom(ROM_0, false);
     // We need to wait for 1000ms,
     do {
@@ -242,6 +243,7 @@ static void detect_spectrum()
         // external (inside spectrum) AY chip.
         if (!(spectrum_flags & SPECTRUM_FLAGS_AY)) {
             bits |= CONFIG1_AY_READ_ENABLE;
+            ESP_LOGI(TAG," AY-3-8912: Enabling AY reads");
         }
         fpga__set_config1_bits(bits);
     }
@@ -323,6 +325,7 @@ void app_main()
     // Wait for BIT mode detection.
     vTaskDelay(20 / portTICK_RATE_MS);
 
+    // END TEST
     if (fpga__isBITmode()) {
         bit__run();
     }
@@ -346,6 +349,7 @@ void app_main()
             internal_error();
         }
         fpga__set_clear_flags(FPGA_FLAG_MODE2A, 0);
+        spectrum_flags |= SPECTRUM_FLAGS_AY;
         ESP_LOGI(TAG, "Switched to +2A/+3 mode");
     }
 

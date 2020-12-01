@@ -1,0 +1,6 @@
+<h1 class="mat-headline">About</h1>
+
+<input #firmwareInput hidden="true" type="file" onclick="this.value=null" (change)="firmwareInputChange($event)" accept=".bin"/>
+<button mat-raised-button (click)="firmwareInput.click()">Upload firmware...</button>
+
+<mat-progress-spinner [value]="progress"></mat-progress-spinner>

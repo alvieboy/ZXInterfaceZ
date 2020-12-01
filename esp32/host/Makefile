@@ -24,6 +24,7 @@ CFLAGS= -fpic -DPIC -Wall -Wextra \
        -Icjson \
        -I. \
        -I../main/ \
+       -I$(FREERTOSKERNEL) \
        -I$(ESP_IDF)/components/esp_system/include/ 	\
        -I$(ESP_IDF)/components/soc/soc/esp32/include/ 	\
        -I$(ESP_IDF)/components/esp_common/include/ \
@@ -118,6 +119,7 @@ usb_driver.c          \
 usb_driver_list.c     \
 usbh.c                \
 usb_hid.c             \
+usb_block.c           \
 hid.c                 \
 usb_ll.c              \
 usb_mouse.c           \

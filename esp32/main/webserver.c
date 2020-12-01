@@ -121,11 +121,15 @@ static esp_err_t webserver__get_handler(httpd_req_t *req)
         return ESP_FAIL;
     }
 
-    /* If name has trailing '/', respond with directory contents */
     if (filename[strlen(filename) - 1] == '/') {
-        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Filename can not end with /");
 
-        //return http_resp_dir_html(req, filepath);
+        // If serving '/' respond with index.html
+        if (!strcmp(filename, "/")) {
+            strcpy(filepath, "/spiffs/index.html");
+        } else {
+            httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Filename can not end with /");
+            return ESP_FAIL;
+        }
     }
 
     // Check if we have a compressed version of the file.
@@ -142,11 +146,8 @@ static esp_err_t webserver__get_handler(httpd_req_t *req)
 
 
     if (stat(filepath, &file_stat) == -1) {
-        /* If file not present on SPIFFS check if URI
-         * corresponds to one of the hardcoded paths */
-        ESP_LOGE(TAG, "Failed to stat file : %s", filepath);
-        httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "File does not exist");
-        return ESP_FAIL;
+        ESP_LOGE(TAG, "Failed to stat file : %s, falling back to index.html", filepath);
+        strcpy(filepath, "/spiffs/index.html");
     }
 
     fd = fopen(filepath, "r");

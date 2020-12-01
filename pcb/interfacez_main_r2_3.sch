@@ -8010,10 +8010,10 @@ www.irf.com&lt;p&gt;
 <part name="C37" library="GadgetFactory" deviceset="C" device="0603" value="1uF 6.3V"/>
 <part name="C3" library="GadgetFactory" deviceset="C" device="0603" value="100nF 6.3V"/>
 <part name="GND3" library="supply1" deviceset="GND" device=""/>
-<part name="RN3" library="resistor-dil" deviceset="4R-N" device="EXB28V" value="330R"/>
-<part name="RN4" library="resistor-dil" deviceset="4R-N" device="EXB28V" value="330R"/>
-<part name="RN5" library="resistor-dil" deviceset="4R-N" device="EXB28V" value="330R"/>
-<part name="RN6" library="resistor-dil" deviceset="4R-N" device="EXB28V" value="330R"/>
+<part name="RN3" library="resistor-dil" deviceset="4R-N" device="EXB28V" value="33R"/>
+<part name="RN4" library="resistor-dil" deviceset="4R-N" device="EXB28V" value="33R"/>
+<part name="RN5" library="resistor-dil" deviceset="4R-N" device="EXB28V" value="33R"/>
+<part name="RN6" library="resistor-dil" deviceset="4R-N" device="EXB28V" value="33R"/>
 <part name="IC4" library="GadgetFactory" deviceset="74*245" device="" value="74LCX245FT"/>
 <part name="RN7" library="resistor-dil" deviceset="4R-N" device="EXB28V" value="33R"/>
 <part name="RN8" library="resistor-dil" deviceset="4R-N" device="EXB28V" value="33R"/>
