@@ -191,8 +191,8 @@ begin
             ahb_address_r   <= to_01("00XXXXXXXXX10XXXXXX1XXX00"); ahb_write_r <= '1'; ahb_inc_r <= '1';
             state_r         <= INDEXED_3;
           when x"FB" => -- Read FIFO command data
-            ahb_address_r   <= to_01("00XXXXXXXXX10XXXXXX010101"); ahb_write_r <= '0'; ahb_inc_r <= '1';
-            state_r         <= RDWR;
+            ahb_address_r   <= to_01("00XXXXXXXXX10XXXXXX010101"); ahb_write_r <= '0'; ahb_inc_r <= '0';
+            state_r         <= RDBLOCK;
           when x"9E" | x"9F" => -- Read ID
             ahb_address_r   <= to_01("00XXXXXXXXX10XXXXXX000000"); ahb_write_r <= '0'; ahb_inc_r <= '1';
             state_r         <= RDWR;

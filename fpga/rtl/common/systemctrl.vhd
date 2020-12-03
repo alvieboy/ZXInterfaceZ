@@ -62,6 +62,7 @@ entity systemctrl is
     cmdfifo_rd_o          : out std_logic;
     cmdfifo_read_i        : in std_logic_vector(7 downto 0);
     cmdfifo_empty_i       : in std_logic;
+    cmdfifo_used_i        : in std_logic_vector(2 downto 0);
     cmdfifo_intack_o      : out std_logic; -- Interrupt acknowledge
 
     -- Capture access
@@ -186,7 +187,7 @@ begin
             dat_out_s <= C_FPGAID2;
           when "000011" => null;
           when "000100" =>
-            dat_out_s <= bit_to_cpu_i.bit_request & '0' & cmdfifo_empty_i & resfifo_full_i & '0';
+            dat_out_s <= bit_to_cpu_i.bit_request & cmdfifo_used_i & resfifo_full_i;
           when "000101" => null; -- Write-only
           when "000110" => null; -- Write-only
           when "000111" => null; -- Write-only
@@ -202,17 +203,18 @@ begin
           when "010011" => null;-- Write-only
           when "010100" => null;-- Write-only
           -- CMD fifo.
-          when "010101" =>
-            if cmdfifo_empty_i='1' then
-              dat_out_s <= x"FF";
-              do_read_fifo_r <= '0';
-            else
-              dat_out_s <= x"FE";
-              do_read_fifo_r <= '1';
-            end if;
+          --when "010101" =>
+          --  if cmdfifo_empty_i='1' then
+          --    dat_out_s <= x"FF";
+          --    do_read_fifo_r <= '0';
+          --  else
+          --    dat_out_s <= x"FE";
+          --    do_read_fifo_r <= '1';
+          --  end if;
 
-          when "010110" =>
-            cmdfifo_rd_o  <= do_read_fifo_r;
+          --when "010110" =>
+          when "010101" =>
+            cmdfifo_rd_o  <= not cmdfifo_empty_i;--'1';--do_read_fifo_r;
             dat_out_s     <= cmdfifo_read_i;
           when "010111" => null; -- Unused
           when "011000" | "011001"=> null; -- TAP Fifo/Command write;

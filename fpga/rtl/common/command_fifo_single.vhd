@@ -12,6 +12,7 @@ entity command_fifo_single is
     wD_i      : in std_logic_vector(7 downto 0);
     rQ_o      : out std_logic_vector(7 downto 0);
     full_o    : out std_logic;
+    used_o    : out std_logic_vector(2 downto 0);
     empty_o   : out std_logic
   );
 end entity command_fifo_single;
@@ -30,10 +31,13 @@ architecture beh of command_fifo_single is
 		wrreq		: IN STD_LOGIC ;
 		empty		: OUT STD_LOGIC ;
 		full		: OUT STD_LOGIC ;
-		q		: OUT STD_LOGIC_VECTOR (7 DOWNTO 0);
+		q		    : OUT STD_LOGIC_VECTOR (7 DOWNTO 0);
 		usedw		: OUT STD_LOGIC_VECTOR (1 DOWNTO 0)
 	);
   END component smallfifo;
+
+  signal used_s : std_logic_vector(1 downto 0);
+  signal full_s : std_logic;
 
 begin
 
@@ -47,9 +51,11 @@ begin
 		sclr		=> reset_i,
 		wrreq		=> wr_i,
 		empty		=> empty_o,
-		full		=> full_o,
+		full		=> full_s,
 		q		    => rQ_o,
-		usedw		=> open
+		usedw		=> used_s
 	);
+  full_o <= full_s;
+  used_o <= full_s & used_s;
 
 end beh;
