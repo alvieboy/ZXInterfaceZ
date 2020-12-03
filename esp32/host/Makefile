@@ -123,7 +123,6 @@ usb_block.c           \
 hid.c                 \
 usb_ll.c              \
 usb_mouse.c           \
-usb_block.c           \
 version.c             \
 version_resource.c    \
 videostreamer.c       \
