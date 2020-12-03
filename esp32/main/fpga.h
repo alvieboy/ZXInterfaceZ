@@ -44,10 +44,11 @@ typedef uint8_t fpga_status_t;
 #define FPGA_SPI_CMD_WRITE_CAP (0x63)
 
 /* Status bits */
-#define FPGA_STATUS_RESFIFO_FULL   (1<<1)
-#define FPGA_STATUS_RESFIFO_QFULL  (1<<2)
-#define FPGA_STATUS_RESFIFO_HFULL  (1<<3)
-#define FPGA_STATUS_RESFIFO_QQQFULL  (1<<4)
+#define FPGA_STATUS_RESFIFO_FULL   (1<<0)
+#define FPGA_STATUS_RESFIFO_QFULL  (1<<1)
+#define FPGA_STATUS_RESFIFO_HFULL  (1<<2)
+#define FPGA_STATUS_RESFIFO_QQQFULL  (1<<3)
+#define FPGA_STATUS_CMDFIFO_USED(x)  (((x)>>4)&0x7)  // bits 4, 5, 6
 #define FPGA_STATUS_BITMODE_REQUESTED  (1<<7)
 /* Flags */
 
@@ -148,7 +149,7 @@ static inline void fpga__clear_flags(fpga_flags_t disable)
     fpga__set_clear_flags(0, disable);
 }
 uint32_t fpga__get_capture_status(void);
-int fpga__read_command_fifo(void);
+int fpga__read_command_fifo(uint8_t *dest);
 uint16_t fpga__get_spectrum_pc(void);
 int fpga__load_tap_fifo(const uint8_t *data, unsigned len, int timeout);
 int fpga__load_tap_fifo_command(const uint8_t *data, unsigned len, int timeout);

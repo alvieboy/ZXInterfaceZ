@@ -49,10 +49,12 @@ bool Menu::handleEvent(uint8_t type, u16_8_t code)
     bool handled = true;
 
     switch (c) {
-    case 'a':
+    case 'a': /* fall-through */
+    case KEY_DOWN:
         chooseNext();
         break;
-    case 'q':
+    case 'q': /* fall-through */
+    case KEY_UP:
         choosePrev();
         break;
     case KEY_ENTER:

@@ -154,13 +154,13 @@ const char *get_spectrum_model(void)
     return spectrum_model_str(spectrum_model);
 }
 
-static void shift_lfsr(uint32_t *data, const uint32_t xorpat)
+static uint32_t shift_lfsr(uint32_t data, const uint32_t xorpat)
 {
-    uint32_t shifted = (*data)>>1;
-    if ((*data)&1) {
+    uint32_t shifted = data>>1;
+    if (data&1) {
         shifted ^= xorpat;
     }
-    *data=shifted;
+    return shifted;
 }
 
 static bool extram_test(bool simple_test)
@@ -170,7 +170,7 @@ static bool extram_test(bool simple_test)
 #ifdef __linux__
     const unsigned topram = 0x00080000;
 #else
-    const unsigned topram = 0x01000000;
+    const unsigned topram = 0x00800000;
 #endif
 
 
@@ -183,14 +183,15 @@ static bool extram_test(bool simple_test)
 
         unsigned address = 0;
         pat.u32 = 0xDEADBEEF;
-        const uint32_t xorpat = (1<<31) | (1<<21) | (1<<1) || (1<<0);
+        const uint32_t xorpat = (1<<31) | (1<<21) | (1<<1) | (1<<0);
 
         ESP_LOGI(TAG, "Testing external RAM (simple)");
 
 
         while (address < topram) {
+            //ESP_LOGI(TAG, "Write %08x value=%08x", address, pat.u32);
             fpga__write_extram_block(address, &pat.u8[0], sizeof(pat.u8));
-            shift_lfsr(&pat.u32, xorpat);
+            pat.u32 = shift_lfsr(pat.u32, xorpat);
             address += 0x1000;
         }
 
@@ -207,7 +208,7 @@ static bool extram_test(bool simple_test)
                          readback.u32);
                 return false;
             }
-            shift_lfsr(&pat.u32, xorpat);
+            pat.u32= shift_lfsr(pat.u32, xorpat);
             address += 0x1000;
         }
         ESP_LOGI(TAG, "External RAM test (simple) passed");
@@ -308,7 +309,7 @@ void app_main()
     spi__init_bus();
     sdcard__init();
     nvs__init();
-
+    ESP_LOGI(TAG, "Init WSYS");
     wsys__init();
 
     ESP_LOGI(TAG, "Init wifi");

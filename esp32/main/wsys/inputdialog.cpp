@@ -12,6 +12,8 @@ InputDialog::InputDialog(const char *title, uint8_t w, uint8_t h): Dialog(title,
     m_edit->setEditable(true);
     m_edit->enter().connect(this, &InputDialog::enterClicked);
 
+//    m_edit->enter().connect( [=]{ setResult(0); } );
+
     setChild(m_layout);
 }
 

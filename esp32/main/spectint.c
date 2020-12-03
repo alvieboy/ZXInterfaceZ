@@ -25,6 +25,7 @@ void spectint__init()
 
     gpio_set_intr_type(PIN_NUM_SPECT_INTERRUPT, GPIO_INTR_NEGEDGE);
     gpio_set_intr_type(PIN_NUM_CMD_INTERRUPT, GPIO_INTR_NEGEDGE);
+    //gpio_set_intr_type(PIN_NUM_CMD_INTERRUPT, GPIO_INTR_LOW_LEVEL);
     gpio_set_intr_type(PIN_NUM_USB_INTERRUPT, GPIO_INTR_NEGEDGE);
     interrupt_count = 0;
 

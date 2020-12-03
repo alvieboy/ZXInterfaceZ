@@ -40,7 +40,7 @@ void scope__get_capture_data_block64(uint8_t channel, uint8_t offset, uint8_t*de
     if (channel)
         address  |= (1<<12);
     // 11 to 0 is RAM individual address.
-    // 64 samples are 256 bytes. Offset is 3 bits.
-    address |= ((unsigned)offset&7)<<8;
+    // 64 samples are 256 bytes. Offset is 4 bits.
+    address |= ((unsigned)offset&15)<<8;
     fpga__read_capture_block(address, dest, 256);
 }

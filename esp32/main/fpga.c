@@ -454,24 +454,24 @@ int fpga__passiveserialconfigure_fromfile(int fh, unsigned len)
 
 
 
-int fpga__read_command_fifo()
+int fpga__read_command_fifo(uint8_t *dest)
 {
-    uint8_t buf[2];
+    int r = fpga__get_status();
+    if (r<0)
+        return r;
 
-    int r = fpga__issue_read(FPGA_SPI_CMD_READ_CMDFIFO, buf, sizeof(buf));
+    unsigned used = FPGA_STATUS_CMDFIFO_USED(r);
+
+    if (used==0)
+        return -1;
+
+
+    r = fpga__issue_read_block(FPGA_SPI_CMD_READ_CMDFIFO, dest, used);
 
     if (r<0)
         return r;
 
-    if (buf[0]==0xff) {
-        return -1;
-    }
-
-    ESP_LOGI(TAG, "Command ");
-
-    dump__buffer(buf,2);
-
-    return buf[1];
+    return used;
 }
 
 static uint16_t fpga__get_tap_fifo_usage()

@@ -94,7 +94,7 @@ void console__hdlc_data(const uint8_t *d, unsigned len)
     if (d[0]==0x05) {
         // d[1] holds ram and offset;
         uint8_t channel = d[1] & 0x80 ? 1: 0;
-        uint8_t offset = d[1] & 0x7;
+        uint8_t offset = d[1] & 0x0F;
         uint8_t buf[256];
 
         scope__get_capture_data_block64(channel, offset, buf);

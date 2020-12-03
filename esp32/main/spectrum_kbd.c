@@ -3,9 +3,9 @@
 
 
 static char CAPSSHIFT_KEYS[39] = {
-    'B', 'H', 'Y', '6', '5', 'T', 'G', 'V',
-    'N', 'J', 'U', '7', '4', 'R', 'F', 'C',
-    'M', 'K', 'I', '8', '3', 'E', 'D', 'X',
+    'B', 'H', 'Y', KEY_DOWN, KEY_LEFT, 'T', 'G', 'V',
+    'N', 'J', 'U', KEY_UP, '4', 'R', 'F', 'C',
+    'M', 'K', 'I', KEY_RIGHT, '3', 'E', 'D', 'X',
     KEY_SYMBOL_SHIFT, 'L', 'O', '9', '2', 'W', 'S', 'Z',
     KEY_BREAK, KEY_ENTER, 'P', KEY_BACKSPACE, '1', 'Q', 'A' };
 
