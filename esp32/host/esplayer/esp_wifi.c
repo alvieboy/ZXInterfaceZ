@@ -49,6 +49,7 @@ esp_err_t esp_wifi_disconnect()
 
 esp_err_t esp_wifi_start()
 {
+    printf("esp_wifi_start() called\n");
     switch (wifi_mode){
     case WIFI_MODE_AP:
         wifi_task_apmode();
