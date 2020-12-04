@@ -179,6 +179,7 @@ architecture beh of zxinterface is
   signal spect_reset_s          : std_logic;
   signal spect_inten_s          : std_logic;
   signal spect_forceromcs_s     : std_logic;
+  signal spect_forceromcs_q_r   : std_logic;
   signal spect_forceromcs_bussync_s : std_logic;
   signal forceromonretn_trig_s    : std_logic;
   signal forceromcs_on_s        : std_logic;
@@ -255,6 +256,7 @@ architecture beh of zxinterface is
   signal io_rd_p_dly_s          : std_logic;
 
   signal nmi_r                  : std_logic;
+  signal nmi_request_r          : std_logic;
   signal in_nmi_rom_r           : std_logic;
   signal ulahack_s              : std_logic;
   --signal ulahack_spisck_s       : std_logic;
@@ -317,7 +319,7 @@ architecture beh of zxinterface is
 
   signal spect_clk_rise_s       : std_logic;
   signal spect_clk_fall_s       : std_logic;
-
+  signal spect_m1_fall_s       : std_logic;
 
   signal capture_rd_s           : std_logic;
   signal capture_wr_s           : std_logic;
@@ -454,7 +456,8 @@ begin
       XRFSH_sync_o  => XRFSH_sync_s,
 
       clk_rise_o    => spect_clk_rise_s,
-      clk_fall_o    => spect_clk_fall_s
+      clk_fall_o    => spect_clk_fall_s,
+      m1_fall_o     => spect_m1_fall_s
   );
 
   data_o_s <= romdata_o_s when rom_enable_s='1' else
@@ -875,33 +878,38 @@ begin
   process(clk_i, arst_i)
   begin
     if arst_i='1' then
-      nmi_r <= '0';
-      in_nmi_rom_r <= '0';
+      nmi_r         <= '0';
+      nmi_request_r <= '0';
+      in_nmi_rom_r  <= '0';
     elsif rising_edge(clk_i) then
 
-      if forcenmi_off_s='1' then
-        nmi_r <= '0';
-        in_nmi_rom_r <='0';
-      elsif (in_nmi_rom_r='0') and (forcenmi_on_s='1' or keyb_trigger_s='1') then
-        nmi_r <= '1';
-        -- Force ROMCS
+      if nmi_request_r='1' and spect_m1_fall_s='1' then
+        nmi_r         <= '1'; -- M1 cycle, activate NMI so it can be properly latched
+        nmi_request_r <= '0';
       end if;
 
-      -- Alternate: if we spot an M1 cycle after we triggered the NMI, then
-      -- we assume we entered the handler. This is to avoid using the old ROM as
-      -- the first instruction.
+      if forcenmi_off_s='1' then
+        nmi_r         <= '0';
+        in_nmi_rom_r  <= '0';
+        nmi_request_r <= '0';
+
+      elsif (in_nmi_rom_r='0') and (forcenmi_on_s='1' or keyb_trigger_s='1') then
+       -- nmi_r           <= '1';
+        nmi_request_r   <= '1'; -- Latch NMI request. We will wait for M1 fall
+      end if;
+
 
       if nmi_access_s='1' then -- Entered NMI.
-      --if nmi_r='1' and XM1_sync_s='0' and XRD_sync_s='0' and XMREQ_sync_s='0'then
         in_nmi_rom_r    <= nmi_r;
         -- Force ROM to index 0. This allows us to use NMI in other ROMs
         --nmi_saved_rom   <= romsel_s;
-        nmi_r <= '0';
+        nmi_r           <= '0';
       end if;
 
       if retn_det_s='1' then -- If we detect a RETN, leave ROM.
         in_nmi_rom_r <= '0';
       end if;
+
     end if;
   end process;
 
@@ -969,15 +977,23 @@ begin
   end generate;
 
   --
-  -- Do NOT allow changes to ROMCS while bus is busy, wait for bus idle
+  -- Do NOT allow changes to ROMCS while bus is busy, wait for start of M1 cycle
   --
   process(clk_i, arst_i)
   begin
     if arst_i='1' then
-      spect_forceromcs_bussync_s <= '0';
+      spect_forceromcs_bussync_s  <= '0';
     elsif rising_edge(clk_i) then
-      if (XM1_sync_s='0' and XMREQ_sync_s='0' and XRD_sync_s='0') then
-        spect_forceromcs_bussync_s <= spect_forceromcs_s or (in_nmi_rom_r or nmi_r);  -- Also force ROM on NMI.
+
+      -- Force ON/OFF follows a different path.
+      if spect_forceromcs_s='0' and (in_nmi_rom_r='0' and nmi_r='0') then
+        spect_forceromcs_bussync_s <= '0';
+      else
+        if spect_m1_fall_s='1' and spect_forceromcs_s='1' then
+          spect_forceromcs_bussync_s <= '1';
+        elsif spect_m1_fall_s='1' and nmi_r='1' then
+          spect_forceromcs_bussync_s <= '1';--spect_forceromcs_s or (in_nmi_rom_r or nmi_r);  -- Also force ROM on NMI.
+        end if;
       end if;
     end if;
   end process;

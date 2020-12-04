@@ -63,7 +63,8 @@ entity businterface is
     mem_active_o  : out std_logic; -- Mem active. Stays high until RD/WR is released
     opcode_rd_p_o : out std_logic; -- Opcode(M1) read pulse
     clk_rise_o    : out std_logic; -- Clock rise event
-    clk_fall_o    : out std_logic  -- Clock fall event
+    clk_fall_o    : out std_logic; -- Clock fall event
+    m1_fall_o     : out std_logic  -- M1 fall event
   );
 
 end entity businterface;
@@ -117,10 +118,15 @@ architecture beh of businterface is
   signal memrd_dly_q        : std_logic_vector(C_MEM_READ_DELAY_PULSE downto 0);
   signal iord_dly_q         : std_logic_vector(C_IO_READ_DELAY_PULSE downto 0); -- TODO: check if we can merge these two
 
-  -- Clock Event detection. Used primarly to generate WAIT states.
+  -- Clock Event detection. Used primarly to generate WAIT states. Note that not all Spectrum
+  -- variants expose the CK signal
   signal ck_r               : std_logic;
   signal ck_rise_event_s    : std_logic;
   signal ck_fall_event_s    : std_logic;
+
+  -- M1 fall event, used for NMI synchronization
+  signal m1_r               : std_logic;
+  signal m1_fall_event_s    : std_logic;
 
 begin
 
@@ -334,6 +340,16 @@ begin
     end if;
   end process;
 
+  process(clk_i, arst_i)
+  begin
+    if arst_i='1' then
+      m1_r <= '1';
+    elsif rising_edge(clk_i) then
+      m1_r            <= XM1_sync_s; -- Unfiltered.
+      m1_fall_event_s <= not XM1_sync_s and m1_r;
+    end if;
+  end process;
+
 
   d_o           <= d_r;
   a_o           <= a_r;
@@ -350,6 +366,7 @@ begin
   io_rd_p_dly_o <= iord_dly_q(C_IO_READ_DELAY_PULSE);
   clk_rise_o    <= ck_rise_event_s;
   clk_fall_o    <= ck_fall_event_s;
+  m1_fall_o     <= m1_fall_event_s;
 
   XCK_sync_o    <= XCK_sync_s;
   XINT_sync_o   <= XINT_sync_s;
