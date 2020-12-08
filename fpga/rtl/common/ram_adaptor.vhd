@@ -254,7 +254,7 @@ begin
 
   waitgen2: if true generate
     wg2: block
-      signal delay: integer range 0 to 13;
+      signal delay: integer range 0 to 13*3;
     begin
 
       process(clk_i, arst_i)
@@ -265,7 +265,7 @@ begin
         elsif rising_edge(clk_i) then
           if request_delayed='1' then
             spect_wait_o <= '1';
-            delay <= 13;
+            delay <= 13*3;
           else
             if delay=0 then
               spect_wait_o <= '0';
