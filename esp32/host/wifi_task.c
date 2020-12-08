@@ -22,6 +22,7 @@ void wifi__end_scan()
 
 int do_hw_wifi_scan(void)
 {
+    printf("WIFI: request scan\n");
     uint32_t val = WIFI_CMD_SCAN;
     xQueueSend(scan_queue, &val, 1000);
     return 0;
@@ -29,13 +30,15 @@ int do_hw_wifi_scan(void)
 
 void wifi_task_apmode(void)
 {
+    printf("WIFI: request AP mode\n");
     uint32_t val = WIFI_CMD_APMODE;
     xQueueSend(scan_queue, &val, 1000);
 }
 
 void wifi_task_connect(void)
 {
-    uint32_t val = WIFI_CMD_APMODE;
+    printf("WIFI: request connect STA mode\n");
+    uint32_t val = WIFI_CMD_CONNECT;
     xQueueSend(scan_queue, &val, 1000);
 }
 
@@ -47,6 +50,7 @@ void wifi_task(void *data)
     printf("Waiting for scan requests\n");
     while (1) {
         if (xQueueReceive(scan_queue, &resp, portMAX_DELAY)==pdTRUE) {
+            printf("Scan request received\n");
             switch (resp) {
             case WIFI_CMD_SCAN:
                 printf("Requested scan\n");
@@ -61,6 +65,7 @@ void wifi_task(void *data)
                                         NULL,
                                         0,
                                         1000);
+                break;
             case WIFI_CMD_CONNECT:
                 vTaskDelay(200 / portTICK_RATE_MS);
                 esp_event_send_internal(WIFI_EVENT, WIFI_EVENT_STA_START, NULL, 0, 1000);

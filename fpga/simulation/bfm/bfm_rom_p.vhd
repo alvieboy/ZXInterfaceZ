@@ -30,7 +30,7 @@ package bfm_rom_p is
       A_i     : in std_logic_vector(15 downto 0);
       D_o     : out std_logic_vector(7 downto 0);
       MREQn_i : in std_logic;
-      RD_i    : in std_logic;
+      RDn_i   : in std_logic;
       OEn_i   : in std_logic
     );
   end component bfm_rom;

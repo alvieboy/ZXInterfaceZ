@@ -45,11 +45,12 @@ begin
     spiPayload_in_s(0) <= x"E5";
     spiPayload_in_s(1) <= x"00";
     spiPayload_in_s(2) <= x"00";
+    spiPayload_in_s(3) <= x"00";
 
-    --Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 2, spiPayload_in_s, spiPayload_out_s);
+    Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 4, spiPayload_in_s, spiPayload_out_s);
 
-    Check("SPI fifo MSB is cleared", spiPayload_out_s(1), x"00");
-    Check("SPI fifo LSB is cleared", spiPayload_out_s(2), x"00");
+    Check("SPI fifo MSB is cleared", spiPayload_out_s(2), x"00");
+    Check("SPI fifo LSB is cleared", spiPayload_out_s(3), x"00");
 
     -- Set pulse widths
 

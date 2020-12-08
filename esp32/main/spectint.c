@@ -21,10 +21,11 @@ extern void usb__isr_handler(void*);
 
 void spectint__init()
 {
-    gpio_evt_queue = xQueueCreate(4, sizeof(uint32_t));
+    gpio_evt_queue = xQueueCreate(8, sizeof(uint32_t));
 
     gpio_set_intr_type(PIN_NUM_SPECT_INTERRUPT, GPIO_INTR_NEGEDGE);
     gpio_set_intr_type(PIN_NUM_CMD_INTERRUPT, GPIO_INTR_NEGEDGE);
+    //gpio_set_intr_type(PIN_NUM_CMD_INTERRUPT, GPIO_INTR_LOW_LEVEL);
     gpio_set_intr_type(PIN_NUM_USB_INTERRUPT, GPIO_INTR_NEGEDGE);
     interrupt_count = 0;
 

@@ -9,6 +9,7 @@
 #include "esp_wifi.h"
 #include "wifi_task.h"
 #include "event_task.h"
+#include <pty.h>
 
 BaseType_t xTaskCreatePinnedToCore(TaskFunction_t pvTaskCode, const char *const pcName, const uint32_t usStackDepth, void *const pvParameters,
                                    UBaseType_t uxPriority, TaskHandle_t *const pvCreatedTask, const BaseType_t xCoreID);
@@ -18,6 +19,8 @@ int interfacez_main(int argc, char **argv);
 
 void vApplicationMallocFailedHook(void);
 void vApplicationTickHook(void);
+
+int ptyfd = -1;
 
 /* ESP rom */
 #include "esp32/rom/uart.h"
@@ -65,8 +68,33 @@ STATUS uart_rx_one_char(uint8_t *c)
     if (read(0, c, 1)==1) {
         return 0;
     }
+    if (ptyfd>=0) {
+        int r = read(ptyfd, c, 1);
+        if (r==1) {
+            printf("DATA %d %02x\n",ptyfd, *c);
+            return 0;
+        } else {
+            if (r<0 && errno!=EINTR) {
+                reopen_pty();
+                //printf("CANNOT READ FROM PTY\n");
+            }
+            return -1;
+        }
+    }
     return -1;
 }
+
+STATUS uart_tx_one_char(uint8_t TxChar)
+{
+    if (ptyfd>=0) {
+        int r = write(ptyfd, &TxChar, 1);
+        if (r==1)
+            return 0;
+        return -1;
+    }
+    return 0;  // Ignore
+}
+
 
 char *inet_ntoa_r(struct in_addr in, char *dest, size_t len)
 {
@@ -98,6 +126,68 @@ char startupdir[512] = {0};
 
 extern int partition_init();
 
+#include <termios.h>
+#include <sys/ioctl.h>
+
+void reopen_pty()
+{
+    char pts[256];
+    int slave;
+
+    struct termios term;
+    memset(&term, 0, sizeof(term));
+
+    term.c_lflag &= ~(ISIG | ICANON | ECHO | IEXTEN);
+    term.c_cc[VMIN] = 0;
+    term.c_cc[VTIME] = 0;
+
+    term.c_cflag |= (CLOCAL | CREAD);
+    term.c_cflag &= ~(HUPCL);
+
+    if (ptyfd>=0)
+        close(ptyfd);
+
+    int r = openpty(&ptyfd, &slave,
+                    pts,
+                    &term,
+                    NULL);
+    if (r<0) {
+        printf("Cannot open PTY");
+        return ;
+    }
+
+    printf("Console PTY %s\n", pts);
+
+#if 0
+    ptyfd = posix_openpt(O_RDWR|O_NOCTTY);
+
+    if (ptyfd>=0) {
+        char pts[256];
+        grantpt(ptyfd);
+        unlockpt(ptyfd);
+        if (ptsname_r(ptyfd, pts, sizeof(pts))<0) {
+            close(ptyfd);
+        }
+        struct termios term;
+
+        ioctl(ptyfd, TCGETS, &term);
+
+        term.c_lflag &= ~(ISIG | ICANON | ECHO | IEXTEN);
+	term.c_cc[VMIN] = 0;
+	term.c_cc[VTIME] = 0;
+
+	term.c_cflag |= (CLOCAL | CREAD);
+	term.c_cflag &= ~(HUPCL);
+
+        ioctl(ptyfd, TCSETS, &term);
+        fcntl(ptyfd, F_SETFL, ioctl(ptyfd, F_GETFL)| O_NONBLOCK);
+        printf("Console PTY %s\n", pts);
+    }
+#endif
+
+
+}
+
 int interfacez_main(int argc, char **argv)
 {
     TaskHandle_t h;
@@ -108,6 +198,8 @@ int interfacez_main(int argc, char **argv)
     wifi_task_init();
     event_task_init();
 
+    // Open pty
+    reopen_pty();
     if (partition_init()<0)
         return -1;
     printf("Start WiFi task\n");

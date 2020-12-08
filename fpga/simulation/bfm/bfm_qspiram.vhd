@@ -19,8 +19,10 @@ end entity bfm_qspiram;
 
 architecture sim of bfm_qspiram is
 
+  constant RAM_SIZE: natural := 16*1024*1024;
+
   subtype memword_type is std_logic_vector(7 downto 0);
-  type mem_type is array(0 to 838867) of memword_type;
+  type mem_type is array(0 to RAM_SIZE-1) of memword_type;
   shared variable qspiram: mem_type := (others => (others => '0'));
   signal data_out_s :  std_logic_vector(3 downto 0);
   signal oe_s       :  std_logic_vector(3 downto 0) := (others => '0');

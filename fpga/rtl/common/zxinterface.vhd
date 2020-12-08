@@ -179,6 +179,7 @@ architecture beh of zxinterface is
   signal spect_reset_s          : std_logic;
   signal spect_inten_s          : std_logic;
   signal spect_forceromcs_s     : std_logic;
+  signal spect_forceromcs_q_r   : std_logic;
   signal spect_forceromcs_bussync_s : std_logic;
   signal forceromonretn_trig_s    : std_logic;
   signal forceromcs_on_s        : std_logic;
@@ -224,6 +225,7 @@ architecture beh of zxinterface is
   signal cmdfifo_read_s         : std_logic_vector(7 downto 0);
   signal cmdfifo_full_s         : std_logic;
   signal cmdfifo_empty_s        : std_logic;
+  signal cmdfifo_used_s         : std_logic_vector(2 downto 0);
   signal cmdfifo_intack_s       : std_logic;
 
   signal port_fe_s              : std_logic_vector(5 downto 0);
@@ -234,7 +236,7 @@ architecture beh of zxinterface is
   signal start_delay_s          : std_logic_vector(7 downto 0);
 
   signal spec_nreq_r            : std_logic;
-  constant SPEC_NREC_DELAY_MAX  : natural := 31;
+  constant SPEC_NREC_DELAY_MAX  : natural := 127;
 
   signal spec_nreq_delay_r      : natural range 0 to SPEC_NREC_DELAY_MAX := SPEC_NREC_DELAY_MAX;
 
@@ -254,6 +256,7 @@ architecture beh of zxinterface is
   signal io_rd_p_dly_s          : std_logic;
 
   signal nmi_r                  : std_logic;
+  signal nmi_request_r          : std_logic;
   signal in_nmi_rom_r           : std_logic;
   signal ulahack_s              : std_logic;
   --signal ulahack_spisck_s       : std_logic;
@@ -279,22 +282,13 @@ architecture beh of zxinterface is
   signal ahb_null_m2s           : AHB_M2S;
   signal ahb_null_s2m           : AHB_S2M;
 
-  signal extram_addr_s          : std_logic_vector(31 downto 0);
-  signal extram_dat_s           : std_logic_vector(31 downto 0);
-  signal extram_dat_write_s     : std_logic_vector(31 downto 0);
-  signal extram_req_s           : std_logic;
-  signal extram_we_s            : std_logic;
-  signal extram_valid_s         : std_logic;
+  signal scope_ahb_m2s_s        : AHB_M2S;
+  signal scope_ahb_s2m_s        : AHB_S2M;
 
   signal rst48_s                : std_logic;
 
-  signal usb_rd_s               : std_logic;
-  signal usb_wr_s               : std_logic;
   signal usb_int_s              : std_logic;
   signal usb_int_async_s        : std_logic;
-  signal generic_addr_s         : std_logic_vector(10 downto 0);
-  signal generic_wdat_s         : std_logic_vector(7 downto 0);
-  signal usb_rdat_s             : std_logic_vector(7 downto 0);
 
   signal keyb_trigger_s         : std_logic;
 
@@ -325,7 +319,7 @@ architecture beh of zxinterface is
 
   signal spect_clk_rise_s       : std_logic;
   signal spect_clk_fall_s       : std_logic;
-
+  signal spect_m1_fall_s       : std_logic;
 
   signal capture_rd_s           : std_logic;
   signal capture_wr_s           : std_logic;
@@ -355,6 +349,21 @@ architecture beh of zxinterface is
   signal bit_control_in_s       : std_logic_vector(7 downto 0);
   signal force_iorqula_s        : std_logic;
 
+  signal ahb_spi_m2s_s          : AHB_M2S;
+  signal ahb_spi_s2m_s          : AHB_S2M;
+  signal ahb_vram_m2s_s         : AHB_M2S;
+  signal ahb_vram_s2m_s         : AHB_S2M;
+  signal ahb_systemctrl_m2s_s   : AHB_M2S;
+  signal ahb_systemctrl_s2m_s   : AHB_S2M;
+  signal ahb_usb_m2s_s          : AHB_M2S;
+  signal ahb_usb_s2m_s          : AHB_S2M;
+  signal ahb_usb_clk48_m2s_s    : AHB_M2S;
+  signal ahb_usb_clk48_s2m_s    : AHB_S2M;
+
+  signal force_romcs_s          : std_logic;
+  signal force_2aromcs_s        : std_logic;
+
+  signal nmi_m1fall_q_r         : std_logic;
 begin
 
   rst48_inst: entity work.rstgen
@@ -448,7 +457,8 @@ begin
       XRFSH_sync_o  => XRFSH_sync_s,
 
       clk_rise_o    => spect_clk_rise_s,
-      clk_fall_o    => spect_clk_fall_s
+      clk_fall_o    => spect_clk_fall_s,
+      m1_fall_o     => spect_m1_fall_s
   );
 
   data_o_s <= romdata_o_s when rom_enable_s='1' else
@@ -630,7 +640,8 @@ begin
     wD_i        => cmdfifo_write_s,
     rQ_o        => cmdfifo_read_s,
     full_o      => cmdfifo_full_s,
-    empty_o     => cmdfifo_empty_s
+    empty_o     => cmdfifo_empty_s,
+    used_o      => cmdfifo_used_s
   );
 
 
@@ -645,6 +656,19 @@ begin
     clk_i         => clk_i,
     MOSI_i        => mosi_s,
     MISO_o        => miso_s,
+
+    ahb_m2s_o     => ahb_spi_m2s_s,
+    ahb_s2m_i     => ahb_spi_s2m_s
+  );
+
+  -- System controller
+  systemctrl_inst: entity work.systemctrl
+  port map (
+    clk_i                 => clk_i,
+    arst_i                => arst_i,
+  
+    ahb_m2s_i             => ahb_systemctrl_m2s_s,
+    ahb_s2m_o             => ahb_systemctrl_s2m_s,
 
     pc_i          => pc_r,
     nmireason_o   => nmireason_s,
@@ -685,14 +709,7 @@ begin
     cmdfifo_read_i        => cmdfifo_read_s,
     cmdfifo_empty_i       => cmdfifo_empty_s,
     cmdfifo_intack_o      => cmdfifo_intack_s,
-
-
-    extram_addr_o         => extram_addr_s,
-    extram_dat_i          => extram_dat_s,
-    extram_dat_o          => extram_dat_write_s,
-    extram_req_o          => extram_req_s,
-    extram_we_o           => extram_we_s,
-    extram_valid_i        => extram_valid_s,
+    cmdfifo_used_i        => cmdfifo_used_s,
 
     forceromonretn_trig_o => forceromonretn_trig_s,
     forceromcs_trig_on_o  => forceromcs_on_s,
@@ -700,15 +717,6 @@ begin
     forcenmi_trig_on_o    => forcenmi_on_s,
     forcenmi_trig_off_o    => forcenmi_off_s,
     -- USB
-    usb_rd_o              => usb_rd_s,
-    usb_wr_o              => usb_wr_s,
-
-    generic_addr_o        => generic_addr_s,
-    generic_dat_o         => generic_wdat_s,
-
-    usb_dat_i             => usb_rdat_s,
-    usb_int_i             => usb_int_s,
-
     capture_rd_o          => capture_rd_s,
     capture_wr_o          => capture_wr_s,
     capture_dat_i         => capture_dat_s,
@@ -730,6 +738,56 @@ begin
     romsel_we_o           => romsel_we_s
   );
 
+  -- Main AHB intercon.
+  intercon_inst: entity work.ahb_intercon5
+    generic map (
+      -- Video RAM 
+      S0_ADDR_MASK    => "00000001100000000010000000000000",
+      S0_ADDR_VALUE   => "00000000000000000000000000000000",
+      -- System controller
+      S1_ADDR_MASK    => "00000001100000000011000000000000",
+      S1_ADDR_VALUE   => "00000000000000000010000000000000",
+      -- USB controller
+      S2_ADDR_MASK    => "00000001100000000011000000000000",
+      S2_ADDR_VALUE   => "00000000000000000011000000000000",
+      -- PSRAM
+      S3_ADDR_MASK    => "00000001000000000000000000000000",
+      S3_ADDR_VALUE   => "00000001000000000000000000000000",
+      -- CAPTURE
+      S4_ADDR_MASK    => "00000001100000000000000000000000",
+      S4_ADDR_VALUE   => "00000000100000000000000000000000"
+    )
+    port map (
+      clk_i     => clk_i,
+      arst_i    => arst_i,
+      -- Master: SPI
+      HMAST_I   => ahb_spi_m2s_s,
+      HMAST_O   => ahb_spi_s2m_s,
+      -- S0: Video RAM
+      HSLAV0_I  => ahb_vram_s2m_s,
+      HSLAV0_O  => ahb_vram_m2s_s,
+      -- S1: System controller
+      HSLAV1_I  => ahb_systemctrl_s2m_s,
+      HSLAV1_O  => ahb_systemctrl_m2s_s,
+      -- S2: USB controller
+      HSLAV2_I  => ahb_usb_s2m_s,
+      HSLAV2_O  => ahb_usb_m2s_s,
+      -- S3: PSRAM
+      HSLAV3_I  => psram_ahb_s2m,
+      HSLAV3_O  => psram_ahb_m2s,
+      -- S4: CAPTURE
+      HSLAV4_I  => scope_ahb_s2m_s,
+      HSLAV4_O  => scope_ahb_m2s_s
+    );
+
+
+
+
+
+
+
+
+
   -- Interrupt generation for command FIFO
   process(clk_i, arst_i)
   begin
@@ -741,9 +799,8 @@ begin
       if (spec_nreq_delay_r/=0) then
         spec_nreq_delay_r <= spec_nreq_delay_r - 1;
       end if;
-      -- TODO TODO: fix this once we have a fifo with more than 1 element.
-      --
-      if cmdfifo_empty_s='0' and spec_nreq_delay_r=0 then   -- !! Empty is generated by read (SPI)
+
+      if cmdfifo_empty_s='0' and spec_nreq_delay_r=0 then
         spec_nreq_r <= '0';
       elsif cmdfifo_intack_s='1' then
         spec_nreq_r <= '1';
@@ -822,33 +879,38 @@ begin
   process(clk_i, arst_i)
   begin
     if arst_i='1' then
-      nmi_r <= '0';
-      in_nmi_rom_r <= '0';
+      nmi_r         <= '0';
+      nmi_request_r <= '0';
+      in_nmi_rom_r  <= '0';
     elsif rising_edge(clk_i) then
 
-      if forcenmi_off_s='1' then
-        nmi_r <= '0';
-        in_nmi_rom_r <='0';
-      elsif (in_nmi_rom_r='0') and (forcenmi_on_s='1' or keyb_trigger_s='1') then
-        nmi_r <= '1';
-        -- Force ROMCS
+      if nmi_request_r='1' and spect_m1_fall_s='1' then
+        nmi_r         <= '1'; -- M1 cycle, activate NMI so it can be properly latched
+        nmi_request_r <= '0';
       end if;
 
-      -- Alternate: if we spot an M1 cycle after we triggered the NMI, then
-      -- we assume we entered the handler. This is to avoid using the old ROM as
-      -- the first instruction.
+      if forcenmi_off_s='1' then
+        nmi_r         <= '0';
+        in_nmi_rom_r  <= '0';
+        nmi_request_r <= '0';
+
+      elsif (in_nmi_rom_r='0') and (forcenmi_on_s='1' or keyb_trigger_s='1') then
+       -- nmi_r           <= '1';
+        nmi_request_r   <= '1'; -- Latch NMI request. We will wait for M1 fall
+      end if;
+
 
       if nmi_access_s='1' then -- Entered NMI.
-      --if nmi_r='1' and XM1_sync_s='0' and XRD_sync_s='0' and XMREQ_sync_s='0'then
         in_nmi_rom_r    <= nmi_r;
         -- Force ROM to index 0. This allows us to use NMI in other ROMs
         --nmi_saved_rom   <= romsel_s;
-        nmi_r <= '0';
+        nmi_r           <= '0';
       end if;
 
       if retn_det_s='1' then -- If we detect a RETN, leave ROM.
         in_nmi_rom_r <= '0';
       end if;
+
     end if;
   end process;
 
@@ -887,11 +949,12 @@ begin
       fifo_rd_o     => fifo_rd_s,
       fifo_data_i   => fifo_read_s,
 
-      vidmem_clk_i  => SPI_SCK_i,
-      vidmem_en_i   => vidmem_en_s,
-      vidmem_adr_i  => vidmem_adr_s,
-      vidmem_data_o => vidmem_data_s,
-
+      vidmem_clk_i  => clk_i,--SPI_SCK_i,
+      --vidmem_en_i   => vidmem_en_s,
+      --vidmem_adr_i  => vidmem_adr_s,
+      --vidmem_data_o => vidmem_data_s,
+      ahb_m2s_i     => ahb_vram_m2s_s,
+      ahb_s2m_o     => ahb_vram_s2m_s,
       capsyncen_i   => spect_capsyncen_s,
       intr_i        => intr_p_s,
       framecmplt_i  => framecmplt_s,
@@ -915,15 +978,28 @@ begin
   end generate;
 
   --
-  -- Do NOT allow changes to ROMCS while bus is busy, wait for bus idle
+  -- Do NOT allow changes to ROMCS while bus is busy, wait for start of M1 cycle
   --
   process(clk_i, arst_i)
   begin
     if arst_i='1' then
-      spect_forceromcs_bussync_s <= '0';
+      spect_forceromcs_bussync_s  <= '0';
+      nmi_m1fall_q_r <= '0';
     elsif rising_edge(clk_i) then
-      if (XM1_sync_s='0' and XMREQ_sync_s='0' and XRD_sync_s='0') then
-        spect_forceromcs_bussync_s <= spect_forceromcs_s or (in_nmi_rom_r or nmi_r);  -- Also force ROM on NMI.
+
+      -- Force ON/OFF follows a different path.
+      if spect_forceromcs_s='0' and (in_nmi_rom_r='0' and nmi_r='0') then
+        spect_forceromcs_bussync_s <= '0';
+      else
+        if spect_m1_fall_s='1' and spect_forceromcs_s='1' then
+          spect_forceromcs_bussync_s <= '1';
+        elsif spect_m1_fall_s='1' and nmi_r='1' then
+          nmi_m1fall_q_r         <= '1';
+          if nmi_m1fall_q_r='1' then
+            spect_forceromcs_bussync_s <= '1';--spect_forceromcs_s or (in_nmi_rom_r or nmi_r);  -- Also force ROM on NMI.
+            nmi_m1fall_q_r <= '0'; -- Clear
+          end if;
+        end if;
       end if;
     end if;
   end process;
@@ -981,65 +1057,39 @@ begin
   psram_hp_ahb_m2s    <= ahb_spect_m2s;
   ahb_spect_s2m       <= psram_hp_ahb_s2m;
 
-  arb_inst: entity work.ahb_arb
-    port map (
-      CLK         => clk_i,
-      RST         => arst_i,
-
-      HMAST0_I    => ahb_spi_m2s,
-      HMAST0_O    => ahb_spi_s2m,
-
-      HMAST1_I    => ahb_null_m2s,
-      HMAST1_O    => ahb_null_s2m,
-
-      HMAST2_I    => ahb_null_m2s,
-      HMAST2_O    => ahb_null_s2m,
-
-      HMAST3_I    => ahb_null_m2s,
-      HMAST3_O    => ahb_null_s2m,
-
-      HSLAV_I     => psram_ahb_s2m,
-      HSLAV_O     => psram_ahb_m2s
-    );
-
-
-  ahbr_inst: entity work.ahbreq
+  -- AHB cross-clock
+  usbahbintercon_inst: entity work.ahb2ahb
   generic map (
-    MODE => "LEVEL"
+    AWIDTH  => 12,
+    DWIDTH  => 8
   )
   port map (
-    clk_i    => clk_i,
-    arst_i   => arst_i,
-
-    --sclk_i    => clk_i,
-    --sarst_i   => '0', -- TODO
-
-    addr_i    => extram_addr_s,
-    trans_i   => extram_req_s,
-    we_i      => extram_we_s,
-    valid_o   => extram_valid_s,
-    data_o    => extram_dat_s,
-    data_i    => extram_dat_write_s,
-
-    m_i       => ahb_spi_s2m,
-    m_o       => ahb_spi_m2s
+    -- Master
+    mclk_i  => clk_i,
+    arst_i  => arst_i,
+    m2s_i   => ahb_usb_m2s_s,
+    s2m_o   => ahb_usb_s2m_s,
+    -- Slave
+    sclk_i  => clk48_i,
+    m2s_o   => ahb_usb_clk48_m2s_s,
+    s2m_i   => ahb_usb_clk48_s2m_s
   );
+
 
   usb_inst: ENTITY work.usbhostctrl
   PORT map (
     usbclk_i      => clk48_i,
     ausbrst_i     => rst48_s,
 
-    clk_i         => clk_i,--SPI_SCK_i,
-    arst_i        => arst_i,
+    ahb_m2s_i     => ahb_usb_clk48_m2s_s,
+    ahb_s2m_o     => ahb_usb_clk48_s2m_s,
 
-    rd_i          => usb_rd_s,
-    wr_i          => usb_wr_s,
-    addr_i        => generic_addr_s,
-    dat_i         => generic_wdat_s,
-    dat_o         => usb_rdat_s,
+    -- Clk/reset for interrupt sync
+    clk_i         => clk_i,
+    arst_i        => arst_i,
     int_o         => usb_int_s,
     int_async_o   => usb_int_async_s,
+
     -- Interface to transceiver
     softcon_o     => USB_SOFTCON_o,
     noe_o         => USB_OE_o,
@@ -1059,7 +1109,8 @@ begin
 
   capinst: if C_CAPTURE_ENABLED generate
     capb: block
-      signal trig_s: std_logic_vector(27 downto 0);
+      signal trig_s: std_logic_vector(30 downto 0);
+      signal nontrig_s: std_logic_vector(9 downto 0);
     begin
 
       trig_s(15 downto 0) <= a_s;
@@ -1071,32 +1122,34 @@ begin
       trig_s(21) <= XWR_sync_s;
       trig_s(22) <= XM1_sync_s;
       trig_s(23) <= XRFSH_sync_s;
-      trig_s(24) <= wait_s;
-      trig_s(25) <= nmi_r;
-      trig_s(26) <= spect_reset_s;
+      trig_s(24) <= not wait_s;
+      trig_s(25) <= not nmi_r;
+      trig_s(26) <= not spect_reset_s;
       trig_s(27) <= spect_forceromcs_bussync_s;
+      trig_s(28) <= force_iorqula_s;
+      trig_s(29) <= usb_int_async_s;
+      trig_s(30) <= spec_nreq_r;
 
-
+      nontrig_s(7 downto 0) <= d_unlatched_s;
+      nontrig_s(8) <= force_romcs_s;
+      nontrig_s(9) <= force_2aromcs_s;
 
       scope_inst: entity work.scope
         generic map (
-          NONTRIGGERABLE_WIDTH  => 8,
-          TRIGGERABLE_WIDTH     => 28,
+          NONTRIGGERABLE_WIDTH  => 10,
+          TRIGGERABLE_WIDTH     => 31,
           WIDTH_BITS            => 10
         )
         port map (
           clk_i         => clk_i,
           arst_i        => arst_i,
-      
-          nontrig_i     => d_unlatched_s,
+
+          nontrig_i     => nontrig_s,
           trig_i        => trig_s,
-      
-          rd_i          => capture_rd_s,
-          wr_i          => capture_wr_s,
-          addr_i        => generic_addr_s,
-          din_i         => generic_wdat_s,
-          dout_o        => capture_dat_s
-        );
+
+          ahb_m2s_i     => scope_ahb_m2s_s,
+          ahb_s2m_o     => scope_ahb_s2m_s
+       );
     end block;
   end generate capinst;
 
@@ -1146,13 +1199,8 @@ begin
   mosi_s          <= SPI_MOSI_i;
   SPI_MISO_o      <= miso_s;
 
-  force_block: block
-    signal force_romcs_s    : std_logic;
-    signal force_2aromcs_s  : std_logic;
-  begin
-
-    force_romcs_s   <= spect_forceromcs_bussync_s and not mode2a_s;
-    force_2aromcs_s <= spect_forceromcs_bussync_s and mode2a_s;
+    force_romcs_s   <= spect_forceromcs_bussync_s; -- Always enabled -- and not mode2a_s;
+    force_2aromcs_s <= spect_forceromcs_bussync_s and mode2a_s; -- Only in 2A+ mode, due to VIDEO signal on same pin
 
     bit_int: entity work.bit_out generic map ( WIDTH=>1, START=>9)
               port map ( data_i(0) => '0', data_o(0) => FORCE_INT_o, bit_from_cpu_i => bit_from_cpu_s );
@@ -1176,9 +1224,6 @@ begin
               port map ( data_i(0) => spect_reset_s, data_o(0) => FORCE_RESET_o, bit_from_cpu_i => bit_from_cpu_s );
 
    bit_o <= bit_from_cpu_s;
-
-  end block;
-
 
   TP5 <= tap_audio_s;
 

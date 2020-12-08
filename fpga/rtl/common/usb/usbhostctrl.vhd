@@ -39,6 +39,7 @@ use ieee.std_logic_misc.all;
 use ieee.numeric_std.all;
 library work;
 use work.usbpkg.all;
+use work.ahbpkg.all;
 -- synopsys translate_off
 use work.txt_util.all;
 -- synopsys translate_on
@@ -49,14 +50,12 @@ ENTITY usbhostctrl IS
     ausbrst_i   : in std_logic;
 
     -- Comms to external world
+    ahb_m2s_i   : in AHB_M2S;
+    ahb_s2m_o   : out AHB_S2M;
+
+
     clk_i       : in std_logic;
     arst_i      : in std_logic;
-    rd_i        : in std_logic;
-    wr_i        : in std_logic;
-    addr_i      : in std_logic_vector(10 downto 0);
-    dat_i       : in std_logic_vector(7 downto 0);
-    dat_o       : out std_logic_vector(7 downto 0);
-
     int_o       : out std_logic; -- sync to clk_i
     int_async_o : out std_logic; -- sync to usb clock
     -- Interface to transceiver
@@ -99,7 +98,26 @@ ARCHITECTURE rtl OF usbhostctrl is
   signal rst_event      : std_logic;
   signal noe_s          : std_logic;
 
+  signal rd_s           : std_logic;
+  signal wr_s           : std_logic;
+  signal addr_s         : std_logic_vector(11 downto 0);
+  signal dat_in_s       : std_logic_vector(7 downto 0);
+  signal dat_out_s      : std_logic_vector(7 downto 0);
+
+
+
+
   signal dbg_rx_data_done_s : std_logic;
+  signal dbg_trans_state_s  : std_logic_vector(4 downto 0);
+  signal cnt_ack_s       : std_logic_vector(7 downto 0);
+  signal cnt_nack_s      : std_logic_vector(7 downto 0);
+  signal cnt_babble_s    : std_logic_vector(7 downto 0);
+  signal cnt_stall_s     : std_logic_vector(7 downto 0);
+  signal cnt_crcerror_s  : std_logic_vector(7 downto 0);
+  signal cnt_timeout_s   : std_logic_vector(7 downto 0);
+  signal cnt_errorpid_s  : std_logic_vector(7 downto 0);
+  signal cnt_cplt_s      : std_logic_vector(7 downto 0);
+
 
   constant C_SOF_TIMEOUT: natural   := altsim(48000, 4800); -- 1ms synth, 100us simulation
   constant C_ATTACH_DELAY: natural  := altsim(480000, 4);-- 48000; -- 10 ms
@@ -217,15 +235,13 @@ ARCHITECTURE rtl OF usbhostctrl is
   --signal intconfreg_s         : std_logic_vector(7 downto 0);
   signal intpendreg_s         : std_logic_vector(7 downto 0);
 
-  signal write_data_s         : std_logic_vector(7 downto 0);
-  signal write_address_s      : std_logic_vector(10 downto 0);
+  --signal write_data_s         : std_logic_vector(7 downto 0);
+  --signal write_address_s      : std_logic_vector(10 downto 0);
 
 
   signal vpo_s, vmo_s: std_logic;
 
 
-  signal wr_sync_s:  std_logic;
-  signal rd_sync_s:  std_logic;
 
   signal address_ep_crc_in_s: std_logic_vector(10 downto 0);
   signal address_ep_crc_out_s: std_logic_vector(4 downto 0);
@@ -246,7 +262,6 @@ ARCHITECTURE rtl OF usbhostctrl is
 
   signal int_s                : std_logic;
   signal read_data_s          : std_logic_vector(7 downto 0);
-  signal read_data_sync_s     : std_logic_vector(7 downto 0);
 
   signal trans_addr_s       : std_logic_vector(6 downto 0);
   signal trans_dsize_s      : std_logic_vector(6 downto 0);
@@ -261,6 +276,7 @@ ARCHITECTURE rtl OF usbhostctrl is
   signal phy_txactive_s     : std_logic;
   signal fs_ce_s            : std_logic;
 	signal dbg_fs_ce_r		: std_logic;
+  signal read_data_r        : std_logic_vector(7 downto 0);
 BEGIN
 
   rstinv      <= not ausbrst_i;
@@ -310,7 +326,7 @@ BEGIN
 
   phy_txactive_s <= not noe_s;
 
-  mainp: process(usbclk_i, ausbrst_i, r, Phy_Linestate, wr_sync_s, write_address_s, write_data_s, statusreg_s, intpendreg_s,
+  mainp: process(usbclk_i, ausbrst_i, r, Phy_Linestate, dat_in_s, addr_s, rd_s, wr_s, statusreg_s, intpendreg_s,
     usb_rst_phy, trans_status_s, trans_dsize_read_s, pwrflt_i)
     variable w  : regs_type;
     variable ch : channel_type;
@@ -364,160 +380,203 @@ BEGIN
     end if;
 
     -- Process writes coming from SPI
-    if wr_sync_s='1' then
-      if write_address_s(10 downto 7) = "0000" then
-        case write_address_s(6 downto 0) is
+    if wr_s='1' then
+      if addr_s(10 downto 7) = "0000" then
+        case addr_s(6 downto 0) is
           when "0000000" =>
-            w.sr.poweron               := write_data_s(5);
-            if write_data_s(4)='1' then w.sr.reset := '1'; end if;
+            w.sr.poweron               := dat_in_s(5);
+            if dat_in_s(4)='1' then w.sr.reset := '1'; end if;
 
           when "0000010" =>  -- Interrupt conf reg
-            w.intconfr.ginten         := write_data_s(7);
-            w.intconfr.disconnectdetect  := write_data_s(0);
-            w.intconfr.connectdetect  := write_data_s(1);
-            w.intconfr.overcurrent    := write_data_s(2);
+            w.intconfr.ginten         := dat_in_s(7);
+            w.intconfr.disconnectdetect  := dat_in_s(0);
+            w.intconfr.connectdetect  := dat_in_s(1);
+            w.intconfr.overcurrent    := dat_in_s(2);
           when "0000011" =>
             -- Interrupt clear/ack
-            if write_data_s(0)='1' then w.intpendr.disconnectdetect := '0'; end if;
-            if write_data_s(1)='1' then w.intpendr.connectdetect := '0'; end if;
-            if write_data_s(2)='1' then w.intpendr.overcurrent   := '0'; end if;
-            if write_data_s(7)='1' then w.int_holdoff:=C_INTERRUPT_HOLDOFF-1; end if;
+            if dat_in_s(0)='1' then w.intpendr.disconnectdetect := '0'; end if;
+            if dat_in_s(1)='1' then w.intpendr.connectdetect := '0'; end if;
+            if dat_in_s(2)='1' then w.intpendr.overcurrent   := '0'; end if;
+            if dat_in_s(7)='1' then w.int_holdoff:=C_INTERRUPT_HOLDOFF-1; end if;
     
           when others =>
         end case;
-      elsif write_address_s(10 downto 7) = "0001" then
-          wch_u := unsigned(write_address_s(6 downto 4));
+      elsif addr_s(10 downto 7) = "0001" then
+          wch_u := unsigned(addr_s(6 downto 4));
           wch := to_integer(wch_u);
-          case write_address_s(3 downto 0) is
+          case addr_s(3 downto 0) is
             when "0000" =>
-              w.ch(wch).conf.eptype    := write_data_s(7 downto 6);
-              w.ch(wch).conf.maxsize   := write_data_s(5 downto 0);
+              w.ch(wch).conf.eptype    := dat_in_s(7 downto 6);
+              w.ch(wch).conf.maxsize   := dat_in_s(5 downto 0);
             when "0001" =>
-              --w.ch(wch).conf.oddframe  := write_data_s(7);
-              --w.ch(wch).conf.lowspeed  := write_data_s(6);
-              w.ch(wch).conf.direction := write_data_s(7);
-              w.ch(wch).conf.epnum     := write_data_s(3 downto 0);
+              --w.ch(wch).conf.oddframe  := dat_in_s(7);
+              --w.ch(wch).conf.lowspeed  := dat_in_s(6);
+              w.ch(wch).conf.direction := dat_in_s(7);
+              w.ch(wch).conf.epnum     := dat_in_s(3 downto 0);
 
             when "0010" =>
-              w.ch(wch).conf.enabled   := write_data_s(7);
-              w.ch(wch).conf.address   := write_data_s(6 downto 0);
+              w.ch(wch).conf.enabled   := dat_in_s(7);
+              w.ch(wch).conf.address   := dat_in_s(6 downto 0);
             when "0011" => -- Interrupt configuration
-              w.ch(wch).intconf.datatogglerror  := write_data_s(7);
-              w.ch(wch).intconf.crcerror    := write_data_s(6);
-              w.ch(wch).intconf.babble          := write_data_s(5);
-              w.ch(wch).intconf.transerror      := write_data_s(4);
-              w.ch(wch).intconf.ack             := write_data_s(3);
-              w.ch(wch).intconf.nack            := write_data_s(2);
-              w.ch(wch).intconf.stall           := write_data_s(1);
-              w.ch(wch).intconf.cplt            := write_data_s(0);
+              w.ch(wch).intconf.datatogglerror  := dat_in_s(7);
+              w.ch(wch).intconf.crcerror    := dat_in_s(6);
+              w.ch(wch).intconf.babble          := dat_in_s(5);
+              w.ch(wch).intconf.transerror      := dat_in_s(4);
+              w.ch(wch).intconf.ack             := dat_in_s(3);
+              w.ch(wch).intconf.nack            := dat_in_s(2);
+              w.ch(wch).intconf.stall           := dat_in_s(1);
+              w.ch(wch).intconf.cplt            := dat_in_s(0);
             when "0100" => -- Interrupt clear
-              if write_data_s(7)='1' then w.ch(wch).intpend.datatogglerror  := '0'; end if;
-              if write_data_s(6)='1' then w.ch(wch).intpend.crcerror        := '0'; end if;
-              if write_data_s(5)='1' then w.ch(wch).intpend.babble          := '0'; end if;
-              if write_data_s(4)='1' then w.ch(wch).intpend.transerror      := '0'; end if;
-              if write_data_s(3)='1' then w.ch(wch).intpend.ack             := '0'; end if;
-              if write_data_s(2)='1' then w.ch(wch).intpend.nack            := '0'; end if;
-              if write_data_s(1)='1' then w.ch(wch).intpend.stall           := '0'; end if;
-              if write_data_s(0)='1' then w.ch(wch).intpend.cplt            := '0'; end if;
+              if dat_in_s(7)='1' then w.ch(wch).intpend.datatogglerror  := '0'; end if;
+              if dat_in_s(6)='1' then w.ch(wch).intpend.crcerror        := '0'; end if;
+              if dat_in_s(5)='1' then w.ch(wch).intpend.babble          := '0'; end if;
+              if dat_in_s(4)='1' then w.ch(wch).intpend.transerror      := '0'; end if;
+              if dat_in_s(3)='1' then w.ch(wch).intpend.ack             := '0'; end if;
+              if dat_in_s(2)='1' then w.ch(wch).intpend.nack            := '0'; end if;
+              if dat_in_s(1)='1' then w.ch(wch).intpend.stall           := '0'; end if;
+              if dat_in_s(0)='1' then w.ch(wch).intpend.cplt            := '0'; end if;
 
             when "0101" =>
-              w.ch(wch).conf.interval       := write_data_s;
-              w.ch(wch).trans.intervalcnt   := unsigned(write_data_s); -- restart counter.
+              w.ch(wch).conf.interval       := dat_in_s;
+              w.ch(wch).trans.intervalcnt   := unsigned(dat_in_s); -- restart counter.
             when "1000" =>
-              w.ch(wch).trans.dpid    := write_data_s(1 downto 0);
-              w.ch(wch).trans.seq     := write_data_s(2);
-              w.ch(wch).trans.epaddr(9 downto 8)  := unsigned(write_data_s(4 downto 3));
-              w.ch(wch).trans.retries := unsigned(write_data_s(6 downto 5));
+              w.ch(wch).trans.dpid    := dat_in_s(1 downto 0);
+              w.ch(wch).trans.seq     := dat_in_s(2);
+              w.ch(wch).trans.epaddr(9 downto 8)  := unsigned(dat_in_s(4 downto 3));
+              w.ch(wch).trans.retries := unsigned(dat_in_s(6 downto 5));
 
             when "1001" => -- Transaction
-              w.ch(wch).trans.epaddr(7 downto 0)   := unsigned(write_data_s);
+              w.ch(wch).trans.epaddr(7 downto 0)   := unsigned(dat_in_s);
 
             when "1010" => -- Transaction
-              w.ch(wch).trans.size := unsigned(write_data_s(6 downto 0));
-              w.ch(wch).trans.cnt  := write_data_s(7);
+              w.ch(wch).trans.size := unsigned(dat_in_s(6 downto 0));
+              w.ch(wch).trans.cnt  := dat_in_s(7);
             when others =>
           end case;
       end if;
     end if;
 
     -- read data
-    if not is_x(write_address_s) then
+    if not is_x(addr_s) and rd_s='1' then
 
-    if write_address_s(10 downto 7) = "0000" then
-      case write_address_s(6 downto 0) is
-        when "0000000" =>
-          read_data_s <= statusreg_s;
-        when "0000001" =>
-          -- channel interrupt pending reg
-          read_data_s <= intpendreg_s;
-        when "0000010" =>
-          --  interrupt status reg
-          read_data_s <= interrupt_v;
-        when others =>
-          case trans_status_s is
-            when IDLE       =>  read_data_s <= x"00";
-            when BUSY       =>  read_data_s <= x"01";
-            when TIMEOUT    =>  read_data_s <= x"02";
-            when BABBLE     =>  read_data_s <= x"03";
-            when ACK        =>  read_data_s <= x"04";
-            when NACK       =>  read_data_s <= x"05";
-            when STALL      =>  read_data_s <= x"06";
-            when CRCERROR   =>  read_data_s <= x"07";
-            when COMPLETED  =>  read_data_s <= x"08";
-            when others     =>  read_data_s <= x"FF";
-          end case;
-      end case;
+      if addr_s(10 downto 7) = "0000" then
+        case addr_s(6 downto 0) is
+          when "0000000" =>
+            read_data_s <= statusreg_s;
+          when "0000001" =>
+            -- channel interrupt pending reg
+            read_data_s <= intpendreg_s;
+          when "0000010" =>
+            --  interrupt status reg
+            read_data_s <= interrupt_v;
 
-    elsif write_address_s(10 downto 7) = "0001" then
-      wch_u := unsigned(write_address_s(6 downto 4));
-      wch := to_integer(wch_u);
-      case write_address_s(3 downto 0) is
-        when "0000" =>
-          read_data_s(7 downto 6) <= r.ch(wch).conf.eptype;
-          read_data_s(5 downto 0) <= r.ch(wch).conf.maxsize;
-        when "0001" =>
-          --read_data_s(7)          <= r.ch(wch).conf.oddframe;
-          --read_data_s(6)          <= r.ch(wch).conf.lowspeed;
-          read_data_s(7)          <= r.ch(wch).conf.direction;
-          read_data_s(3 downto 0) <= r.ch(wch).conf.epnum;
-        --
-        when "0010" =>
-          read_data_s(7)          <= r.ch(wch).conf.enabled;
-          read_data_s(6 downto 0) <= r.ch(wch).conf.address;
-        when "0011" => -- Interrupt configuration
-          read_data_s(7)          <= r.ch(wch).intconf.datatogglerror;
-          read_data_s(6)          <= r.ch(wch).intconf.crcerror;
-          read_data_s(5)          <= r.ch(wch).intconf.babble;
-          read_data_s(4)          <= r.ch(wch).intconf.transerror;
-          read_data_s(3)          <= r.ch(wch).intconf.ack;
-          read_data_s(2)          <= r.ch(wch).intconf.nack;
-          read_data_s(1)          <= r.ch(wch).intconf.stall;
-          read_data_s(0)          <= r.ch(wch).intconf.cplt;
-        when "0100" => -- Interrupt read
-          read_data_s(7)          <= r.ch(wch).intpend.datatogglerror;
-          read_data_s(6)          <= r.ch(wch).intpend.crcerror;
-          read_data_s(5)          <= r.ch(wch).intpend.babble;
-          read_data_s(4)          <= r.ch(wch).intpend.transerror;
-          read_data_s(3)          <= r.ch(wch).intpend.ack;
-          read_data_s(2)          <= r.ch(wch).intpend.nack;
-          read_data_s(1)          <= r.ch(wch).intpend.stall;
-          read_data_s(0)          <= r.ch(wch).intpend.cplt;
-        when "0101" =>
-          read_data_s             <= r.ch(wch).conf.interval;
-        when "1000" =>
-          read_data_s(1 downto 0) <= r.ch(wch).trans.dpid;
-          read_data_s(2)          <= r.ch(wch).trans.seq;
-          read_data_s(4 downto 3) <= std_logic_vector(r.ch(wch).trans.epaddr(9 downto 8));
-          read_data_s(6 downto 5) <= std_logic_vector(r.ch(wch).trans.retries);
-        when "1001" => -- Transaction
-          read_data_s             <= std_logic_vector(r.ch(wch).trans.epaddr(7 downto 0));
-        when "1010" => -- Transaction
-          read_data_s(6 downto 0) <= std_logic_vector(r.ch(wch).trans.size);
-          read_data_s(7)          <= r.ch(wch).trans.cnt;
-        when others =>
-          read_data_s <= (others => 'X');
+          when "0000011" =>
+
+            case trans_status_s is
+              when IDLE       =>  read_data_s <= x"00";
+              when BUSY       =>  read_data_s <= x"01";
+              when TIMEOUT    =>  read_data_s <= x"02";
+              when BABBLE     =>  read_data_s <= x"03";
+              when ACK        =>  read_data_s <= x"04";
+              when NACK       =>  read_data_s <= x"05";
+              when STALL      =>  read_data_s <= x"06";
+              when CRCERROR   =>  read_data_s <= x"07";
+              when COMPLETED  =>  read_data_s <= x"08";
+              when others     =>  read_data_s <= x"0F";
+            end case;
+
+          when "0000100" =>
+            case r.host_state is
+              when DETACHED   =>  read_data_s <= x"00";
+              when ATTACHED   =>  read_data_s <= x"01";
+              when IDLE       =>  read_data_s <= x"02";
+              when RESET1     =>  read_data_s <= x"03";
+              when RESET2     =>  read_data_s <= x"04";
+              when WAIT_SOF   =>  read_data_s <= x"05";
+              when IN1        =>  read_data_s <= x"06";
+              when OUT1       =>  read_data_s <= x"07";
+              when SETUP1     =>  read_data_s <= x"08";
+              when SOF1       =>  read_data_s <= x"09";
+              when others     =>  read_data_s <= x"0F";
+            end case;
+          when "0000101" =>
+
+            read_data_s <= "000" & dbg_trans_state_s ;
+
+          when "0000110" =>
+              read_data_s <= cnt_ack_s;
+          when "0000111" =>
+              read_data_s <= cnt_nack_s;
+          when "0001000" =>
+              read_data_s <= cnt_babble_s;
+          when "0001001" =>
+              read_data_s <= cnt_stall_s;
+          when "0001010" =>
+              read_data_s <= cnt_crcerror_s;
+          when "0001011" =>
+              read_data_s <= cnt_timeout_s;
+          when "0001100" =>
+              read_data_s <= cnt_errorpid_s;
+          when "0001101" =>
+              read_data_s <= cnt_cplt_s;
+          when others =>
+            read_data_s <= (others =>'X');
         end case;
-    end if;
+
+      elsif addr_s(10 downto 7) = "0001" then
+        wch_u := unsigned(addr_s(6 downto 4));
+        wch := to_integer(wch_u);
+        case addr_s(3 downto 0) is
+          when "0000" =>
+            read_data_s(7 downto 6) <= r.ch(wch).conf.eptype;
+            read_data_s(5 downto 0) <= r.ch(wch).conf.maxsize;
+          when "0001" =>
+            --read_data_s(7)          <= r.ch(wch).conf.oddframe;
+            --read_data_s(6)          <= r.ch(wch).conf.lowspeed;
+            read_data_s(7)          <= r.ch(wch).conf.direction;
+            read_data_s(3 downto 0) <= r.ch(wch).conf.epnum;
+          --
+          when "0010" =>
+            read_data_s(7)          <= r.ch(wch).conf.enabled;
+            read_data_s(6 downto 0) <= r.ch(wch).conf.address;
+          when "0011" => -- Interrupt configuration
+            read_data_s(7)          <= r.ch(wch).intconf.datatogglerror;
+            read_data_s(6)          <= r.ch(wch).intconf.crcerror;
+            read_data_s(5)          <= r.ch(wch).intconf.babble;
+            read_data_s(4)          <= r.ch(wch).intconf.transerror;
+            read_data_s(3)          <= r.ch(wch).intconf.ack;
+            read_data_s(2)          <= r.ch(wch).intconf.nack;
+            read_data_s(1)          <= r.ch(wch).intconf.stall;
+            read_data_s(0)          <= r.ch(wch).intconf.cplt;
+          when "0100" => -- Interrupt read
+            read_data_s(7)          <= r.ch(wch).intpend.datatogglerror;
+            read_data_s(6)          <= r.ch(wch).intpend.crcerror;
+            read_data_s(5)          <= r.ch(wch).intpend.babble;
+            read_data_s(4)          <= r.ch(wch).intpend.transerror;
+            read_data_s(3)          <= r.ch(wch).intpend.ack;
+            read_data_s(2)          <= r.ch(wch).intpend.nack;
+            read_data_s(1)          <= r.ch(wch).intpend.stall;
+            read_data_s(0)          <= r.ch(wch).intpend.cplt;
+          when "0101" =>
+            read_data_s             <= r.ch(wch).conf.interval;
+          when "1000" =>
+            read_data_s(1 downto 0) <= r.ch(wch).trans.dpid;
+            read_data_s(2)          <= r.ch(wch).trans.seq;
+            read_data_s(4 downto 3) <= std_logic_vector(r.ch(wch).trans.epaddr(9 downto 8));
+            read_data_s(6 downto 5) <= std_logic_vector(r.ch(wch).trans.retries);
+          when "1001" => -- Transaction
+            read_data_s             <= std_logic_vector(r.ch(wch).trans.epaddr(7 downto 0));
+          when "1010" => -- Transaction
+            read_data_s(6 downto 0) <= std_logic_vector(r.ch(wch).trans.size);
+            read_data_s(7)          <= r.ch(wch).trans.cnt;
+          when others =>
+            read_data_s <= (others => 'X');
+          end case;
+      else
+        read_data_s <= (others => 'X');
+      end if;
+    else
+      read_data_s <= (others => 'X');
     end if;
 
     ch := r.ch( r.channel );
@@ -578,7 +637,7 @@ BEGIN
         if ch.conf.enabled='1' then
           -- synopsys translate_off
           if rising_edge(usbclk_i) then
-            report "Channel "&str(r.channel)&" enabled";
+            --report "Channel "&str(r.channel)&" enabled";
           end if;
           -- synopsys translate_on
 
@@ -872,7 +931,6 @@ BEGIN
     end if;
 
 
-
     if ausbrst_i='1' then
       r.host_state        <= DETACHED;
       r.frame             <= (others => '0');
@@ -901,7 +959,8 @@ BEGIN
         r.ch(i).trans.epaddr      <= (others => '0');
         r.ch(i).trans.intervalcnt <= (others => '0');
         r.ch(i).conf.interval     <= (others => '0');
-        w.ch(i).trans.issued := '1';
+        r.ch(i).trans.issued      <= '1';
+        r.ch(i).trans.cnt         <= '0';
 
       end loop;
 
@@ -909,47 +968,6 @@ BEGIN
       r <= w;
     end if;
   end process;
-
-  -- Pass on the write request
-  wrb: block
-    signal di_s,do_s: std_logic_vector(18 downto 0);
-  begin
-    di_s              <= dat_i & addr_i;
-    write_address_s   <= do_s(10 downto 0);
-    write_data_s      <= do_s(18 downto 11);
-
-  wr_rq_sync: entity work.async_dualpulse_data
-    generic map (
-      DWIDTH => 8+11,
-      WIDTH => 4
-    )
-    port map (
-      clki_i  => clk_i,
-      arst_i  => arst_i,
-      clko_i  => usbclk_i,
-      pulse_i(0) => wr_i,
-      pulse_i(1) => rd_i,
-      data_i  => di_s,
-      pulse_o(0) => wr_sync_s,
-      pulse_o(1) => rd_sync_s,
-      data_o  => do_s
-    );
-
-  end block;
-
-  -- Pass on data read (to SPI)
-  dread_sync: entity work.syncv
-    generic map (
-      WIDTH => 8,
-      RESET => 'X'
-    )
-    port map (
-      arst_i  => arst_i,
-      clk_i   => clk_i,
-      din_i   => read_data_s,
-      dout_o  => read_data_sync_s
-    );
-
 
   int_sync: entity work.sync
     generic map (
@@ -962,9 +980,26 @@ BEGIN
       dout_o  => int_o
     );
 
+  ahb2rdwr_inst: entity work.ahb2rdwr
+    generic map (
+      AWIDTH => 12, DWIDTH => 8
+    )
+    port map (
+      clk_i     => usbclk_i,
+      arst_i    => ausbrst_i,
+      ahb_m2s_i => ahb_m2s_i,
+      ahb_s2m_o => ahb_s2m_o,
 
-  hep_rd_s <= rd_i and addr_i(10);
-  hep_wr_s <= wr_i and addr_i(10);
+      addr_o    => addr_s,
+      dat_o     => dat_in_s,
+      dat_i     => dat_out_s,
+      rd_o      => rd_s,
+      wr_o      => wr_s
+    );
+
+
+  hep_rd_s <= '1' when addr_s(10)='1' and rd_s='1' else '0' ;
+  hep_wr_s <= '1' when addr_s(10)='1' and wr_s='1' else '0' ;
 
   epmem_inst: entity work.usb_epmem
     port map (
@@ -978,9 +1013,9 @@ BEGIN
       hclk_i    => clk_i,
       hrd_i     => hep_rd_s,
       hwr_i     => hep_wr_s,
-      haddr_i   => addr_i(9 downto 0),
+      haddr_i   => addr_s(9 downto 0),
       hdata_o   => hep_dat_s,
-      hdata_i   => dat_i
+      hdata_i   => dat_in_s
   );
 
   usb_trans_inst: entity work.usb_trans
@@ -1025,8 +1060,25 @@ BEGIN
     udata_o           => epmem_data_in_s,
 
     dbg_rx_data_done_o => dbg_rx_data_done_s,
-    status_o          => trans_status_s
+    dbg_state_o        => dbg_trans_state_s,
+    status_o            => trans_status_s,
+
+    cnt_ack_o         =>  cnt_ack_s,
+    cnt_nack_o        =>  cnt_nack_s,
+    cnt_babble_o      =>  cnt_babble_s,
+    cnt_stall_o       =>  cnt_stall_s ,
+    cnt_crcerror_o    =>  cnt_crcerror_s,
+    cnt_timeout_o     =>  cnt_timeout_s,
+    cnt_errorpid_o    =>  cnt_errorpid_s,
+    cnt_cplt_o        =>  cnt_cplt_s
   );
+
+  process(usbclk_i)
+  begin
+    if rising_edge(usbclk_i) then
+      read_data_r<=read_data_s;
+    end if;
+  end process;
 
 
   --epmem_addr_s <= std_logic_vector(r.epmem_addr);
@@ -1038,7 +1090,9 @@ BEGIN
   vmo_o       <= '0' when r.host_state=RESET1 else vmo_s;
   int_async_o <= int_s;
   pwren_o     <= not r.sr.poweron;
-  dat_o <= hep_dat_s when addr_i(10)='1' else read_data_sync_s;
+
+  dat_out_s   <= hep_dat_s when addr_s(10)='1' else read_data_r;
+
   mode_o      <= '1';
 
   deb: block

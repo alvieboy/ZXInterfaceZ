@@ -10,6 +10,7 @@ entity bfm_spectrum is
     Data_o  : out Data_Spectrum_type;
 
     clk_i   : in std_logic;
+    rstn_i  : in std_logic;
     ck_o    : out std_logic;
     wr_o    : out std_logic;
     rd_o    : out std_logic;
@@ -98,14 +99,19 @@ begin
 
   process
   begin
-    wait on z80_enable;
-    if z80_enable='1' then
-      device_sel<='0';
-      SPECT_RESET_n <= '0';
-      wait for 1 us;
-      SPECT_RESET_n <= '1';
-    else
-      device_sel <= '1';
+    wait on z80_enable, rstn_i;
+    if z80_enable'event then
+      if z80_enable='1' then
+        device_sel <= '0';
+        SPECT_RESET_n <= '0';
+        wait for 1 us;
+        SPECT_RESET_n <= '1';
+      else
+        device_sel <= '1';
+      end if;
+    end if;
+    if rstn_i'event then
+      SPECT_RESET_n<=rstn_i;
     end if;
   end process;
 
@@ -119,13 +125,13 @@ begin
     local_IORQ_n    <= '1';
     local_M1_n      <= '1';
     local_RFSH_n    <= '1';
+    d_io      <= (others => 'Z');
 
 
 
 
     l1: loop
       --report "Wait cmd";
-      --d_io      <= (others => 'Z');
 
       wait on Cmd_i.Cmd;
       --report "Got cmd";

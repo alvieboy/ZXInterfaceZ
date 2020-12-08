@@ -11,11 +11,105 @@
 #include "rom.h"
 #include "memlayout.h"
 #include "log.h"
+#include "hdlc_encoder.h"
+#include "version.h"
+#include "esp32/rom/uart.h"
+#include "byteops.h"
+#include "scope.h"
 
 char cmd[256];
 uint8_t cmdptr = 0;
+static hdlc_encoder_t enc;
 
 #define CTAG "CONSOLE"
+
+
+static void console__hdlc_write(void *user, uint8_t val)
+{
+    while (uart_tx_one_char(val)!=0) {
+        vTaskDelay(20 / portTICK_RATE_MS);
+    }
+}
+
+void console__init(void)
+{
+    hdlc_encoder__init(&enc, &console__hdlc_write, NULL, NULL);
+}
+
+void console__hdlc_data(const uint8_t *d, unsigned len)
+{
+    uint8_t reply;
+
+    if (len<1)
+        return;
+
+    if (d[0]==0x01) {
+        reply = 0x81;
+        // Version
+        hdlc_encoder__begin(&enc);
+        hdlc_encoder__write(&enc, &reply,1);
+        hdlc_encoder__write(&enc, version, strlen(version));
+        hdlc_encoder__end(&enc);
+    }
+    if (d[0]==0x02 && len==13) {
+        uint32_t mask = extractle32(&d[1]);
+        uint32_t val = extractle32(&d[5]);
+        uint32_t edge = extractle32(&d[9]);
+
+        scope__set_triggers(mask,val,edge);
+
+        reply = 0x82;
+        hdlc_encoder__begin(&enc);
+        hdlc_encoder__write(&enc, &reply,1);
+        hdlc_encoder__end(&enc);
+    }
+
+    if (d[0]==0x03 && len==2) {
+        scope__start(d[1]);
+
+        reply = 0x83;
+        hdlc_encoder__begin(&enc);
+        hdlc_encoder__write(&enc, &reply,1);
+        hdlc_encoder__end(&enc);
+    }
+    if (d[0]==0x04) {
+        union {
+            struct {
+                uint32_t status;
+                uint32_t counter;
+                uint32_t trig_address;
+            };
+            uint8_t buf[12];
+        } data;
+
+        scope__get_capture_info(&data.status, &data.counter, &data.trig_address);
+
+        reply = 0x84;
+
+        hdlc_encoder__begin(&enc);
+        hdlc_encoder__write(&enc, &reply,1);
+        hdlc_encoder__write(&enc, &data.buf[0], 12);
+        hdlc_encoder__end(&enc);
+    }
+    if (d[0]==0x05) {
+        // d[1] holds ram and offset;
+        uint8_t channel = d[1] & 0x80 ? 1: 0;
+        uint8_t offset = d[1] & 0x0F;
+        uint8_t buf[256];
+
+        scope__get_capture_data_block64(channel, offset, buf);
+
+        reply = 0x85;
+
+        hdlc_encoder__begin(&enc);
+        hdlc_encoder__write(&enc, &reply,1);
+        hdlc_encoder__write(&enc, &d[2],1); // Sequence
+        hdlc_encoder__write(&enc, buf, 256);
+        hdlc_encoder__end(&enc);
+
+    }
+
+}
 
 static int console__volume(int argc, char **argv)
 {
@@ -162,6 +256,13 @@ static int console__loadrom(int argc, char **argv)
 
 static int console__reset(int argc, char **argv)
 {
+    if (argc>0) {
+        if (strcmp(argv[0], "custom")==0) {
+            ESP_LOGI(CTAG, "Resetting to custom ROM0");
+            fpga__reset_to_custom_rom(ROM_0, false);
+            return 0;
+        }
+    }
     fpga__reset_spectrum();
     return 0;
 }

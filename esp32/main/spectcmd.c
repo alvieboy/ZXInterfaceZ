@@ -276,7 +276,7 @@ static int spectcmd__kbddata(const uint8_t *cmdbuf, unsigned len)
     key = *cmdbuf++;
     key += (uint16_t)(*cmdbuf)<<8;
 
-    //ESP_LOGI(TAG, "KBD: %04x", key);
+    ESP_LOGI(TAG, "KBD: %04x", key);
 
     char c = spectrum_kbd__to_ascii(key);
     //if (c >= ' ') {
@@ -353,7 +353,7 @@ static int spectcmd__check()
     uint8_t error_resp = 0xff;
     uint8_t index = command_buffer[0];
 
-    ESP_LOGI(TAG,"Command in: %02x", index);
+    ESP_LOGI(TAG,"Command in: %02x ptr %d", index, __cmdptr);
 
     spectcmd_handler_t handler = NULL;
 
@@ -362,6 +362,7 @@ static int spectcmd__check()
     }
 
     if (handler) {
+        ESP_LOGI(TAG, "Dispatching command");
         ret = handler(&command_buffer[1], __cmdptr-1);
     } else {
         ESP_LOGI(TAG, "Invalid command 0x%02x", index);
@@ -376,21 +377,35 @@ static int spectcmd__check()
 void spectcmd__request()
 {
     int r;
+    uint8_t cmdbuf[4];
+
     while (1) {
-        r = fpga__read_command_fifo();
-        spectcmd__ackinterrupt();
+        uint8_t *cmdptr = &cmdbuf[0];
+        r = fpga__read_command_fifo(cmdbuf);
 
         if (r<0) {
             break; // No more data
         }
-        if (__cmdptr<sizeof(command_buffer)) {
-            command_buffer[__cmdptr++] = r & 0xff;
-            spectcmd__check();
-        } else {
-            ESP_LOGW(TAG, "Command buffer overflow!");
+        while (r--) {
+            if (__cmdptr<sizeof(command_buffer)) {
+#if 0
+                ESP_LOGI(TAG, "Buf %02x %02x %02x %02x",
+                         cmdbuf[0],
+                         cmdbuf[1],
+                         cmdbuf[2],
+                         cmdbuf[3]);
+                ESP_LOGI(TAG, "Queueing %02x (%d)", *cmdptr, __cmdptr);
+#endif
+                command_buffer[__cmdptr++] = *cmdptr;
+                cmdptr++;
+                spectcmd__check();
+            } else {
+                ESP_LOGW(TAG, "Command buffer overflow!");
+            }
         }
     }
 
     // Clear IRQ.
+    spectcmd__ackinterrupt();
 
 }

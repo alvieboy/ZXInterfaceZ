@@ -125,7 +125,8 @@ begin
     spiPayload_in_s(1) <= x"00";
     Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 2, spiPayload_in_s, spiPayload_out_s);
 
-    SpectrumReadMem( Spectrum_Cmd, Spectrum_Data, x"0000", data);
+    -- So that ROMCS is activated we need to perform an opcode read, which sets M1 properly.
+    SpectrumReadOpcode( Spectrum_Cmd, Spectrum_Data, x"0000", data);
     Check("1: ROM0 data", data, x"DE");
     SpectrumReadMem( Spectrum_Cmd, Spectrum_Data, x"0001", data);
     Check("2: ROM0 data", data, x"AD");

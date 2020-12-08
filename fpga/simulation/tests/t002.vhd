@@ -7,11 +7,13 @@ architecture t002 of tbc_device is
   signal spiPayload_in_s    : spiPayload_type;
   signal spiPayload_out_s   : spiPayload_type;
   signal fifodata           : unsigned(7 downto 0);
-  signal expected_fifodata  : unsigned(7 downto 0);
+  signal expected_size      : unsigned(2 downto 0);
 begin
 
   process
     variable depth: natural := 0;
+    variable used_size_v:  std_logic_vector(2 downto 0);
+    variable expected_fifodata  : unsigned(7 downto 0);
   begin
     logger_start("T002","Check depth of command FIFO");
 
@@ -65,21 +67,32 @@ begin
 
     Check( "Depth is less than 64", depth <= 64 );
 
-    expected_fifodata <= x"00";
+    expected_fifodata := x"00";
+    expected_size <= "100";
 
     l2: for i in 0 to depth*2 loop
-
-      -- Now, read back from FIFO.
-      spiPayload_in_s(0) <= x"FB";
+      -- Get FIFO used size
+      spiPayload_in_s(0) <= x"DE";
       spiPayload_in_s(1) <= x"00";
+      spiPayload_in_s(2) <= x"00";
+      Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 3, spiPayload_in_s, spiPayload_out_s);
+
+      report "Fifo used data " & hstr(spiPayload_out_s(2));
+      used_size_v := spiPayload_out_s(2)(6 downto 4);
+      Check( "Fifo USED is correct", std_logic_vector(expected_size), used_size_v);
+
+
+      -- Now, read back from FIFO, one byte at a time.
+      spiPayload_in_s(0) <= x"FB";
+      spiPayload_in_s(1) <= x"01";
       spiPayload_in_s(2) <= x"00";
       spiPayload_in_s(3) <= x"00";
       Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 4, spiPayload_in_s, spiPayload_out_s);
 
-      Check( "FIFO report not empty", spiPayload_out_s(2), x"FE");
+      --Check( "FIFO report not empty", spiPayload_out_s(2), x"FE");
       Check( "FIFO data consistent",  spiPayload_out_s(3), std_logic_vector(expected_fifodata));
 
-      expected_fifodata <= expected_fifodata + 1;
+      expected_fifodata := expected_fifodata + 1;
 
       -- Check that interrupt is still asserted
       Check( "3: CtrlPins27 is 1", CtrlPins_Data.IO27 , '0');
@@ -124,27 +137,42 @@ begin
     -- Interrupt must *still* be asserted
     Check( "4: CtrlPins27 is 1", CtrlPins_Data.IO27 , '0');
 
-    -- Do a full burst read (-1).
+    -- Do a full burst read (4).
 
-    l3: for i in 0 to depth-1 loop
+    --l3: for i in 0 to depth-1 loop
       spiPayload_in_s(0) <= x"FB";
-      spiPayload_in_s(1) <= x"00";
-      Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 4, spiPayload_in_s, spiPayload_out_s);
+      spiPayload_in_s(1) <= x"04";
+      spiPayload_in_s(2) <= x"00";
+      spiPayload_in_s(3) <= x"00"; --d0
+      spiPayload_in_s(4) <= x"00"; --d0
+      spiPayload_in_s(5) <= x"00"; --d0
+      spiPayload_in_s(6) <= x"00"; --d0
+      Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 7, spiPayload_in_s, spiPayload_out_s);
 
-      Check( "FIFO report not empty", spiPayload_out_s(2), x"FE");
+      --Check( "FIFO report not empty", spiPayload_out_s(2), x"FE");
+      l4: for i in 0 to 3 loop
 
-      Check( "FIFO data consistent", spiPayload_out_s(3), std_logic_vector(expected_fifodata));
-      expected_fifodata <= expected_fifodata + 1;
+        Check( "FIFO burst data consistent", spiPayload_out_s(3+i), std_logic_vector(expected_fifodata));
+
+        expected_fifodata := expected_fifodata + 1;
+      end loop;
 
       Check( "5: CtrlPins27 is 1", CtrlPins_Data.IO27 , '0');
 
-    end loop;
+    --end loop;
 
-    spiPayload_in_s(0) <= x"FB";
+
+    -- Get FIFO used size
+    spiPayload_in_s(0) <= x"DE";
     spiPayload_in_s(1) <= x"00";
-    Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 4, spiPayload_in_s, spiPayload_out_s);
+    spiPayload_in_s(2) <= x"00";
+    Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 3, spiPayload_in_s, spiPayload_out_s);
 
-    Check( "FIFO report empty", spiPayload_out_s(2), x"FF");
+    report "Fifo used data " & hstr(spiPayload_out_s(2));
+    used_size_v := spiPayload_out_s(2)(6 downto 4);
+
+
+    Check( "FIFO report empty", used_size_v, "000");
 
     Check( "6: CtrlPins27 is 1", CtrlPins_Data.IO27 , '0');
 
@@ -187,11 +215,16 @@ begin
     wait for 32 * 10.41 ns;
     Check( "9: CtrlPins27 is 1", CtrlPins_Data.IO27 , '1');
 
-    spiPayload_in_s(0) <= x"FB";
+    -- Get FIFO used size
+    spiPayload_in_s(0) <= x"DE";
     spiPayload_in_s(1) <= x"00";
-    Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 4, spiPayload_in_s, spiPayload_out_s);
+    spiPayload_in_s(2) <= x"00";
+    Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 3, spiPayload_in_s, spiPayload_out_s);
 
-    Check( "FIFO report empty", spiPayload_out_s(2), x"FF");
+    report "Fifo used data " & hstr(spiPayload_out_s(2));
+    used_size_v := spiPayload_out_s(2)(6 downto 4);
+
+    Check( "FIFO report empty", used_size_v, "000");
 
     FinishTest(
       SysClk_Cmd,

@@ -13,7 +13,6 @@ intz.rom: interfacez-rom.asm \
 	nmihandler.asm \
 	snaram.asm      \
 	snarestore.asm  \
-	resource.asm    \
 	debug.asm \
 	port_defs.asm    \
 	z80restore.asm \

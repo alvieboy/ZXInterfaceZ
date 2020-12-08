@@ -235,6 +235,7 @@ begin
     end if;
   end process;
 
+  waitgen: if false generate
 
   process(clk_i, arst_i)
   begin
@@ -248,6 +249,36 @@ begin
       end if;
     end if;
   end process;
+
+  end generate;
+
+  waitgen2: if true generate
+    wg2: block
+      signal delay: integer range 0 to 13*3;
+    begin
+
+      process(clk_i, arst_i)
+      begin
+        if arst_i='1' then
+          spect_wait_o <= '0';
+          delay <= 0;
+        elsif rising_edge(clk_i) then
+          if request_delayed='1' then
+            spect_wait_o <= '1';
+            delay <= 13*3;
+          else
+            if delay=0 then
+              spect_wait_o <= '0';
+            else
+              delay <= delay - 1;
+            end if;
+          end if;
+        end if;
+      end process;
+    end block;
+
+  end generate;
+
 
   ahb_o.HSIZE               <= C_AHB_SIZE_BYTE;
   ahb_o.HBURST              <= C_AHB_BURST_INCR;

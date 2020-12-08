@@ -263,6 +263,12 @@ set_global_assignment -name EDA_TEST_BENCH_FILE simulation/tests/t001.vhd -secti
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to RAMCLK_o
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to RAMD_IO[*]
 #set_global_assignment -name SOURCE_FILE db/interfacez.cmp.rdb
+
+set_global_assignment -name VHDL_FILE ../rtl/common/ahb_intercon5.vhd
+set_global_assignment -name VHDL_FILE ../rtl/common/systemctrl.vhd
+set_global_assignment -name VHDL_FILE ../rtl/common/ahb2ahb.vhd
+set_global_assignment -name VHDL_FILE ../rtl/common/ahb_intercon4.vhd
+set_global_assignment -name VHDL_FILE ../rtl/common/ahb2rdwr.vhd
 set_global_assignment -name VHDL_FILE ../rtl/common/uart_fifo_altera.vhd
 set_global_assignment -name VHDL_FILE ../rtl/common/testuart.vhd
 set_global_assignment -name VHDL_FILE ../rtl/common/uart_rx.vhd
@@ -362,5 +368,4 @@ set_global_assignment -name QIP_FILE ../rtl/common/audiomult.qip
 set_global_assignment -name QIP_FILE ../rtl/common/smallfifo.qip
 set_global_assignment -name QIP_FILE ../rtl/common/smallfifo_dualclock.qip
 set_global_assignment -name QIP_FILE ../rtl/common/audiorec_fifo.qip
-
 set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top

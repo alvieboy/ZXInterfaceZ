@@ -171,6 +171,7 @@ void bit__run(void)
                        rxbuf,
                        sizeof(rxbuf),
                        &bit__handler,
+                       NULL,
                        NULL);
 
     hdlc_encoder__init(&encoder,

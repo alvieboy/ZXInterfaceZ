@@ -25,6 +25,8 @@
 #define EXAMPLE_ESP_WIFI_PASS      CONFIG_ESP_WIFI_PASSWORD
 #define EXAMPLE_MAX_STA_CONN       CONFIG_MAX_STA_CONN
 
+#define DEFAULT_TXPOWER 20 /* +5dB */
+
 /* FreeRTOS event group to signal when we are connected*/
 static EventGroupHandle_t s_wifi_event_group;
 
@@ -325,6 +327,8 @@ static void wifi__init_softap()
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
     ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_AP, &wifi_config));
     ESP_ERROR_CHECK(esp_wifi_start());
+
+    ESP_ERROR_CHECK(esp_wifi_set_max_tx_power(nvs__u8("wifitxpower",DEFAULT_TXPOWER)));
 
     ESP_LOGI(TAG, "Configured WiFi in AP mode");
     ESP_LOGI(TAG, " SSID    : %s", wifi_config.ap.ssid);

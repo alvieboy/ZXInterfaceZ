@@ -78,4 +78,6 @@ PACKAGE ahbpkg IS
     '0'
   );
 
+  --FUNCTION AHB_IS_REQUEST(m2s: in AHB_M2S) RETURN boolean;
+
 END PACKAGE ahbpkg;

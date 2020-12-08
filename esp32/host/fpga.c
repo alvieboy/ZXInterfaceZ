@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
+#include "freertos/semphr.h"
 #include <malloc.h>
 #include <errno.h>
 #include <string.h>
@@ -17,6 +18,7 @@
 
 
 static xQueueHandle fpga_spi_queue = NULL;
+static SemaphoreHandle_t spi_sem;
 
 
 static hdlc_encoder_t hdlc_encoder;
@@ -66,6 +68,7 @@ int fpga_init(void)
     int yes = 1;
 
     fpga_spi_queue = xQueueCreate(4, sizeof(struct spi_payload));
+    spi_sem = xSemaphoreCreateMutex();
 
     if (emulator_socket <0) {
         emulator_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP );
@@ -90,7 +93,9 @@ int fpga_init(void)
     hdlc_decoder__init(&hdlc_decoder,
                        hdlcbuf,
                        sizeof(hdlcbuf),
-                       &hdlc_data, NULL);
+                       &hdlc_data,
+                       NULL,
+                       NULL);
 
     hdlc_encoder__init(&hdlc_encoder, &hdlc_writer, &hdlc_flusher, NULL);
     printf("Starting FPGA thread\n");
@@ -99,7 +104,7 @@ int fpga_init(void)
     printf("FPGA ready\n");
     return 0;
 }
-#if 0
+#if 1
 
 void dump(const char *t, const uint8_t *buffer, size_t len)
 {
@@ -117,6 +122,7 @@ void hdlc_data(void *user, const uint8_t *data, unsigned datalen)
 {
     struct spi_payload payload;
 //    printf("HDLC data %d\n", data[0]);
+    dump("SPI IN (via hdlc): ",data, datalen);
     switch (data[0]) {
     case 0x00:
         // Interrupt (pin) data
@@ -178,15 +184,24 @@ void fpga_do_transaction(uint8_t *buffer, size_t len)
   //  dump("SPI IN: ",buffer,len);
 
     if (emulator_socket>=0) {
+
+        // Mutex.
+        if (xSemaphoreTake( spi_sem,  portMAX_DELAY )!= pdTRUE) {
+            printf("Cannot take semaphore!!!\n");
+            return -1;
+        }
+
         hdlc_encoder__begin(&hdlc_encoder);
         hdlc_encoder__write(&hdlc_encoder, buffer, len);
         hdlc_encoder__end(&hdlc_encoder);
         // Wait for response
         if (!xQueueReceive(fpga_spi_queue, &payload, portMAX_DELAY)) {
+            xSemaphoreGive(spi_sem);
             return;
         }
+        xSemaphoreGive(spi_sem);
         // Assert payload size: TODO
-
+        printf("SPI req %02x reply %02x\n", buffer[0], payload.data[0]);
         memcpy(buffer, payload.data, len);
         free(payload.data);
 

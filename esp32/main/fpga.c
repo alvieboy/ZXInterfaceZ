@@ -221,6 +221,11 @@ int fpga__upload_rom_chunk(uint32_t baseaddress, uint16_t offset, uint8_t *buffe
     return len;
 }
 
+int fpga__get_reset_time()
+{
+    return 500;
+}
+
 int fpga__reset_to_custom_rom(int romno, bool activate_retn_hook)
 {
     ESP_LOGI(TAG, "Resetting spectrum (to custom ROM)");
@@ -235,7 +240,7 @@ int fpga__reset_to_custom_rom(int romno, bool activate_retn_hook)
         fpga__set_trigger(FPGA_FLAG_TRIG_FORCEROMONRETN);
     }
 
-    vTaskDelay(2 / portTICK_RATE_MS);
+    vTaskDelay(fpga__get_reset_time() / portTICK_RATE_MS);
     fpga__clear_flags(FPGA_FLAG_RSTSPECT);
 
     ESP_LOGI(TAG, "Reset completed");
@@ -250,7 +255,7 @@ int fpga__reset_spectrum()
 
     fpga__set_trigger(FPGA_FLAG_TRIG_FORCEROMCS_OFF | FPGA_FLAG_TRIG_FORCENMI_OFF);
 
-    vTaskDelay(2 / portTICK_RATE_MS);
+    vTaskDelay(fpga__get_reset_time() / portTICK_RATE_MS);
     fpga__clear_flags(FPGA_FLAG_RSTSPECT);
 
     ESP_LOGI(TAG, "Reset completed");
@@ -454,24 +459,24 @@ int fpga__passiveserialconfigure_fromfile(int fh, unsigned len)
 
 
 
-int fpga__read_command_fifo()
+int fpga__read_command_fifo(uint8_t *dest)
 {
-    uint8_t buf[2];
+    int r = fpga__get_status();
+    if (r<0)
+        return r;
 
-    int r = fpga__issue_read(FPGA_SPI_CMD_READ_CMDFIFO, buf, sizeof(buf));
+    unsigned used = FPGA_STATUS_CMDFIFO_USED(r);
+
+    if (used==0)
+        return -1;
+
+
+    r = fpga__issue_read_block(FPGA_SPI_CMD_READ_CMDFIFO, dest, used);
 
     if (r<0)
         return r;
 
-    if (buf[0]==0xff) {
-        return -1;
-    }
-
-    ESP_LOGI(TAG, "Command ");
-
-    dump__buffer(buf,2);
-
-    return buf[1];
+    return used;
 }
 
 static uint16_t fpga__get_tap_fifo_usage()
@@ -740,3 +745,18 @@ int fpga__read_bit_data(uint8_t *buf, unsigned len)
 
 }
 
+int fpga__read_capture_block(uint16_t address, uint8_t *dest, int size)
+{
+    return fpga__issue_read_addr16(FPGA_SPI_CMD_READ_CAP,
+                                   address,
+                                   dest,
+                                   size);
+}
+
+int fpga__write_capture_block(uint16_t address, const uint8_t *buffer, int size)
+{
+    return fpga__issue_write_addr16(FPGA_SPI_CMD_WRITE_CAP,
+                                   address,
+                                   buffer,
+                                   size);
+}

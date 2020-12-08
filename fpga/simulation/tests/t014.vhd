@@ -42,6 +42,18 @@ begin
     Check("3rd byte", spiPayload_out_s(6), x"BE");
     Check("4th byte", spiPayload_out_s(7), x"EF");
 
+    spiPayload_in_s(0) <= x"DF";
+    spiPayload_in_s(1) <= x"00"; -- Addr h
+    spiPayload_in_s(2) <= x"02"; -- Addr l
+    spiPayload_in_s(3) <= x"00"; -- Dummy
+    spiPayload_in_s(4) <= x"00";
+    spiPayload_in_s(5) <= x"00";
+
+    Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 6, spiPayload_in_s, spiPayload_out_s);
+
+    Check("1st byte", spiPayload_out_s(4), x"BE");
+    Check("2nd byte", spiPayload_out_s(5), x"EF");
+
     FinishTest(
       SysClk_Cmd,
       SpectClk_Cmd

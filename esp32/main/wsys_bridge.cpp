@@ -75,6 +75,7 @@ void wsys__reset()
 
 static void wsys__dispatchevent(struct wsys_event evt)
 {
+    WSYS_LOGI("Dispatching event %d", evt.type);
     switch(evt.type) {
     case EVENT_KBD:
         screen__keyboard_event(evt.data);
@@ -102,7 +103,9 @@ static void wsys__dispatchevent(struct wsys_event evt)
 void wsys__eventloop_iter()
 {
     struct wsys_event evt;
+    WSYS_LOGI("Wait for event");
     if (xQueueReceive(wsys_evt_queue, &evt, portMAX_DELAY)) {
+        WSYS_LOGI("Dispatch event");
         wsys__dispatchevent(evt);
     }
     screen__check_redraw();
@@ -110,6 +113,7 @@ void wsys__eventloop_iter()
 
 void wsys__task(void *data __attribute__((unused)))
 {
+    WSYS_LOGI("Starting task");
     screen__init();
     //xQueueSend(wsys_evt_queue, &gpio_num, NULL);
     while (1) {
@@ -125,7 +129,10 @@ void wsys__sendEvent()
 void wsys__init()
 {
     wsys_evt_queue = xQueueCreate(4, sizeof(struct wsys_event));
-    xTaskCreate(wsys__task, "wsys_task", 4096, NULL, 9, NULL);
+    if (xTaskCreate(wsys__task, "wsys_task", 4096, NULL, 9, NULL)!=pdPASS) {
+        ESP_LOGE("WSYS", "Cannot create task");
+    }
+    WSYS_LOGI("WSYS task created");
 }
 
 
