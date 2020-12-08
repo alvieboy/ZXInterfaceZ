@@ -221,6 +221,11 @@ int fpga__upload_rom_chunk(uint32_t baseaddress, uint16_t offset, uint8_t *buffe
     return len;
 }
 
+int fpga__get_reset_time()
+{
+    return 500;
+}
+
 int fpga__reset_to_custom_rom(int romno, bool activate_retn_hook)
 {
     ESP_LOGI(TAG, "Resetting spectrum (to custom ROM)");
@@ -235,7 +240,7 @@ int fpga__reset_to_custom_rom(int romno, bool activate_retn_hook)
         fpga__set_trigger(FPGA_FLAG_TRIG_FORCEROMONRETN);
     }
 
-    vTaskDelay(2 / portTICK_RATE_MS);
+    vTaskDelay(fpga__get_reset_time() / portTICK_RATE_MS);
     fpga__clear_flags(FPGA_FLAG_RSTSPECT);
 
     ESP_LOGI(TAG, "Reset completed");
@@ -250,7 +255,7 @@ int fpga__reset_spectrum()
 
     fpga__set_trigger(FPGA_FLAG_TRIG_FORCEROMCS_OFF | FPGA_FLAG_TRIG_FORCENMI_OFF);
 
-    vTaskDelay(2 / portTICK_RATE_MS);
+    vTaskDelay(fpga__get_reset_time() / portTICK_RATE_MS);
     fpga__clear_flags(FPGA_FLAG_RSTSPECT);
 
     ESP_LOGI(TAG, "Reset completed");

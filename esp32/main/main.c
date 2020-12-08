@@ -139,7 +139,7 @@ const char *spectrum_model_str(uint8_t model)
     case 0x01:
         if (board__is9Vsupply()) {
             modelstr = "+2(128K)";
-        } else if (board__is5Vsupply()) {
+        } else if (board__isplus2plus3supply()) {
             modelstr = "+2A,+3";
         } else {
             modelstr = "+2(128K),+2A,+3";
@@ -343,7 +343,7 @@ void app_main()
 
     // Set mode if we are using a 2A/3 spectrum;
 
-    if (board__is5Vsupply()) {
+    if (board__isplus2plus3supply()) {
         // Check if FPGA supports mode
         if ((fpga__id() >>16)!=0xA610) {
             ESP_LOGE(TAG, "Detected +2A/+3 but FPGA binary does not support it (%08x)", fpga__id());

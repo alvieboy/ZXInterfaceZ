@@ -1,7 +1,6 @@
 #include "spectrum_kbd.h"
 #include <stdlib.h>
 
-
 static char CAPSSHIFT_KEYS[39] = {
     'B', 'H', 'Y', KEY_DOWN, KEY_LEFT, 'T', 'G', 'V',
     'N', 'J', 'U', KEY_UP, '4', 'R', 'F', 'C',
