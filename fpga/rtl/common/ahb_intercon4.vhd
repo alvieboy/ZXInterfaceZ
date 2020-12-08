@@ -110,18 +110,20 @@ BEGIN
     when IDLE =>
       HMAST_O.HREADY <= '1';
       HMAST_O.HRESP  <= '0';
+      HMAST_O.HRDATA <= (others => 'X');
     when ADDRESS =>
       -- At this point we are still waiting for acknowledge from
       -- slave side.
       HMAST_O.HREADY <= '0';
       HMAST_O.HRESP  <= '0';
+      HMAST_O.HRDATA <= (others => 'X');
     when DATA =>
       case slave_sel_s is
         when "0001" => HMAST_O.HREADY <= slave_s2m(0).HREADY; HMAST_O.HRESP <= slave_s2m(0).HRESP; HMAST_O.HRDATA  <= slave_s2m(0).HRDATA;
         when "0010" => HMAST_O.HREADY <= slave_s2m(1).HREADY; HMAST_O.HRESP <= slave_s2m(1).HRESP; HMAST_O.HRDATA  <= slave_s2m(1).HRDATA;
         when "0100" => HMAST_O.HREADY <= slave_s2m(2).HREADY; HMAST_O.HRESP <= slave_s2m(2).HRESP; HMAST_O.HRDATA  <= slave_s2m(2).HRDATA;
         when "1000" => HMAST_O.HREADY <= slave_s2m(3).HREADY; HMAST_O.HRESP <= slave_s2m(3).HRESP; HMAST_O.HRDATA  <= slave_s2m(3).HRDATA;
-        when others => HMAST_O.HREADY <= '0'; HMAST_O.HRESP <= '1';
+        when others => HMAST_O.HREADY <= '0'; HMAST_O.HRESP <= '1'; HMAST_O.HRDATA <= (others => 'X');
       end case;
     end case;
   end process;
