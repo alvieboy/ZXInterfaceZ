@@ -362,7 +362,8 @@ architecture beh of zxinterface is
 
   signal force_romcs_s          : std_logic;
   signal force_2aromcs_s        : std_logic;
-  
+
+  signal nmi_m1fall_q_r         : std_logic;
 begin
 
   rst48_inst: entity work.rstgen
@@ -983,6 +984,7 @@ begin
   begin
     if arst_i='1' then
       spect_forceromcs_bussync_s  <= '0';
+      nmi_m1fall_q_r <= '0';
     elsif rising_edge(clk_i) then
 
       -- Force ON/OFF follows a different path.
@@ -992,7 +994,11 @@ begin
         if spect_m1_fall_s='1' and spect_forceromcs_s='1' then
           spect_forceromcs_bussync_s <= '1';
         elsif spect_m1_fall_s='1' and nmi_r='1' then
-          spect_forceromcs_bussync_s <= '1';--spect_forceromcs_s or (in_nmi_rom_r or nmi_r);  -- Also force ROM on NMI.
+          nmi_m1fall_q_r         <= '1';
+          if nmi_m1fall_q_r='1' then
+            spect_forceromcs_bussync_s <= '1';--spect_forceromcs_s or (in_nmi_rom_r or nmi_r);  -- Also force ROM on NMI.
+            nmi_m1fall_q_r <= '0'; -- Clear
+          end if;
         end if;
       end if;
     end if;
@@ -1103,7 +1109,7 @@ begin
 
   capinst: if C_CAPTURE_ENABLED generate
     capb: block
-      signal trig_s: std_logic_vector(28 downto 0);
+      signal trig_s: std_logic_vector(30 downto 0);
       signal nontrig_s: std_logic_vector(9 downto 0);
     begin
 
@@ -1121,6 +1127,8 @@ begin
       trig_s(26) <= not spect_reset_s;
       trig_s(27) <= spect_forceromcs_bussync_s;
       trig_s(28) <= force_iorqula_s;
+      trig_s(29) <= usb_int_async_s;
+      trig_s(30) <= spec_nreq_r;
 
       nontrig_s(7 downto 0) <= d_unlatched_s;
       nontrig_s(8) <= force_romcs_s;
@@ -1129,7 +1137,7 @@ begin
       scope_inst: entity work.scope
         generic map (
           NONTRIGGERABLE_WIDTH  => 10,
-          TRIGGERABLE_WIDTH     => 29,
+          TRIGGERABLE_WIDTH     => 31,
           WIDTH_BITS            => 10
         )
         port map (
