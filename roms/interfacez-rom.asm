@@ -41,21 +41,21 @@ DETECT:
  	LD	A, CMD_SPECTRUMDETECT
         CALL	WRITECMDFIFO
 
-        LD	C, $7F
+        LD	BC, $7FFD
         XOR	A
-        OUT	($FD), A
+        OUT	(C), A              	; 0x7FFD: select page 0.
         LD	A, $AA
-        LD	(RAM128PAGESTART), A
-        LD	A, $01 ; Page 1
-        OUT	($FD), A
-        LD	A, $55
+        LD	(RAM128PAGESTART), A    ; Write 0xAA to @C000 (page 0)
+        LD	A, $01 			; 0x7FFD: select page 1
+        OUT	(C), A
+        LD	A, $55                  ; Write 0x55 to @C000 (page 1)
         LD	(RAM128PAGESTART), A
         XOR	A
-        OUT	($FD), A
-        LD	A, (RAM128PAGESTART)
-        CP	$55    
+        OUT	(C), A                  ; 0x7FFD: select page 0
+        LD	A, (RAM128PAGESTART)    ; Read out @C000.
+        CP	$55                     ; If we read back 0x55, we don't have paging 
         JR	Z, _is_16k_48k
-        CP	$AA	
+        CP	$AA	                ; Paging enabled, Check if page1 OK
         JR	NZ, _memoryerror
         ; at this point, a 128K or similar
         LD	A, $01
