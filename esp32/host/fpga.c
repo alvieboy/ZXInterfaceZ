@@ -80,7 +80,6 @@ int fpga_init(void)
         sockaddr.sin_port = htons(8007);
 
         setsockopt(emulator_socket, IPPROTO_TCP, TCP_NODELAY, &yes, sizeof(yes));
-
         if (connect(emulator_socket, (struct sockaddr*)&sockaddr,
                     sizeof(struct sockaddr_in))<0) {
             printf("Cannot connect to ZX Spectrum emulator (QtSpecem), using "
@@ -121,8 +120,9 @@ extern void gpio_isr_do_trigger(gpio_num_t num);
 void hdlc_data(void *user, const uint8_t *data, unsigned datalen)
 {
     struct spi_payload payload;
-//    printf("HDLC data %d\n", data[0]);
+#if 0
     dump("SPI IN (via hdlc): ",data, datalen);
+#endif
     switch (data[0]) {
     case 0x00:
         // Interrupt (pin) data
@@ -160,11 +160,17 @@ void fpga_rxthread(void *arg)
 {
     uint8_t localbuf[512];
     hdlcrxlen = 0;
+
+    fcntl(emulator_socket, F_SETFL, fcntl(emulator_socket, F_GETFL) | O_NONBLOCK);
+
     while (1) {
         int r;
         do {
             r = recv(emulator_socket, localbuf, sizeof(localbuf), 0);
-        } while ((r<0) && (errno==EINTR));
+            if (r<0 && errno==EAGAIN) {
+                vTaskDelay(20 / portTICK_RATE_MS);
+            }
+        } while ((r<0) && (errno==EINTR || errno==EAGAIN));
         if (r<=0) {
             printf("Error receiving: %s\n", strerror(errno));
             close(emulator_socket);
@@ -201,7 +207,9 @@ void fpga_do_transaction(uint8_t *buffer, size_t len)
         }
         xSemaphoreGive(spi_sem);
         // Assert payload size: TODO
+#if 0
         printf("SPI req %02x reply %02x\n", buffer[0], payload.data[0]);
+#endif
         memcpy(buffer, payload.data, len);
         free(payload.data);
 
