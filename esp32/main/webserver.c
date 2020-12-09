@@ -283,6 +283,7 @@ int webserver__init(void)
     config.max_open_sockets = 4;
 #ifdef __linux__
     config.server_port = 8000;
+    config.task_priority = 4;
 #endif
     /* Use the URI wildcard matching function in order to
      * allow the same handler to respond to multiple different
