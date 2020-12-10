@@ -101,4 +101,4 @@ _nextreg:
         OUT	(PORT_RAM_ADDR_0), A ; $01C01A
         OUT	(C), A
         
-	JP	RESTOREREGS
+	JP	RESTOREREGS_NOROM
