@@ -22,25 +22,26 @@ struct relocentry
 };
 
 const struct relocentry relocmap[] = {
-    { "AF'", 0x0005, RELOC_16 },
-
-    { "BC'", 0x000F, RELOC_16 },
-    { "DE'", 0x0012, RELOC_16 },
-    { "HL'", 0x0015, RELOC_16 },
-    { "I",   0x001B, RELOC_8 },
-    { "AF",  0x001F, RELOC_16 },
-    { "BC",  0x0026, RELOC_16 },
-    { "R",   0x002C, RELOC_8 },
-    { "BORDER",   0x0030, RELOC_8 },
-    { "DE",   0x0035, RELOC_16 },
-    { "IX",   0x0039, RELOC_16 },
-    { "IY",   0x003D, RELOC_16 },
-    { "SP",   0x0043, RELOC_16 },
-    { "HL",   0x004A, RELOC_16 },
-    { "IM",   0x004D, RELOC_IM },  // 0x46, 0x56, 0x5E,
-    { "INT",  0x004E, RELOC_EIDI},  // EI: 0xFB, DI: 0xF3,
+    { "P7FFD", 0x0004, RELOC_8 }, // Port 0x7FFD settings
+    { "P1FFD", 0x000A, RELOC_8 }, // Port 0x1FFD settings
+    { "AF'", (0x0005)+0x000D, RELOC_16 }, //
+    { "BC'", (0x000F)+0x000D, RELOC_16 },
+    { "DE'", 0x0012+0x000D, RELOC_16 },
+    { "HL'", 0x0015+0x000D, RELOC_16 },
+    { "I",   0x001B+0x000D, RELOC_8 },
+    { "AF",  0x001F+0x000D, RELOC_16 },
+    { "BC",  0x0026+0x000D, RELOC_16 },
+    { "R",   0x002C+0x000D, RELOC_8 },
+    { "BORDER",   0x0030+0x000D, RELOC_8 },
+    { "DE",   0x0035+0x000D, RELOC_16 },
+    { "IX",   0x0039+0x000D, RELOC_16 },
+    { "IY",   0x003D+0x000D, RELOC_16 },
+    { "SP",   0x0043+0x000D, RELOC_16 },
+    { "HL",   0x004A+0x000D, RELOC_16 },
+    { "IM",   0x004D+0x000D, RELOC_IM },  // 0x46, 0x56, 0x5E,
+    { "INT",  (0x004E)+0x000D, RELOC_EIDI},  // EI: 0xFB, DI: 0xF3,
 //    { "EXC",  0x004B, RELOC_EXECINSN}, // Exec instruction (RETN or JP)
-    { "PC",   0x0045, RELOC_PUSHPC }, // Jump PC for JP in EXC
+    { "PC",   0x0045+0x000D, RELOC_PUSHPC }, // Jump PC for JP in EXC
 };
 
 static const struct relocentry *findreloc(const char *name)
