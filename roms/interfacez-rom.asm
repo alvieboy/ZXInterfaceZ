@@ -187,6 +187,8 @@ PASSWDTMP: DB "Spectrum", 0
 DISCONNECTED:	DB	"Disconnected", 0
 SCANNING:	DB	"Scanning...", 0
 
+ORG 	ROM_PATCHED_SNALOAD - 64
+	include "version.asm"
 
 ; THIS MUST BE THE LAST ENTRY!!!!
 	include "snarestore.asm"

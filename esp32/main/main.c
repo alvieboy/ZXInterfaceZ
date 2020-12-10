@@ -375,6 +375,16 @@ void app_main()
         ESP_LOGW(TAG,"Cannot load ROM from flash, continuing with no ROM");
     }
 
+    {
+        char *rom = rom__get_version();
+        if (*rom) {
+            ESP_LOGI(TAG,"Spectrum ROM version: %s", rom);
+        } else {
+            ESP_LOGW(TAG,"Cannot extract ROM version from file");
+        }
+    }
+
+
     config__init();
     spectcmd__init();
     videostreamer__init();

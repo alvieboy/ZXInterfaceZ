@@ -1,3 +1,6 @@
+GITVER=$(shell git describe --tags --dirty)
+BUILDDATE=$(shell date --utc)
+
 all: intz.rom loadscr.rom
 
 snaloader.rom: snaloader-rom.asm
@@ -6,6 +9,12 @@ snaloader.rom: snaloader-rom.asm
 	#./pad $@ 16384
 
 intz.rom: pad
+
+.PHONY: version.asm
+
+version.asm:
+	@echo "VERSION: DB \"$(GITVER) $(BUILDDATE)\",0"  > version.asm
+
 
 intz.rom: interfacez-rom.asm \
 	keyboard.asm \
@@ -16,6 +25,7 @@ intz.rom: interfacez-rom.asm \
 	debug.asm \
 	port_defs.asm    \
 	z80restore.asm \
+	version.asm \
 	interfacez-sysvars.asm
 
 	pasmo -d --alocal interfacez-rom.asm $@ > $@.out
