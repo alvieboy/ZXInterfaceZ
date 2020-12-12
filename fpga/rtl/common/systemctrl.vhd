@@ -32,6 +32,9 @@ entity systemctrl is
     frameend_o            : out std_logic;
     mode2a_o              : out std_logic;
 
+    page128_pmc_i         : in std_logic_vector(7 downto 0);
+    page128_smc_i         : in std_logic_vector(7 downto 0);
+
     vidmode_o             : out std_logic_vector(1 downto 0);
     ulahack_o             : out std_logic;
 
@@ -234,9 +237,10 @@ begin
           when "011101" => -- Test UART data
             dat_out_s   <= bit_to_cpu_i.rx_data;
             bit_from_cpu_o.rx_read <= '1';
-
-
-
+          when "011110" => -- PMC
+            dat_out_s   <= page128_pmc_i;
+          when "011111" => -- SMC
+            dat_out_s   <= page128_smc_i;
 
           when others =>
         end case;

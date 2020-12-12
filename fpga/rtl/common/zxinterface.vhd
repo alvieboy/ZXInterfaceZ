@@ -688,6 +688,10 @@ begin
     frameend_o    => framecmplt_s,
     mode2a_o      => mode2a_s,
 
+    page128_pmc_i   => page128_pmc_s,
+    page128_smc_i   => page128_smc_s,
+
+
 
     resfifo_reset_o => resfifo_reset_s,
     resfifo_wr_o    => resfifo_wr_s,
