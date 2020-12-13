@@ -15,6 +15,7 @@ use work.bfm_audiocap_p.all;
 use work.bfm_qspiram_p.all;
 use work.bfm_usbdevice_p.all;
 use work.bfm_rom_p.all;
+use work.bfm_ram_p.all;
 
 entity tbc_device is
   port (
@@ -33,6 +34,7 @@ entity tbc_device is
     QSPIRam1_Cmd    : out Cmd_QSPIRam_type;
     UsbDevice_Cmd   : out Cmd_UsbDevice_type;
     Rom_Cmd         : out Cmd_Rom_type;
+    Ram_Cmd         : out Cmd_Ram_type;
 
     -- Inputs
     Spimaster_Data  : in Data_Spimaster_type;
