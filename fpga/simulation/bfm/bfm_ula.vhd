@@ -37,7 +37,7 @@ begin
 
   D_io <= (others => 'Z') when Cmd_i.Enabled=false or A_i(0)/='0' or IOREQn_i='1' OR RDn_i='1' OR OEn_i='1' else d_s;
 
-  process(A_i, IOREQn_i, RDn_i)
+  process(A_i, IOREQn_i, RDn_i, WRn_i)
     variable a: natural;
     variable k: std_logic_vector(4 downto 0);
   begin
@@ -56,6 +56,7 @@ begin
     end if;
 
     if A_i(0)='0' AND IOREQn_i='0' AND WRn_i='0' then
+      report "ULA write " & hstr(D_io);
       d_q <= D_io;
     end if;
 
