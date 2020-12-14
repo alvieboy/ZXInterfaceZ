@@ -126,3 +126,11 @@ configuration t016 of tb_top is
         end for;
     end for;
 end t016;
+
+configuration t017 of tb_top is
+    for sim
+        for tbc: tbc_device
+            use entity work.tbc_device(t017);
+        end for;
+    end for;
+end t017;

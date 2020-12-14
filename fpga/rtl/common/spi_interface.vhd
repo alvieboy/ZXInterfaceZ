@@ -217,6 +217,15 @@ begin
           when x"63" => -- Capture write
             ahb_address_r   <= to_01("01XXXXXXXXXXXXXXXXXXXXXXX"); ahb_write_r <= '1'; ahb_inc_r <= '1';
             state_r         <= INDEXED_16;
+
+          when x"64" => -- System controller generic read
+            ahb_address_r   <= to_01("00XXXXXXXXX10XXXXXXXXXXXX"); ahb_write_r <= '0'; ahb_inc_r <= '1';
+            state_r         <= INDEXED_12;
+
+          when x"65" => -- System controller generic write
+            ahb_address_r   <= to_01("00XXXXXXXXX10XXXXXXXXXXXX"); ahb_write_r <= '1'; ahb_inc_r <= '1';
+            state_r         <= INDEXED_12;
+
           when others =>
             -- Default: read status
             ahb_address_r   <= to_01("0XXXXXXXXXX10XXXXXX000100"); ahb_write_r <= '0'; ahb_inc_r <= '0';

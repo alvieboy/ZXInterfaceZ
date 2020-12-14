@@ -81,6 +81,12 @@ package zxinterfacepkg is
   end record;
 
 
+  constant ROM_MAX_HOOKS: natural := 4;
+
+  type rom_hook_base_t  is array (0 to ROM_MAX_HOOKS-1) of unsigned(13 downto 0);
+  type rom_hook_len_t   is array (0 to ROM_MAX_HOOKS-1) of unsigned(5 downto 0);
+
+
   function to_01(a: in std_logic_vector) return std_logic_vector;
 
 end package;

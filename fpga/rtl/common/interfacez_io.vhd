@@ -91,6 +91,8 @@ entity interfacez_io is
     page128_pmc_o         : out std_logic_vector(7 downto 0);
     page128_smc_o         : out std_logic_vector(7 downto 0);
 
+    trig_force_clearromcsonret_o  : out std_logic;
+
     dbg_o                 : out std_logic_vector(7 downto 0)
   );
 
@@ -141,6 +143,7 @@ architecture beh of interfacez_io is
 
   signal page128_pmc_r          : std_logic_vector(7 downto 0); -- Reused in 128K mode
   signal page128_smc_r          : std_logic_vector(7 downto 0);
+  signal trig_force_clearromcsonret_r : std_logic;
 
 begin
 
@@ -195,12 +198,14 @@ begin
       ay_wr_o       <= '0';
       romsel_r      <= "00";
       memsel_r      <= "000";
+      trig_force_clearromcsonret_r<='0';
 
     elsif rising_edge(clk_i) then
 
       resfifo_rd_o <= '0';
       cmdfifo_wr_r <= '0';
       ay_wr_o      <= '0';
+      trig_force_clearromcsonret_r <= '0';
 
       if wrp_i='1' and adr_i(0)='0' then -- ULA write
         port_fe_r <= dat_i(5 downto 0);
@@ -236,6 +241,11 @@ begin
 
           when SPECT_PORT_MEMSEL =>
             memsel_r      <= dat_i(2 downto 0);
+
+          when SPECT_PORT_NMIREASON =>
+            -- We reuse this address to force ROMCS clear on RET
+            trig_force_clearromcsonret_r <= dat_i(0);
+
           when others =>
         end case;
 
@@ -447,4 +457,6 @@ begin
   memsel_o        <= memsel_r;
   page128_pmc_o   <= page128_pmc_r;
   page128_smc_o   <= page128_smc_r;
+  trig_force_clearromcsonret_o <= trig_force_clearromcsonret_r;
+
 end beh;

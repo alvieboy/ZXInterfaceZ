@@ -139,6 +139,7 @@ architecture beh of zxinterface is
   signal fifo_size_s            : unsigned(7 downto 0);
   signal fifo_reset_s           : std_logic;
 
+  signal D_BUS_DIR_s            : std_logic;
   -- Resynchronized ZX spectrum signals
   signal XCK_sync_s             : std_logic;
   signal XINT_sync_s            : std_logic;
@@ -185,12 +186,14 @@ architecture beh of zxinterface is
   signal forceromcs_on_s        : std_logic;
   signal forceromcs_off_s       : std_logic;
   signal forceromonretn_r       : std_logic;
+  signal forceromonret_r        : std_logic;
   signal forcenmi_on_s          : std_logic;
   signal forcenmi_off_s         : std_logic;
   signal nmireason_s            : std_logic_vector(7 downto 0);
   signal wait_s                 : std_logic;
 
   signal retn_det_s             : std_logic;
+  signal ret_det_s              : std_logic;
   signal spect_capsyncen_s      : std_logic;
   signal framecmplt_s           : std_logic;
 
@@ -364,6 +367,15 @@ architecture beh of zxinterface is
   signal force_2aromcs_s        : std_logic;
 
   signal nmi_m1fall_q_r         : std_logic;
+
+
+  signal hook_base_s            : rom_hook_base_t;
+  signal hook_len_s             : rom_hook_len_t;
+  signal hook_valid_s           : std_logic_vector(ROM_MAX_HOOKS-1 downto 0);
+  signal hook_romcs_s           : std_logic;
+
+  signal trig_force_clearromcsonret_s: std_logic;
+
 begin
 
   rst48_inst: entity work.rstgen
@@ -423,7 +435,7 @@ begin
       XM1_i         => XM1_i,
       XRFSH_i       => XRFSH_i,
 
-      D_BUS_DIR_o   => D_BUS_DIR_o,
+      D_BUS_DIR_o   => D_BUS_DIR_s,
       D_BUS_OE_o    => D_BUS_OE_o,
       CTRL_OE_o     => CTRL_OE_o,
       A_BUS_OE_o    => A_BUS_OE_o,
@@ -555,6 +567,7 @@ begin
       page128_pmc_o   => page128_pmc_s,
       page128_smc_o   => page128_smc_s,
 
+      trig_force_clearromcsonret_o => trig_force_clearromcsonret_s,
 
       dbg_o           => dbg_o(15 downto 8)
   );
@@ -603,7 +616,7 @@ begin
 
   -- TODO: we should have more then one ROM here.
 
-  rom_active_s    <= rom_enable_s and spect_forceromcs_bussync_s;
+  rom_active_s    <= rom_enable_s and (spect_forceromcs_bussync_s or hook_romcs_s);
   --io_active_s     <= io_enable_s;-- and NOT XRD_sync_s;
 
   data_o_valid_s  <= rom_active_s or io_enable_s;--io_active_s;
@@ -739,7 +752,10 @@ begin
     audio_enable_o        => audio_enable_o,
     memromsel_o           => memromsel_s,
     memsel_we_o           => memsel_we_s,
-    romsel_we_o           => romsel_we_s
+    romsel_we_o           => romsel_we_s,
+    hook_base_o           => hook_base_s,
+    hook_len_o            => hook_len_s,
+    hook_valid_o          => hook_valid_s
   );
 
   -- Main AHB intercon.
@@ -865,16 +881,26 @@ begin
     if arst_i='1' then
       spect_forceromcs_s  <='0';
       forceromonretn_r    <= '0';
+      forceromonret_r     <= '0';
     elsif rising_edge(clk_i) then
       if forceromonretn_trig_s='1' then
         forceromonretn_r <= '1';
       end if;
+
+      if trig_force_clearromcsonret_s='1' then
+        forceromonret_r<='1';
+      end if;
+
       if forceromcs_on_s='1' then
         spect_forceromcs_s<='1';
-      elsif forceromcs_off_s='1' or (forceromonretn_r='1' and retn_det_s='1') then
+      elsif forceromcs_off_s='1' or (forceromonretn_r='1' and retn_det_s='1')
+                                 or (forceromonret_r='1' and ret_det_s='1') then
         spect_forceromcs_s<='0';
         if (forceromonretn_r='1' and retn_det_s='1') then
           forceromonretn_r<='0';
+        end if;
+        if (forceromonret_r='1' and ret_det_s='1') then
+          forceromonret_r<='0';
         end if;
       end if;
     end if;
@@ -929,6 +955,7 @@ begin
       pc_o        => pc_s,
       pc_valid_o  => pc_valid_s,
       retn_det_o  => retn_det_s,
+      ret_det_o   => ret_det_s,
       nmi_access_o=> nmi_access_s
     );
 
@@ -980,6 +1007,24 @@ begin
     fifo_rd_s       <= '0';
     vidmem_data_s   <= (others =>'0');
   end generate;
+
+
+  -- ROM hooks.
+  rom_hook_inst: entity work.rom_hook
+    port map (
+      clk_i         => clk_i,
+      arst_i        => arst_i,
+
+      a_i           => a_unlatched_s,
+      rdn_i         => XRD_sync_s,
+      mreqn_i       => XMREQ_sync_s,
+      hook_base_i   => hook_base_s,
+      hook_len_i    => hook_len_s,
+      hook_valid_i  => hook_valid_s,
+      force_romcs_o => hook_romcs_s
+    );
+
+
 
   --
   -- Do NOT allow changes to ROMCS while bus is busy, wait for start of M1 cycle
@@ -1113,7 +1158,7 @@ begin
 
   capinst: if C_CAPTURE_ENABLED generate
     capb: block
-      signal trig_s: std_logic_vector(30 downto 0);
+      signal trig_s: std_logic_vector(31 downto 0);
       signal nontrig_s: std_logic_vector(9 downto 0);
     begin
 
@@ -1129,10 +1174,11 @@ begin
       trig_s(24) <= not wait_s;
       trig_s(25) <= not nmi_r;
       trig_s(26) <= not spect_reset_s;
-      trig_s(27) <= spect_forceromcs_bussync_s;
+      trig_s(27) <= spect_forceromcs_bussync_s or hook_romcs_s;
       trig_s(28) <= force_iorqula_s;
       trig_s(29) <= usb_int_async_s;
       trig_s(30) <= spec_nreq_r;
+      trig_s(31) <= D_BUS_DIR_s;
 
       nontrig_s(7 downto 0) <= d_unlatched_s;
       nontrig_s(8) <= force_romcs_s;
@@ -1141,7 +1187,7 @@ begin
       scope_inst: entity work.scope
         generic map (
           NONTRIGGERABLE_WIDTH  => 10,
-          TRIGGERABLE_WIDTH     => 31,
+          TRIGGERABLE_WIDTH     => 32,
           WIDTH_BITS            => 10
         )
         port map (
@@ -1203,8 +1249,8 @@ begin
   mosi_s          <= SPI_MOSI_i;
   SPI_MISO_o      <= miso_s;
 
-    force_romcs_s   <= spect_forceromcs_bussync_s; -- Always enabled -- and not mode2a_s;
-    force_2aromcs_s <= spect_forceromcs_bussync_s and mode2a_s; -- Only in 2A+ mode, due to VIDEO signal on same pin
+    force_romcs_s   <= (spect_forceromcs_bussync_s or hook_romcs_s); -- Always enabled -- and not mode2a_s;
+    force_2aromcs_s <= (spect_forceromcs_bussync_s or hook_romcs_s) and mode2a_s; -- Only in 2A+ mode, due to VIDEO signal on same pin
 
     bit_int: entity work.bit_out generic map ( WIDTH=>1, START=>9)
               port map ( data_i(0) => '0', data_o(0) => FORCE_INT_o, bit_from_cpu_i => bit_from_cpu_s );
@@ -1240,6 +1286,7 @@ begin
   audio_l_o <= audio_left_s;
   audio_r_o <= audio_right_s;
 
+  D_BUS_DIR_o <= D_BUS_DIR_s;
   
 end beh;
 

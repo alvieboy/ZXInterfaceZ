@@ -1,6 +1,8 @@
 library IEEE;   
 use IEEE.STD_LOGIC_1164.all;
 use IEEE.numeric_std.all;
+library work;
+use work.zxinterfacepkg.all;
 
 entity insn_detector is
   port (
@@ -18,13 +20,15 @@ entity insn_detector is
 
     nmi_access_o: out std_logic;
     rst8_det_o  : out std_logic;
-    retn_det_o  : out std_logic  -- RETN detected
+    retn_det_o  : out std_logic;  -- RETN detected
+    ret_det_o   : out std_logic   -- RET detected
   );
 end entity insn_detector;
 
 architecture beh of insn_detector is
 
   signal retn_detected_r  :  std_logic;
+  signal ret_detected_r   :  std_logic;
   signal rst8_detected_r  :  std_logic;
   signal nmi_access_r     :  std_logic;
 
@@ -88,10 +92,12 @@ begin
   begin
     if arst_i='1' then
       retn_detected_r <= '0';
+      ret_detected_r  <= '0';
       nmi_access_r    <= '0';
 
     elsif rising_edge(clk_i) then
       retn_detected_r <= '0';
+      ret_detected_r  <= '0';
       rst8_detected_r <= '0';
       nmi_access_r    <= '0';
       pc_valid_o      <= '0';
@@ -110,6 +116,10 @@ begin
             rst8_detected_r <= '1';
           end if;
 
+          if decode_state=NO_PREFIX and d_i=x"C9" then
+            ret_detected_r <= '1';
+          end if;
+
         end if;
 
 
@@ -124,6 +134,7 @@ begin
   end process;
 
   retn_det_o    <= retn_detected_r;
+  ret_det_o     <= ret_detected_r;
   nmi_access_o  <= nmi_access_r;
   rst8_det_o    <= rst8_detected_r;
 

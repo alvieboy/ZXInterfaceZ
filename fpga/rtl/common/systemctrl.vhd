@@ -92,7 +92,11 @@ entity systemctrl is
     audio_enable_o        : out std_logic;
     memromsel_o           : out std_logic_vector(2 downto 0);
     memsel_we_o           : out std_logic;
-    romsel_we_o           : out std_logic
+    romsel_we_o           : out std_logic;
+    -- ROM hookds
+    hook_base_o           : out rom_hook_base_t;
+    hook_len_o            : out rom_hook_len_t;
+    hook_valid_o          : out std_logic_vector(ROM_MAX_HOOKS-1 downto 0)
   );
 end systemctrl;
 
@@ -113,7 +117,7 @@ architecture beh of systemctrl is
   -- For AHB interconnection
   signal rd_s           : std_logic;
   signal wr_s           : std_logic;
-  signal addr_s         : std_logic_vector(5 downto 0);
+  signal addr_s         : std_logic_vector(6 downto 0);
   signal dat_in_s       : std_logic_vector(7 downto 0);
   signal dat_out_s      : std_logic_vector(7 downto 0);
 
@@ -128,11 +132,15 @@ architecture beh of systemctrl is
   signal do_read_fifo_r : std_logic;
   signal tapfifo_used_lsb_r : std_logic_vector(7 downto 0);
 
+  signal hook_base_r    : rom_hook_base_t;
+  signal hook_len_r     : rom_hook_len_t;
+  signal hook_valid_r   : std_logic_vector(ROM_MAX_HOOKS-1 downto 0);
+
 begin
 
   ahb2rdwr_inst: entity work.ahb2rdwr
     generic map (
-      AWIDTH => 6, DWIDTH => 8
+      AWIDTH => 7, DWIDTH => 8
     )
     port map (
       clk_i     => clk_i,
@@ -181,30 +189,30 @@ begin
       else
         dat_out_s <= (others => 'X');
 
-        case addr_s(5 downto 0) is
-          when "000000" =>
+        case addr_s is
+          when "0000000" =>
             dat_out_s <= C_FPGAID0;
-          when "000001" =>
+          when "0000001" =>
             dat_out_s <= C_FPGAID1;
-          when "000010" =>
+          when "0000010" =>
             dat_out_s <= C_FPGAID2;
-          when "000011" => null;
-          when "000100" =>
+          when "0000011" => null;
+          when "0000100" =>
             dat_out_s <= bit_to_cpu_i.bit_request & cmdfifo_used_i & resfifo_full_i;
-          when "000101" => null; -- Write-only
-          when "000110" => null; -- Write-only
-          when "000111" => null; -- Write-only
-          when "001000" | "001001" |"001010" | "001011" => null; -- Write-only
-          when "001100" | "001101" |"001110" | "001111" => -- BIT data
+          when "0000101" => null; -- Write-only
+          when "0000110" => null; -- Write-only
+          when "0000111" => null; -- Write-only
+          when "0001000" | "0001001" |"0001010" | "0001011" => null; -- Write-only
+          when "0001100" | "0001101" |"0001110" | "0001111" => -- BIT data
             dat_out_s <= bit_dout_s;
-          when "010000" => -- PC LSB
+          when "0010000" => -- PC LSB
             pc_latch_r  <= pc_i(15 downto 8);
             dat_out_s   <= pc_i(7 downto 0);
-          when "010001" => -- PC MSB
+          when "0010001" => -- PC MSB
             dat_out_s   <= pc_latch_r;
-          when "010010" => null;-- Write-only
-          when "010011" => null;-- Write-only
-          when "010100" => null;-- Write-only
+          when "0010010" => null;-- Write-only
+          when "0010011" => null;-- Write-only
+          when "0010100" => null;-- Write-only
           -- CMD fifo.
           --when "010101" =>
           --  if cmdfifo_empty_i='1' then
@@ -216,30 +224,30 @@ begin
           --  end if;
 
           --when "010110" =>
-          when "010101" =>
+          when "0010101" =>
             cmdfifo_rd_o  <= not cmdfifo_empty_i;--'1';--do_read_fifo_r;
             dat_out_s     <= cmdfifo_read_i;
-          when "010111" => null; -- Unused
-          when "011000" | "011001"=> null; -- TAP Fifo/Command write;
+          when "0010111" => null; -- Unused
+          when "0011000" | "0011001"=> null; -- TAP Fifo/Command write;
 
-          when "011010" =>
+          when "0011010" =>
             dat_out_s <= tapfifo_full_i & "00000" & tapfifo_used_i(9 downto 8);
             tapfifo_used_lsb_r <= tapfifo_used_i(7 downto 0);
 
-          when "011011" =>
+          when "0011011" =>
             dat_out_s <= tapfifo_used_lsb_r;
 
-          when "011100" => -- Test UART status
+          when "0011100" => -- Test UART status
             dat_out_s   <= "10" &
                   bit_to_cpu_i.rx_avail_size &
                   bit_to_cpu_i.rx_avail &
                   bit_to_cpu_i.tx_busy;
-          when "011101" => -- Test UART data
+          when "0011101" => -- Test UART data
             dat_out_s   <= bit_to_cpu_i.rx_data;
             bit_from_cpu_o.rx_read <= '1';
-          when "011110" => -- PMC
+          when "0011110" => -- PMC
             dat_out_s   <= page128_pmc_i;
-          when "011111" => -- SMC
+          when "0011111" => -- SMC
             dat_out_s   <= page128_smc_i;
 
           when others =>
@@ -249,6 +257,7 @@ begin
   end process;
 
   process(clk_i, arst_i)
+    variable hook_index_v: natural range 0 to 3;
   begin
     if arst_i='1' then
 
@@ -265,6 +274,9 @@ begin
       memsel_we_r           <= '0';
       romsel_we_r           <= '0';
       memromsel_r           <= (others => 'X');
+      hook_valid_r          <= (others => '0');
+      hook_base_r           <= (others=>(others => 'X'));
+      hook_len_r            <= (others=>(others => 'X'));
       --bit_from_cpu_o.tx_data_valid <= '0';
       --bit_from_cpu_o.tx_data  <= (others => 'X');
 
@@ -286,15 +298,18 @@ begin
       
 
       if wr_s='1' then
+
+        hook_index_v := to_integer(unsigned(addr_s(3 downto 2)));
+
         case addr_s is
-          when "000000" => null;
-          when "000001" => null;
-          when "000010" => null;
-          when "000011" => null;
-          when "000100" => null;
-          when "000101" =>
+          when "0000000" => null;
+          when "0000001" => null;
+          when "0000010" => null;
+          when "0000011" => null;
+          when "0000100" => null;
+          when "0000101" =>
             flags_r(7 downto 0) <= dat_in_s;
-          when "000110" =>
+          when "0000110" =>
             resfifo_reset_o       <= dat_in_s(0);
             forceromonretn_trig_o <= dat_in_s(1);
             forceromcs_trig_on_o  <= dat_in_s(2);
@@ -304,35 +319,44 @@ begin
             cmdfifo_reset_o       <= dat_in_s(5);
             forcenmi_trig_on_o    <= dat_in_s(6);
             forcenmi_trig_off_o   <= dat_in_s(7); -- this might not be necessary.
-          when "000111" =>
+          when "0000111" =>
             flags_r(15 downto 8) <= dat_in_s;
-          when "001000" | "001001" | "001010" | "001011" => null; -- BIT is handled by BIT mode
-          when "001100" | "001101" | "001110" | "001111" => null; -- BIT is handled by BIT mode
-          when "010000" | "010001" => null; -- Last PC not writeable
-          when "010010" =>
+          when "0001000" | "0001001" | "0001010" | "0001011" => null; -- BIT is handled by BIT mode
+          when "0001100" | "0001101" | "0001110" | "0001111" => null; -- BIT is handled by BIT mode
+          when "0010000" | "0010001" => null; -- Last PC not writeable
+          when "0010010" =>
             memromsel_r <= dat_in_s(2 downto 0);
             memsel_we_r <= dat_in_s(7);
             romsel_we_r <= not dat_in_s(7);
-          when "010011" => null; -- Frame EOF not implemented
-          when "010100" => null; -- Resource FIFO write
-          when "010101" | "010111" => null; -- Command FIFO read
-          when "011000" => null; -- TAP fifo write
-          when "011001" => null; -- TAP command fifo write
-          when "011010" | "011011"=> null; -- TAP command fifo usage read
-          when "011100" => null; -- Test UART status read
-          when "011101" => null; -- Test UART data
+          when "0010011" => null; -- Frame EOF not implemented
+          when "0010100" => null; -- Resource FIFO write
+          when "0010101" | "0010111" => null; -- Command FIFO read
+          when "0011000" => null; -- TAP fifo write
+          when "0011001" => null; -- TAP command fifo write
+          when "0011010" | "0011011"=> null; -- TAP command fifo usage read
+          when "0011100" => null; -- Test UART status read
+          when "0011101" => null; -- Test UART data
              --TestUARTData  0XXXXXXXXXX10XXXXXX011101 1
             --bit_from_cpu_o.tx_data_valid <= '1';
             --bit_from_cpu_o.tx_data  <= dat_in_s;
 
-          when "1---00" =>
+          when "01---00" =>
             tempreg_r(23 downto 16) <= dat_in_s;
-          when "1---01" =>
+          when "01---01" =>
             tempreg_r(15 downto 8) <= dat_in_s;
-          when "1---10" =>
+          when "01---10" =>
             tempreg_r(7 downto 0) <= dat_in_s;
-          when "1---11" =>
+          when "01---11" =>
             regs32_r( to_integer(unsigned(addr_s(5 downto 2)))) <= tempreg_r & dat_in_s;
+
+          when "1000000" | "1000100" | "1001000" | "1001100" => -- Hook low
+            hook_base_r(hook_index_v)(7 downto 0) <= unsigned(dat_in_s);
+          when "1000001" | "1000101" | "1001001" | "1001101" => -- Hook high
+            hook_base_r(hook_index_v)(13 downto 8) <= unsigned(dat_in_s(5 downto 0));
+          when "1000010" | "1000110" | "1001010" | "1001110" => -- Hook len
+            hook_len_r(hook_index_v)(5 downto 0) <= unsigned(dat_in_s(5 downto 0));
+          when "1000011" | "1000111" | "1001011" | "1001111" => -- Hook active
+            hook_valid_r(hook_index_v) <= dat_in_s(0);
 
 
           when others =>
@@ -377,10 +401,10 @@ begin
   resfifo_write_o       <= dat_in_s;
 
   -- Last address bit determines wheteher is command or data
-  tapfifo_wr_o          <= '1' when wr_s='1' and addr_s(5 downto 1)="01100" else '0';
+  tapfifo_wr_o          <= '1' when wr_s='1' and addr_s(6 downto 1)="001100" else '0';
   tapfifo_write_o       <= addr_s(0) & dat_in_s;
 
-  bit_from_cpu_o.tx_data_valid <= '1' when wr_s='1' and addr_s="011101" else '0';
+  bit_from_cpu_o.tx_data_valid <= '1' when wr_s='1' and addr_s="0011101" else '0';
   bit_from_cpu_o.tx_data  <= dat_in_s;
 
   kbd_en_o              <= regs32_r(2)(0);
@@ -407,7 +431,9 @@ begin
   memsel_we_o           <= memsel_we_r;
   romsel_we_o           <= romsel_we_r;
 
-
+  hook_base_o           <= hook_base_r;
+  hook_len_o            <= hook_len_r;
+  hook_valid_o          <= hook_valid_r;
 
 
 

@@ -80,6 +80,10 @@ package zxinterfacepkg is
     bit_data      : std_logic_vector(31 downto 0);
   end record;
 
+  constant ROM_MAX_HOOKS: natural := 4;
+
+  type rom_hook_base_t  is array (0 to ROM_MAX_HOOKS-1) of unsigned(13 downto 0);
+  type rom_hook_len_t   is array (0 to ROM_MAX_HOOKS-1) of unsigned(5 downto 0);
 
 end package;
 

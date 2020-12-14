@@ -13,6 +13,7 @@ use work.bfm_audiocap_p.all;
 use work.bfm_qspiram_p.all;
 use work.bfm_usbdevice_p.all;
 use work.bfm_rom_p.all;
+use work.bfm_ram_p.all;
 use work.txt_util.all;
 
 ENTITY tb_top IS
@@ -37,6 +38,7 @@ architecture sim of tb_top is
     QSPIRam1_Cmd    : out Cmd_QSPIRam_type;
     UsbDevice_Cmd   : out Cmd_UsbDevice_type;
     Rom_Cmd         : out Cmd_Rom_type;
+    Ram_Cmd         : out Cmd_Ram_type;
 
     -- Inputs
     Spimaster_Data  : in Data_Spimaster_type;
@@ -64,6 +66,7 @@ architecture sim of tb_top is
   signal QSPIRam1_Cmd_s   : Cmd_QSPIRam_type  := Cmd_QSPIRam_Defaults;
   signal Usbdevice_Cmd_s  : Cmd_Usbdevice_type  := Cmd_Usbdevice_Defaults;
   signal Rom_Cmd_s        : Cmd_Rom_type  := Cmd_Rom_Defaults;
+  signal Ram_Cmd_s        : Cmd_Ram_type  := Cmd_Ram_Defaults;
 
   signal Spimaster_Data_s : Data_Spimaster_type;
   signal Spectrum_Data_s  : Data_Spectrum_type;
@@ -170,6 +173,7 @@ begin
       QSPIRam1_Cmd    => QSPIRam1_Cmd_s,
       Usbdevice_Cmd   => Usbdevice_Cmd_s,
       Rom_Cmd         => Rom_Cmd_s,
+      Ram_Cmd         => Ram_Cmd_s,
       -- Outputs
       Spimaster_Data  => Spimaster_Data_s,
       Spectrum_Data   => Spectrum_Data_s,
@@ -288,6 +292,16 @@ begin
       OEn_i   => romoe_s
     );
   romoe_s <=  XA_s(15) or XA_s(14) or FORCE_ROMCS_s;
+
+  ram_inst: ENTITY work.bfm_ram
+    PORT MAP (
+      Cmd_i   => Ram_Cmd_s,
+      A_i     => XA_s,
+      D_io    => XD_io,
+      MREQn_i => XMREQ_s,
+      RDn_i   => XRD_s,
+      WRn_i   => XWR_s
+    );
 
   -- USB transceiver
 
