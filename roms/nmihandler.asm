@@ -20,13 +20,33 @@ NMIHANDLER:
         OUT	(C), L           ; Ram: 0x2004
         OUT	(C), H           ; Ram: 0x2005
         
+        ; Save YM mixer status and clear sound.
+        LD	D, C
+        LD	BC, $FFFD
+        LD	A, $07
+        OUT	(C), A 	; Select register 0x07 (Mixer)
+        IN	A, (C)
+        LD	C, D            ; Back to RAM_DATA port
+        ; Save mixer to Ram
+        OUT	(C), A          ; Ram: 0x2006
+        LD	BC, $BFFD
+        LD	A, $FF
+        OUT	(C), A    	; Clear Mixer status
+        LD	C, D		; Back to RAM_DATA port 
+        
+        ; Reserve some space for future expansion.
+        
+        LD	A, $10
+        OUT	(PORT_RAM_ADDR_0), A         ; Set external RAM LSB to 0x2010
+
+        
         ; Save whole screen + scratch area to External RAM. 
         ; 8192 bytes (0x2000)
         LD	B, $00
         LD	D, $20
 	LD	HL, SCREEN
 lone:
-        OTIR                   	; Starts at 0x0006
+        OTIR                   	; Starts at 0x2010
         DEC	D
         JR	NZ, lone
         ; Screen saved.
@@ -35,32 +55,32 @@ lone:
         
         LD	(NMI_SCRATCH), SP
         LD	HL, (NMI_SCRATCH)     ; HL=SP
-        OUT	(C), L        	; Ram: 0x4006
-        OUT	(C), H        	; Ram: 0x4007
+        OUT	(C), L        	; Ram: 0x4010
+        OUT	(C), H        	; Ram: 0x4011
         
         LD	A, IXL
-        OUT	(C), A        	; Ram: 0x4008
+        OUT	(C), A        	; Ram: 0x4012
         LD	A, IXH
-        OUT	(C), A        	; Ram: 0x4009
+        OUT	(C), A        	; Ram: 0x4013
 
         LD	A, IYL
-        OUT	(C), A        	; Ram: 0x400A
+        OUT	(C), A        	; Ram: 0x4014
         LD	A, IYH
-        OUT	(C), A        	; Ram: 0x400B
+        OUT	(C), A        	; Ram: 0x4015
         
         ; We don't touch alternative registers, so leave them alone for now.
         
         ; Do save AF, however. It's easier to just do it here.
         ; HL still contains SP value
         LD	A, (HL)
-        OUT	(C), A          ; Ram: 0x400C [flags]
+        OUT	(C), A          ; Ram: 0x4016 [flags]
         INC	HL
         LD	A, (HL)
-        OUT	(C), A          ; Ram: 0x400D [A]
+        OUT	(C), A          ; Ram: 0x4017 [A]
 
         ; Get R 
         LD	A, R
-        OUT	(C), A	   	; Ram: 0x400E
+        OUT	(C), A	   	; Ram: 0x4018
 
         LD	SP, NMI_SPVAL
         PUSH	AF
@@ -68,18 +88,18 @@ lone:
         ; Get flags from SP
         LD	HL, NMI_SPVAL-2
         LD	A, (HL)
-        OUT	(C), A	   	; Ram: 0x400F
+        OUT	(C), A	   	; Ram: 0x4019
         POP	AF
         
         ; Finally, save I
         LD	A, I
-        OUT	(C), A	   	; Ram: 0x4010
+        OUT	(C), A	   	; Ram: 0x401A
         
         ; 
         
         ; Save border.
         IN	A, (PORT_ULA)
-        OUT	(C), A	   	; Ram: 0x4011
+        OUT	(C), A	   	; Ram: 0x401B
         DEBUGSTR "Serving NMI\n"
 
         CALL	NMIPROCESS_VIDEOONLY
@@ -88,49 +108,64 @@ NMIRESTORE:
 	; Restore SP first, since we need to manipulate RAM 
         ; in order to restore it
         LD	C, PORT_RAM_DATA	       ; Data port 
-        LD	A, $06		; LSB 
+        LD	A, $10		; LSB 
         OUT	(PORT_RAM_ADDR_0), A 
         LD	A, $40          ; MSB
         OUT	(PORT_RAM_ADDR_1), A
         XOR	A
-        OUT	(PORT_RAM_ADDR_2), A   ; Address: 0x004006
+        OUT	(PORT_RAM_ADDR_2), A   ; Address: 0x004010
         
-        IN	L, (C)          ; Ram: 0x4006
-        IN	H, (C)          ; Ram: 0x4007
+        IN	L, (C)          ; Ram: 0x4010
+        IN	H, (C)          ; Ram: 0x4011
         LD	(NMI_SCRATCH), HL
         LD	SP, (NMI_SCRATCH)
         ; SP ready now.
         ; Restore IX, IY now
-        IN	A, (C)          ; Ram: 0x4008
+        IN	A, (C)          ; Ram: 0x4012
         LD	IXL, A
-        IN	A, (C)          ; Ram: 0x4009
+        IN	A, (C)          ; Ram: 0x4013
         LD	IXH, A
-        IN	A, (C)          ; Ram: 0x400A
+        IN	A, (C)          ; Ram: 0x4014
         LD	IYL, A
         IN	A, (C)
-        LD	IYH, A          ; Ram: 0x400B
+        LD	IYH, A          ; Ram: 0x4015
         
         ; Move back to screen area.
-        LD	A, $06		; LSB 
+        LD	A, $10		; LSB 
         OUT	(PORT_RAM_ADDR_0), A 
         LD	A, $20          ; MSB
-        OUT	(PORT_RAM_ADDR_1), A     ; 0x2006
+        OUT	(PORT_RAM_ADDR_1), A     ; 0x2010
         ; Restore screen and scratchpad memory
         LD	B, $00
         LD	D, $20
         LD	E, A
 	LD	HL, SCREEN
 _l2:
-        INIR                   	; Starts at 0x2006
+        INIR                   	; Starts at 0x2010
         DEC	D
         JR	NZ, _l2
+        
         ; Restore other regs
 
-
-        LD	A, $01		; LSB 
+        LD	A, $06		; LSB 
         OUT	(PORT_RAM_ADDR_0), A 
         LD	A, $20          ; MSB   
         OUT	(PORT_RAM_ADDR_1), A
+
+	IN	E, (C)		; Mixer state in E
+        ; Restore YM Mixer state
+        LD	D, C		; Save RAM_DATA port
+        LD	BC, $FFFD
+        LD	A, $07
+        OUT	(C), A
+        LD	B, $BF
+        OUT	(C), E		; Restore YM register 0x07
+
+        LD	C, D		; Restore RAM_DATA port
+
+	; Move pointer to 0x2001
+        LD	A, $01		; LSB 
+        OUT	(PORT_RAM_ADDR_0), A 
         ; BEDLH
        	IN	B,(C)           ; Ram: 0x2001
         IN	E,(C)           ; Ram: 0x2002
@@ -140,8 +175,6 @@ _l2:
 	; Last one is C.
         XOR	A
         OUT	(PORT_RAM_ADDR_0), A        ; Ram: 0x2000
-        ;LD	A, $20
-        ;OUT	(PORT_RAM_ADDR_1), A        ; Ram: 0x0000
         IN	C, (C)
         ; SP is "good" here.
 	POP 	AF

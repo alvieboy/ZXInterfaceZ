@@ -10,6 +10,8 @@ PORT_RAM_ADDR_1 equ $3B
 PORT_RAM_ADDR_2 equ $3F
 PORT_RAM_DATA 	equ $63
 PORT_MEMSEL   	equ $6b
+PORT_NMIREASON	equ $6F
+
 
 
 PORT_ULA equ $fe

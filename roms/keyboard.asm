@@ -1,11 +1,9 @@
 ;------------------
 ; Keyboard scanning
 ;------------------
-; from keyboard and S_INKEY
-; returns 1 or 2 keys in DE, most significant shift first if any
-; key values 0-39 else 255
 
-					;;;$028E
+DEBOUNCEVAL	EQU 	$10
+					
 KEY_SCAN:	LD	L,$2F		; initial key value
 					; valid values are obtained by subtracting
 					; eight five times.
@@ -25,12 +23,12 @@ KEY_LINE:	IN	A,(C)		; read the port to A - bits will be reset
 		LD	H,A		; transfer row bits to H
 		LD	A,L		; load the initial key value to A
 
-					;;;$029F
+					
 KEY_3KEYS:	INC	D		; now test the key buffer
 		RET	NZ		; if we have collected 2 keys already
 					; then too many so quit.
 
-					;;;$02A1
+					
 KEY_BITS:	SUB	$08		; subtract 8 from the key value
 					; cycling through key values (top = $27)
 					; e.g. 2F>  27>1F>17>0F>07
@@ -68,12 +66,6 @@ KEY_DONE:	DEC	L		; cycles 2F>2E>2D>2C>2B>2A>29>28 for
 		RET			; return (with zero set if it was).
 					; but with symbol shift now in D
 
-;-------------------------------
-; Scan keyboard and decode value
-;-------------------------------
-; from interrupt 50 times a second
-
-					;;;$02BF
 KEYBOARD:	CALL	KEY_SCAN	; routine KEY_SCAN
 		RET	NZ		; return if invalid combinations
                 
@@ -83,13 +75,26 @@ KEYBOARD:	CALL	KEY_SCAN	; routine KEY_SCAN
 		SBC	HL, DE
                 LD	A, H
                 OR	L
-                RET	Z		; Same key
+                ;RET	Z		; Same key
+                JR	Z, SAMEKEY
+		; Different key pressed
                 LD	(PREVKEY), DE
-					; Notify key pressed
+                LD	A, DEBOUNCEVAL
+                LD	(DEBOUNCE), A
+                RET	; NZ set
+PROPAGATE:
+		;DEBUGSTR "Debounced\n"
                 LD	(CURKEY), DE
-                ;DEBUGHEXDE
                 LD	HL, FLAGS
                 SET	5, (HL)
+                RET
+
+SAMEKEY:        LD	A, (DEBOUNCE)
+		CP	$FF
+                RET	Z 	; Already debounced.
+                DEC	A
+                LD	(DEBOUNCE), A
+                JR      Z, PROPAGATE ; Debounce finished
                 RET
 
 	; Input: DE

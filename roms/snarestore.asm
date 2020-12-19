@@ -1,12 +1,12 @@
 ORG ROM_PATCHED_SNALOAD
 RESTOREREGS:
 ; For 128K machines we need to restore ROM number if needed. Can also set the RAM mapping
-; correctly
-	LD	BC, $7FFD
-        LD	A, $10 ; Bit 4 set (48K ROM).
+; correctly. 
+	LD	BC, $1FFD
+        LD	A, $04 ; Bit 2 set (48K ROM)
         OUT	(C), A
-        LD	B, $1F
-        LD      A, $04 ; Bit 2 set (48K ROM)
+        LD	B, $7F
+        LD      A, $10 ; Bit 4 set (48K ROM).
         OUT	(C), A
 RESTOREREGS_NOROM:
 ; This is the register restore routine.

@@ -19,6 +19,8 @@ version.asm:
 intz.rom: interfacez-rom.asm \
 	keyboard.asm \
 	string.asm \
+	loadpatch.asm \
+	resource.asm \
 	nmihandler.asm \
 	snaram.asm      \
 	snarestore.asm  \

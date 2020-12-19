@@ -166,14 +166,16 @@ _endl1: HALT
 	include "debug.asm"
         include "string.asm"
         include "keyboard.asm"
-	include	"charmap.asm"
         include	"resource.asm"
         include	"graphics.asm"
         include	"print.asm"
         include	"regdebug.asm"
 	include "keybtest.asm"
         include "utils.asm"
+        ; WARNING WARNING -  this does need correct placement in ROM
+        include "loadpatch.asm"
 	include "nmihandler.asm"
+	include	"charmap.asm"
 	include "snaram.asm"
         include "z80restore.asm"
        
