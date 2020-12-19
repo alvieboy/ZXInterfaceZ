@@ -15,6 +15,7 @@
 #include "vga.h"
 #include "spectrum_kbd.h"
 #include "wsys.h"
+#include "fasttap.h"
 
 #define COMMAND_BUFFER_MAX 128
 
@@ -204,6 +205,26 @@ static int spectcmd__playtape(const uint8_t *cmdbuf, unsigned len)
     return ret;
 }
 
+static int spectcmd__playtape_fast(const uint8_t *cmdbuf, unsigned len)
+{
+    char filename[32];
+
+    NEED(1);
+
+    uint8_t filenamelen = cmdbuf[0];
+
+    NEED(filenamelen);
+
+    ESP_LOGI(TAG,"Playing tape (fast)");
+
+    spectcmd__removedata();
+
+    memcpy(filename, &cmdbuf[1], filenamelen);
+    filename[filenamelen] = '\0';
+
+    return fasttap__prepare(filename);
+}
+
 static int spectcmd__setvideomode(const uint8_t *cmdbuf, unsigned len)
 {
     NEED(1);
@@ -320,6 +341,27 @@ static int spectcmd__detect(const uint8_t *cmdbuf, unsigned len)
     return 0;
 }
 
+static int spectcmd__fast_load(const uint8_t *cmdbuf, unsigned len)
+{
+    spectcmd__removedata();
+
+    // Activate ROMCS
+    fpga__set_trigger(FPGA_FLAG_TRIG_FORCEROMCS_ON);
+
+    return 0;
+}
+
+static int spectcmd__fast_load_data(const uint8_t *cmdbuf, unsigned len)
+{
+    NEED(3);
+    spectcmd__removedata();
+    unsigned blocklen = cmdbuf[1];
+    blocklen +=( (unsigned)cmdbuf[2])<<8;
+    ESP_LOGI(TAG, "TAP: requested fast load %02x size %d", cmdbuf[0], blocklen);
+    fasttap__next();
+    return 0;
+}
+
 static const spectcmd_handler_t spectcmd_handlers[] = {
     &spectcmd__load_resource, // 00 SPECTCMD_CMD_GETRESOURCE
     &spectcmd__setwifi,       // 01 SPECTCMD_CMD_SETWIFI
@@ -339,6 +381,9 @@ static const spectcmd_handler_t spectcmd_handlers[] = {
     &spectcmd__nmiready,      // 0F SPECTCMD_CMD_NMIREADY
     &spectcmd__leavenmi,      // 10 SPECTCMD_CMD_LEAVENMI
     &spectcmd__detect,        // 11 SPECTCMD_CMD_SPECTRUM_DETECT
+    &spectcmd__fast_load,     // 12 SPECTCMD_CMD_FASTLOAD
+    &spectcmd__fast_load_data,// 13 SPECTCMD_CMD_FASTLOAD_DATA
+    &spectcmd__playtape_fast, // 14 SPECTCMD_CMD_PLAYTAPE_FAST
     // FOPEN
     // FCLOSE
     // FREAD
@@ -353,7 +398,7 @@ static int spectcmd__check()
     uint8_t error_resp = 0xff;
     uint8_t index = command_buffer[0];
 
-    ESP_LOGI(TAG,"Command in: %02x ptr %d", index, __cmdptr);
+    //ESP_LOGI(TAG,"Command in: %02x ptr %d", index, __cmdptr);
 
     spectcmd_handler_t handler = NULL;
 
@@ -362,7 +407,7 @@ static int spectcmd__check()
     }
 
     if (handler) {
-        ESP_LOGI(TAG, "Dispatching command");
+        //ESP_LOGI(TAG, "Dispatching command");
         ret = handler(&command_buffer[1], __cmdptr-1);
     } else {
         ESP_LOGI(TAG, "Invalid command 0x%02x", index);
