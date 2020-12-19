@@ -372,12 +372,12 @@ BEGIN
       end if;
     end loop;
 
-    if r.int_holdoff=0 then
+    --if r.int_holdoff=0 then
       int_s <= (or_reduce(interrupt_v) or r.intpendr.connectdetect or r.intpendr.overcurrent) and r.intconfr.ginten;
-    else
-      int_s <= '0';
-      w.int_holdoff := r.int_holdoff - 1;
-    end if;
+    --else
+    --  int_s <= '0';
+    --  w.int_holdoff := r.int_holdoff - 1;
+    --end if;
 
     -- Process writes coming from SPI
     if wr_s='1' then

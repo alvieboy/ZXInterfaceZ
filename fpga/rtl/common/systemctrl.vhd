@@ -66,7 +66,19 @@ entity systemctrl is
     cmdfifo_read_i        : in std_logic_vector(7 downto 0);
     cmdfifo_empty_i       : in std_logic;
     cmdfifo_used_i        : in std_logic_vector(2 downto 0);
-    cmdfifo_intack_o      : out std_logic; -- Interrupt acknowledge
+
+    -- Interrupt acknowledges
+    intack_o              : out std_logic;
+    cmdfifo_intack_o      : out std_logic;
+    usb_intack_o          : out std_logic;
+    spect_intack_o        : out std_logic;
+
+    -- Interrupt in
+    cmdfifo_int_i         : in std_logic;
+    usb_int_i             : in std_logic;
+    spect_int_i           : in std_logic;
+
+    --cmdfifo_intack_o      : out std_logic; -- Interrupt acknowledge
 
     -- Capture access
     capture_rd_o          : out std_logic;
@@ -96,7 +108,8 @@ entity systemctrl is
     -- ROM hookds
     hook_base_o           : out rom_hook_base_t;
     hook_len_o            : out rom_hook_len_t;
-    hook_valid_o          : out std_logic_vector(ROM_MAX_HOOKS-1 downto 0)
+    hook_valid_o          : out std_logic_vector(ROM_MAX_HOOKS-1 downto 0);
+    hook_rom_o            : out std_logic_vector(ROM_MAX_HOOKS-1 downto 0)
   );
 end systemctrl;
 
@@ -135,6 +148,7 @@ architecture beh of systemctrl is
   signal hook_base_r    : rom_hook_base_t;
   signal hook_len_r     : rom_hook_len_t;
   signal hook_valid_r   : std_logic_vector(ROM_MAX_HOOKS-1 downto 0);
+  signal hook_rom_r     : std_logic_vector(ROM_MAX_HOOKS-1 downto 0);
 
 begin
 
@@ -196,7 +210,12 @@ begin
             dat_out_s <= C_FPGAID1;
           when "0000010" =>
             dat_out_s <= C_FPGAID2;
-          when "0000011" => null;
+          when "0000011" =>
+            -- Interrupt
+            dat_out_s(0) <= cmdfifo_int_i;
+            dat_out_s(1) <= usb_int_i;
+            dat_out_s(2) <= spect_int_i;
+
           when "0000100" =>
             dat_out_s <= bit_to_cpu_i.bit_request & cmdfifo_used_i & resfifo_full_i;
           when "0000101" => null; -- Write-only
@@ -268,13 +287,18 @@ begin
       forceromcs_trig_off_o <= '0';
       forcenmi_trig_on_o    <= '0';
       forcenmi_trig_off_o   <= '0';
-      cmdfifo_intack_o      <= '0';
       cmdfifo_reset_o       <= '0';
+
+      intack_o              <= '0';
+      cmdfifo_intack_o      <= '0';
+      usb_intack_o          <= '0';
+      spect_intack_o        <= '0';
 
       memsel_we_r           <= '0';
       romsel_we_r           <= '0';
       memromsel_r           <= (others => 'X');
       hook_valid_r          <= (others => '0');
+      hook_rom_r            <= (others => '0');
       hook_base_r           <= (others=>(others => 'X'));
       hook_len_r            <= (others=>(others => 'X'));
       --bit_from_cpu_o.tx_data_valid <= '0';
@@ -288,7 +312,10 @@ begin
       forceromcs_trig_off_o <= '0';
       forcenmi_trig_on_o    <= '0';
       forcenmi_trig_off_o   <= '0';
+      intack_o              <= '0';
       cmdfifo_intack_o      <= '0';
+      usb_intack_o          <= '0';
+      spect_intack_o        <= '0';
       cmdfifo_reset_o       <= '0';
       memsel_we_r           <= '0';
       romsel_we_r           <= '0';
@@ -305,7 +332,13 @@ begin
           when "0000000" => null;
           when "0000001" => null;
           when "0000010" => null;
-          when "0000011" => null;
+          when "0000011" =>   --- interrupt control
+            -- Command FIFO interrupt acknowledge
+            intack_o              <= '1';
+            cmdfifo_intack_o      <= dat_in_s(0);
+            usb_intack_o          <= dat_in_s(1);
+            spect_intack_o        <= dat_in_s(2);
+
           when "0000100" => null;
           when "0000101" =>
             flags_r(7 downto 0) <= dat_in_s;
@@ -314,8 +347,7 @@ begin
             forceromonretn_trig_o <= dat_in_s(1);
             forceromcs_trig_on_o  <= dat_in_s(2);
             forceromcs_trig_off_o <= dat_in_s(3);
-            -- Command FIFO interrupt acknowledge
-            cmdfifo_intack_o      <= dat_in_s(4);
+
             cmdfifo_reset_o       <= dat_in_s(5);
             forcenmi_trig_on_o    <= dat_in_s(6);
             forcenmi_trig_off_o   <= dat_in_s(7); -- this might not be necessary.
@@ -353,6 +385,7 @@ begin
             hook_base_r(hook_index_v)(7 downto 0) <= unsigned(dat_in_s);
           when "1000001" | "1000101" | "1001001" | "1001101" => -- Hook high
             hook_base_r(hook_index_v)(13 downto 8) <= unsigned(dat_in_s(5 downto 0));
+            hook_rom_r(hook_index_v) <= dat_in_s(6); -- MSBs choose ROM.
           when "1000010" | "1000110" | "1001010" | "1001110" => -- Hook len
             hook_len_r(hook_index_v)(5 downto 0) <= unsigned(dat_in_s(5 downto 0));
           when "1000011" | "1000111" | "1001011" | "1001111" => -- Hook active
@@ -434,7 +467,7 @@ begin
   hook_base_o           <= hook_base_r;
   hook_len_o            <= hook_len_r;
   hook_valid_o          <= hook_valid_r;
-
+  hook_rom_o            <= hook_rom_r;
 
 
 end beh;

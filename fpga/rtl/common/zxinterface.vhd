@@ -75,6 +75,7 @@ entity zxinterface is
     USB_INTN_o    : out std_logic;
 
     spec_int_o    : out std_logic;
+    REQACKN_i     : in std_logic; -- interrupt ack from host
     spec_nreq_o   : out std_logic; -- Spectrum data request
 
     -- RAM interface
@@ -228,8 +229,17 @@ architecture beh of zxinterface is
   signal cmdfifo_read_s         : std_logic_vector(7 downto 0);
   signal cmdfifo_full_s         : std_logic;
   signal cmdfifo_empty_s        : std_logic;
+  signal cmdfifo_notempty_s     : std_logic;
   signal cmdfifo_used_s         : std_logic_vector(2 downto 0);
+
+
+  signal int_s                  : std_logic;
+  signal intack_s               : std_logic;
   signal cmdfifo_intack_s       : std_logic;
+  signal usb_intack_s           : std_logic;
+  signal spect_intack_s         : std_logic;
+
+  signal spec_int_r             : std_logic;
 
   signal port_fe_s              : std_logic_vector(5 downto 0);
 
@@ -238,10 +248,10 @@ architecture beh of zxinterface is
 
   signal start_delay_s          : std_logic_vector(7 downto 0);
 
-  signal spec_nreq_r            : std_logic;
-  constant SPEC_NREC_DELAY_MAX  : natural := 127;
+  signal spec_nreq_s            : std_logic;
+  --constant SPEC_NREC_DELAY_MAX  : natural := 127;
 
-  signal spec_nreq_delay_r      : natural range 0 to SPEC_NREC_DELAY_MAX := SPEC_NREC_DELAY_MAX;
+  --signal spec_nreq_delay_r      : natural range 0 to SPEC_NREC_DELAY_MAX := SPEC_NREC_DELAY_MAX;
 
   signal pixclk_s               : std_logic;
   signal vidmode_s              : std_logic_vector(1 downto 0);
@@ -320,6 +330,8 @@ architecture beh of zxinterface is
   signal current_rom_s          : std_logic_vector(1 downto 0);
   signal memsel_s               : std_logic_vector(2 downto 0);
 
+--  signal romsel128_s            : std_logic;
+
   signal spect_clk_rise_s       : std_logic;
   signal spect_clk_fall_s       : std_logic;
   signal spect_m1_fall_s       : std_logic;
@@ -372,9 +384,11 @@ architecture beh of zxinterface is
   signal hook_base_s            : rom_hook_base_t;
   signal hook_len_s             : rom_hook_len_t;
   signal hook_valid_s           : std_logic_vector(ROM_MAX_HOOKS-1 downto 0);
+  signal hook_rom_s             : std_logic_vector(ROM_MAX_HOOKS-1 downto 0);
   signal hook_romcs_s           : std_logic;
 
   signal trig_force_clearromcsonret_s: std_logic;
+  signal reqackn_sync_s         : std_logic;
 
 begin
 
@@ -725,8 +739,19 @@ begin
     cmdfifo_rd_o          => cmdfifo_rd_s,
     cmdfifo_read_i        => cmdfifo_read_s,
     cmdfifo_empty_i       => cmdfifo_empty_s,
-    cmdfifo_intack_o      => cmdfifo_intack_s,
     cmdfifo_used_i        => cmdfifo_used_s,
+
+    -- Interrupt ack
+    cmdfifo_intack_o      => cmdfifo_intack_s,
+    intack_o              => intack_s,
+    usb_intack_o          => usb_intack_s,
+    spect_intack_o        => spect_intack_s,
+
+    -- Interrupt in (for reporting)
+
+    cmdfifo_int_i         => cmdfifo_notempty_s,
+    usb_int_i             => usb_int_s,
+    spect_int_i           => spec_int_r,
 
     forceromonretn_trig_o => forceromonretn_trig_s,
     forceromcs_trig_on_o  => forceromcs_on_s,
@@ -755,7 +780,8 @@ begin
     romsel_we_o           => romsel_we_s,
     hook_base_o           => hook_base_s,
     hook_len_o            => hook_len_s,
-    hook_valid_o          => hook_valid_s
+    hook_valid_o          => hook_valid_s,
+    hook_rom_o            => hook_rom_s
   );
 
   -- Main AHB intercon.
@@ -801,33 +827,22 @@ begin
     );
 
 
+  cmdfifo_notempty_s <= not cmdfifo_empty_s;
 
+  int_s <= usb_int_s or cmdfifo_notempty_s or spec_int_r;
 
+  interruptctrl_inst: entity work.interruptctrl
+  port map (
+    clk_i     => clk_i,
+    arst_i    => arst_i,
 
+    int_i     => int_s,
+    inten_i   => intack_s,   -- Interrupt enable, after processing the interrupt on host side
 
-
-
-
-  -- Interrupt generation for command FIFO
-  process(clk_i, arst_i)
-  begin
-    if arst_i='1' then
-      spec_nreq_r   <= '1';
-      spec_nreq_delay_r <= SPEC_NREC_DELAY_MAX;
-
-    elsif rising_edge(clk_i) then
-      if (spec_nreq_delay_r/=0) then
-        spec_nreq_delay_r <= spec_nreq_delay_r - 1;
-      end if;
-
-      if cmdfifo_empty_s='0' and spec_nreq_delay_r=0 then
-        spec_nreq_r <= '0';
-      elsif cmdfifo_intack_s='1' then
-        spec_nreq_r <= '1';
-        spec_nreq_delay_r <= SPEC_NREC_DELAY_MAX;
-      end if;
-    end if;
-  end process;
+    intackn_i => REQACKN_i,
+    intackn_sync_o => reqackn_sync_s,
+    intn_o    => spec_nreq_s
+  );
 
   -- Audio
   zxaudio_inst: entity work.zxaudio
@@ -1021,6 +1036,8 @@ begin
       hook_base_i   => hook_base_s,
       hook_len_i    => hook_len_s,
       hook_valid_i  => hook_valid_s,
+      hook_rom_i    => hook_rom_s,
+      romsel_i      => page128_pmc_s(4),
       force_romcs_o => hook_romcs_s
     );
 
@@ -1159,7 +1176,7 @@ begin
   capinst: if C_CAPTURE_ENABLED generate
     capb: block
       signal trig_s: std_logic_vector(31 downto 0);
-      signal nontrig_s: std_logic_vector(9 downto 0);
+      signal nontrig_s: std_logic_vector(13 downto 0);
     begin
 
       trig_s(15 downto 0) <= a_s;
@@ -1176,17 +1193,24 @@ begin
       trig_s(26) <= not spect_reset_s;
       trig_s(27) <= spect_forceromcs_bussync_s or hook_romcs_s;
       trig_s(28) <= force_iorqula_s;
-      trig_s(29) <= usb_int_async_s;
-      trig_s(30) <= spec_nreq_r;
-      trig_s(31) <= D_BUS_DIR_s;
+      trig_s(29) <= usb_int_s;
+      trig_s(30) <= spec_nreq_s;   -- main interrupt
+      trig_s(31) <= spec_int_r;
 
       nontrig_s(7 downto 0) <= d_unlatched_s;
       nontrig_s(8) <= force_romcs_s;
       nontrig_s(9) <= force_2aromcs_s;
+      nontrig_s(10) <= reqackn_sync_s;
+      nontrig_s(11) <= cmdfifo_notempty_s;
+      nontrig_s(12) <= D_BUS_DIR_s;
+      nontrig_s(13) <= page128_pmc_s(4);
+
+    --  int_s <= usb_int_s or cmdfifo_notempty_s or spec_int_r;
+
 
       scope_inst: entity work.scope
         generic map (
-          NONTRIGGERABLE_WIDTH  => 10,
+          NONTRIGGERABLE_WIDTH  => 14,
           TRIGGERABLE_WIDTH     => 32,
           WIDTH_BITS            => 10
         )
@@ -1277,11 +1301,28 @@ begin
 
   TP5 <= tap_audio_s;
 
-  spec_int_o <= '1' when spect_inten_s='0' else XINT_i;--sync_s; TBD
-  spec_nreq_o <= spec_nreq_r;
+  process(clk_i, arst_i)
+  begin
+    if arst_i='1' then
+      spec_int_r <= '0';
+    elsif rising_edge(clk_i) then
+      if spect_inten_s='0' or spect_intack_s='1' then
+        spec_int_r <= '0';
+      else
+        if XINT_sync_s='0' then
+          spec_int_r <= '1';
+        end if;
+      end if;
+    end if;
+  end process;
+
+  --spec_int_o <= '1' when spect_inten_s='0' else XINT_i;
+  spec_int_o<='1';
+
+  spec_nreq_o <= spec_nreq_s;
 
   ahb_null_m2s <= C_AHB_NULL_M2S;
-  USB_INTN_o <= not usb_int_async_s;
+  USB_INTN_o <= '1';--not usb_int_async_s;
 
   audio_l_o <= audio_left_s;
   audio_r_o <= audio_right_s;

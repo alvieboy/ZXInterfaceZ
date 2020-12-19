@@ -199,6 +199,14 @@ begin
           when x"DF" => -- Read video memory
             ahb_address_r   <= to_01("00XXXXXXXXX0XXXXXXXXXXXXX"); ahb_write_r <= '0'; ahb_inc_r <= '1';
             state_r         <= INDEXED_13;
+
+          when x"A0" => -- Interrupt ack
+            ahb_address_r   <= to_01("00XXXXXXXXX10XXXXXX000011"); ahb_write_r <= '1'; ahb_inc_r <= '0';
+            state_r         <= WRINC;
+          when x"A1" => -- Interrupt read
+            ahb_address_r   <= to_01("00XXXXXXXXX10XXXXXX000011"); ahb_write_r <= '0'; ahb_inc_r <= '0';
+            state_r         <= RDWR;
+
           when x"50" => -- Read external RAM
             ahb_address_r   <= to_01("1XXXXXXXXXXXXXXXXXXXXXXXX"); ahb_write_r <= '0'; ahb_inc_r <= '1';
             state_r         <= INDEXED_24;
