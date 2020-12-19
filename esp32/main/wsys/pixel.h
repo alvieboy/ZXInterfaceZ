@@ -25,7 +25,7 @@ static inline void pixel__draw8xor(screenptr_t screenptr, unsigned bit_offset, u
     } else {
         uint16_t dpix = ((uint16_t)screenptr[0])<<8;
         dpix += (uint16_t)screenptr[1];
-        uint16_t mask = ((1U<<width)-1) <<(8- bit_offset);
+        //uint16_t mask = ((1U<<width)-1) <<(8- bit_offset);
         //dpix &= ~mask;
         dpix ^= ((uint16_t)val)<<(8-bit_offset);
         screenptr[0] = dpix>>8;
