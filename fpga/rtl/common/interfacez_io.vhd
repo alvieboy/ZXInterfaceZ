@@ -199,7 +199,8 @@ begin
       romsel_r      <= "00";
       memsel_r      <= "000";
       trig_force_clearromcsonret_r<='0';
-
+      page128_pmc_r <= (others => '0');
+      page128_smc_r <= (others => '0');
     elsif rising_edge(clk_i) then
 
       resfifo_rd_o <= '0';
