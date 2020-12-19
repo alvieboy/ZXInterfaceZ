@@ -42,6 +42,10 @@ typedef uint8_t fpga_status_t;
 #define FPGA_SPI_CMD_WRITE_BIT (0xD6)
 #define FPGA_SPI_CMD_READ_CAP (0x62)
 #define FPGA_SPI_CMD_WRITE_CAP (0x63)
+#define FPGA_SPI_CMD_READ_CTRL (0x64)
+#define FPGA_SPI_CMD_WRITE_CTRL (0x65)
+#define FPGA_SPI_CMD_READ_INTERRUPT_ACK (0xA0)
+#define FPGA_SPI_CMD_READ_INTERRUPT_STATUS (0xA1)
 
 /* Status bits */
 #define FPGA_STATUS_RESFIFO_FULL   (1<<0)
@@ -68,6 +72,7 @@ typedef uint8_t fpga_status_t;
 #define FPGA_FLAG_VIDMODE1 (1<<12)
 #define FPGA_FLAG_MODE2A (1<<13)
 #define FPGA_FLAG_BITMODE (1<<14)
+#define FPGA_FLAG_ENABLE_AUDIO (1<<15)
 
 
 
@@ -101,6 +106,11 @@ typedef uint8_t fpga_status_t;
 
 #define FPGA_RESOURCE_FIFO_SIZE 1024 /* Should be 1024 */
 #define FPGA_TAP_FIFO_SIZE 1023 /* Should be 1024 */
+
+/* Interrupts */
+#define FPGA_INTERRUPT_CMD (1<<0)
+#define FPGA_INTERRUPT_USB (1<<1)
+#define FPGA_INTERRUPT_SPECT (1<<2)
 
 #define ROM_0 0
 #define ROM_1 1
@@ -185,6 +195,16 @@ int fpga__read_bit_data(uint8_t *data, unsigned len);
 
 int fpga__read_capture_block(uint16_t address, uint8_t *dest, int size);
 int fpga__write_capture_block(uint16_t address, const uint8_t *buffer, int size);
+
+int fpga__disable_hooks(void);
+
+#define HOOK_ROM1(address) ((address)|(1<<(6+8)))
+#define HOOK_ROM0(address) ((address))
+
+int fpga__enable_hook(uint8_t index, uint16_t start, uint8_t len);
+
+int fpga__readinterrupt(void);
+int fpga__ackinterrupt(uint8_t mask);
 
 #ifdef __cplusplus
 }

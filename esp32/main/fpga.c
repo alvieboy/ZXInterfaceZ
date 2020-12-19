@@ -760,3 +760,48 @@ int fpga__write_capture_block(uint16_t address, const uint8_t *buffer, int size)
                                    buffer,
                                    size);
 }
+
+int fpga__disable_hooks(void)
+{
+    uint8_t buf[1];
+    buf[0] = 0;
+    unsigned i;
+    unsigned address = 0x43;
+    for (i=0;i<4;i++) {
+        fpga__issue_write_addr16(FPGA_SPI_CMD_WRITE_CTRL,
+                                 address,
+                                 &buf[0],
+                                 1);
+        address+=0x04;
+    }
+    return 0;
+}
+
+int fpga__enable_hook(uint8_t index, uint16_t start, uint8_t len)
+{
+    uint8_t buf[4];
+    buf[0] = start & 0xff;
+    buf[1] = start >> 8;
+    buf[2] = len-1;
+    buf[3] = 1;
+
+    return fpga__issue_write_addr16(FPGA_SPI_CMD_WRITE_CTRL,
+                                    0x40 + (index*0x04),
+                                    &buf[0],
+                                    4);
+}
+
+int fpga__readinterrupt(void)
+{
+    uint8_t intstat;
+
+    int r = fpga__issue_read(FPGA_SPI_CMD_READ_INTERRUPT_STATUS, &intstat, 1);
+    if (r<0)
+        return -1;
+    return intstat;
+
+}
+int fpga__ackinterrupt(uint8_t mask)
+{
+    return fpga__issue_write(FPGA_SPI_CMD_READ_INTERRUPT_ACK, &mask, 1);
+}
