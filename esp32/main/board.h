@@ -19,6 +19,8 @@ static inline bool board__isplus2plus3supply(void)
     return board__is5Vsupply() || board__is12Vsupply();
 }
 
+bool board__hasVoltageSensor(void);
+
 #ifdef __cplusplus
 }
 #endif

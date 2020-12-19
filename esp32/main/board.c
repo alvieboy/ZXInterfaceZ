@@ -3,6 +3,7 @@
 #include "adc.h"
 #include "esp_log.h"
 #include "defs.h"
+#include "fpga.h"
 
 /*
  * Boards in production
@@ -55,9 +56,9 @@ bool board__is9Vsupply(void)
     return board__inrail(9000);
 }
 
-static bool board__hasVoltageSensor()
+bool board__hasVoltageSensor(void)
 {
-    return board__is5Vsupply() || board__is9Vsupply();
+    return supply_rail_voltage > 3000;
 }
 
 bool board__isCompatible(uint8_t major, uint8_t minor)
@@ -77,3 +78,4 @@ bool board__isCompatible(uint8_t major, uint8_t minor)
         return false;
     }
 }
+
