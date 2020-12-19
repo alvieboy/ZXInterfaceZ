@@ -11,11 +11,13 @@ entity rom_hook is
     arst_i        : in std_logic;
 
     a_i           : in std_logic_vector(15 downto 0);
+    romsel_i      : in std_logic;
     rdn_i         : in std_logic;
     mreqn_i       : in std_logic;
     hook_base_i   : in rom_hook_base_t;
     hook_len_i    : in rom_hook_len_t;
     hook_valid_i  : in std_logic_vector(ROM_MAX_HOOKS-1 downto 0);
+    hook_rom_i    : in std_logic_vector(ROM_MAX_HOOKS-1 downto 0);
     force_romcs_o : out std_logic
   );
 end entity rom_hook;
@@ -38,7 +40,7 @@ begin
         a_u_v := unsigned(a_i(13 downto 0));
 
         hookcheck: for i in 0 to ROM_MAX_HOOKS-1 loop
-          if hook_valid_i(i)='1' and a_u_v>=hook_base_i(i) and a_u_v <= hook_len_i(i)+hook_base_i(i) then
+          if hook_valid_i(i)='1' and hook_rom_i(i)=romsel_i and a_u_v>=hook_base_i(i) and a_u_v <= hook_len_i(i)+hook_base_i(i) then
             hook_match_r(i) <= '1';
           else
             hook_match_r(i) <= '0';
