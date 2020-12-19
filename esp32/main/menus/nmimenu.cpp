@@ -10,15 +10,17 @@
 #include "wsys/messagebox.h"
 #include "tapeplayer.h"
 #include "about.h"
+#include "fasttap.h"
 
 static MenuWindow *nmimenu;
 
 static const MenuEntryList nmimenu_entries = {
-    .sz = 8,
+    .sz = 9,
     .entries = {
         { .flags = 0, .string = "Load snapshot..." },
         { .flags = 1, .string = "Save snapshot..." },
-        { .flags = 0, .string = "Play tape..." },
+        { .flags = 1, .string = "Play tape..." },
+        { .flags = 0, .string = "Play tape (fast)..." },
         { .flags = 1, .string = "Poke..." },
         { .flags = 0, .string = "Settings..." },
         { .flags = 0, .string = "Reset" },
@@ -31,6 +33,7 @@ static const char *nmimenu_help[] = {
     "Loads a ZX snapshot from file on the SD card",
     "Saves current status as snapshot to SD card",
     "Play a TAP or TZX file. Ensure you load \"\" before",
+    "Play a TAP or TZX file (fast load)",
     "Pokes stuff around",
     "Change wireless, bluetooth, usb settings",
     "Reset the ZX spectrum",
@@ -40,6 +43,7 @@ static const char *nmimenu_help[] = {
 
 static void cb_load_snapshot();
 static void cb_load_tape();
+static void cb_load_tape_fast();
 static void cb_exit_nmi();
 static void cb_about();
 static void cb_reset();
@@ -50,6 +54,7 @@ static const CallbackMenu::Function nmimenu_functions[] =
     &cb_load_snapshot,
     NULL,
     &cb_load_tape,
+    &cb_load_tape_fast,
     NULL,
     &cb_settings,
     &cb_reset,
@@ -67,7 +72,7 @@ static void about__show()
 
 void nmimenu__show()
 {
-    nmimenu = WSYSObject::create<MenuWindow>("ZX Interface Z", 24, 14);
+    nmimenu = WSYSObject::create<MenuWindow>("ZX Interface Z", 24, 15);
 
     nmimenu->setEntries( &nmimenu_entries );
     nmimenu->setCallbackTable( nmimenu_functions );
@@ -122,6 +127,19 @@ static void do_load_tape(FileChooserDialog *d, int status)
     }
 }
 
+static void do_load_tape_fast(FileChooserDialog *d, int status)
+{
+    char fp[128];
+    if (status==0) {
+        WSYS_LOGI("Tape is: %s", d->getSelection());
+
+        fullpath(d->getSelection(), fp, 127);
+        fasttap__prepare(fp);
+        screen__destroyAll();
+        wsys__send_command(0xFF);
+    }
+}
+
 
 
 static void cb_load_tape()
@@ -131,6 +149,17 @@ static void cb_load_tape()
     dialog->setFilter(FILE_FILTER_TAPES);
     if (dialog->exec()>=0) {
         do_load_tape(dialog, dialog->result());
+    }
+    dialog->destroy();
+}
+
+static void cb_load_tape_fast()
+{
+    FileChooserDialog *dialog = WSYSObject::create<FileChooserDialog>("Load tape (fast)", 24, 18);
+    dialog->setWindowHelpText("Use Q/A to move, ENTER selects");
+    dialog->setFilter(FILE_FILTER_TAPES);
+    if (dialog->exec()>=0) {
+        do_load_tape_fast(dialog, dialog->result());
     }
     dialog->destroy();
 }
