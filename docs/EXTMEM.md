@@ -21,6 +21,7 @@ Paging control on Spectrum side is controlled by RS (ROMSEL) and MS (MEMSEL)
 | 0x01A000 | 0x01BFFF |  8kB | RAM bank 5                |0,1| 5 | |   0x2000 |   0x3FFF |
 | 0x01C000 | 0x01DFFF |  8kB | RAM bank 6                |0,1| 6 | |   0x2000 |   0x3FFF |
 | 0x01E000 | 0x01FFFF |  8kB | RAM bank 7                |0,1| 7 | |   0x2000 |   0x3FFF |
-| 0x020000 | 0x7FFFFF |      | Unused                    | - | - | |   -      |   -      |
+| 0x020000 | 0x027FFF |      | Unused                    | - | - | |   -      |   -      |
+| 0x028000 | 0x7FFFFF |      | TAP fastload buffer       | - | - | |   -      |   -      |
 +----------+----------+------+---------------------------+---+---+-+----------+----------+
 ```
