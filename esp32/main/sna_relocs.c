@@ -22,8 +22,8 @@ struct relocentry
 };
 
 const struct relocentry relocmap[] = {
-    { "P7FFD", 0x0004, RELOC_8 }, // Port 0x7FFD settings
-    { "P1FFD", 0x000A, RELOC_8 }, // Port 0x1FFD settings
+    { "P1FFD", 0x0004, RELOC_8 }, // Port 0x7FFD settings
+    { "P7FFD", 0x000A, RELOC_8 }, // Port 0x1FFD settings
     { "AF'", (0x0005)+0x000D, RELOC_16 }, //
     { "BC'", (0x000F)+0x000D, RELOC_16 },
     { "DE'", 0x0012+0x000D, RELOC_16 },
