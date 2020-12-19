@@ -131,6 +131,8 @@ webserver_req.c       \
 wifi.c                \
 tzx.c                 \
 tap.c                 \
+fasttap.c             \
+model.c               \
 json.c                \
 audio.c               \
 console.c             \

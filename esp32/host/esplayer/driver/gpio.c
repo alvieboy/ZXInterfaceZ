@@ -42,7 +42,7 @@ esp_err_t gpio_install_isr_service(int intr_alloc_flags)
 
 esp_err_t gpio_set_level(gpio_num_t gpio_num, uint32_t level)
 {
-    return ESP_OK;
+    return gpio_ll_set_level(0, gpio_num, level);
 }
 
 int gpio_get_level(gpio_num_t gpio_num)
