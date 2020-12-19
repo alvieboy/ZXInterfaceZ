@@ -3,6 +3,91 @@
 #include "fpga.h"
 #include "byteops.h"
 
+static const char *scope_names_nontrig[] = {
+    "D0",
+    "D1",
+    "D2",
+    "D3",
+    "D4",
+    "D5",
+    "D6",
+    "D7",
+    "FORCEROMCS0",
+    "FORCEROMCS2A",
+    "/REQACK",
+    "/CMDFIFOEMPTY",
+    "DBUSDIR",
+    "ROMPAGESEL0"
+};
+
+static const char *scope_names_trig[] = {
+    "A0",
+    "A1",
+    "A2",
+    "A3",
+    "A4",
+    "A5",
+    "A6",
+    "A7",
+    "A8",
+    "A9",
+    "A10",
+    "A11",
+    "A12",
+    "A13",
+    "A14",
+    "A15",
+    "/CK",
+    "/INT",
+    "/MREQ",
+    "/IORQ",
+    "/RD",
+    "/WR",
+    "/M1",
+    "/RFSH",
+    "/WAIT",
+    "/NMI",
+    "/RESET",
+    "FORCEROMCS",
+    "FORCEIORQULA",
+    "USB_INT",
+    "/INT",
+    "SPECT_INT"
+};
+
+int scope__get_group_size(scope_group_t group)
+{
+    int r = -1;
+    switch (group) {
+    case SCOPE_GROUP_NONTRIG:
+        r = sizeof(scope_names_nontrig)/sizeof(scope_names_nontrig[0]);
+        break;
+    case SCOPE_GROUP_TRIG:
+        r = sizeof(scope_names_trig)/sizeof(scope_names_trig[0]);
+        break;
+    default:
+        break;
+    }
+    return r;
+}
+
+const char *scope__get_signal_name(scope_group_t group, int index)
+{
+    const char *name = NULL;
+    switch (group) {
+    case SCOPE_GROUP_NONTRIG:
+        name = scope_names_nontrig[index];
+        break;
+    case SCOPE_GROUP_TRIG:
+        name = scope_names_trig[index];
+        break;
+    default:
+        break;
+    }
+    return name;
+}
+
+
 void scope__start(uint8_t clockdiv)
 {
     uint8_t buf[4];

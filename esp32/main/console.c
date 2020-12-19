@@ -36,6 +36,24 @@ void console__init(void)
     hdlc_encoder__init(&enc, &console__hdlc_write, NULL, NULL);
 }
 
+static void console__send_scope_group(hdlc_encoder_t *enc, scope_group_t group)
+{
+    uint8_t len = scope__get_group_size(group);
+    int i;
+
+    hdlc_encoder__write(enc, &len, 1);
+
+    for (i=0; i<(int)len;i++) {
+        const char *name = scope__get_signal_name(group, i);
+        if (name) {
+            hdlc_encoder__write(enc, name, strlen(name)+1);  // Include NULL
+        } else {
+            // Should not happen!
+            ESP_LOGE(TAG, "Invalid signal name!!!");
+        }
+    }
+}
+
 void console__hdlc_data(const uint8_t *d, unsigned len)
 {
     uint8_t reply;
@@ -45,10 +63,12 @@ void console__hdlc_data(const uint8_t *d, unsigned len)
 
     if (d[0]==0x01) {
         reply = 0x81;
-        // Version
+        // Version and info
         hdlc_encoder__begin(&enc);
         hdlc_encoder__write(&enc, &reply,1);
-        hdlc_encoder__write(&enc, version, strlen(version));
+        hdlc_encoder__write(&enc, version, strlen(version)+1);  // Include NULL at end
+        console__send_scope_group(&enc, SCOPE_GROUP_NONTRIG);
+        console__send_scope_group(&enc, SCOPE_GROUP_TRIG);
         hdlc_encoder__end(&enc);
     }
     if (d[0]==0x02 && len==13) {
