@@ -14,6 +14,27 @@ begin
     variable depth: natural := 0;
     variable used_size_v:  std_logic_vector(2 downto 0);
     variable expected_fifodata  : unsigned(7 downto 0);
+
+    procedure ackFifoInterrupt is
+    begin
+      -- Clear interrupt
+      spiPayload_in_s(0) <= x"A0";
+      spiPayload_in_s(1) <= x"01";
+      Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 2, spiPayload_in_s, spiPayload_out_s);
+    end procedure;
+
+    procedure checkInterrupt(line: in natural) is
+    begin
+      Check( "CtrlPins27 is 0", CtrlPins_Data.IO27 , '0');
+      -- Get interrupt
+      spiPayload_in_s(0) <= x"A1";
+      spiPayload_in_s(1) <= x"00";
+      spiPayload_in_s(2) <= x"00";
+      Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 3, spiPayload_in_s, spiPayload_out_s);
+
+      Check( "Interrupt line " &str(line)&" active", spiPayload_out_s(2)(line),'1');
+    end procedure;
+
   begin
     logger_start("T002","Check depth of command FIFO");
 
@@ -57,7 +78,11 @@ begin
 
       wait for 32 * 10.41 ns;
 
-      Check( "2: CtrlPins27 is 1", CtrlPins_Data.IO27 , '0');
+      checkInterrupt(0);
+      -- Ack interrupt
+      ackInterrupt(CtrlPins_Cmd);
+      ackFifoInterrupt;
+
 
       --Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 5, spiPayload_in_s, spiPayload_out_s);
 
@@ -95,7 +120,7 @@ begin
       expected_fifodata := expected_fifodata + 1;
 
       -- Check that interrupt is still asserted
-      Check( "3: CtrlPins27 is 1", CtrlPins_Data.IO27 , '0');
+      checkInterrupt(0);
 
 
       -- Inject more data.
@@ -135,7 +160,7 @@ begin
     Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 4, spiPayload_in_s, spiPayload_out_s);
 
     -- Interrupt must *still* be asserted
-    Check( "4: CtrlPins27 is 1", CtrlPins_Data.IO27 , '0');
+    checkInterrupt(0);
 
     -- Do a full burst read (4).
 
@@ -157,7 +182,7 @@ begin
         expected_fifodata := expected_fifodata + 1;
       end loop;
 
-      Check( "5: CtrlPins27 is 1", CtrlPins_Data.IO27 , '0');
+      --checkInterrupt(0);
 
     --end loop;
 
@@ -174,18 +199,21 @@ begin
 
     Check( "FIFO report empty", used_size_v, "000");
 
-    Check( "6: CtrlPins27 is 1", CtrlPins_Data.IO27 , '0');
+    --checkInterrupt(0);
 
     -- Clear interrupt
-    spiPayload_in_s(0) <= x"EC";
-    spiPayload_in_s(1) <= x"00";
-    spiPayload_in_s(2) <= x"10";
-    spiPayload_in_s(3) <= x"00";
-    Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 4, spiPayload_in_s, spiPayload_out_s);
-
+    ackInterrupt(CtrlPins_Cmd);
 
     wait for 32 * 10.41 ns;
     Check( "7: CtrlPins27 is 1", CtrlPins_Data.IO27 , '1');
+
+    -- Ensure it does not trigger again.
+
+    ackFifoInterrupt;
+
+    wait for 32 * 10.41 ns;
+    Check( "7.1: CtrlPins27 is 1", CtrlPins_Data.IO27 , '1');
+
 
     -- Test FIFO reset
 
@@ -196,7 +224,8 @@ begin
     Spectrum_Cmd.Cmd      <= NONE;
 
     wait for 32 * 10.41 ns;
-    Check( "8: CtrlPins27 is 0", CtrlPins_Data.IO27 , '0');
+
+    checkInterrupt(0);
 
     spiPayload_in_s(0) <= x"EC";
     spiPayload_in_s(1) <= x"00";
@@ -204,13 +233,8 @@ begin
     spiPayload_in_s(3) <= x"00";
     Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 4, spiPayload_in_s, spiPayload_out_s);
 
-    -- ACk interrupt
-    spiPayload_in_s(0) <= x"EC";
-    spiPayload_in_s(1) <= x"00";
-    spiPayload_in_s(2) <= x"10";
-    spiPayload_in_s(3) <= x"00";
-    Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 4, spiPayload_in_s, spiPayload_out_s);
-
+    ackInterrupt(CtrlPins_Cmd);
+    ackFifoInterrupt;
 
     wait for 32 * 10.41 ns;
     Check( "9: CtrlPins27 is 1", CtrlPins_Data.IO27 , '1');

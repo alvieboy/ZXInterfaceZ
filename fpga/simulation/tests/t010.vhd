@@ -1,4 +1,5 @@
 use work.tbc_device_p.all;
+use work.logger.all;
 
 architecture t010 of tbc_device is
 
@@ -11,10 +12,14 @@ begin
     variable data: std_logic_vector(7 downto 0);
     variable stamp: time;
 
-    
+
+    procedure checkInterrupt(v: in std_logic) is
+    begin
+    --Check("103: USB interrupt", CtrlPins_Data.USB_INTn, '0');
+    end procedure;
 
   begin
-    report "T010: USB";
+    logger_start("T010","USB");
 
     PowerUpAndReset(
       SysRst_Cmd,
@@ -43,9 +48,10 @@ begin
     Usbdevice_Cmd.Cmd <= NONE;
     wait for 0 ns;
 
-    wait on CtrlPins_Data.USB_INTn for 50 us;
+    wait on CtrlPins_Data.IO27 for 50 us;
 
-    Check("103: USB interrupt", CtrlPins_Data.USB_INTn, '0');
+    checkInterrupt('0');
+    --Check("103: USB interrupt", CtrlPins_Data.USB_INTn, '0');
 
     spiPayload_in_s(0) <= x"61"; -- USB write
     spiPayload_in_s(1) <= x"00";
@@ -55,7 +61,8 @@ begin
 
     wait for 1 us;
 
-    Check("104: USB interrupt", CtrlPins_Data.USB_INTn, '1');
+    --Check("104: USB interrupt", CtrlPins_Data.USB_INTn, '1');
+    checkInterrupt('1');
 
     wait on Usbdevice_Data.SOFStamp for 100 us;
 
@@ -95,9 +102,10 @@ begin
 
     Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 14, spiPayload_in_s, spiPayload_out_s);
 
-    wait on CtrlPins_Data.USB_INTn for 400 us;
+    wait on CtrlPins_Data.IO27 for 400 us;
 
-    Check("014: USB interrupt", CtrlPins_Data.USB_INTn, '0');
+    checkInterrupt('0');
+    --Check("014: USB interrupt", CtrlPins_Data.USB_INTn, '0');
 
     report "USB interrupt";
     -- Get interrupts
@@ -115,8 +123,8 @@ begin
 
   process
   begin
-    wait on CtrlPins_Data.USB_INTn;
-    if      CtrlPins_Data.USB_INTn='0' then
+    wait on CtrlPins_Data.IO27;
+    if      CtrlPins_Data.IO27='0' then
       report "****** USB interrupt **********";
     end if;
   end process;

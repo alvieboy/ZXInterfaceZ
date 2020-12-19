@@ -1,4 +1,5 @@
 use work.tbc_device_p.all;
+use work.logger.all;
 
 architecture t009 of tbc_device is
 
@@ -12,9 +13,14 @@ begin
     variable stamp: time;
 
     
+    procedure checkInterrupt(v: in std_logic) is
+    begin
+    --Check("103: USB interrupt", CtrlPins_Data.USB_INTn, '0');
+    end procedure;
 
   begin
-    report "T008: USB";
+
+    logger_start("T009","USB");
 
     PowerUpAndReset(
       SysRst_Cmd,
@@ -56,9 +62,10 @@ begin
 
 --    wait for 5 us; -- Wait for attach detection.
 
-    wait on CtrlPins_Data.USB_INTn for 50 us;
+    wait on CtrlPins_Data.IO27 for 50 us;
 
-    Check("103: USB interrupt", CtrlPins_Data.USB_INTn, '0');
+    checkInterrupt('0');
+    --Check("103: USB interrupt", CtrlPins_Data.USB_INTn, '0');
     spiPayload_in_s(0) <= x"61"; -- USB write
     spiPayload_in_s(1) <= x"00";
     spiPayload_in_s(2) <= x"03"; -- Address
@@ -67,7 +74,8 @@ begin
 
     wait for 1 us;
 
-    Check("104: USB interrupt", CtrlPins_Data.USB_INTn, '1');
+    checkInterrupt('1');
+    --Check("104: USB interrupt", CtrlPins_Data.USB_INTn, '1');
 
     spiPayload_in_s(0) <= x"60"; -- USB read
     spiPayload_in_s(1) <= x"00";
@@ -133,7 +141,8 @@ begin
 
     wait on Usbdevice_Data.SOFStamp for 100 us;
 
-    Check("014: USB not interrupt", CtrlPins_Data.USB_INTn, '1');
+    checkInterrupt('1');
+    --Check("014: USB not interrupt", CtrlPins_Data.USB_INTn, '1');
 
     -- Test setup frame
 
@@ -171,9 +180,10 @@ begin
 
     Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 11, spiPayload_in_s, spiPayload_out_s);
 
-    wait on CtrlPins_Data.USB_INTn for 200 us;
+    wait on CtrlPins_Data.IO27 for 200 us;
 
-    Check("014: USB interrupt", CtrlPins_Data.USB_INTn, '0');
+    checkInterrupt('0');
+    --Check("014: USB interrupt", CtrlPins_Data.USB_INTn, '0');
 
     report "USB interrupt";
     -- Get interrupts
@@ -220,9 +230,10 @@ begin
 
     Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 7, spiPayload_in_s, spiPayload_out_s);
 
-    wait on CtrlPins_Data.USB_INTn for 200 us;
+    wait on CtrlPins_Data.IO27 for 200 us;
 
-    Check("016: USB interrupt", CtrlPins_Data.USB_INTn, '0');
+    checkInterrupt('0');
+    --Check("016: USB interrupt", CtrlPins_Data.USB_INTn, '0');
 
     spiPayload_in_s(0) <= x"60"; -- USB read
     spiPayload_in_s(1) <= x"00";
@@ -254,9 +265,9 @@ begin
 
   process
   begin
-    wait on CtrlPins_Data.USB_INTn;
-    if      CtrlPins_Data.USB_INTn='0' then
-      report "****** USB interrupt **********";
+    wait on CtrlPins_Data.IO27;
+    if      CtrlPins_Data.IO27='0' then
+      report "****** Interrupt **********";
     end if;
   end process;
 
