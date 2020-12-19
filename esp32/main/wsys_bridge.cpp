@@ -11,6 +11,7 @@
 #include "wsys/filechooserdialog.h"
 #include "menus/nmimenu.h"
 #include "systemevent.h"
+#include "memlayout.h"
 
 struct wsys_event {
     uint8_t type;
@@ -34,7 +35,7 @@ void wsys__keyboard_event(uint16_t raw, char ascii)
 
 void wsys__get_screen_from_fpga()
 {
-    fpga__read_extram_block(0x002006, &spectrum_framebuffer.screen[0], sizeof(spectrum_framebuffer));
+    fpga__read_extram_block(MEMLAYOUT_NMI_SCREENAREA, &spectrum_framebuffer.screen[0], sizeof(spectrum_framebuffer));
 }
 
 void wsys__nmiready()
