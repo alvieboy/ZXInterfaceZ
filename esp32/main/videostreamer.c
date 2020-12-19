@@ -32,6 +32,9 @@ static uint8_t fb_prev[SPECTRUM_FRAME_SIZE];
 
 #define MAX_PACKET_SIZE   1080
 
+extern void usb__trigger_interrupt(void);
+
+
 struct frame {
     uint8_t seq:7;
     uint8_t val:1;    /* 1: */
@@ -183,11 +186,13 @@ static void videostreamer__server_task(void *pvParameters)
     ESP_LOGI(TAG, "VideoStreamer task initialised");
     do {
         io_num = spectint__getinterrupt();
-        //ESP_LOGI(TAG, "I %d", io_num);
         if(io_num)
         {
-            if (io_num==PIN_NUM_SPECT_INTERRUPT) {
-                
+            uint8_t intstatus;
+            // Get interrupt status
+            intstatus = fpga__readinterrupt();
+            
+            if (intstatus & FPGA_INTERRUPT_SPECT) {
                 framecounter++;
                 interrupt_count++;
 
@@ -218,10 +223,20 @@ static void videostreamer__server_task(void *pvParameters)
                 } else {
                     framecounter++;
                 }
-            } else if (io_num==PIN_NUM_CMD_INTERRUPT) {
+            }
+            if (intstatus & FPGA_INTERRUPT_CMD) {
                 // Command request
                 spectcmd__request();
-            } 
+            }
+
+            if (intstatus & FPGA_INTERRUPT_USB) {
+                // Command request
+                usb__trigger_interrupt();
+            }
+
+
+            // Re-enable
+            fpga__ackinterrupt(intstatus);
         }
     } while (1);
 }
