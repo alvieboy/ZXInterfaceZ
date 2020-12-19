@@ -43,7 +43,7 @@
 #include "bit.h"
 #include "hdlc_decoder.h"
 #include "scope.h"
-
+#include "model.h"
 static int8_t videomode = 0;
 
 uint32_t loglevel;
@@ -234,9 +234,34 @@ static void detect_spectrum()
 
     fpga__reset_spectrum();
 
-    ESP_LOGI(TAG,"Spectrum model: %s (0x%02x)", spectrum_model_str(spectrum_model), spectrum_model);
 
     ESP_LOGI(TAG," AY-3-8912: %s", spectrum_flags& SPECTRUM_FLAGS_AY ? "PRESENT": "absent");
+
+    switch(spectrum_model) {
+    case 0xfe:
+        break;
+    case 0x00:
+        model__set(MODEL_48K); //"16/48K";
+        break;
+    case 0x01:
+        if (board__hasVoltageSensor()) {
+
+            if (board__is9Vsupply()) {
+                model__set(MODEL_128K); // modelstr = "+2(128K)";
+            } else if (board__isplus2plus3supply()) {
+                model__set(MODEL_2APLUS);//modelstr = "+2A,+3";
+            } else {
+                //modelstr = "+2(128K),+2A,+3";
+            }
+        } else {
+            // Must be 128K
+            model__set(MODEL_128K); // modelstr = "+2(128K)";
+        }
+        break;
+    }
+
+    ESP_LOGI(TAG,"Spectrum model: %s (0x%02x)", spectrum_model_str(spectrum_model), spectrum_model);
+
 
     if (nvs__u8("ay",1)) {
         uint32_t bits = CONFIG1_AY_ENABLE;
@@ -375,14 +400,6 @@ void app_main()
         ESP_LOGW(TAG,"Cannot load ROM from flash, continuing with no ROM");
     }
 
-    {
-        char *rom = rom__get_version();
-        if (*rom) {
-            ESP_LOGI(TAG,"Spectrum ROM version: %s", rom);
-        } else {
-            ESP_LOGW(TAG,"Cannot extract ROM version from file");
-        }
-    }
 
 
     config__init();
@@ -400,13 +417,10 @@ void app_main()
 
     ESP_LOGI(TAG, "InterfaceZ version: %s %s", version, gitversion);
     ESP_LOGI(TAG, "  built %s", builddate);
+    ESP_LOGI(TAG, " FPGA: 0x%08x", fpga__id());
+    ESP_LOGI(TAG, " Spectrum ROM version: %s", *rom__get_version() ? rom__get_version() : "unknown");
 
     detect_spectrum();
-
-
-
-    // Start capture
-//    scope__start();
 
     unsigned iter = 0;
     while(1) {
