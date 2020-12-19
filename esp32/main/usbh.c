@@ -178,12 +178,20 @@ static int usbh__parse_interfaces(struct usb_device *dev)
     return -1;
 }
 
-
+#if 0
 void IRAM_ATTR usb__isr_handler(void* arg)
 {
     struct usbcmd cmd;
     cmd.cmd = USB_CMD_INTERRUPT;
     xQueueSendFromISR(usb_cmd_queue, &cmd, NULL);
+}
+#endif
+
+void usb__trigger_interrupt(void)
+{
+    struct usbcmd cmd;
+    cmd.cmd = USB_CMD_INTERRUPT;
+    xQueueSend(usb_cmd_queue, &cmd, portMAX_DELAY);
 }
 
 static void usbh__reset(void)
