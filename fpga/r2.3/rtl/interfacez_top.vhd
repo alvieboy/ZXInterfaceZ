@@ -41,11 +41,12 @@ entity interfacez_top is
     ESP_IO27_o   : out std_logic;
 
     -- ESP32 SPI interface
-    ESP_QHD_io    : inout std_logic;
+    --ESP_QHD_io    : inout std_logic;
+    REQACKN_i     : in std_logic; -- reuse QHD
     ESP_MISO_io   : inout std_logic;
     ESP_NCSO_i    : in std_logic;
     ESP_SCK_i     : in std_logic;
-    ESP_QWP_io    : inout std_logic;
+    --ESP_QWP_io    : inout std_logic;
     ESP_MOSI_io   : inout std_logic;
     -- LED outputs
     LED2_o        : out std_logic;
@@ -217,7 +218,7 @@ begin
       -- USB power control
       USB_FLT_i     => USB_FLT_i,
       USB_PWREN_o   => USB_PWREN_o,
-      USB_INTN_o    => ESP_QWP_io, -- TODO: Rename
+      --USB_INTN_o    => ESP_QWP_io, -- TODO: Rename
       -- Debug
       TP4           => TP4_o,
       dbg_o         => dbg_s,
@@ -227,6 +228,7 @@ begin
 
       spec_int_o    => ESP_IO26_o,
       spec_nreq_o   => spec_nreq_s, -- Request from spectrum
+      REQACKN_i     => REQACKN_i,
           -- video out
       hsync_o       => hsync_s,
       vsync_o       => vsync_s,

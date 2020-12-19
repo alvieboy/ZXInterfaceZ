@@ -91,8 +91,9 @@ architecture sim of tb_top is
   SIGNAL ESP_MISO_s : STD_LOGIC;
   SIGNAL ESP_MOSI_s : STD_LOGIC;
   SIGNAL ESP_NCSO_s : STD_LOGIC;
-  SIGNAL ESP_QHD_io : STD_LOGIC;
-  SIGNAL ESP_QWP_s  : STD_LOGIC;
+  --SIGNAL ESP_QHD_io : STD_LOGIC;
+  SIGNAL REQACKN_s  : STD_LOGIC;
+  --SIGNAL ESP_QWP_s  : STD_LOGIC;
   SIGNAL ESP_SCK_s : STD_LOGIC;
   SIGNAL FORCE_INT_s : STD_LOGIC;
   SIGNAL FORCE_WAIT_s : STD_LOGIC;
@@ -246,14 +247,15 @@ begin
       Cmd_i     => CtrlPins_Cmd_s,
       Data_o    => CtrlPins_Data_s,
 
-      USB_INTn_i    => ESP_QWP_s,
-      IO26_i        => ESP_IO26_s,
+      --USB_INTn_i    => ESP_QWP_s,
+      --IO26_i        => ESP_IO26_s,
       IO27_i        => ESP_IO27_s,
       FORCE_RESET_i => FORCE_RESET_s,
       FORCE_ROMCS_i => FORCE_ROMCS_s,
       FORCE_ROMCS2A_i => FORCE_ROMCS2A_s,
       FORCE_NMI_i   => FORCE_NMI_s,
-      FORCE_IORQULA_i => FORCE_IORQULA_s
+      FORCE_IORQULA_i => FORCE_IORQULA_s,
+      REQACK_o      => REQACKN_s
 
     );
 
@@ -343,8 +345,9 @@ begin
     ESP_MISO_io => ESP_MISO_s,
     ESP_MOSI_io => ESP_MOSI_s,
     ESP_NCSO_i => ESP_NCSO_s,
-    ESP_QHD_io => ESP_QHD_io,
-    ESP_QWP_io => ESP_QWP_s,
+    --ESP_QHD_io => ESP_QHD_io,
+    REQACKN_i  => REQACKN_s,
+    --ESP_QWP_io => QWP_s,
     ESP_SCK_i => ESP_SCK_s,
     FORCE_INT_o => FORCE_INT_s,
     FORCE_WAIT_o => FORCE_WAIT_s,
