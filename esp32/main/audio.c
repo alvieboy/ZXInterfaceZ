@@ -97,6 +97,7 @@ void audio__init()
                              );
     }
     audio__update();
+    fpga__set_clear_flags(FPGA_FLAG_ENABLE_AUDIO,0);
 }
 
 void audio__set_volume_f(uint8_t chan, float volume, float balance)
