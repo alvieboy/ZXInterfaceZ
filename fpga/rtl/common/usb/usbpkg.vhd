@@ -3,6 +3,9 @@ use ieee.std_logic_1164.all;
 
 package usbpkg is
 
+  constant C_USB_TRANS_USE_COUNTERS: boolean := false;
+  constant C_USB_TRANS_DEBUG: boolean := false;
+
   type usb_transaction_status_type is (
     IDLE,
     BUSY,

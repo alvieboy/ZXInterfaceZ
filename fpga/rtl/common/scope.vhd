@@ -182,7 +182,8 @@ begin
   process(clk_i,arst_i)
   begin
     if arst_i='1' then
-      triggered_r <= '0';
+      triggered_r   <= '0';
+      trig_addr_r   <= (others => 'X');
     elsif rising_edge(clk_i) then
       if trigger_match_s='1' and enable_s='1' then
         triggered_r <= '1';
@@ -218,6 +219,7 @@ begin
     if arst_i='1' then
       trigmask_r      <= (others => '1');
       trigval_r       <= (others => '0');
+      trigedge_r      <= (others => '0');
       control_r       <= (others => '0');
       start_capture_r <= '0';
     elsif rising_edge(clk_i) then

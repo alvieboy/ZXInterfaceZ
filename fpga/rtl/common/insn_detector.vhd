@@ -94,6 +94,11 @@ begin
       retn_detected_r <= '0';
       ret_detected_r  <= '0';
       nmi_access_r    <= '0';
+      pc_o            <= (others => 'X');
+      rst8_detected_r <= '0';
+      pc_valid_o      <= '0';
+
+
 
     elsif rising_edge(clk_i) then
       retn_detected_r <= '0';

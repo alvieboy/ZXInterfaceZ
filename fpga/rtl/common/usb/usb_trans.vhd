@@ -516,7 +516,9 @@ begin
         if itg_zero_s then
           status_o          <= ACK;
           w.state   := IDLE;
-          w.cnt_ack   := r.cnt_ack + 1;
+          if C_USB_TRANS_USE_COUNTERS then
+            w.cnt_ack   := r.cnt_ack + 1;
+          end if;
         end if;
 
       when STALL =>
@@ -525,7 +527,9 @@ begin
         if itg_zero_s then
           status_o          <= STALL;
           w.state   := IDLE;
-          w.cnt_stall   := r.cnt_stall + 1;
+          if C_USB_TRANS_USE_COUNTERS then
+            w.cnt_stall   := r.cnt_stall + 1;
+          end if;
         end if;
 
       when NACK =>
@@ -534,8 +538,9 @@ begin
         if itg_zero_s then
           status_o          <= NACK;
           w.state   := IDLE;
-          w.cnt_nack   := r.cnt_nack + 1;
-
+          if C_USB_TRANS_USE_COUNTERS then
+            w.cnt_nack   := r.cnt_nack + 1;
+          end if;
         end if;
 
       when CRCERROR =>
@@ -544,8 +549,9 @@ begin
         if itg_zero_s then
           status_o          <= CRCERROR;
           w.state   := IDLE;
-          w.cnt_crcerror   := r.cnt_crcerror + 1;
-
+          if C_USB_TRANS_USE_COUNTERS then
+            w.cnt_crcerror   := r.cnt_crcerror + 1;
+          end if;
         end if;
 
       when COMPLETE =>
@@ -554,22 +560,26 @@ begin
         if itg_zero_s then
           status_o          <= COMPLETED;
           w.state   := IDLE;
-          w.cnt_cplt   := r.cnt_cplt + 1;
-
+          if C_USB_TRANS_USE_COUNTERS then
+            w.cnt_cplt   := r.cnt_cplt + 1;
+          end if;
         end if;
 
       when SEND_NACK=>
       when ERRORPID =>
-        w.cnt_errorpid   := r.cnt_errorpid + 1;
-          w.state := IDLE;
+        if C_USB_TRANS_USE_COUNTERS then
+          w.cnt_errorpid   := r.cnt_errorpid + 1;
+        end if;
+        w.state := IDLE;
 
 
       when BABBLE =>
         if itg_zero_s then
           status_o          <= BABBLE;
           w.state := IDLE;
-          w.cnt_babble   := r.cnt_babble + 1;
-
+          if C_USB_TRANS_USE_COUNTERS then
+            w.cnt_babble   := r.cnt_babble + 1;
+          end if;
         end if;
 
     end case;
@@ -581,12 +591,21 @@ begin
       r.pd_resetn   <= '0';
       r.seq_valid   <= '0';
 
-      r.cnt_ack         <= (others => '0');
-      r.cnt_nack        <= (others => '0');
-      r.cnt_stall       <= (others => '0');
-      r.cnt_crcerror    <= (others => '0');
-      r.cnt_timeout     <= (others => '0');
-      r.cnt_errorpid    <= (others => '0');
+      r.pid         <= (others => 'X');
+      r.txsize      <= (others => 'X');
+      r.addr        <= (others => 'X');
+      r.txcrc16     <= (others => 'X');
+      r.rxtimeout   <= C_RX_TIMEOUT-1;
+      r.seq         <= 'X';
+
+      if C_USB_TRANS_USE_COUNTERS then
+        r.cnt_ack         <= (others => '0');
+        r.cnt_nack        <= (others => '0');
+        r.cnt_stall       <= (others => '0');
+        r.cnt_crcerror    <= (others => '0');
+        r.cnt_timeout     <= (others => '0');
+        r.cnt_errorpid    <= (others => '0');
+      end if;
   
 
     elsif rising_edge(usbclk_i) then
@@ -631,39 +650,61 @@ begin
 
   process(r.state)
   begin
-    case r.state is
-      when IDLE =>           dbg_state_o <= "00000";
-      when SENDPID =>        dbg_state_o <= "00001";
-      when TOKEN1 =>         dbg_state_o <= "00010";
-      when TOKEN2 =>         dbg_state_o <= "00011";
-      when DATA1 =>          dbg_state_o <= "00100";
-      when CRC1 =>           dbg_state_o <= "00101";
-      when CRC2 =>           dbg_state_o <= "00110";
-      when FLUSH =>          dbg_state_o <= "00111";
-      when ERRORPID =>       dbg_state_o <= "01000";
-      when BABBLE =>         dbg_state_o <= "01001";
-      when TIMEOUT =>        dbg_state_o <= "01010";
-      when WAIT_RX =>        dbg_state_o <= "01011";
-      when WAIT_DATA =>      dbg_state_o <= "01100";
-      when WAIT_ACK_NACK =>  dbg_state_o <= "01101";
-      when ACK =>            dbg_state_o <= "01111";
-      when NACK =>           dbg_state_o <= "10000";
-      when STALL =>          dbg_state_o <= "10001";
-      when SEND_ACK =>       dbg_state_o <= "10010";
-      when SEND_NACK =>      dbg_state_o <= "10011";
-      when CRCERROR =>       dbg_state_o <= "10100";
-      when COMPLETE =>       dbg_state_o <= "10101";
-      when others =>         dbg_state_o <= "10110";
-    end case;
+    if C_USB_TRANS_DEBUG then
+      case r.state is
+        when IDLE =>           dbg_state_o <= "00000";
+        when SENDPID =>        dbg_state_o <= "00001";
+        when TOKEN1 =>         dbg_state_o <= "00010";
+        when TOKEN2 =>         dbg_state_o <= "00011";
+        when DATA1 =>          dbg_state_o <= "00100";
+        when CRC1 =>           dbg_state_o <= "00101";
+        when CRC2 =>           dbg_state_o <= "00110";
+        when FLUSH =>          dbg_state_o <= "00111";
+        when ERRORPID =>       dbg_state_o <= "01000";
+        when BABBLE =>         dbg_state_o <= "01001";
+        when TIMEOUT =>        dbg_state_o <= "01010";
+        when WAIT_RX =>        dbg_state_o <= "01011";
+        when WAIT_DATA =>      dbg_state_o <= "01100";
+        when WAIT_ACK_NACK =>  dbg_state_o <= "01101";
+        when ACK =>            dbg_state_o <= "01111";
+        when NACK =>           dbg_state_o <= "10000";
+        when STALL =>          dbg_state_o <= "10001";
+        when SEND_ACK =>       dbg_state_o <= "10010";
+        when SEND_NACK =>      dbg_state_o <= "10011";
+        when CRCERROR =>       dbg_state_o <= "10100";
+        when COMPLETE =>       dbg_state_o <= "10101";
+        when others =>         dbg_state_o <= "10110";
+      end case;
+      else
+      dbg_state_o <= (others => 'X');
+    end if;
+
   end process;
 
-  cnt_ack_o      <= std_logic_vector(r.cnt_ack);
-  cnt_nack_o     <= std_logic_vector(r.cnt_nack);
-  cnt_babble_o   <= std_logic_vector(r.cnt_babble);
-  cnt_stall_o    <= std_logic_vector(r.cnt_stall);
-  cnt_crcerror_o <= std_logic_vector(r.cnt_crcerror);
-  cnt_timeout_o  <= std_logic_vector(r.cnt_timeout);
-  cnt_errorpid_o <= std_logic_vector(r.cnt_errorpid);
-  cnt_cplt_o     <= std_logic_vector(r.cnt_cplt);
+  g1: if C_USB_TRANS_USE_COUNTERS generate
+
+    cnt_ack_o      <= std_logic_vector(r.cnt_ack);
+    cnt_nack_o     <= std_logic_vector(r.cnt_nack);
+    cnt_babble_o   <= std_logic_vector(r.cnt_babble);
+    cnt_stall_o    <= std_logic_vector(r.cnt_stall);
+    cnt_crcerror_o <= std_logic_vector(r.cnt_crcerror);
+    cnt_timeout_o  <= std_logic_vector(r.cnt_timeout);
+    cnt_errorpid_o <= std_logic_vector(r.cnt_errorpid);
+    cnt_cplt_o     <= std_logic_vector(r.cnt_cplt);
+
+  end generate;
+
+  g2: if not C_USB_TRANS_USE_COUNTERS generate
+
+    cnt_ack_o      <= (others => 'X');
+    cnt_nack_o     <= (others => 'X');
+    cnt_babble_o   <= (others => 'X');
+    cnt_stall_o    <= (others => 'X');
+    cnt_crcerror_o <= (others => 'X');
+    cnt_timeout_o  <= (others => 'X');
+    cnt_errorpid_o <= (others => 'X');
+    cnt_cplt_o     <= (others => 'X');
+
+  end generate;
 
 end beh;

@@ -692,14 +692,14 @@ BEGIN
         if r.sr.poweron='0' then
           w.host_state := DETACHED;
         end if;
-        --if usb_rst_phy='1' then
+          if usb_rst_phy='1' then
           -- Disconnected???
-        --  if r.intconfr.disconnectdetect='1' then
-        --    w.intpendr.disconnectdetect := '1';
-        --  end if;
-        --  w.sr.connected := '0';
-        --  w.host_state := DETACHED;
-        --end if;
+            if r.intconfr.disconnectdetect='1' then
+              w.intpendr.disconnectdetect := '1';
+            end if;
+            w.sr.connected := '0';
+            w.host_state := DETACHED;
+          end if;
 
 
       when SOF1 =>

@@ -223,7 +223,9 @@ begin
     end if;
 
     if arst_i='1' then
-      r.state <= IDLE;
+      r.state           <= IDLE;
+      r.last_byte_len   <= (others => 'X');
+      r.pulse_data      <= (others => 'X');
 
       --r.pilot_header_len <= to_unsigned(8063,12);
       --r.pilot_data_len   <= to_unsigned(3223,12);

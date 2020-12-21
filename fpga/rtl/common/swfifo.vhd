@@ -33,6 +33,7 @@ begin
   begin
     if aclr='1' then
       wrptr_r <= '0';
+      wdata_r <= (others => 'X');
     elsif rising_edge(wrclk) then
       if wrreq='1' then
         wrptr_r <= not wrptr_r;

@@ -123,7 +123,7 @@ begin
       enable_r        <= (others => '1');  -- TBD.
       a_volume_r      <= (others => '0');
       b_volume_r      <= (others => '0');
-      b_volume_r      <= (others => '0');
+      c_volume_r      <= (others => '0');
       env_period_r    <= (others => '0');
       env_shape_r     <= (others => '0');
 

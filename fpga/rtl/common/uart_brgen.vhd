@@ -52,13 +52,14 @@ architecture behave of uart_brgen is
 signal cnt: integer range 0 to 65535;
 
 begin
-  process (clk)
+  process (clk, rst)
   begin
-    if rising_edge(clk) then
+    if rst='1' then
+      cnt <= conv_integer(count);
       clkout <= '0';
-      if rst='1' then
-        cnt <= conv_integer(count);
-      elsif en='1' then
+    elsif rising_edge(clk) then
+      clkout <= '0';
+      if en='1' then
         if cnt=0 then
           clkout <= '1';
           cnt <= conv_integer(count);

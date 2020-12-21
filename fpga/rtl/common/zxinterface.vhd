@@ -603,6 +603,8 @@ begin
 
   -- RAM write access captures
 
+  -- TODO: convert thisn into a regular single clock FIFO.
+
   ramfifo_inst: entity work.gh_fifo_async_sr_wf
   generic map (
     add_width   => 8, -- 256 entries
@@ -638,6 +640,7 @@ begin
   --
   -- Resource FIFO. This FIFO is between ESP and spectrum. ESP writes, Spectrum reads.
   --
+  -- TODO: convert this into a single clock FIFO
   resourcefifo_inst: entity work.resource_fifo
   port map (
     wclk_i      => clk_i,--SPI_SCK_i,
@@ -977,6 +980,7 @@ begin
   process(clk_i, arst_i)
   begin
     if arst_i='1' then
+      pc_r <= (others => '0');
     elsif rising_edge(clk_i) then
       if pc_valid_s='1' then
         pc_r <= pc_s;

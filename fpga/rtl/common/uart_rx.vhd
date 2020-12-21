@@ -84,7 +84,7 @@ signal baudreset: std_logic;
 signal filterreset: std_logic;
 signal datao: std_logic_vector(7 downto 0);
 signal dataready: std_logic;
-signal start: std_logic;
+--signal start: std_logic;
 
 signal debug_synctick_q: std_logic;
 signal debug_baudreset_q: std_logic;
@@ -138,10 +138,10 @@ begin
       state <= rx_idle;
       dataready <= '0';
       baudreset <= '0';
-      start<='0';
+      --start<='0';
     else
       baudreset <= '0';
-      start<='0';
+      --start<='0';
       if read='1' then
         dataready <= '0';
       end if;
@@ -150,7 +150,7 @@ begin
           if rx='0' then       -- Start bit
             state <= rx_start;
             baudreset <= '1';
-            start <='1';
+            --start <='1';
           end if;
         when rx_start =>
           if baudtick='1' then

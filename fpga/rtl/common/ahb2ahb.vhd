@@ -108,7 +108,9 @@ begin
   process(mclk_i,arst_i)
   begin
     if arst_i='1' then
-      reqstate_r<=IDLE;
+      reqstate_r      <= IDLE;
+      request_addr_r  <= (others => 'X');
+
     elsif rising_edge(mclk_i) then
       case reqstate_r is
         when IDLE =>
@@ -157,24 +159,29 @@ begin
   process(sclk_i,arst_i)
   begin
     if arst_i='1' then
-      m2s_o.HTRANS <= C_AHB_TRANS_IDLE;
-      state_r <= IDLE;
+      m2s_o.HTRANS    <= C_AHB_TRANS_IDLE;
+      state_r         <= IDLE;
+      request_wdata_r <= (others => 'X');
     elsif rising_edge(sclk_i) then
       case state_r is
         when IDLE =>
+          --request_wdata_r <= (others => 'X');
           if request_rdempty_s='0' then
-            m2s_o.HTRANS <= C_AHB_TRANS_NONSEQ;
-            state_r <= ADDRESS;
+            m2s_o.HTRANS    <= C_AHB_TRANS_NONSEQ;
+            state_r         <= ADDRESS;
           end if;
         when ADDRESS =>
           if s2m_i.HREADY='1' then
             request_wdata_r <= request_dout_s(REQWIDTH-AWIDTH-1 downto REQWIDTH-AWIDTH-DWIDTH);
             state_r <= DATA;
             m2s_o.HTRANS <= C_AHB_TRANS_IDLE;
+          else
+            --request_wdata_r <= (others => 'X');
           end if;
         when DATA =>
           if s2m_i.HREADY='1' then
             state_r <= IDLE;
+            --request_wdata_r <= (others => 'X');
           end if;
       end case;
     end if;

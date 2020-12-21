@@ -224,7 +224,7 @@ begin
       bus_oe_s      <= (others => 'X');
       master_r      <= 'X';
       select_dly_r  <= 0;
-
+      data_capture_r <= (others => 'X');
     elsif rising_edge(clk_i) then
 
       if select_dly_r/=0 then

@@ -156,6 +156,11 @@ begin
     variable data_v: std_logic_vector(7 downto 0);
   begin
     if rst_i='1' then
+
+      ram_din_s   <= (others => 'X');
+      ram_we_s    <= '0';
+      ram_addr_s  <= (others => 'X');
+
     elsif rising_edge(clk_i) then
       --ram_en_s <='0';
       ram_we_s <='0';

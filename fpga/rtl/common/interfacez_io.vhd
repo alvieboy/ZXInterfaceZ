@@ -201,6 +201,13 @@ begin
       trig_force_clearromcsonret_r<='0';
       page128_pmc_r <= (others => '0');
       page128_smc_r <= (others => '0');
+      ay_dout_o     <= (others => '0');
+      ayreg_r       <= (others => '0');
+      d_write_r     <= (others => 'X');
+      ram_addr_r    <= (others => 'X');
+      scratch0_r    <= (others => '0');
+      scratch1_r    <= (others => '0');
+
     elsif rising_edge(clk_i) then
 
       resfifo_rd_o <= '0';
@@ -408,6 +415,7 @@ begin
       forceiorqula_o  <= '0';
       forceoutput_s <= '0';
       keyb_trigger_o <= '0';
+      uladata_r     <= (others => '0');
     --
     elsif rising_edge(clk_i) then
       keyb_trigger_o <= '0';

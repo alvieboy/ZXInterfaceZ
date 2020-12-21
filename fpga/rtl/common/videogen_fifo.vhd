@@ -214,13 +214,18 @@ begin
       when others =>
     end case;
 
-    if sync_in_mainclk_s='1' or rst_i='1' then
+    if sync_in_mainclk_s='1' then
       w.state   := FETCH_DATA;
       w.counter := (others => '0');
+      w.pixel   := (others => 'X');
       ven_o     <= '0';
     end if;
 
-    if rising_edge(clk_i) then
+    if rst_i='1' then
+      r.state   <= FETCH_DATA;
+      r.counter <= (others => '0');
+      r.pixel   <= (others => 'X');
+    elsif rising_edge(clk_i) then
       r<=w;
     end if;
 

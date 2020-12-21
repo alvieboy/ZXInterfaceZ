@@ -144,6 +144,15 @@ BEGIN
     if arst_i='1' then
       state_r   <= IDLE;
       hslave_r  <= 0;
+      latch_m2s_r.HADDR     <= (others => 'X');
+      latch_m2s_r.HBURST    <= (others => 'X');
+      latch_m2s_r.HMASTLOCK <= 'X';
+      latch_m2s_r.HPROT     <= (others => 'X');
+      latch_m2s_r.HSIZE     <= (others => 'X');
+      latch_m2s_r.HTRANS    <= C_AHB_TRANS_IDLE;
+      latch_m2s_r.HWDATA    <= (others => 'X');
+      latch_m2s_r.HWRITE    <= 'X';
+
     elsif rising_edge(clk_i) then
 
       case slave_sel_s is

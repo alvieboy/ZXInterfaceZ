@@ -133,13 +133,15 @@ begin
     if arst_i='1' or csn_s='1' then
 
       ahb_m2s_o.HTRANS  <= C_AHB_TRANS_IDLE;
+      ahb_m2s_o.HADDR   <= (others => 'X');
+      ahb_m2s_o.HWDATA  <= (others => 'X');
       state_r           <= IDLE;
       ahb_address_r     <= (others => 'X');
       ahb_write_r       <= 'X';
       ahb_inc_r         <= 'X';
       blocksize_active_r<= '0';
       blocksize_r       <= (others => 'X');
-
+      txdat_s           <= (others => 'X');
     elsif rising_edge(clk_i) then
 
       if rx_empty_s='0' and first_dat_s='1' then

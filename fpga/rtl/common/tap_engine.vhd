@@ -52,6 +52,7 @@ begin
   end process;
 
 
+  -- TODO: convert this into a single clock FIFO
   fifo_inst: entity work.tap_fifo
   port map (
     -- Write port

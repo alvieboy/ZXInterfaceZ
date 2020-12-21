@@ -70,22 +70,22 @@ begin
 
   -- Tx process
   TxProc:
-  process (clk_i)
+  process (clk_i, reset_i)
      variable bitpos : integer range 0 to 10; -- Bit position in the frame
   begin
-     if rising_edge(clk_i) then
-        if reset_i='1' then
-           loaded_r <= '0';
-           bitpos:=0;
-           txd_r <= '1';
-           intx_o <= '0';
-           idle <= '1';
-        else -- reset_i='0'
-           if load_i='1' then
-              tbuff_r  <= datai_i;
-              loaded_r <= '1';
-           end if;
-           if enable_i='1' then
+     if reset_i='1' then
+       loaded_r <= '0';
+       bitpos   :=0;
+       txd_r    <= '1';
+       intx_o   <= '0';
+       idle     <= '1';
+     elsif rising_edge(clk_i) then -- reset_i='0'
+      if load_i='1' then
+        tbuff_r  <= datai_i;
+        loaded_r <= '1';
+      end if;
+
+      if enable_i='1' then
               case bitpos is
                    when 0 => -- idle or stop bit
                         txd_r <= '1';
@@ -114,7 +114,6 @@ begin
                  bitpos:=0;
               end if;
            end if; -- enable_i='1'
-        end if; -- reset_i='0'
      end if; -- rising_edge(clk_i)
   end process TxProc;
 end architecture Behaviour;
