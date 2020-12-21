@@ -33,11 +33,6 @@ void spectcmd__init()
     spectcmd__removedata();
 }
 
-static void spectcmd__ackinterrupt()
-{
-    fpga__set_trigger(FPGA_FLAG_TRIG_INTACK);
-}
-
 static int spectcmd__do_load_resource(struct resource *r)
 {
     return resource__sendtofifo(r);
@@ -449,8 +444,4 @@ void spectcmd__request()
             }
         }
     }
-
-    // Clear IRQ.
-    spectcmd__ackinterrupt();
-
 }
