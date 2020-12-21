@@ -14,7 +14,7 @@
 
 static MenuWindow *nmimenu;
 
-static const MenuEntryList nmimenu_entries = {
+static MenuEntryList nmimenu_entries = {
     .sz = 9,
     .entries = {
         { .flags = 0, .string = "Load snapshot..." },
@@ -32,10 +32,10 @@ static const MenuEntryList nmimenu_entries = {
 static const char *nmimenu_help[] = {
     "Loads a ZX snapshot from file on the SD card",
     "Saves current status as snapshot to SD card",
-    "Play a TAP or TZX file. Ensure you load \"\" before",
-    "Play a TAP or TZX file (fast load)",
+    "Play a TAP or TZX file.",
+    "Play TAP file (fast load)",
     "Pokes stuff around",
-    "Change wireless, bluetooth, usb settings",
+    "Change wireless, bluetooth, USB settings",
     "Reset the ZX spectrum",
     "About the ZX spectrum",
     "Exit to ZX spectrum"
