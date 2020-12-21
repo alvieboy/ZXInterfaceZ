@@ -247,15 +247,15 @@ static void detect_spectrum()
         if (board__hasVoltageSensor()) {
 
             if (board__is9Vsupply()) {
-                model__set(MODEL_128K); // modelstr = "+2(128K)";
+                model__set(MODEL_128K); 
             } else if (board__isplus2plus3supply()) {
-                model__set(MODEL_2APLUS);//modelstr = "+2A,+3";
+                model__set(MODEL_2APLUS);
             } else {
-                //modelstr = "+2(128K),+2A,+3";
+                // Unknown model
             }
         } else {
             // Must be 128K
-            model__set(MODEL_128K); // modelstr = "+2(128K)";
+            model__set(MODEL_128K); 
         }
         break;
     }
@@ -421,6 +421,9 @@ void app_main()
     ESP_LOGI(TAG, " Spectrum ROM version: %s", *rom__get_version() ? rom__get_version() : "unknown");
 
     detect_spectrum();
+
+    // Power on USB
+    usb_ll__set_power(1);
 
     unsigned iter = 0;
     while(1) {
