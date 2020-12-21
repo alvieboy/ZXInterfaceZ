@@ -168,10 +168,6 @@ static int firmware__parse_type(const char *text, firmware_type_t *type)
         *type = FIRMWARE_TYPE_OTA;
     } else if (strcmp(text,"resources")==0) {
         *type = FIRMWARE_TYPE_RESOURCES;
-    } else if (strcmp(text,"fpga")==0) {
-        *type = FIRMWARE_TYPE_FPGA;
-    } else if (strcmp(text,"rom")==0) {
-        *type = FIRMWARE_TYPE_ROM;
     } else {
         ESP_LOGE(TAG,"Unknown firmware type '%s'", text);
         return -1;
@@ -317,38 +313,6 @@ static int firmware__stream_file(firmware_upgrade_t *f,
     return 0;
 }
 
-static int firmware__program_fpga(firmware_upgrade_t *f, firmware_compress_t compress)
-{
-    flash_program_handle_t handle;
-
-    if (flash_pgm__prepare_programming(&handle,
-                                       0x40,
-                                       0x00,
-                                       NULL,
-                                       f->size)<0) {
-        ESP_LOGE(TAG,"Cannot start FPGA programming");
-        return -1;
-    }
-
-    return firmware__stream_file(f, compress, (firmware_streamer_t)&flash_pgm__program_chunk, &handle);
-}
-
-static int firmware__program_rom(firmware_upgrade_t *f, firmware_compress_t compress)
-{
-    flash_program_handle_t handle;
-
-    if (flash_pgm__prepare_programming(&handle,
-                                       0x42,
-                                       0x00,
-                                       NULL,
-                                       f->size)<0) {
-        ESP_LOGE(TAG,"Cannot start ROM programming");
-        return -1;
-    }
-
-    return firmware__stream_file(f, compress, (firmware_streamer_t)&flash_pgm__program_chunk, &handle);
-}
-
 static int firmware__program_resources(firmware_upgrade_t *f, firmware_compress_t compress)
 {
     flash_program_handle_t handle;
@@ -424,27 +388,11 @@ static int firmware__read_file_entry(firmware_upgrade_t *f)
             info->completed = true;
         }
         break;
-    case FIRMWARE_TYPE_FPGA:
-        r = firmware__program_fpga(f, info->compress);
-        if (r==0) {
-            ESP_LOGI(TAG, "FPGA programming completed");
-            info->completed = true;
-        }
-        break;
     case FIRMWARE_TYPE_RESOURCES:
         ESP_LOGI(TAG, "Resources Firmware");
         r = firmware__program_resources(f, info->compress);
         if (r==0) {
             ESP_LOGI(TAG, "Resources programming completed");
-            info->completed = true;
-        }
-        break;
-
-    case FIRMWARE_TYPE_ROM:
-        ESP_LOGI(TAG, "ROM Firmware");
-        r = firmware__program_rom(f, info->compress);
-        if (r==0) {
-            ESP_LOGI(TAG, "ROM programming completed");
             info->completed = true;
         }
         break;
