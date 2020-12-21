@@ -14,6 +14,24 @@ extern "C" {
     struct framebuffer spectrum_framebuffer;
 };
 
+uint8_t current_charset = MAIN_CHARSET;
+uint8_t charset_stack[4];
+uint8_t charset_stack_index=0;
+
+void push_charset(int index)
+{
+    charset_stack[charset_stack_index] = current_charset;
+    charset_stack_index++;
+    current_charset = index;
+}
+int pop_charset(void)
+{
+    charset_stack_index--;
+    current_charset = charset_stack[charset_stack_index];
+    return 0;
+}
+
+
 screenptr_t screenptr_t::drawchar(const uint8_t *data)
 {
     screenptr_t temp = *this;
@@ -74,7 +92,7 @@ screenptr_t screenptr_t::drawascii(char c)
     if (c<FIRST_PRINTABLE_CHAR)
         return *this;
     c-=FIRST_PRINTABLE_CHAR;
-    temp = temp.drawchar(&CHAR_SET[(int)c*8]);
+    temp = temp.drawchar(&getcurrentcharset()[(int)c*8]);
     return temp;
 }
 
@@ -83,7 +101,7 @@ screenptr_t screenptr_t::drawstring(const char *s)
     screenptr_t temp = *this;
     while (*s) {
         int c = (*s) - FIRST_PRINTABLE_CHAR;
-        temp = temp.drawchar(&CHAR_SET[c*8])++;
+        temp = temp.drawchar(&getcurrentcharset()[c*8])++;
         s++;
     }
     return temp;
@@ -152,12 +170,12 @@ screenptr_t screenptr_t::drawstringpad(const char *s, int len)
     screenptr_t temp = *this;
     while ((*s) && len) {
         int c = (*s) - 32;
-        temp = temp.drawchar(&CHAR_SET[c*8])++;
+        temp = temp.drawchar(&getcurrentcharset()[c*8])++;
         s++;
         len--;
     }
     while (len--) {
-        temp = temp.drawchar(&CHAR_SET[0])++;
+        temp = temp.drawchar(&getcurrentcharset()[0])++;
     }
     return temp;
 }

@@ -52,9 +52,9 @@ void Window::fillHeaderLine(attrptr_t attr)
 {
     uint8_t w = m_w - 1;
     while (w--) {
-        *attr++ = 0x07;
+        *attr++ = attr_t(WHITE);//BLACK, CYAN, true);//WHITE);
     }
-    *attr = 0x00; // last one black
+    *attr = attr_t(BLACK);
 }
 
 void Window::drawStatus()
@@ -110,7 +110,9 @@ void Window::drawWindowCore()
     screenptr = m_screenptr;
     screenptr++;
 
+    push_charset(COMPUTER_CHARSET);
     screenptr.drawstring( m_title );
+    pop_charset();
 
     if (hasHelpText()) {
         screenptr = m_screenptr;
@@ -130,12 +132,12 @@ void Window::drawWindowCore()
 
     attrptr = m_attrptr;
     attrptr += m_w - 6;
-    *attrptr++ = 0x42;
-    *attrptr++ = 0x56;
-    *attrptr++ = 0x74;
-    *attrptr++ = 0x65;
-    *attrptr++ = 0x68;
-    *attrptr++ = 0x00;
+    *attrptr++ = attr_t(RED, BLACK, true);//0x42;
+    *attrptr++ = attr_t(YELLOW, RED, true);//0x56;
+    *attrptr++ = attr_t(GREEN, YELLOW, true);//0x56;0x74;
+    *attrptr++ = attr_t(CYAN, GREEN, true);//0x56;0x74;0x65;
+    *attrptr++ = attr_t(BLACK, CYAN, true);//0x56;0x74;0x65;0x68;
+    *attrptr++ = attr_t(BLACK);//0x00;
 
     if (hasHelpText()) {
         int i;

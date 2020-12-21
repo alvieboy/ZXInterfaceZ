@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <functional>
 #include "systemevent.h"
+#include "charmap.h"
 
 #include "../wsys.h"
 extern "C" {
@@ -15,6 +16,40 @@ extern "C" {
 #define WSYS_BOUND_CHECKS
 #define WSYS_ENABLE_DEBUG
 #endif
+
+typedef enum {
+    BLACK   = 0,    // 000
+    BLUE,           // 001
+    RED,            // 010
+    MAGENTA,        // 011
+    GREEN,          // 100
+    CYAN,           // 101
+    YELLOW,         // 110
+    WHITE,          // 111
+} color_t;
+
+struct attr_t {
+    union {
+        struct {
+            color_t m_fg:3;
+            color_t m_bg:3;
+            uint8_t m_bright:1;
+            uint8_t m_flash:1;
+        } __attribute__((packed));
+        uint8_t raw:8;
+    };
+
+    attr_t(color_t fg, color_t bg=BLACK, bool bright=false, bool flash=false):
+        m_fg(fg),
+        m_bg(bg),
+        m_bright(bright?1:0),
+        m_flash(flash?1:0)
+    {}
+    operator uint8_t () const {return raw; };
+} __attribute__((packed));
+
+
+
 
 #ifdef WSYS_ENABLE_DEBUG
 
@@ -65,8 +100,16 @@ struct framebuffer {
 #endif
 
 
+extern uint8_t current_charset;
+static inline const uint8_t*getcurrentcharset(void) {
+    return CHAR_SETS[current_charset];
+}
+
+
 extern "C" struct framebuffer spectrum_framebuffer;
 
+void push_charset(int index);
+int pop_charset();
 
 static inline uint16_t getxyattrstart(uint8_t x, uint8_t y)
 {
