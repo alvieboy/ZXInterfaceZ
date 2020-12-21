@@ -189,10 +189,15 @@ begin
   process(clk_i, arst_i)
   begin
     if arst_i='1' then
-      dat_out_s <= (others => 'X');
-      cmdfifo_rd_o    <= '0';
-      do_read_fifo_r  <= '0';
-      bit_from_cpu_o.rx_read <= '0';
+      dat_out_s               <= (others => 'X');
+      cmdfifo_rd_o            <= '0';
+      do_read_fifo_r          <= '0';
+      bit_from_cpu_o.rx_read  <= '0';
+      pc_latch_r              <= (others => 'X');
+      tapfifo_used_lsb_r      <= (others => 'X');
+      tempreg_r               <= (others => 'X');
+
+
     elsif rising_edge(clk_i) then
 
       cmdfifo_rd_o <= '0';
@@ -372,13 +377,17 @@ begin
             --bit_from_cpu_o.tx_data_valid <= '1';
             --bit_from_cpu_o.tx_data  <= dat_in_s;
 
-          when "01---00" =>
+          when "0100000" | "0100100" | "0101000" | "0101100" |
+               "0110000" | "0110100" | "0111000" | "0111100" =>
             tempreg_r(23 downto 16) <= dat_in_s;
-          when "01---01" =>
+          when "0100001" | "0100101" | "0101001" | "0101101" |
+               "0110001" | "0110101" | "0111001" | "0111101" =>
             tempreg_r(15 downto 8) <= dat_in_s;
-          when "01---10" =>
+          when "0100010" | "0100110" | "0101010" | "0101110" |
+               "0110010" | "0110110" | "0111010" | "0111110" =>
             tempreg_r(7 downto 0) <= dat_in_s;
-          when "01---11" =>
+          when "0100011" | "0100111" | "0101011" | "0101111" |
+               "0110011" | "0110111" | "0111011" | "0111111" =>
             regs32_r( to_integer(unsigned(addr_s(5 downto 2)))) <= tempreg_r & dat_in_s;
 
           when "1000000" | "1000100" | "1001000" | "1001100" => -- Hook low
@@ -428,9 +437,8 @@ begin
   vidmode_o(1)          <= flags_r(12); --
 
   bit_from_cpu_o.bit_enable <= flags_r(14); -- BIT enabled
-  audio_enable_o        <= flags_r(15);
-
-  resfifo_wr_o          <= '1' when wr_s='1' and addr_s="010100" else '0';
+  audio_enable_o        <= flags_r(15);                  
+  resfifo_wr_o          <= '1' when wr_s='1' and addr_s="0010100" else '0';
   resfifo_write_o       <= dat_in_s;
 
   -- Last address bit determines wheteher is command or data
