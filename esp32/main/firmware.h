@@ -10,9 +10,7 @@ typedef int (*firmware_read_fun)(void *, uint8_t *buffer, size_t len);
 
 typedef enum {
     FIRMWARE_TYPE_OTA,
-    FIRMWARE_TYPE_FPGA,
-    FIRMWARE_TYPE_RESOURCES,
-    FIRMWARE_TYPE_ROM
+    FIRMWARE_TYPE_RESOURCES
 } firmware_type_t;
 
 typedef enum {
