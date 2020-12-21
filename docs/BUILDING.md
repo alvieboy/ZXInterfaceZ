@@ -89,6 +89,11 @@ make flash
 It should program the board, but it will be held in programming mode. To exit programming mode back to run time mode, do
 - Press RESET button
 
+If your _Interface Z_ is connected to another port than the standard (on Linux `ttyUSB0`) use `ESPPORT` to configure it. Example:
+```bash
+make flash ESPPORT=/dev/ttyUSB1
+```
+
 ## Building host-mode firmware
 The Host-mode firmware is used solely for development.
 ### Prerequisites
