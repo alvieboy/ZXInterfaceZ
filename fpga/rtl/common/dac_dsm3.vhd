@@ -50,7 +50,7 @@ begin  -- beh1
       del1 <= (others => '0');
       del2 <= (others => '0');
       dout <= '0';
-      d_q  <= (others => 'X');
+      d_q  <= (others => '0');
     elsif clk'event and clk = '1' then  -- rising clock edge
       if clk_ena = '1' then
         del1 <= din - d_q + del1;
