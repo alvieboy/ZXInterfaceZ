@@ -37,6 +37,33 @@ _dlyloop: ; (T=35), 10us
         OR 	C               ; T=4
         JR 	NZ, _dlyloop    ; T=12
 DETECT:
+	; Notify CRC
+	LD	A, CMD_ROMCRC
+        CALL 	WRITECMDFIFO
+        LD	A, 0
+        CALL 	WRITECMDFIFO
+
+	; Perform a CRC on current ROM.
+        LD	DE, ROMCRC_RAM
+        LD	HL, ROMCRC_ROM
+        LD	BC, ROMCRC_SIZE
+        LDIR
+        CALL	ROMCRC_RAM
+        ; Next ROM
+        LD	BC, $7FFD
+        LD      A, $10 ; Bit 4 set (48K ROM).
+        OUT	(C), A
+
+	LD	A, CMD_ROMCRC
+	CALL   	WRITECMDFIFO
+        LD	A, 1
+        CALL 	WRITECMDFIFO
+
+        CALL	ROMCRC_RAM
+        LD	BC, $7FFD
+        LD      A, $00 ; Bit 4 reset
+        OUT	(C), A
+
 	; Attempt to detect machine type.
  	LD	A, CMD_SPECTRUMDETECT
         CALL	WRITECMDFIFO
@@ -173,7 +200,9 @@ _endl1: HALT
 	include "keybtest.asm"
         include "utils.asm"
         ; WARNING WARNING -  this does need correct placement in ROM
+        ; Make sure it does not overlap with other routines.
         include "loadpatch.asm"
+        include "romcrc.asm"
 	include "nmihandler.asm"
 	include	"charmap.asm"
 	include "snaram.asm"
