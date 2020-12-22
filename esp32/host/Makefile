@@ -15,6 +15,7 @@ SRCPATH=$(shell pwd)
 CFLAGS= -fpic -DPIC -Wall -Wextra \
 	-DGITVER=\"$(GITVER)\" \
 	-DBUILDDATE='"$(BUILDDATE)"' \
+	-DCONFIG_LOG_TIMESTAMP_SOURCE_RTOS \
 	-O0 -g -Wall -Wextra -DIDF_VER=\"0.1\" \
 	$(shell pkg-config --cflags glib-2.0) \
 	-I$(FREERTOSKERNEL)/include \
@@ -38,6 +39,7 @@ CFLAGS= -fpic -DPIC -Wall -Wextra \
        -I$(ESP_IDF)/components/wear_levelling/include/ \
        -I$(ESP_IDF)/components/esp_netif/include/ \
        -I$(ESP_IDF)/components/esp_eth/include/ \
+       -I$(ESP_IDF)/components/log/include/ \
        -I$(ESP_IDF)/components/spiffs/include/ \
        -I$(ESP_IDF)/components/mbedtls/mbedtls/include \
        -I$(ESP_IDF)/components/app_update/include/ \
@@ -142,6 +144,7 @@ vga.c                 \
 adc.c                 \
 board.c               \
 scope.c               \
+log.c                 \
 spectrum_kbd.c        \
 systemevent.c 	      \
 wsys/charmap.c        \

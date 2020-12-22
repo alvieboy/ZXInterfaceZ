@@ -48,6 +48,11 @@ void LogEmitter::log(const char *type, const char *tag, char *fmt, va_list ap)
     vsprintf(p, fmt, ap);
     qDebug()<<line;
 
+    // Remove newlines
+    char *nl = strchr(line, '\n');
+    if (nl)
+        *nl = '\0';
+
     emit logstring(QString(line));
 
     //edit->appendPlainText(line);

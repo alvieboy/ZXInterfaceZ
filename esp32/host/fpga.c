@@ -168,7 +168,7 @@ void fpga_rxthread(void *arg)
         do {
             r = recv(emulator_socket, localbuf, sizeof(localbuf), 0);
             if (r<0 && errno==EAGAIN) {
-                vTaskDelay(20 / portTICK_RATE_MS);
+                vTaskDelay(10 / portTICK_RATE_MS);
             }
         } while ((r<0) && (errno==EINTR || errno==EAGAIN));
         if (r<=0) {
