@@ -49,7 +49,7 @@ static int usbh__control_request_completed_reply(uint8_t chan, uint8_t stat, str
 static int usbh__request_completed_reply(uint8_t chan, uint8_t stat, void *req);
 static int usbh__issue_setup_data_request(struct usb_request *req);
 static void usbh__add_device(struct usb_device *);
-static void usbh__remove_device(struct usb_device *);
+//static void usbh__remove_device(struct usb_device *);
 
 static struct usb_device_entry *usb_devices = NULL;
 
@@ -72,7 +72,7 @@ static void usbh__add_device(struct usb_device *dev)
     systemevent__send(SYSTEMEVENT_TYPE_USB, SYSTEMEVENT_USB_DEVICE_CHANGED);
 
 }
-
+#if 0
 static void usbh__remove_device(struct usb_device *dev)
 {
     struct usb_device_entry *e = usb_devices;
@@ -90,6 +90,7 @@ static void usbh__remove_device(struct usb_device *dev)
         e = e->next;
     }
 }
+#endif
 
 static uint8_t usbh__allocate_address()
 {
@@ -839,9 +840,29 @@ static int usbh__assign_address(struct usb_device *dev)
     return 0;
 }
 
+static void usbh__device_disconnect(struct usb_device *dev)
+{
+    // Release all interfaces
+    unsigned i;
+    for (i=0;i< (dev->config_descriptor->bNumInterfaces);i++) {
+        struct usb_interface *intf = &dev->interfaces[i];
+        if (intf->drv)
+            intf->drv->disconnect( dev, intf );
+    }
+
+}
+
 void usb_ll__disconnected_callback()
 {
     ESP_LOGE(USBHTAG, "Disconnected callback");
+
+    while (usb_devices) {
+        // Disconnect this device
+        usbh__device_disconnect(usb_devices->dev);
+        struct usb_device_entry *next = usb_devices->next;
+        free(usb_devices);
+        usb_devices = next;
+    }
 }
 
 void usb_ll__overcurrent_callback()
