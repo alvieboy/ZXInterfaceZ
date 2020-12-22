@@ -70,6 +70,9 @@ int spi__transceive(spi_device_handle_t spi, uint8_t *buffer, unsigned len)
 
 
     xSemaphoreGive(spi_sem);
+    if (ret<0) {
+        ESP_LOGE(TAG, "Cannot SPI transmit!!");
+    }
     return ret;
 }
 
@@ -103,8 +106,12 @@ int spi__transceive_cmd8_addr24(spi_device_handle_t spi,
     }
     int ret = spi_device_polling_transmit(spi, &ext.base);  //Transmit!
 
-
     xSemaphoreGive(spi_sem);
+
+    if (ret<0) {
+        ESP_LOGE(TAG, "Cannot SPI transmit!!");
+    }
+
     return ret;
 }
 
@@ -138,8 +145,12 @@ int spi__transceive_cmd8_addr16(spi_device_handle_t spi,
     }
     int ret = spi_device_polling_transmit(spi, &ext.base);  //Transmit!
 
-
     xSemaphoreGive(spi_sem);
+
+    if (ret<0) {
+        ESP_LOGE(TAG, "Cannot SPI transmit!!");
+    }
+
     return ret;
 }
 
@@ -173,8 +184,12 @@ int spi__transceive_cmd8_addr8(spi_device_handle_t spi,
     }
     int ret = spi_device_polling_transmit(spi, &ext.base);  //Transmit!
 
-
     xSemaphoreGive(spi_sem);
+
+    if (ret<0) {
+        ESP_LOGE(TAG, "Cannot SPI transmit!!");
+    }
+
     return ret;
 }
 
@@ -205,8 +220,12 @@ int spi__transceive_cmd8(spi_device_handle_t spi,
     }
     int ret = spi_device_polling_transmit(spi, &ext.base);  //Transmit!
 
-
     xSemaphoreGive(spi_sem);
+
+    if (ret<0) {
+        ESP_LOGE(TAG, "Cannot SPI transmit!!");
+    }
+
     return ret;
 }
 
@@ -240,9 +259,12 @@ int spi__transceive_cmd8_addr32(spi_device_handle_t spi,
     }
     int ret = spi_device_polling_transmit(spi, &ext.base);  //Transmit!
 
-   // ESP_LOGI(TAG, "%s: Release", __FUNCTION__);
-
     xSemaphoreGive(spi_sem);
+
+    if (ret<0) {
+        ESP_LOGE(TAG, "Cannot SPI transmit!!");
+    }
+
     return ret;
 }
 
@@ -276,8 +298,12 @@ int spi__transmit_cmd8_addr16(spi_device_handle_t spi,
     }
     int ret = spi_device_polling_transmit(spi, &ext.base);  //Transmit!
 
-
     xSemaphoreGive(spi_sem);
+
+    if (ret<0) {
+        ESP_LOGE(TAG, "Cannot SPI transmit!!");
+    }
+
     return ret;
 }
 
@@ -311,8 +337,12 @@ int spi__transmit_cmd8_addr24(spi_device_handle_t spi,
     }
     int ret = spi_device_polling_transmit(spi, &ext.base);  //Transmit!
 
-
     xSemaphoreGive(spi_sem);
+
+    if (ret<0) {
+        ESP_LOGE(TAG, "Cannot SPI transmit!!");
+    }
+
     return ret;
 }
 
@@ -343,7 +373,11 @@ int spi__transmit_cmd8(spi_device_handle_t spi,
     }
     int ret = spi_device_polling_transmit(spi, &ext.base);  //Transmit!
 
-
     xSemaphoreGive(spi_sem);
+
+    if (ret<0) {
+        ESP_LOGE(TAG, "Cannot SPI transmit!!");
+    }
+
     return ret;
 }
