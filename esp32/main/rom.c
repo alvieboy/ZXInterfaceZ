@@ -13,7 +13,58 @@
 
 static char romversion[64];
 
+const rom_model_t *detected_rom[4] ={ NULL };
+
+/*
+ * NOTE NOTE NOTE
+ *
+ * This is *NOT* a full CRC32 of the ROM image, instead we use data each 64 bytes to compute
+ * a CRC32 (total 256 bytes per 16KB of ROM). This makes calculating the CRC much faster, and
+ * it is enough to detect each ROM.
+ *
+*/
+static const rom_model_t rom_models[] = {
+    { 0xf20fe685, "BASIC for 16/48K models" },
+    { 0x337e8d68, "Spanish 48K ROM" },
+    { 0x97c8b8ab, "Didaktik" },
+    { 0x4a15f949, "English 128 ROM 0 (128K editor and menu)"},
+    { 0x4942ac90, "English 128 ROM 1 (48K BASIC)" },
+    { 0xa3ac08d4, "Spanish 128 ROM 0 (128K editor and menu)",
+    { 0x4eb16388, "Spanish +2 ROM 0 (128K editor & menu)",
+    { 0x29eaf9c8, "Spanish 128 ROM 1 (48K BASIC)" },
+    { 0x0efe0f61, "Spanish +2 ROM 1 (48K BASIC)" },
+    { 0x99e01bf5, "+2A (rom 0)" },
+    { 0x538ed9fd, "+2A (rom 1)" },
+    { 0x1876d007, "+3 (rom 0)" },
+    { 0xc0bd92b1, "+3 (rom 1)" },
+    { 0xbc11e448, "+3 (rom 2)" },
+    { 0x8623592e, "+3 (rom 3)" }
+};
+
+
 static int rom__read_version(const char *file);
+
+
+const rom_model_t *rom__get(uint8_t index)
+{
+    index &=3;
+    return detected_rom[index];
+}
+
+const rom_model_t *rom__set_rom_crc(uint8_t index, uint32_t crc)
+{
+    unsigned i;
+    index &=3;
+    detected_rom[index] = NULL;
+
+    for(i=0;i<sizeof(rom_models)/sizeof(rom_models[0]);i++) {
+        if (rom_models[i].crc==crc) {
+            detected_rom[index] = &rom_models[i];
+            break;
+        }
+    }
+    return detected_rom[index];
+}
 
 int rom__load_from_flash(void)
 {
@@ -111,3 +162,5 @@ int rom__load_custom_from_file(const char *file, unsigned address)
 
     return r;
 }
+
+

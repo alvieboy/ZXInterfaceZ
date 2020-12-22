@@ -16,11 +16,14 @@
 #include "spectrum_kbd.h"
 #include "wsys.h"
 #include "fasttap.h"
+#include "esp32/rom/crc.h"
+#include "rom.h"
+#include "log.h"
 
-#define COMMAND_BUFFER_MAX 128
+#define COMMAND_BUFFER_MAX 256+2
 
-static uint8_t command_buffer[COMMAND_BUFFER_MAX]; // Max 128 bytes.
-static uint8_t __cmdptr = 0;
+static uint8_t command_buffer[COMMAND_BUFFER_MAX]; // Max 256+2 bytes.
+static uint16_t __cmdptr = 0;
 typedef int (*spectcmd_handler_t)(const uint8_t *cmdbuf, unsigned len);
 
 static void spectcmd__removedata()
@@ -349,11 +352,68 @@ static int spectcmd__fast_load(const uint8_t *cmdbuf, unsigned len)
 static int spectcmd__fast_load_data(const uint8_t *cmdbuf, unsigned len)
 {
     NEED(3);
-    spectcmd__removedata();
     unsigned blocklen = cmdbuf[1];
     blocklen +=( (unsigned)cmdbuf[2])<<8;
     ESP_LOGI(TAG, "TAP: requested fast load %02x size %d", cmdbuf[0], blocklen);
+    spectcmd__removedata();
     fasttap__next();
+    return 0;
+}
+
+#define CRCPOLY_LE 0xedb88320
+
+static uint32_t rom__crc32_le(uint32_t crc, unsigned char const *p, size_t len)
+{
+    int i;
+    while (len--) {
+        crc ^= *p++;
+        for (i = 0; i < 8; i++)
+            crc = (crc >> 1) ^ ((crc & 1) ? CRCPOLY_LE : 0);
+    }
+    return crc;
+}
+
+
+static int spectcmd__romcrc(const uint8_t *cmdbuf, unsigned len)
+{
+    NEED(257);
+    uint8_t romnum = *cmdbuf++;
+
+    uint32_t crc = 0xFFFFFFFF;
+
+    crc = rom__crc32_le(crc, cmdbuf, 256);
+
+    ESP_LOGI(TAG, "Dump for ROM%d", romnum);
+    do {
+        unsigned offset=0;
+        char title[16];
+        while (offset<256) {
+            sprintf(title, "%03d: ", offset);
+            BUFFER_LOGI(TAG, title, &cmdbuf[offset], 16);
+            offset+=16;
+        }
+    } while (0);
+    /*
+    ESP_LOGI(TAG,"First rom %d 8 bytes (64-apart): %02x %02x %02x %02x %02x %02x %02x %02x",
+             romnum,
+             cmdbuf[0],
+             cmdbuf[1],
+             cmdbuf[2],
+             cmdbuf[3],
+             cmdbuf[4],
+             cmdbuf[5],
+             cmdbuf[6],
+             cmdbuf[7]);
+      */
+    //crc = crc32_le(crc, cmdbuf, 256);
+    crc = crc ^ 0xFFFFFFFF;
+
+    const rom_model_t *model = rom__set_rom_crc(romnum, crc);
+
+    ESP_LOGI(TAG, "ROM %d CRC: %08x : %s", romnum, crc, model ? model->name: "unknown");
+
+
+    spectcmd__removedata();
     return 0;
 }
 
@@ -379,6 +439,7 @@ static const spectcmd_handler_t spectcmd_handlers[] = {
     &spectcmd__fast_load,     // 12 SPECTCMD_CMD_FASTLOAD
     &spectcmd__fast_load_data,// 13 SPECTCMD_CMD_FASTLOAD_DATA
     &spectcmd__playtape_fast, // 14 SPECTCMD_CMD_PLAYTAPE_FAST
+    &spectcmd__romcrc,        // 15 SPECTCMD_CMD_ROMCRC
     // FOPEN
     // FCLOSE
     // FREAD
