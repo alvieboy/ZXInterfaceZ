@@ -327,7 +327,7 @@ begin
       memromsel_r           <= (others => 'X');
       --bit_from_cpu_o.tx_data_valid <= '0';
       --bit_from_cpu_o.tx_data  <= (others => 'X');
-      
+      regs32_r              <= (others => (others => '0') );
 
       if wr_s='1' then
 
