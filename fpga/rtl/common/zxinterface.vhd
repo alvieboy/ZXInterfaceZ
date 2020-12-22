@@ -943,20 +943,17 @@ begin
         nmi_request_r <= '0';
 
       elsif (in_nmi_rom_r='0') and (forcenmi_on_s='1' or keyb_trigger_s='1') then
-       -- nmi_r           <= '1';
         nmi_request_r   <= '1'; -- Latch NMI request. We will wait for M1 fall
       end if;
 
 
       if nmi_access_s='1' then -- Entered NMI.
         in_nmi_rom_r    <= nmi_r;
-        -- Force ROM to index 0. This allows us to use NMI in other ROMs
-        --nmi_saved_rom   <= romsel_s;
         nmi_r           <= '0';
       end if;
 
       if retn_det_s='1' then -- If we detect a RETN, leave ROM.
-        in_nmi_rom_r <= '0';
+        in_nmi_rom_r    <= '0';
       end if;
 
     end if;
@@ -1252,27 +1249,28 @@ begin
 --    audio_i     => tap_audio_s
 --  );
 
+  bit_uart: if C_BIT_ENABLED generate
 
+    testuart_inst: entity work.testuart
+    port map (
+      clk_i           => clk_i,
+      arst_i          => arst_i,
+      rx_i            => testuart_rx_i,
+      tx_o            => testuart_tx_o,
+      -- RX fifo access
+      fifo_used_o     => bit_to_cpu_s.rx_avail_size,
+      fifo_empty_o    => testuart_rx_empty,
+      fifo_rd_i       => bit_from_cpu_s.rx_read,
+      fifo_data_o     => bit_to_cpu_s.rx_data,
+      -- TX fifo
+      uart_tx_en_i    => bit_from_cpu_s.tx_data_valid,
+      uart_tx_data_i  => bit_from_cpu_s.tx_data,
+      uart_tx_busy_o  => bit_to_cpu_s.tx_busy
+    );
+  
+    bit_to_cpu_s.rx_avail <= not testuart_rx_empty;
 
-  testuart_inst: entity work.testuart
-  port map (
-    clk_i           => clk_i,
-    arst_i          => arst_i,
-    rx_i            => testuart_rx_i,
-    tx_o            => testuart_tx_o,
-    -- RX fifo access
-    fifo_used_o     => bit_to_cpu_s.rx_avail_size,
-    fifo_empty_o    => testuart_rx_empty,
-    fifo_rd_i       => bit_from_cpu_s.rx_read,
-    fifo_data_o     => bit_to_cpu_s.rx_data,
-    -- TX fifo
-    uart_tx_en_i    => bit_from_cpu_s.tx_data_valid,
-    uart_tx_data_i  => bit_from_cpu_s.tx_data,
-    uart_tx_busy_o  => bit_to_cpu_s.tx_busy
-  );
-
-  bit_to_cpu_s.rx_avail <= not testuart_rx_empty;
-
+  end generate;
 
   mosi_s          <= SPI_MOSI_i;
   SPI_MISO_o      <= miso_s;

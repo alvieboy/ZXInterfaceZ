@@ -436,7 +436,7 @@ begin
   vidmode_o(0)          <= flags_r(11); --
   vidmode_o(1)          <= flags_r(12); --
 
-  bit_from_cpu_o.bit_enable <= flags_r(14); -- BIT enabled
+  bit_from_cpu_o.bit_enable <= flags_r(14) when C_BIT_ENABLED else '0'; -- BIT enabled
   audio_enable_o        <= flags_r(15);                  
   resfifo_wr_o          <= '1' when wr_s='1' and addr_s="0010100" else '0';
   resfifo_write_o       <= dat_in_s;

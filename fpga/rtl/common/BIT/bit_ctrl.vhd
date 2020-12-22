@@ -30,14 +30,15 @@ architecture beh of bit_ctrl is
 
 begin
 
-  bit_dout_o <= bit_data_i(((1+to_integer(to_01(bit_index_i)))*8)-1 downto (8*(to_integer(to_01(bit_index_i)))));
+  bit_dout_o <= bit_data_i(((1+to_integer(to_01(bit_index_i)))*8)-1 downto (8*(to_integer(to_01(bit_index_i)))))
+    when C_BIT_ENABLED else (others => 'X');
 
   process(clk_i, arst_i)
   begin
     if arst_i='1' then
       dout_r  <= (others => '0');
     elsif rising_edge(clk_i) then
-      if bit_enable_i='0' then
+      if bit_enable_i='0' or C_BIT_ENABLED=false then
         dout_r  <= (others => '0');
       else
         if bit_we_i='1' and bit_index_i=3 then
@@ -52,7 +53,7 @@ begin
     if arst_i='1' then
       dout_temp_r  <= (others => '0');
     elsif rising_edge(clk_i) then
-      if bit_we_i='1' then
+      if bit_we_i='1' and C_BIT_ENABLED then
         case bit_index_i is
           when "00" =>
             dout_temp_r(7 downto 0) <= bit_din_i;
