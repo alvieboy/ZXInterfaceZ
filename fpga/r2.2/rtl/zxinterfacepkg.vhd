@@ -7,6 +7,7 @@ package zxinterfacepkg is
   constant C_CLK_KHZ                : natural := 96000;
 
   constant C_SCREENCAP_ENABLED      : boolean := true;
+  constant C_BIT_ENABLED            : boolean := false;
 
   constant C_FPGAID0                : std_logic_vector(7 downto 0) := x"A5";
   constant C_FPGAID1                : std_logic_vector(7 downto 0) := x"10";

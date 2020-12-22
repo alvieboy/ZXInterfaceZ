@@ -269,7 +269,7 @@ begin
 
   process(audio_enable_s, bit_s, audio_l_s, audio_r_s)
   begin
-    if bit_s='1' then
+    if bit_s='1' and C_BIT_ENABLED then
       EXT_io(11) <= 'Z';
       EXT_io(12) <= testuart_tx_s;
     else
@@ -340,14 +340,20 @@ begin
   );
 
   -- BIT
-  bit_det: entity work.bit_detect
-  port map (
-    clk_i       => sysclk_s,
-    arst_i      => sysrst_s,
-    det_i       => EXT_io(13),
-    bit_o       => bit_s
-  );
 
+  cb1: if C_BIT_ENABLED generate
+    bit_det: entity work.bit_detect
+    port map (
+      clk_i       => sysclk_s,
+      arst_i      => sysrst_s,
+      det_i       => EXT_io(13),
+      bit_o       => bit_s
+    );
+  end generate;
+
+  cb2: if not C_BIT_ENABLED generate
+    bit_s <= '0';
+  end generate;
 
 
 end str;
