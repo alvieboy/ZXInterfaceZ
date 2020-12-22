@@ -1,5 +1,11 @@
 SNARAM:
 	DI
+        ; Ensure a consistent RAM location mapping, because we will update the ROM
+        ; numbering later
+        LD	A, $00
+        LD	BC, $7FF0
+        OUT	(C), A
+
         ; External RAM address: 0x010000
         LD	A, $00		; LSB 
         OUT	(PORT_RAM_ADDR_0), A 
@@ -19,4 +25,3 @@ _l2:
         JR	NZ, _l2
         ; ESP32 shall have perform a ROM patch. Jump into it.
         JP	ROM_PATCHED_SNALOAD
-
