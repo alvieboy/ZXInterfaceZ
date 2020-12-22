@@ -389,6 +389,7 @@ architecture beh of zxinterface is
 
   signal trig_force_clearromcsonret_s: std_logic;
   signal reqackn_sync_s         : std_logic;
+  signal disable_romcs_s        : std_logic;
 
 begin
 
@@ -582,7 +583,7 @@ begin
       page128_smc_o   => page128_smc_s,
 
       trig_force_clearromcsonret_o => trig_force_clearromcsonret_s,
-
+      disable_romcs_o => disable_romcs_s,
       dbg_o           => dbg_o(15 downto 8)
   );
 
@@ -632,7 +633,8 @@ begin
 
   -- TODO: we should have more then one ROM here.
 
-  rom_active_s    <= rom_enable_s and (spect_forceromcs_bussync_s or hook_romcs_s);
+  rom_active_s    <= '0' when disable_romcs_s='1' else
+      rom_enable_s and (spect_forceromcs_bussync_s or hook_romcs_s);
   --io_active_s     <= io_enable_s;-- and NOT XRD_sync_s;
 
   data_o_valid_s  <= rom_active_s or io_enable_s;--io_active_s;
@@ -1275,8 +1277,8 @@ begin
   mosi_s          <= SPI_MOSI_i;
   SPI_MISO_o      <= miso_s;
 
-    force_romcs_s   <= (spect_forceromcs_bussync_s or hook_romcs_s); -- Always enabled -- and not mode2a_s;
-    force_2aromcs_s <= (spect_forceromcs_bussync_s or hook_romcs_s) and mode2a_s; -- Only in 2A+ mode, due to VIDEO signal on same pin
+  force_romcs_s   <= (spect_forceromcs_bussync_s or hook_romcs_s) and not disable_romcs_s; -- Always enabled -- and not mode2a_s;
+  force_2aromcs_s <= (spect_forceromcs_bussync_s or hook_romcs_s) and mode2a_s and not disable_romcs_s; -- Only in 2A+ mode, due to VIDEO signal on same pin
 
     bit_int: entity work.bit_out generic map ( WIDTH=>1, START=>9)
               port map ( data_i(0) => '0', data_o(0) => FORCE_INT_o, bit_from_cpu_i => bit_from_cpu_s );

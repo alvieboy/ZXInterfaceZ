@@ -119,6 +119,8 @@ begin
     -- Entering NMI. this should
     SpectrumReadOpcode( Spectrum_Cmd, Spectrum_Data, x"0066", data_v );
 
+    wait for 100 ns;
+
     -- NMI should be "acknowledged".
     Check("7 NMI is forced", CtrlPins_Data.NMI, '0');
     Check("8 ROMCS is forced", CtrlPins_Data.ROMCS, '1');
@@ -162,7 +164,7 @@ begin
     -- De-activate ROMCS
     spiPayload_in_s(0) <= x"EC";
     spiPayload_in_s(1) <= x"00";
-    spiPayload_in_s(2) <= "00001000"; -- ForceROMCS
+    spiPayload_in_s(2) <= "00001000"; -- ForceROMCS off
     spiPayload_in_s(3) <= x"00";
 
     Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 4, spiPayload_in_s, spiPayload_out_s);
@@ -172,8 +174,29 @@ begin
     Check("11 ROMCS is not forced", CtrlPins_Data.ROMCS, '0');
 
 
-    wait for 3 us;
+    wait for 1 us;
 
+    -- Check if we can disable ROMCS by specturm forcing ROMCS to disable
+    -- Activate ROMCS
+    spiPayload_in_s(0) <= x"EC";
+    spiPayload_in_s(1) <= x"00";
+    spiPayload_in_s(2) <= "00000100"; -- ForceROMCS
+    spiPayload_in_s(3) <= x"00";
+    Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 4, spiPayload_in_s, spiPayload_out_s);
+
+    SpectrumReadOpcode(Spectrum_Cmd, Spectrum_Data, x"0067", data_v);
+
+    wait for 100 ns;
+
+    Check("12 ROMCS is forced", CtrlPins_Data.ROMCS, '1');
+
+    SpectrumWriteIO(Spectrum_Cmd, Spectrum_Data, x"006F", x"02");
+
+    Check("13 ROMCS is NOT forced", CtrlPins_Data.ROMCS, '0');
+
+    SpectrumWriteIO(Spectrum_Cmd, Spectrum_Data, x"006F", x"00");
+
+    Check("14 ROMCS is forced", CtrlPins_Data.ROMCS, '1');
 
     wait for 2 us;
 

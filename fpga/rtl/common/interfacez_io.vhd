@@ -92,7 +92,7 @@ entity interfacez_io is
     page128_smc_o         : out std_logic_vector(7 downto 0);
 
     trig_force_clearromcsonret_o  : out std_logic;
-
+    disable_romcs_o       : out std_logic;
     dbg_o                 : out std_logic_vector(7 downto 0)
   );
 
@@ -207,6 +207,7 @@ begin
       ram_addr_r    <= (others => 'X');
       scratch0_r    <= (others => '0');
       scratch1_r    <= (others => '0');
+      disable_romcs_o <= '0';
 
     elsif rising_edge(clk_i) then
 
@@ -253,6 +254,8 @@ begin
           when SPECT_PORT_NMIREASON =>
             -- We reuse this address to force ROMCS clear on RET
             trig_force_clearromcsonret_r <= dat_i(0);
+            -- We also use it to disable ROMCS temporarly to perform ROM checksums
+            disable_romcs_o <= dat_i(1);
 
           when others =>
         end case;
