@@ -14,3 +14,8 @@ extern uint32_t loglevel;
     ESP_LOGI(tag,x);\
     } \
     } while (0)
+
+
+#define BUFFER_LOGI(tag, hdr, buffer, len) log_buffer(ESP_LOG_INFO, tag, hdr, buffer, len)
+
+void log_buffer(esp_log_level_t level, const char *tag, const char *hdr, const uint8_t *buf, uint8_t len);
