@@ -24,12 +24,15 @@ entity ram_adaptor is
     spect_data_i          : in std_logic_vector(7 downto 0);
     spect_data_o          : out std_logic_vector(7 downto 0);
     rom_active_i          : in std_logic;
-    spect_clk_rise_i      : in std_logic;
-    spect_clk_fall_i      : in std_logic;
+    --spect_clk_rise_i      : in std_logic;
+    --spect_clk_fall_i      : in std_logic;
     spect_wait_o          : out std_logic;
+    nmi_entry_rd_p_o      : out std_logic; -- One pulse if we are reading opcode @0066
     -- Ticks
     spect_mem_rd_p_i      : in std_logic;
     spect_mem_wr_p_i      : in std_logic;
+
+    spect_m1_i            : in std_logic;
     romsel_i              : in std_logic_vector(1 downto 0);
     memsel_i              : in std_logic_vector(2 downto 0)
 
@@ -51,6 +54,7 @@ architecture beh of ram_adaptor is
     ack     : std_logic;
     spectdata : std_logic_vector(7 downto 0);
     ramdata   : std_logic_vector(7 downto 0);
+    nmi_entry_rd_p  : std_logic;
   end record;
 
   signal r: regs_type;
@@ -134,7 +138,7 @@ begin
   write_access_s  <= rom_active_i  and spect_mem_wr_p_i;
 
   process(clk_i, arst_i, ram_wr_i, r, ahb_i, ram_rd_i, spect_addr_i, spect_data_i, spect_mem_rd_p_i, spect_mem_wr_p_i,
-    write_access_s, romsel_i, memsel_i, ram_dat_i, ram_addr_i, read_access_s, write_access_s)
+    write_access_s, romsel_i, memsel_i, ram_dat_i, ram_addr_i, read_access_s, spect_m1_i, write_access_s)
     variable w: regs_type;
   begin
     w := r;
@@ -146,7 +150,15 @@ begin
   
     --ram_ack_o <= '0';
     w.ack := '0';
+    w.nmi_entry_rd_p := '0';
     request_delayed <= '0';
+
+    if spect_mem_rd_p_i='1' and spect_m1_i='0' and spect_addr_i=x"0066" then
+      w.nmi_entry_rd_p := '1';
+      w.srd := '1';
+
+    end if;
+
 
     case r.state is
 
@@ -173,6 +185,11 @@ begin
             ahb_o.HADDR(23 downto 0)  <= translate_address(spect_addr_i, romsel_i, memsel_i);
           end if;
         elsif ram_rd_i='1' or read_access_s='1' or r.srd='1' then
+
+          if read_access_s='1' and spect_m1_i='0' and spect_addr_i=x"0066" then
+            w.nmi_entry_rd_p := '1';
+          end if;
+
           ahb_o.HTRANS <= C_AHB_TRANS_SEQ;
           ahb_o.HWRITE <= '0';
           if ahb_i.HREADY='1' then
@@ -230,29 +247,12 @@ begin
       r.ack     <= '0';
       r.spectdata  <= (others => '0');
       r.ramdata    <= (others => '0');
+      r.nmi_entry_rd_p <= '0';
     elsif rising_edge(clk_i) then
       r <= w;
     end if;
   end process;
 
-  waitgen: if false generate
-
-  process(clk_i, arst_i)
-  begin
-    if arst_i='1' then
-      spect_wait_o <= '0';
-    elsif rising_edge(clk_i) then
-      if request_delayed='1' then
-        spect_wait_o <= '1';
-      elsif spect_clk_fall_i='1' then
-        spect_wait_o <= '0';
-      end if;
-    end if;
-  end process;
-
-  end generate;
-
-  waitgen2: if true generate
     wg2: block
       signal delay: integer range 0 to 13*3;
     begin
@@ -277,8 +277,6 @@ begin
       end process;
     end block;
 
-  end generate;
-
 
   ahb_o.HSIZE               <= C_AHB_SIZE_BYTE;
   ahb_o.HBURST              <= C_AHB_BURST_INCR;
@@ -288,4 +286,5 @@ begin
   spect_data_o              <= r.spectdata;
   ram_dat_o                 <= r.ramdata;
   ram_ack_o                 <= r.ack;
+  nmi_entry_rd_p_o          <= r.nmi_entry_rd_p;
 end beh;

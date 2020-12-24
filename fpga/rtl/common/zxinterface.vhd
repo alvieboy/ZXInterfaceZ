@@ -390,6 +390,7 @@ architecture beh of zxinterface is
   signal trig_force_clearromcsonret_s: std_logic;
   signal reqackn_sync_s         : std_logic;
   signal disable_romcs_s        : std_logic;
+  signal nmi_entry_rd_p_s       : std_logic;
 
 begin
 
@@ -949,7 +950,8 @@ begin
       end if;
 
 
-      if nmi_access_s='1' then -- Entered NMI.
+--      if nmi_access_s='1' then -- Entered NMI.
+      if nmi_entry_rd_p_s='1' then -- Entered NMI.
         in_nmi_rom_r    <= nmi_r;
         nmi_r           <= '0';
       end if;
@@ -1062,12 +1064,15 @@ begin
       else
         if spect_m1_fall_s='1' and spect_forceromcs_s='1' then
           spect_forceromcs_bussync_s <= '1';
-        elsif spect_m1_fall_s='1' and nmi_r='1' then
-          nmi_m1fall_q_r         <= '1';
-          if nmi_m1fall_q_r='1' then
-            spect_forceromcs_bussync_s <= '1';--spect_forceromcs_s or (in_nmi_rom_r or nmi_r);  -- Also force ROM on NMI.
-            nmi_m1fall_q_r <= '0'; -- Clear
-          end if;
+        --elsif spect_m1_fall_s='1' and nmi_r='1' then
+        --  nmi_m1fall_q_r         <= '1';
+        --  if nmi_m1fall_q_r='1' then
+        --    spect_forceromcs_bussync_s <= '1';--spect_forceromcs_s or (in_nmi_rom_r or nmi_r);  -- Also force ROM on NMI.
+        --    nmi_m1fall_q_r <= '0'; -- Clear
+        --  end if;
+        --end if;
+        elsif nmi_entry_rd_p_s='1' and nmi_r='1' then
+          spect_forceromcs_bussync_s<= '1';
         end if;
       end if;
     end if;
@@ -1110,9 +1115,11 @@ begin
       spect_data_i    => d_s,
       spect_data_o    => romdata_o_s,
       rom_active_i    => rom_active_s,
-      spect_clk_rise_i => spect_clk_rise_s,
-      spect_clk_fall_i => spect_clk_fall_s,
+      --spect_clk_rise_i => spect_clk_rise_s,
+      --spect_clk_fall_i => spect_clk_fall_s,
       spect_wait_o    => wait_s,
+      spect_m1_i       => XM1_sync_s,
+      nmi_entry_rd_p_o  => nmi_entry_rd_p_s,
       -- Ticks
       spect_mem_rd_p_i => mem_rd_p_s,
       spect_mem_wr_p_i => mem_wr_p_s,
@@ -1179,7 +1186,7 @@ begin
   capinst: if C_CAPTURE_ENABLED generate
     capb: block
       signal trig_s: std_logic_vector(31 downto 0);
-      signal nontrig_s: std_logic_vector(13 downto 0);
+      signal nontrig_s: std_logic_vector(15 downto 0);
     begin
 
       trig_s(15 downto 0) <= a_s;
@@ -1206,14 +1213,16 @@ begin
       nontrig_s(10) <= reqackn_sync_s;
       nontrig_s(11) <= cmdfifo_notempty_s;
       nontrig_s(12) <= D_BUS_DIR_s;
-      nontrig_s(13) <= page128_pmc_s(4);
+      nontrig_s(13) <= page128_pmc_s(4); -- ROM for 128K
+      nontrig_s(14) <= nmi_request_r;
+      nontrig_s(15) <= in_nmi_rom_r;
 
     --  int_s <= usb_int_s or cmdfifo_notempty_s or spec_int_r;
 
 
       scope_inst: entity work.scope
         generic map (
-          NONTRIGGERABLE_WIDTH  => 14,
+          NONTRIGGERABLE_WIDTH  => 16,
           TRIGGERABLE_WIDTH     => 32,
           WIDTH_BITS            => 10
         )
