@@ -80,6 +80,7 @@ architecture beh of spi_interface is
 
   signal blocksize_active_r : std_logic;
   signal blocksize_r  : unsigned(7 downto 0);
+  signal deselected_r : std_logic;
 
   function to_01(a: in std_logic_vector) return std_logic_vector is
     variable l: std_logic_vector(a'range);
@@ -130,7 +131,7 @@ begin
 
   process(clk_i, arst_i)
   begin
-    if arst_i='1' or csn_s='1' then
+    if arst_i='1' then
 
       ahb_m2s_o.HTRANS  <= C_AHB_TRANS_IDLE;
       ahb_m2s_o.HADDR   <= (others => 'X');
@@ -348,6 +349,34 @@ begin
         when others =>
           report "TBD " & state_type'image(state_r) severity failure;
       end case;
+
+
+      -- CSN handling
+      case state_r is
+        when RDWR_2 =>
+          deselected_r <= '0';
+
+        when RDWR_3 =>
+          
+          if ahb_s2m_i.HREADY='1' then
+            if deselected_r='1' or csn_s='1' then
+              state_r <= IDLE;
+            end if;
+          end if;
+
+          if csn_s='1' then
+            deselected_r <= '1';
+          end if;
+
+        when others =>
+          if csn_s='1' then
+            state_r <= IDLE;
+          end if;
+          deselected_r <= 'X';
+
+      end case;
+
+
 
 
 
