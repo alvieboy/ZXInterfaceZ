@@ -3,6 +3,7 @@
 #include "wsys/menuwindow.h"
 #include "wsys/screen.h"
 #include "wsys/filechooserdialog.h"
+#include "wsys/chooserdialog.h"
 #include "settingsmenu.h"
 #include "fileaccess.h"
 #include "fpga.h"
@@ -11,6 +12,9 @@
 #include "tapeplayer.h"
 #include "about.h"
 #include "fasttap.h"
+#include "inputdialog.h"
+#include "poke.h"
+#include "nmi_poke.h"
 
 static MenuWindow *nmimenu;
 
@@ -21,7 +25,7 @@ static MenuEntryList nmimenu_entries = {
         { .flags = 1, .string = "Save snapshot..." },
         { .flags = 1, .string = "Play tape..." },
         { .flags = 0, .string = "Play tape (fast)..." },
-        { .flags = 1, .string = "Poke..." },
+        { .flags = 0, .string = "Poke..." },
         { .flags = 0, .string = "Settings..." },
         { .flags = 0, .string = "Reset" },
         { .flags = 0, .string = "About..." },
@@ -48,6 +52,7 @@ static void cb_exit_nmi();
 static void cb_about();
 static void cb_reset();
 static void cb_settings();
+static void cb_poke();
 
 static const CallbackMenu::Function nmimenu_functions[] =
 {
@@ -55,7 +60,7 @@ static const CallbackMenu::Function nmimenu_functions[] =
     NULL,
     &cb_load_tape,
     &cb_load_tape_fast,
-    NULL,
+    &cb_poke,
     &cb_settings,
     &cb_reset,
     &cb_about,
@@ -104,6 +109,105 @@ static void do_load_snapshot(FileChooserDialog *d, int status)
     }
 }
 
+#include "poke.h"
+
+static void poke_add_entry(void* list, const char *file)
+{
+    static_cast<EntryList*>(list)->push_back( Entry(file, NULL) );
+}
+
+static int poke_ask_fun(void *user)
+{
+    unsigned long v;
+    char *endp = NULL;
+    bool retry;
+
+    int r = -1;
+
+    do {
+        retry = false;
+        InputDialog *in = WSYSObject::create<InputDialog>("Enter POKE value", 28, 5);
+        if (in->exec()==0) {
+            // Check if valid number
+            ESP_LOGI("POKE","Converting '%s'\n", in->getText());
+
+            v = strtoul(in->getText(), &endp, 0);
+
+            in->destroy();
+
+            if (endp!=NULL && (*endp)=='\0') {
+                r = 0;
+            } else {
+                r = -1;
+            }
+            if (v > 255) {
+                r=-1;
+            }
+            if (r<0) {
+                MessageBox::show("Invalid value!");
+                retry = true;
+            }
+            r = v;
+
+        } else {
+            r = -1;
+
+            in->destroy();
+
+        }
+    } while (retry);
+    return r;
+}
+
+static void do_select_poke(FileChooserDialog *d, int status)
+{
+    EntryList list;
+    nmi_handler_poke_t nmipoke;
+    poke_t poke;
+    int r;
+
+    poke__init(&poke);
+
+    r = poke__openfile(&poke, d->getSelection());
+
+    if (r==0) {
+
+        if (poke__loadentries(&poke, &poke_add_entry, &list)<0) {
+            MessageBox::show("Cannot load POK entries");
+        } else {
+    
+            ChooserDialog *ch = WSYSObject::create<ChooserDialog>("Choose trainer", 30, 12);
+
+            ch->setEntries(list);
+
+            if (ch->exec()==0) {
+
+                nmi_poke__init(&nmipoke);
+
+                poke__setaskfunction(&poke, &poke_ask_fun, NULL);
+                poke__setmemorywriter(&poke, &nmi_poke__mem_write_fun, &nmipoke);
+
+                if (poke__apply_trainer(&poke, ch->getSelection())!=0) {
+                    MessageBox::show("Cannot apply POK trainer");
+                } else {
+                    // All good.
+                    nmi_poke__finish(&nmipoke);
+                    screen__destroyAll();
+                    wsys__send_command(0xFC);
+                    return;
+                }
+            }
+
+            ch->destroy();
+        }
+    } else {
+        MessageBox::show("Cannot load POK");
+        return;
+    }
+
+    poke__close(&poke);
+}
+
 static void cb_load_snapshot()
 {
     FileChooserDialog *dialog = WSYSObject::create<FileChooserDialog>("Load snapshot", 24, 18);
@@ -117,6 +221,18 @@ static void cb_load_snapshot()
     
 }
 
+static void cb_poke()
+{
+    FileChooserDialog *dialog = WSYSObject::create<FileChooserDialog>("Load POKE", 24, 18);
+    dialog->setWindowHelpText("Use Q/A to move, ENTER selects");
+    dialog->setFilter(FILE_FILTER_POKES);
+    if (dialog->exec()>=0) {
+        do_select_poke(dialog, dialog->result());
+    }
+    dialog->destroy();
+}
+
+
 static void do_load_tape(FileChooserDialog *d, int status)
 {
     if (status==0) {
@@ -127,17 +243,22 @@ static void do_load_tape(FileChooserDialog *d, int status)
     }
 }
 
-static void do_load_tape_fast(FileChooserDialog *d, int status)
+static int do_load_tape_fast(FileChooserDialog *d, int status)
 {
     char fp[128];
     if (status==0) {
         WSYS_LOGI("Tape is: %s", d->getSelection());
 
         fullpath(d->getSelection(), fp, 127);
-        fasttap__prepare(fp);
-        screen__destroyAll();
-        wsys__send_command(0xFF);
+        if (fasttap__prepare(fp)==0) {
+            screen__destroyAll();
+            wsys__send_command(0xFF);
+            return 0;
+        } else {
+            MessageBox::show("Cannot load TZX file");
+        }
     }
+    return -1;
 }
 
 
@@ -158,9 +279,14 @@ static void cb_load_tape_fast()
     FileChooserDialog *dialog = WSYSObject::create<FileChooserDialog>("Load tape (fast)", 24, 18);
     dialog->setWindowHelpText("Use Q/A to move, ENTER selects");
     dialog->setFilter(FILE_FILTER_TAPES);
-    if (dialog->exec()>=0) {
-        do_load_tape_fast(dialog, dialog->result());
-    }
+    do {
+        if (dialog->exec()>=0) {
+            if (do_load_tape_fast(dialog, dialog->result())==0)
+                break;
+        } else {
+            break;
+        }
+    } while (1);
     dialog->destroy();
 }
 
