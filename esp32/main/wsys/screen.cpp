@@ -80,10 +80,11 @@ void screen__keyboard_event(u16_8_t k)
     unsigned l = windows.size();
     if (l==0)
         return;
-    WSYS_LOGI( "KBD event");
     if (kbdfocuswidget) {
+        WSYS_LOGI( "KBD event (grabbed)");
         kbdfocuswidget->handleEvent(0,k);
     } else {
+        WSYS_LOGI( "KBD event (window %d)", l-1);
         windows[l-1]->handleEvent(0,k);
     }
 
