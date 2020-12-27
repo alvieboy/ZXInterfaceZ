@@ -61,6 +61,7 @@ typedef struct {
 int wifi__scan( const wifi_scan_parser_t *parser, void *data );
 cJSON *wifi__ap_get_json(void);
 int wifi__scan_json(void);
+esp_err_t wifi__set_conf_json(cJSON *node, const char **errstr);
 
 int wifi__config_sta(const char *ssid, const char *pwd);
 int wifi__config_ap(const char *ssid, const char *pwd, uint8_t channel);

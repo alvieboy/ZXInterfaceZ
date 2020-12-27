@@ -64,6 +64,16 @@ const struct channel_list wifi_channels =
     }
 };
 
+static bool wifi__isvalidchannel(int channel)
+{
+    unsigned i;
+    for (i=0; i<wifi_channels.num_chans;i++) {
+        if (wifi_channels.info[i].chan == channel)
+            return true;
+    }
+    return false;
+}
+
 int wifi__get_ap_channel()
 {
     return nvs__u8("ap_chan", 3);
@@ -403,7 +413,7 @@ void wifi__init()
 
     if (nvs__u8("wifi", WIFI_MODE_AP)==WIFI_MODE_STA) {
         wifi__init_wpa2();
-    } else {
+    } else if (nvs__u8("wifi", WIFI_MODE_AP)==WIFI_MODE_AP) {
         wifi__init_softap();
     }
 
@@ -430,10 +440,19 @@ int wifi__get_rssi()
     return -1;
 }
 
+static esp_err_t wifi__stop()
+{
+    wifi__teardown();
+    nvs__set_u8("wifi", WIFI_MODE_NULL);
+    return ESP_OK;
+}
+
+
 void wifi__get_conf_json(cJSON *node)
 {
     char temp[64];
-    struct ip4_addr addr;
+    struct ip4_addr addr, mask, gw;
+    uint8_t mac[6];
 
     bool issta = nvs__u8("wifi", WIFI_MODE_AP)==WIFI_MODE_STA;
     cJSON_AddStringToObject(node, "mode", issta? "sta":"ap");
@@ -444,7 +463,7 @@ void wifi__get_conf_json(cJSON *node)
         nvs__fetch_str("hostname",  temp, sizeof(temp),"interfacez.local");
         cJSON_AddStringToObject(sta, "hostname", temp);
         // only DHCP for now
-        cJSON_AddStringToObject(sta, "ip", "dhcp");
+        cJSON_AddStringToObject(sta, "ip_config", "dhcp");
         cJSON_AddItemToObject(node, "sta", sta);
     } else {
         cJSON *ap = cJSON_CreateObject();
@@ -468,7 +487,196 @@ void wifi__get_conf_json(cJSON *node)
 
         cJSON_AddItemToObject(node, "ap", ap);
     }
+    // Add status node
+
+    if (netif!=NULL) {
+        cJSON *status = cJSON_CreateObject();
+
+        esp_netif_get_mac(netif, &mac[0]);
+
+        sprintf(temp, "%02x:%02x:%02x:%02x:%02x:%02x",
+                mac[0],
+                mac[1],
+                mac[2],
+                mac[3],
+                mac[4],
+                mac[0]);
+
+        cJSON_AddStringToObject(status, "connected", wifi__isconnected()?"true":"false");
+
+        cJSON_AddStringToObject(status, "mac", temp);
+
+        wifi__get_ip_info(&addr.addr, &mask.addr, &gw.addr);
+
+        inet_ntoa_r( addr , temp, sizeof(temp) );
+        cJSON_AddStringToObject(status, "ip", temp);
+        inet_ntoa_r( gw , temp, sizeof(temp) );
+        cJSON_AddStringToObject(status, "gw", temp);
+        inet_ntoa_r( mask , temp, sizeof(temp) );
+        cJSON_AddStringToObject(status, "netmask", temp);
+
+        cJSON_AddItemToObject(node, "status", status);
+    }
 }
+
+static esp_err_t wifi__fetch_json_ip_mask_gw(cJSON *node, const char **errstr,
+                                             ip4_addr_t *ip,
+                                             ip4_addr_t *netmask,
+                                             ip4_addr_t *gw)
+{
+    esp_err_t r;
+
+    if (ip) {
+        // fetch IP address
+        r = json__get_ip(node,"ip", ip);
+        if (r<0) {
+            *errstr = "Invalid IP address";
+            return r;
+        }
+    }
+    if (netmask) {
+        r = json__get_ip(node,"netmask", netmask);
+        if (r<0) {
+            *errstr = "Invalid IP netmask";
+            return r;
+        }
+    }
+    if (gw) {
+        r = json__get_ip(node,"gw", gw);
+        if (r<0) {
+            *errstr = "Invalid IP gateway";
+            return r;
+        }
+    }
+    // TBD: validate IP/Netmask/GW
+
+    return ESP_OK;
+}
+
+static esp_err_t wifi__fetch_json_ssid_passsword(cJSON *node, const char **errstr,
+                                                 const char **ssid,
+                                                 const char **password)
+{
+    *ssid = json__get_string(node, "ssid");
+    *password = json__get_string(node, "password");
+
+    return ESP_OK;
+}
+
+static esp_err_t wifi__set_conf_json_ap(cJSON *node, const char **errstr)
+{
+    int r;
+
+    ip4_addr_t ip, mask;
+    const char *ssid, *password;
+    int chan = -1;
+
+    r = wifi__fetch_json_ssid_passsword(node, errstr, &ssid, &password);
+
+    if (r<0)
+        return r;
+
+    r = wifi__fetch_json_ip_mask_gw(node, errstr,&ip,&mask,NULL);
+
+    cJSON *n = cJSON_GetObjectItemCaseSensitive(node, "channel");
+    if ((!n) || cJSON_IsNumber(n)) {
+        *errstr = "Invalid channel";
+        r = -1;
+    } else {
+        chan = n->valueint;
+        if (!wifi__isvalidchannel(chan)) {
+            *errstr = "Invalid channel";
+            r = -1;
+        }
+    }
+    if (r<0)
+        return r;
+
+    uint32_t prev_ip = wifi__config_get_ip();
+    uint32_t prev_gw = wifi__config_get_gw();
+    uint32_t prev_mask = wifi__config_get_netmask();
+
+    nvs__set_u32("ip", ip.addr);
+    nvs__set_u32("mask", mask.addr);
+    nvs__set_u32("gw", 0);
+    
+
+    r = wifi__config_ap(ssid, password, chan);
+
+    if (r<0) {
+
+        nvs__set_u32("ip", prev_ip);
+        nvs__set_u32("mask", prev_mask);
+        nvs__set_u32("gw", prev_gw);
+
+        *errstr = "Cannot apply configuration";
+    }
+
+
+    return r;
+}
+
+static esp_err_t wifi__set_conf_json_sta(cJSON *node, const char **errstr)
+{
+    int r = ESP_FAIL;
+    ip4_addr_t ip, mask, gw;
+
+    const char *ssid, *password;
+
+    r = wifi__fetch_json_ssid_passsword(node, errstr, &ssid, &password);
+
+    if (r<0)
+        return r;
+
+    const char *inet = json__get_string(node, "inet");
+
+    if (!inet) {
+        return r;
+    } else if (strcmp(inet,"static")==0) {
+#if 0
+        r = wifi__fetch_json_ip_mask_gw(node, errstr,&ip,&mask,&gw);
+        if (r<0)
+            return r;
+#endif
+        r = -1;
+        *errstr = "Static IP currently unsupported";
+
+    } else if (strcmp(inet,"dhcp")==0) {
+        r = ESP_OK;
+    } else {
+        *errstr = "Invalid inet settings";
+        r = -1;
+    }
+
+    if (r==ESP_OK) {
+        r = wifi__config_sta(ssid, password);
+        if (r<0) {
+            *errstr = "Cannot apply configuration";
+        }
+    }
+
+
+    return r;
+}
+
+esp_err_t wifi__set_conf_json(cJSON *node, const char **errstr)
+{
+    esp_err_t r = ESP_FAIL;
+    const char *mode = cJSON_GetObjectItem(node, "mode")->valuestring;
+
+    if (strstr(mode,"disabled")==0) {
+        r = wifi__stop();
+    } else if (strstr(mode,"ap")==0) {
+        r = wifi__set_conf_json_ap(node, errstr);
+    } else if (strstr(mode,"sta")==0) {
+        r = wifi__set_conf_json_sta(node, errstr);
+    } else {
+        *errstr = "Invalid mode setting";
+    }
+
+    return r;
+}
+
 
 static void wifi__ap_json_entry(void *user, uint8_t auth, uint8_t channel, int8_t rssi, const char *ssid, size_t ssidlen)
 {
