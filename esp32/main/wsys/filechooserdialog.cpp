@@ -36,7 +36,8 @@ static bool filter_match(uint8_t filter, struct dirent *e)
         case FILE_FILTER_TAPES:
             return ext_match(ext, "tap") || ext_match(ext,"tzx");
             break;
-        default:
+        case FILE_FILTER_POKES:
+            return ext_match(ext, "pok");
             break;
         }
     }
