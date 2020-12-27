@@ -7,6 +7,7 @@
 #include "tzx.h"
 #include "byteops.h"
 #include "minmax.h"
+#include "fileaccess.h"
 
 #ifdef __linux__
 
@@ -56,7 +57,7 @@ void tzx__chunk(struct tzx *t, const uint8_t *data, int len)
 #define NEED(x) if (tzx__check(t, &data, &len, x)<0) return;
 
     if (len==0) {
-        tzx__finished_callback();
+        t->callbacks->finished_callback();
         return;
     }
     //ESP_LOGI(TAG, "Parse chunk len %d", len);
@@ -139,7 +140,7 @@ void tzx__chunk(struct tzx *t, const uint8_t *data, int len)
             break;
         case PURETONE:
             NEED(4);
-            tzx__tone_callback( extractle16(&t->tzxbuf[0]), extractle16(&t->tzxbuf[2]) );
+            t->callbacks->tone_callback( extractle16(&t->tzxbuf[0]), extractle16(&t->tzxbuf[2]) );
             t->state = BLOCK;
             break;
 
@@ -160,7 +161,7 @@ void tzx__chunk(struct tzx *t, const uint8_t *data, int len)
             ESP_LOGI(TAG, "Pulse width (%d): %d", t->pulsecount-1, val);
 
             if (t->pulsecount == t->pulses) {
-                tzx__pulse_callback(t->pulses, &t->pulse_data[0]);
+                t->callbacks->pulse_callback(t->pulses, &t->pulse_data[0]);
                 t->state = BLOCK;
             } 
 
@@ -169,11 +170,11 @@ void tzx__chunk(struct tzx *t, const uint8_t *data, int len)
             NEED(10);
 
             t->datachunk = extractle24(&t->tzxbuf[7]) ;
-            tzx__pure_data_callback( extractle16(&t->tzxbuf[0]),
-                                    extractle16(&t->tzxbuf[2]),
-                                    t->datachunk,
-                                    extractle16(&t->tzxbuf[5]),
-                                    t->tzxbuf[4]);
+            t->callbacks->pure_data_callback( extractle16(&t->tzxbuf[0]),
+                                             extractle16(&t->tzxbuf[2]),
+                                             t->datachunk,
+                                             extractle16(&t->tzxbuf[5]),
+                                             t->tzxbuf[4]);
 
             t->state = RAWDATA;
             break;
@@ -182,14 +183,14 @@ void tzx__chunk(struct tzx *t, const uint8_t *data, int len)
 
             alen = MIN((int)len, (int)t->datachunk);
 
-            tzx__data_callback(data, alen);
+            t->callbacks->data_callback(data, alen);
 
             t->datachunk-=alen;
             len-=alen;
             data+=alen;
 
             if (t->datachunk==0) {
-                tzx__data_finished_callback();
+                t->callbacks->data_finished_callback();
                 t->state = BLOCK;
             }
 
@@ -219,7 +220,7 @@ void tzx__chunk(struct tzx *t, const uint8_t *data, int len)
             t->state = RAWDATA;
             ESP_LOGI(TAG,"Standard block ahead, %d bytes", val);
 
-            tzx__standard_block_callback(val, pause);
+            t->callbacks->standard_block_callback(val, pause);
 
             break;
 
@@ -244,7 +245,7 @@ void tzx__chunk(struct tzx *t, const uint8_t *data, int len)
             ESP_LOGI(TAG,"Turbo-speed block ahead, %d bytes", data_len);
             t->datachunk = data_len;
             t->state = RAWDATA;
-            tzx__turbo_block_callback(pilot, sync0, sync1, pulse0, pulse1, pilot_len, gap_len, data_len, t->lastbytesize);
+            t->callbacks->turbo_block_callback(pilot, sync0, sync1, pulse0, pulse1, pilot_len, gap_len, data_len, t->lastbytesize);
 
             break;
 
@@ -259,11 +260,124 @@ void tzx__chunk(struct tzx *t, const uint8_t *data, int len)
     } while (len>0);
 }
 
-void tzx__init(struct tzx *t)
+void tzx__init(struct tzx *t, const struct tzx_callbacks *callbacks)
 {
     t->tzxbufptr = 0;
     t->state = HEADER;
+    t->callbacks = callbacks;
 }
+
+static int analyser_is_not_trivial;
+
+static void analyser_tzx_standard_block_callback(uint16_t length, uint16_t pause_after)
+{
+}
+
+static void analyser_tzx_turbo_block_callback(uint16_t pilot,
+                                              uint16_t sync0,
+                                              uint16_t sync1,
+                                              uint16_t pulse0,
+                                              uint16_t pulse1,
+                                              uint16_t pilot_len,
+                                              uint16_t gap_len,
+                                              uint32_t data_len,
+                                              uint8_t last_byte_len)
+{
+    analyser_is_not_trivial = 1;
+}
+
+static void analyser_tzx_pure_data_callback(uint16_t pulse0, uint16_t pulse1, uint32_t data_len, uint16_t gap,
+                                    uint8_t last_byte_len)
+{
+    analyser_is_not_trivial = 1;
+}
+
+static void analyser_tzx_data_callback(const uint8_t *data, int len)
+{
+}
+
+void analyser_tzx_tone_callback(uint16_t t_states, uint16_t count)
+{
+    analyser_is_not_trivial = 1;
+}
+
+void analyser_tzx_pulse_callback(uint8_t count, const uint16_t *t_states /* these are words */)
+{
+    analyser_is_not_trivial = 1;
+}
+
+void analyser_tzx_data_finished_callback(void)
+{
+}
+
+void analyser_tzx_finished_callback(void)
+{
+}
+
+
+const struct tzx_callbacks analyser_tzx_callbacks =
+{
+    .standard_block_callback = analyser_tzx_standard_block_callback,
+    .turbo_block_callback    = analyser_tzx_turbo_block_callback,
+    .data_callback           = analyser_tzx_data_callback,
+    .tone_callback           = analyser_tzx_tone_callback,
+    .pulse_callback          = analyser_tzx_pulse_callback,
+    .pure_data_callback      = analyser_tzx_pure_data_callback,
+    .data_finished_callback  = analyser_tzx_data_finished_callback,
+    .finished_callback       = analyser_tzx_finished_callback
+};
+
+int tzx__can_fastplay_fd(int fd)
+{
+    struct tzx t;
+    unsigned char buf[64];
+
+    analyser_is_not_trivial = 0;
+
+    tzx__init(&t, &analyser_tzx_callbacks);
+    int r;
+
+    do {
+        r = read(fd, buf, sizeof(buf));
+        if (r<0) {
+            break;
+        }
+        if (r>0) {
+            tzx__chunk(&t, buf, r);
+        }
+    } while (r>0);
+
+    if (r<0)
+        return -1;
+
+    return analyser_is_not_trivial;
+}
+
+int tzx__can_fastplay(const char *filename)
+{
+
+    int fd = __open(filename, O_RDONLY);
+
+    if (fd<0)
+        return -1;
+
+    int r = tzx__can_fastplay_fd(fd);
+
+    close(fd);
+
+    return r;
+}
+
+
+
+
+
+
+
+
+
+
+
 
 #ifdef TESTTZX
 int main(int argc, char **argv)

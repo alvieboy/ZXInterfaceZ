@@ -120,7 +120,7 @@ static void tapeplayer__do_load_command(const uint8_t *buf, unsigned size)
 
 }
 
-void tzx__tone_callback(uint16_t tstates, uint16_t count)
+static void tapeplayer__tzx_tone_callback(uint16_t tstates, uint16_t count)
 {
     uint8_t txbuf[6];
     int i = 0;
@@ -139,7 +139,7 @@ void tzx__tone_callback(uint16_t tstates, uint16_t count)
     tapeplayer__do_load_command(txbuf,i);
 }
 
-void tzx__pulse_callback(uint8_t count, const uint16_t *t_states /* these are words */)
+static void tapeplayer__tzx_pulse_callback(uint8_t count, const uint16_t *t_states /* these are words */)
 {
     uint8_t txbuf[3];
     int i = 0;
@@ -217,20 +217,20 @@ static void tapeplayer__standard_block(uint16_t length, uint16_t pause_after, ui
 }
 
 
-void tzx__standard_block_callback(uint16_t length, uint16_t pause_after)
+void tapeplayer__tzx_standard_block_callback(uint16_t length, uint16_t pause_after)
 {
     tapeplayer__standard_block(length, pause_after, TAP_DEFAULT_PILOT_LEN);
 }
 
-void tzx__turbo_block_callback(uint16_t pilot,
-                               uint16_t sync0,
-                               uint16_t sync1,
-                               uint16_t pulse0,
-                               uint16_t pulse1,
-                               uint16_t pilot_len,
-                               uint16_t gap_len,
-                               uint32_t data_len,
-                               uint8_t last_byte_len)
+void tapeplayer__tzx_turbo_block_callback(uint16_t pilot,
+                                          uint16_t sync0,
+                                          uint16_t sync1,
+                                          uint16_t pulse0,
+                                          uint16_t pulse1,
+                                          uint16_t pilot_len,
+                                          uint16_t gap_len,
+                                          uint32_t data_len,
+                                          uint8_t last_byte_len)
 {
     uint8_t txbuf[32];
     //uint8_t *txptr = &txbuf[0];
@@ -288,11 +288,11 @@ void tzx__turbo_block_callback(uint16_t pilot,
     tapeplayer__do_load_command(txbuf, i);
 }
 
-void tzx__pure_data_callback(uint16_t pulse0,
-                             uint16_t pulse1,
-                             uint32_t data_len,
-                             uint16_t gap_len,
-                             uint8_t last_byte_len)
+void tapeplayer__tzx_pure_data_callback(uint16_t pulse0,
+                                        uint16_t pulse1,
+                                        uint32_t data_len,
+                                        uint16_t gap_len,
+                                        uint8_t last_byte_len)
 {
     uint8_t txbuf[17];
     int i = 0;
@@ -325,7 +325,7 @@ void tap__standard_block_callback(uint16_t length, uint16_t pause_after)
     tapeplayer__standard_block(length, pause_after, TAP_DEFAULT_PILOT_LEN);
 }
 
-void tzx__data_callback(const uint8_t *data, int len)
+void tapeplayer__tzx_data_callback(const uint8_t *data, int len)
 {
     tapeplayer__do_load_data(data,len);
 }
@@ -343,7 +343,7 @@ static void tapeplayer__data_finished(void)
 }
 
 
-void tzx__data_finished_callback(void)
+void tapeplayer__tzx_data_finished_callback(void)
 {
     tapeplayer__data_finished();
 }
@@ -358,7 +358,7 @@ static void tapeplayer__finished()
 
 }
 
-void tzx__finished_callback(void)
+void tapeplayer__tzx_finished_callback(void)
 {
     tapeplayer__finished();
 }
@@ -393,6 +393,19 @@ void tapeplayer__play(const char *filename)
     fullpath(filename, &cmd.file[0], sizeof(cmd.file)-1);
     xQueueSend(tap_evt_queue, &cmd, 1000);
 }
+
+const struct tzx_callbacks tapeplayer_tzx_callbacks =
+{
+    .standard_block_callback = tapeplayer__tzx_standard_block_callback,
+    .turbo_block_callback    = tapeplayer__tzx_turbo_block_callback,
+    .data_callback           = tapeplayer__tzx_data_callback,
+    .tone_callback           = tapeplayer__tzx_tone_callback,
+    .pulse_callback          = tapeplayer__tzx_pulse_callback,
+    .pure_data_callback      = tapeplayer__tzx_pure_data_callback,
+    .data_finished_callback  = tapeplayer__tzx_data_finished_callback,
+    .finished_callback       = tapeplayer__tzx_finished_callback
+};
+
 
 static void tapeplayer__do_start_play(const char *filename)
 {
@@ -433,7 +446,7 @@ static void tapeplayer__do_start_play(const char *filename)
         if (ext_match(ext,"tzx")) {
             is_tzx = true;
             ESP_LOGI(TAG,"Initializing TZX structure");
-            tzx__init(&tape_data.tzx);
+            tzx__init(&tape_data.tzx, &tapeplayer_tzx_callbacks);
         } else {
             is_tzx = false;
             ESP_LOGI(TAG,"Initializing TAP structure");
