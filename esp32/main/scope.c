@@ -17,7 +17,9 @@ static const char *scope_names_nontrig[] = {
     "/REQACK",
     "/CMDFIFOEMPTY",
     "DBUSDIR",
-    "ROMPAGESEL0"
+    "ROMPAGESEL0",
+    "NMIREQUEST",
+    "INNMIROM"
 };
 
 static const char *scope_names_trig[] = {
