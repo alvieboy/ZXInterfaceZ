@@ -20,7 +20,8 @@ const rom_model_t *detected_rom[4] ={ NULL };
  *
  * This is *NOT* a full CRC32 of the ROM image, instead we use data each 64 bytes to compute
  * a CRC32 (total 256 bytes per 16KB of ROM). This makes calculating the CRC much faster, and
- * it is enough to detect each ROM.
+ * it is enough to detect each ROM. This also means you cannot use the pre-computed CRC which
+ * are available on the Internet.
  *
 */
 static const rom_model_t rom_models[] = {
@@ -163,4 +164,16 @@ int rom__load_custom_from_file(const char *file, unsigned address)
     return r;
 }
 
+int rom__load_custom_routine(const uint8_t *data, unsigned size)
+{
+    uint8_t freearea[2];
+    // Read out free area
+    fpga__read_extram_block(NMI_ROM_BASEADDRESS + 0x0006, freearea, 2);
 
+    uint16_t start = (uint16_t)freearea[0] + (((uint16_t)freearea[1])<<8);
+
+    ESP_LOGI(TAG,"Start of ROM custom area: %02x\n", start);
+
+    fpga__write_extram_block(NMI_ROM_BASEADDRESS+start, data, size);
+    return 0;
+}
