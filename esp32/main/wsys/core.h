@@ -14,7 +14,7 @@ extern "C" {
 
 #ifdef __linux__
 #define WSYS_BOUND_CHECKS
-#define WSYS_ENABLE_DEBUG
+//#define WSYS_ENABLE_DEBUG
 #endif
 
 typedef enum {
