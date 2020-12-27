@@ -22,6 +22,52 @@ struct webserver_req_entry {
     webserver_req_handler_t req;
 };
 
+#define MAX_POST_LEN 16384
+
+static cJSON *webserver_req__parse_post_json(httpd_req_t *req)
+{
+    int total_len = req->content_len;
+    int cur_len = 0;
+    char *buf;
+
+    if (total_len<=0) {
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "content too short");
+        return NULL;
+    }
+
+    if (total_len> MAX_POST_LEN) {
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "content too long");
+        return NULL;
+    }
+
+
+    buf = (char*)malloc(total_len);
+
+    if (NULL==buf) {
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "cannot allocate memory");
+        return NULL;
+    }
+
+    int received = 0;
+
+    while (cur_len < total_len) {
+        received = httpd_req_recv(req, buf + cur_len, total_len);
+        if (received <= 0) {
+            /* Respond with 500 Internal Server Error */
+            httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to post control value");
+            free(buf);
+            return NULL;
+        }
+        cur_len += received;
+    }
+
+    buf[total_len] = '\0';
+
+    cJSON *root = cJSON_Parse(buf);
+    free(buf);
+    return root;
+}
+
 static void webserver_req__send_and_free_json(httpd_req_t *req, cJSON *response)
 {
     char *data = cJSON_Print(response);
@@ -464,6 +510,31 @@ static esp_err_t webserver_req__restart(httpd_req_t *req, const char *querystr)
 }
 
 
+
+static esp_err_t webserver_req__set_wifi(httpd_req_t *req, const char *querystr)
+{
+    esp_err_t r = ESP_FAIL;
+    const char *error = NULL;
+
+    cJSON *wifij = webserver_req__parse_post_json(req);
+
+    if (!wifij)
+        return r;
+
+    r = wifi__set_conf_json(wifij, &error);
+
+    if (r!=ESP_OK) {
+        if (error) {
+            httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, error);
+        }
+    }
+
+    cJSON_Delete(wifij);
+    return r;
+
+}
+
+
 static const struct webserver_req_entry req_handlers[] = {
     { "version", &webserver_req__version },
     { "list",    &webserver_req__list },
@@ -479,10 +550,11 @@ static const struct webserver_req_entry req_handlers[] = {
 };
 
 static const struct webserver_req_entry post_handlers[] = {
-    { "file",    &webserver_req__post_file },
+    { "file",      &webserver_req__post_file },
     { "fwupgrade", &webserver_req__firmware_upgrade },
     { "volume",    &webserver_req__post_volume },
-    { "restart",    &webserver_req__restart },
+    { "restart",   &webserver_req__restart },
+    { "wifi",      &webserver_req__set_wifi },
 };
 
 
