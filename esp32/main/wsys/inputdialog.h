@@ -1,3 +1,6 @@
+#ifndef __WSYS_INPUT_DIALOG_H__
+#define __WSYS_INPUT_DIALOG_H__
+
 #include "dialog.h"
 #include "label.h"
 #include "button.h"
@@ -20,3 +23,5 @@ private:
     EditBox *m_edit;
     VLayout *m_layout;
 };
+
+#endif
