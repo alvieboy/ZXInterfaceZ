@@ -119,6 +119,22 @@ int __open(const char *path, int flags, ...)
     return fd;
 }
 
+FILE *__fopen(const char *path, const char *mode)
+{
+    FILE *f;
+#ifdef __linux__
+    do {
+        char fpath[512];
+        sprintf(fpath,"%s/%s", startupdir, path);
+        f = fopen(fpath, mode);
+    } while (0);
+#else
+    f = fopen(path, mode);
+#endif
+    return f;
+}
+
+
 int __lstat(const char *path, struct stat *st)
 {
     int r;
