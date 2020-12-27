@@ -15,7 +15,7 @@
 #include <stdlib.h>
 #include "driver/gpio.h"
 #include "fpga.h"
-
+#include "interface.h"
 
 static xQueueHandle fpga_spi_queue = NULL;
 static SemaphoreHandle_t spi_sem;
@@ -28,12 +28,23 @@ static uint8_t writebuf[8192];
 static unsigned writebufptr = 0;
 static unsigned hdlcrxlen = 0;
 
+
+#ifdef FPGA_USE_SOCKET_PROTOCOL
 static int emulator_socket = -1;
+#else
+static spi_transceive_fun_t spi_transceive= NULL;
+#endif
+
 extern uint64_t pinstate;
 
 void fpga_do_transaction(uint8_t *buffer, size_t len);
-int fpga_set_comms_socket(int socket);
 
+int interface__set_comms_fun(spi_transceive_fun_t fun)
+{
+    spi_transceive = fun;
+}
+
+#ifdef FPGA_USE_SOCKET_PROTOCOL
 static void hdlc_writer(void *userdata, const uint8_t c)
 {
     writebuf[writebufptr++] = c;
@@ -59,11 +70,14 @@ int fpga_set_comms_socket(int socket)
 {
     emulator_socket = socket;
 }
+#endif
+
 
 int fpga_init(void);
 
 int fpga_init(void)
 {
+#ifdef FPGA_USE_SOCKET_PROTOCOL
     struct sockaddr_in sockaddr;
     int yes = 1;
 
@@ -100,8 +114,12 @@ int fpga_init(void)
     printf("Starting FPGA thread\n");
     // Start RX thread
     xTaskCreate(fpga_rxthread, "fpgathread", 4096, NULL, 6, NULL);
+#else
+    // Ignore
+#endif
     printf("FPGA ready\n");
     return 0;
+
 }
 #if 1
 
@@ -117,6 +135,17 @@ void dump(const char *t, const uint8_t *buffer, size_t len)
 
 extern void gpio_isr_do_trigger(gpio_num_t num);
 
+void interface__gpio_trigger(int num)
+{
+    gpio_isr_do_trigger(num);
+}
+
+void interface__rawpindata(uint64_t p)
+{
+    pinstate = p;
+}
+
+#ifdef FPGA_USE_SOCKET_PROTOCOL
 void hdlc_data(void *user, const uint8_t *data, unsigned datalen)
 {
     struct spi_payload payload;
@@ -183,11 +212,14 @@ void fpga_rxthread(void *arg)
     abort();
 }
 
+#endif
+
 void fpga_do_transaction(uint8_t *buffer, size_t len)
 {
-    struct spi_payload payload;
 
-  //  dump("SPI IN: ",buffer,len);
+#ifdef FPGA_USE_SOCKET_PROTOCOL
+
+    struct spi_payload payload;
 
     if (emulator_socket>=0) {
 
@@ -224,4 +256,8 @@ void fpga_do_transaction(uint8_t *buffer, size_t len)
             break;
         }
     }
+#else
+    if (spi_transceive)
+        spi_transceive(buffer, &buffer[1], len);
+#endif
 }

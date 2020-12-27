@@ -9,6 +9,7 @@
 #include <QPlainTextEdit>
 #include "LogEmitter.h"
 #include "text.h"
+#include "interface.h"
 
 extern "C" int fpga_set_comms_socket(int socket);
 extern "C" int interfacez_main(int,char**);
@@ -63,7 +64,41 @@ void LogEmitter::log(int level, const char *tag, char *fmt, va_list ap)
 
 extern "C" void ansi_get_stylesheet(char *dest);
 
-static int setupgui(int sock)
+#ifndef FPGA_USE_SOCKET_PROTOCOL
+
+struct MyLinkClient: public LinkClient
+{
+    MyLinkClient(InterfaceZ*me): LinkClient(me)
+    {
+    }
+
+    virtual ~MyLinkClient() {
+    }
+    virtual void gpioEvent(uint8_t v) {
+        interface__gpio_trigger(v);
+    }
+    virtual void sendGPIOupdate(uint64_t v) {
+        interface__rawpindata(v);
+    }
+    virtual QString getError() override {
+        return QString("Unknown");
+    }
+    void close() override {
+    }
+};
+
+
+static MyLinkClient *localClient;
+
+static int spi_transceive_fun(const uint8_t *tx, uint8_t *rx, unsigned size)
+{
+    localClient->transceive(tx, rx, size);
+    return 0;
+}
+#endif
+
+
+static int setupgui(int sock=-1)
 {
     SpectrumWidget *spectrumWidget = new SpectrumWidget();
 
@@ -157,7 +192,17 @@ static int setupgui(int sock)
     iz->linkGPIO(nmi, 34);
     iz->linkGPIO(io0, 0);
 
+#ifdef FPGA_USE_SOCKET_PROTOCOL
     iz->setCommsSocket(sock);
+#endif
+
+    localClient = new MyLinkClient(iz);
+
+    interface__set_comms_fun(&spi_transceive_fun);
+
+    iz->addClient(localClient);
+
+
 
     QObject::connect( spectrumWidget, &SpectrumWidget::NMI, iz, &InterfaceZ::onNMI);
 
@@ -166,18 +211,25 @@ static int setupgui(int sock)
 }
 
 
+
 int main(int argc, char**argv)
 {
     int sockets[2];
     QApplication app(argc, argv);
     IZThread *iz = new IZThread();
 
+#if 0
+
     if (socketpair(AF_UNIX, SOCK_STREAM, 0, &sockets[0])<0)
         return -1;
 
-    fpga_set_comms_socket(sockets[0]);
-
     setupgui(sockets[1]);
+#else
+
+    setupgui();
+
+#endif
+
     usleep(1000000);
     iz->start();
 
