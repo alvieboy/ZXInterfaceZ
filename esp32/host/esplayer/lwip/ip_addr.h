@@ -1,3 +1,6 @@
+#ifndef __LWIP_IP_ADDR_H__
+#define __LWIP_IP_ADDR_H__
+
 #include <inttypes.h>
 struct ip4_addr {
   uint32_t addr;
@@ -17,4 +20,6 @@ typedef struct ip6_addr ip6_addr_t;
 
 #ifndef MAC2STR
 #define MAC2STR(a) (a)[0], (a)[1], (a)[2], (a)[3], (a)[4], (a)[5]
+#endif
+
 #endif

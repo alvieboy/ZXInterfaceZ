@@ -1,6 +1,7 @@
 #include "esp_netif.h"
 #include "esp_wifi_default.h"
 #include "esp_event.h"
+#include <netinet/in.h>
 
 esp_event_base_t IP_EVENT="ip";
 
@@ -54,4 +55,14 @@ esp_err_t esp_netif_get_mac(esp_netif_t *netif, uint8_t *mac)
     mac[3] = 0xef;
     mac[4] = 0xca;
     mac[5] = 0xfe;
+}
+
+int ip4addr_aton(const char *cp, ip4_addr_t *addr)
+{
+    struct in_addr a;
+    int r = inet_aton(cp, &a);
+    if (r==0) {
+        addr->addr = a.s_addr;
+    }
+    return r;
 }

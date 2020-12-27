@@ -8,12 +8,25 @@
 #include "interfacez/interfacez.h"
 #include <QPlainTextEdit>
 #include "LogEmitter.h"
+#include "text.h"
 
 extern "C" int fpga_set_comms_socket(int socket);
 extern "C" int interfacez_main(int,char**);
 extern "C" void init_pallete();
 extern "C" void init_emul();
-extern "C" void set_logger(void (*)(const char *type, const char *tag, char *fmt, va_list ap));
+extern "C" void set_logger(void (*)(int level, const char *tag, char *fmt, va_list ap));
+
+class HTMLLogger: public QObject
+{
+public:
+    HTMLLogger(QPlainTextEdit *e): m_text(e)
+    {
+    }
+public slots:
+    void log(int level, QString str);
+private:
+    QPlainTextEdit *m_text;
+};
 
 
 class IZThread: public QThread
@@ -30,34 +43,25 @@ static InterfaceZ *iz;
 
 
 static QPlainTextEdit *edit;
-
-
-
 static LogEmitter *logemitter;
+static HTMLLogger *htmllogger;
 
-static void logger(const char *type, const char *tag, char *fmt, va_list ap)
+static void logger(int level, const char *tag, char *fmt, va_list ap)
 {
-    logemitter->log(type, tag, fmt, ap);
+    logemitter->log(level, tag, fmt, ap);
 }
 
-void LogEmitter::log(const char *type, const char *tag, char *fmt, va_list ap)
+void LogEmitter::log(int level, const char *tag, char *fmt, va_list ap)
 {
     char line[512];
-    char *p = line;
-    p += sprintf(p, "%s %s: ", type, tag);
-    vsprintf(p, fmt, ap);
-    qDebug()<<line;
-
+    vsprintf(line, fmt, ap);
     // Remove newlines
-    char *nl = strchr(line, '\n');
-    if (nl)
-        *nl = '\0';
-
-    emit logstring(QString(line));
-
-    //edit->appendPlainText(line);
-    //edit->moveCursor(QTextCursor::End);
+    chomp(line);
+    printf("%s\n", line);
+    emit logstring(level, QString(line));
 }
+
+extern "C" void ansi_get_stylesheet(char *dest);
 
 static int setupgui(int sock)
 {
@@ -96,7 +100,20 @@ static int setupgui(int sock)
     edit->setReadOnly(true);
     edit->ensureCursorVisible();
 
-    QObject::connect( logemitter, &LogEmitter::logstring, edit, &QPlainTextEdit::appendPlainText, Qt::QueuedConnection);
+    char style[1024];
+    ansi_get_stylesheet(style);
+
+    edit->setStyleSheet(style);
+    //printf("Style: %s\n", style);
+
+    htmllogger = new HTMLLogger(edit);
+
+
+    QObject::connect( logemitter,
+                     &LogEmitter::logstring,
+                     htmllogger,
+                     &HTMLLogger::log,
+                     Qt::QueuedConnection);
 
     set_logger(&logger);
 
@@ -167,3 +184,13 @@ int main(int argc, char**argv)
     //iz->wait();
     return app.exec();
 };
+
+extern "C" int ansi_convert_line_to_html(const char *input, char *output, unsigned maxlen);
+
+
+void HTMLLogger::log(int level, QString str)
+{
+    char out[4096];
+    ansi_convert_line_to_html(str.toLocal8Bit().constData(), out, 4096);
+    m_text->appendHtml(out);
+}

@@ -4,27 +4,17 @@
 
 extern int ptyfd;
 
-static void (*extern_logger)(const char *type, const char *tag, char *fmt, va_list ap) = 0;
+static void (*extern_logger)(int level, const char *tag, char *fmt, va_list ap) = 0;
 
 uint32_t esp_log_timestamp(void)
 {
     return 0;
 }
 
-
-/*
-void esp_log_write(esp_log_level_t level, const char* tag, const char* format, ...)
-{
-
-} */
-
-void set_logger(void (*l)(const char *type, const char *tag, char *fmt, va_list ap))
+void set_logger(void (*l)(int level, const char *tag, char *fmt, va_list ap))
 {
     extern_logger = l;
 }
-
-
-
 
 void do_log(const char *type, const char *tag, const char *fmt, ...)
 {
@@ -46,7 +36,7 @@ void esp_log_writev(esp_log_level_t level, const char *tag, const char *fmt, va_
 
     //va_start(ap, fmt);
     if (extern_logger) {
-        extern_logger(tag, "", (char*)fmt,ap);
+        extern_logger((int)level, tag, (char*)fmt,ap);
     }
     //va_end(ap);
     //va_start(ap, fmt);

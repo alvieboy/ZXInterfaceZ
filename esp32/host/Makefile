@@ -12,7 +12,7 @@ SRCPATH=$(shell pwd)
 
 # -Werror=missing-prototypes
 
-CFLAGS= -fpic -DPIC -Wall -Wextra \
+CFLAGS= -fpic -DPIC -Wall -Wextra -Wno-format \
 	-DGITVER=\"$(GITVER)\" \
 	-DBUILDDATE='"$(BUILDDATE)"' \
 	-DCONFIG_LOG_TIMESTAMP_SOURCE_RTOS \
@@ -133,6 +133,9 @@ webserver_req.c       \
 wifi.c                \
 tzx.c                 \
 tap.c                 \
+poke.c                \
+nmi_poke.c            \
+text.c                \
 fasttap.c             \
 model.c               \
 json.c                \
@@ -172,6 +175,7 @@ wsys/multiwidget.cpp  \
 wsys/stackedwidget.cpp  \
 wsys/button.cpp  \
 wsys/filechooserdialog.cpp \
+wsys/chooserdialog.cpp \
 wsys/vbar.cpp \
 wsys/fixedlayout.cpp \
 wsys/editbox.cpp \

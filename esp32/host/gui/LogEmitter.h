@@ -10,9 +10,9 @@ class LogEmitter: public QObject
 {
     Q_OBJECT
 public:
-    void log(const char *type, const char *tag, char *fmt, va_list ap);
+    void log(int level, const char *tag, char *fmt, va_list ap);
 signals:
-    void logstring(QString);
+    void logstring(int level, QString);
 };
 
 #endif
