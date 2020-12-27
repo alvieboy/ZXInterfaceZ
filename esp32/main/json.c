@@ -2,6 +2,8 @@
 #include "fileaccess.h"
 #include <fcntl.h>
 #include <string.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 cJSON *json__load_from_file(const char *filename)
 {
@@ -50,3 +52,11 @@ char *json__get_string_alloc(cJSON*node, const char *name)
     return strdup(s);
 }
 
+int json__get_ip(cJSON*node, const char *name, ip4_addr_t *addr)
+{
+    const char *ips  = json__get_string(node,name);
+    if (!ips)
+        return -1;
+
+    return ip4addr_aton(ips,addr);
+}
