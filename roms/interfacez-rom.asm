@@ -11,6 +11,8 @@ START:	DI			; disable interrupts.
         JP	DELAY
         ;JP	REGTEST
 
+ORG $0006
+	DW	FREEAREA
 	ORG	$0008
 		      
 RST8:	JP 	RST8
@@ -217,6 +219,10 @@ COPYRIGHT:DB	"ZX Interface Z (C) Alvieboy 2020", 0
 PASSWDTMP: DB "Spectrum", 0
 DISCONNECTED:	DB	"Disconnected", 0
 SCANNING:	DB	"Scanning...", 0
+
+FREEAREA	EQU	$
+	LD	HL, 1234
+        LD	(HL), $22
 
 ORG 	ROM_PATCHED_SNALOAD - 64
 	include "version.asm"

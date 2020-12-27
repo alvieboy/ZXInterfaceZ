@@ -302,6 +302,8 @@ _command:
         JR	Z, _snapshot
         CP	$FD
         JR	Z, _z80sna
+        CP	$FC
+        JR	Z, _execandexit
         JR	screenloop
 _leavenmi:
 	LD	A, CMD_LEAVENMI
@@ -312,6 +314,10 @@ _leavenmi:
         JP	WAITFORNOKEY ; TAILCALL
 
         ;RET
+_execandexit:
+	CALL	FREEAREA
+        JR	_leavenmi
+        
 _z80sna:
 	LD	A, CMD_LEAVENMI
         CALL	WRITECMDFIFO
