@@ -62,7 +62,7 @@ int poke__loadentries(poke_t *poke, void (*handler)(void *, const char *), void 
 {
     pokeline_t line;
     int r;
-    ESP_LOGI(TAG, "Loading entries");
+    ESP_LOGI(TAG, "Loading POK entries");
     rewind(poke->f);
     do {
         r = poke__readline(poke, line, sizeof(line));
@@ -75,7 +75,7 @@ int poke__loadentries(poke_t *poke, void (*handler)(void *, const char *), void 
 
         // Remove newlines
         chomp(line);
-        ESP_LOGI(TAG, "Line: %s", line);
+        ESP_LOGD(TAG, "Line: %s", line);
         switch (line[0]) {
         case 'N':
             handler(user, &line[1]);
@@ -173,7 +173,7 @@ Where l determines the content, bbb is the bank, aaaaa is the address to be poke
     If the field [value] is in range 0-255, this is the value to be POKEd. If it is 256, a requester should pop up where the user can enter a value.
     */
     // M 8 34801 195 0
-    ESP_LOGI(TAG, "Applying value");
+    ESP_LOGD(TAG, "Applying value");
     poke__set_memory(poke, bank & 0xff, address & 0xFFFF, value & 0xff);
 
     return 0;
@@ -191,12 +191,12 @@ int poke__apply_trainer(poke_t *poke, const char *name)
     ESP_LOGI(TAG,"Applying trainer '%s'\n\n", name);
 
     do {
-        ESP_LOGI(TAG, "Reading poke line");
+        ESP_LOGD(TAG, "Reading poke line");
         if (poke__readline(poke, line, sizeof(line))<0)
             return -1;
 
         chomp(line);
-        ESP_LOGI(TAG, "Line: %s", line);
+        ESP_LOGD(TAG, "Line: %s", line);
         switch (line[0]) {
         case 'N':
             if (found)

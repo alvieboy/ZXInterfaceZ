@@ -52,6 +52,7 @@ volatile int restart_requested = 0;
 static volatile uint8_t spectrum_model = 0xff;
 static volatile uint8_t spectrum_flags = 0x00;
 
+static void detect_spectrum(void);
 void request_restart(void)
 {
     restart_requested = 1;
@@ -86,9 +87,6 @@ static void event_button_switch(button_event_type_e type)
         wsys__reset();
 
         fpga__set_trigger(FPGA_FLAG_TRIG_FORCENMI_ON);
-        // TEMPORARY!
-        //wsys__nmiready();
-
     }
 }
 
@@ -99,6 +97,7 @@ static void event_button_io0(button_event_type_e type)
     }
     if (type==BUTTON_PRESSED) {
         ESP_LOGI(TAG, "IO0 pressed");
+        detect_spectrum();
     }
     if (type==BUTTON_LONG_PRESSED) {
         ESP_LOGI(TAG, "IO0 long pressed");

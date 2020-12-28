@@ -295,7 +295,7 @@ static int spectcmd__kbddata(const uint8_t *cmdbuf, unsigned len)
     key = *cmdbuf++;
     key += (uint16_t)(*cmdbuf)<<8;
 
-    ESP_LOGI(TAG, "KBD: %04x", key);
+    ESP_LOGD(TAG, "KBD: %04x", key);
 
     char c = spectrum_kbd__to_ascii(key);
     //if (c >= ' ') {
