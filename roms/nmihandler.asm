@@ -327,8 +327,8 @@ _snapshot:
         CALL	WRITECMDFIFO
         JP 	SNARAM
 _processvideo:
-	DEBUGSTR "Sequence "
-        DEBUGHEXA
+	;DEBUGSTR "Sequence "
+        ;DEBUGHEXA
         LD	(FRAMES1), A
 
         LD	C, PORT_RAM_ADDR_0
