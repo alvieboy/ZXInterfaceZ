@@ -10,7 +10,7 @@ begin
 
   process
   begin
-    logger_start("T016","ROM hook tests");
+    logger_start("T017","ROM hook tests");
 
     Spimaster_Cmd <= Cmd_Spimaster_Defaults;
 

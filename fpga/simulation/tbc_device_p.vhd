@@ -96,6 +96,7 @@ package body tbc_device_p is
       log("Overall test status: PASS");
     else
       log("Overall test status: ** FAIL ** (" &str(errorCounter)&" errors)");
+      report "Test failed" severity failure;
     end if;
     wait;
   end procedure;

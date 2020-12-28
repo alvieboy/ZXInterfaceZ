@@ -1,3 +1,16 @@
+GHDLMAKEFLAGS=-m --ieee=synopsys -fexplicit
+
+TESTS=t001 \
+t002 \
+t004 \
+t007 \
+t008 \
+t010 \
+t012 \
+t013 \
+t014 \
+t017 \
+t018
 
 LOCALDESIGNFILES= \
 	zxinterfacepkg.vhd \
@@ -7,3 +20,17 @@ LOCALSIMFILES=tb_top.vhd
 
 
 include ../../simulation/Makefile.inc
+
+all: run
+
+run:	$(TESTS)
+	for test in $(TESTS); do  \
+		echo $$test; \
+		sh run.sh $$test 2>&1 | tee log.$$test | tail -n 1 ;  \
+	done
+
+clean:
+	rm -f $(TESTS)
+
+$(TESTS):
+	ghdl $(GHDLMAKEFLAGS) $@

@@ -23,9 +23,9 @@ begin
       SpectClk_Cmd
     );
 
-    qspiramWrite(QSPIRam0_Cmd, 102, x"ED");
-    qspiramWrite(QSPIRam0_Cmd, 103, x"45");
-
+    qspiramWrite(QSPIRam0_Cmd, 102, x"00");
+    qspiramWrite(QSPIRam0_Cmd, 103, x"ED");
+    qspiramWrite(QSPIRam0_Cmd, 104, x"45");
     -- Write internal ROM
     spiPayload_in_s(0) <= x"E1";
     spiPayload_in_s(1) <= x"00";
@@ -76,6 +76,7 @@ begin
 
     SpectrumReadOpcode( Spectrum_Cmd, Spectrum_Data, x"0066", data_v );
     SpectrumReadOpcode( Spectrum_Cmd, Spectrum_Data, x"0067", data_v );
+    SpectrumReadOpcode( Spectrum_Cmd, Spectrum_Data, x"0068", data_v );  -- This reads out NOP; RETN
 
     Check("4.1 ROMCS is not forced", CtrlPins_Data.ROMCS, '0');
 
@@ -116,13 +117,20 @@ begin
     SpectrumReadMem( Spectrum_Cmd, Spectrum_Data, x"0001", data_v ); -- not M1 cycle
     Check("6.3 ROM returned correct data", data_v, x"AD");
 
-    -- Entering NMI. this should
+    -- Not yet entering NMI. 
+    SpectrumReadOpcode( Spectrum_Cmd, Spectrum_Data, x"0020", data_v );
+
+    -- Entering NMI. this should ack NMI
     SpectrumReadOpcode( Spectrum_Cmd, Spectrum_Data, x"0066", data_v );
 
     wait for 100 ns;
 
     -- NMI should be "acknowledged".
-    Check("7 NMI is forced", CtrlPins_Data.NMI, '0');
+    Check("7 NMI is not forced", CtrlPins_Data.NMI, '0');
+
+    -- ROMCS should only activate after 2nd opcode.
+    --SpectrumReadOpcode( Spectrum_Cmd, Spectrum_Data, x"0067", data_v );
+
     Check("8 ROMCS is forced", CtrlPins_Data.ROMCS, '1');
 
     Spectrum_Cmd.Address  <= x"0067";  -- 103
@@ -134,7 +142,7 @@ begin
 
     Spectrum_Cmd.Address  <= x"0068";  -- 104
     Spectrum_Cmd.Cmd      <= READOPCODE;
-    Spectrum_Cmd.Refresh  <= x"0000";
+    Spectrum_Cmd.Refresh  <= x"0000";                       
     wait until Spectrum_Data.Busy = false;
     Spectrum_Cmd.Cmd      <= NONE;
     wait for 0 ps;
@@ -199,6 +207,38 @@ begin
     Check("14 ROMCS is forced", CtrlPins_Data.ROMCS, '1');
 
     wait for 2 us;
+
+    -- Check if we cannot re-enter NMI
+
+
+    spiPayload_in_s(0) <= x"EC";
+    spiPayload_in_s(1) <= x"00";
+    spiPayload_in_s(2) <= "01000000"; -- ForceNMI;
+    spiPayload_in_s(3) <= x"00";
+    Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 4, spiPayload_in_s, spiPayload_out_s);
+    Check("15 NMI is not forced", CtrlPins_Data.NMI, '0');
+
+    SpectrumReadOpcode(Spectrum_Cmd, Spectrum_Data, x"0020", data_v);
+    Check("16 NMI is forced", CtrlPins_Data.NMI, '1');
+    SpectrumReadOpcode(Spectrum_Cmd, Spectrum_Data, x"0021", data_v);
+    SpectrumReadOpcode(Spectrum_Cmd, Spectrum_Data, x"0066", data_v);
+    Check("17 NMI is not forced", CtrlPins_Data.NMI, '0');
+
+
+
+    spiPayload_in_s(0) <= x"EC";
+    spiPayload_in_s(1) <= x"00";
+    spiPayload_in_s(2) <= "01000000"; -- ForceNMI;
+    spiPayload_in_s(3) <= x"00";
+    Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 4, spiPayload_in_s, spiPayload_out_s);
+    Check("15 NMI is not forced", CtrlPins_Data.NMI, '0');
+
+    SpectrumReadOpcode(Spectrum_Cmd, Spectrum_Data, x"0020", data_v);
+    Check("16 NMI is forced", CtrlPins_Data.NMI, '0');
+    SpectrumReadOpcode(Spectrum_Cmd, Spectrum_Data, x"0021", data_v);
+    SpectrumReadOpcode(Spectrum_Cmd, Spectrum_Data, x"0066", data_v);
+    Check("17 NMI is not forced", CtrlPins_Data.NMI, '0');
+
 
     FinishTest(
       SysClk_Cmd,
