@@ -145,13 +145,14 @@ static int poke__apply_poke(poke_t *poke, char *line)
         ESP_LOGE(TAG, "Malformed POK: invalid value");
         return -1;
     }
-
+#if 0
     endp = NULL;
     unsigned long old = strtoul(toks[3], &endp, 0);
     if (NULL==endp || (*endp)!='\0') {
         ESP_LOGE(TAG, "Malformed POK: invalid old value");
         return -1;
     }
+#endif
 
     if (value==256) {
         ESP_LOGI(TAG, "Ask user");
@@ -184,11 +185,10 @@ int poke__apply_trainer(poke_t *poke, const char *name)
     pokeline_t line;
     bool found = false;
     bool eof = false;
-    int pokelen;
 
     rewind(poke->f);
 
-    ESP_LOGI(TAG,"Applying trainer '%s'\n\n", name);
+    ESP_LOGI(TAG,"Applying trainer '%s'", name);
 
     do {
         ESP_LOGD(TAG, "Reading poke line");
