@@ -15,9 +15,16 @@ Make sure you have an updated repository. Place it in any path and then `export 
 You will need Intel Quartus (Lite or better) in order to build the FPGA design. It will also need to include the Cyclone IV support.
 You can download the Lite edition for free from [the Intel website](https://fpgasoftware.intel.com/?edition=lite).
 
-### Building the binary bitfile
+### Building the binary bitfile (GUI)
 Launch Quartus and open the project file *interfacez.qpf* . Perform a full "Compile design" step. That should generate the output file (which is
 *output_files/interfacez.rbf*. No need to perform any programming of the FPGA at this point - uploading will be handled in [Manually uploading the design](#manually-uploading-the-design) .
+
+### Building the binary bitfile (Command line)
+
+```
+cd $INTERFACE_Z/fpga/r2.2
+make
+```
 
 ## Building Angular Webapp
 ### Prerequisites

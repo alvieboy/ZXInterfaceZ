@@ -38,6 +38,12 @@ Adjusting Video output
 
 ## Load/Save Snapshot
 
+## Fast Load Tape
+
+- Trigger the _main menu_, and chose _Play tape (fast)..._ choose the TAP or TZX file.
+- Type in `LOAD ""`
+- Enjoy as if you were using a super fast tape.
+
 ## Play Tape
 
 - Type in `LOAD ""`
