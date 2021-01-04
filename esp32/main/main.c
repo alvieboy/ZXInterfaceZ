@@ -62,7 +62,7 @@ static void io0_long_press()
 {
     char romname[128];
 
-    if (nvs__fetch_str("io0rom", romname, sizeof(romname), "/spiffs/DiagROMv47.rom")<0) {
+    if (nvs__fetch_str("io0rom", romname, sizeof(romname), "/spiffs/DiagROMv54.rom")<0) {
         ESP_LOGE(TAG, "Cannot fetch rom for IO0");
         return ;
     }
