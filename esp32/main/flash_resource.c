@@ -7,7 +7,16 @@
 #include "esp_spiffs.h"
 #include "fpga.h"
 
-void flash_resource__init(void)
+int flash_resource__deinit(void)
+{
+#ifndef __linux__
+    return esp_vfs_spiffs_unregister("resources");
+#else
+    return 0;
+#endif
+}
+
+int flash_resource__init(void)
 {
 #ifndef __linux__
     esp_vfs_spiffs_conf_t conf = {
@@ -27,8 +36,9 @@ void flash_resource__init(void)
         } else {
             ESP_LOGE(TAG, "Failed to initialize SPIFFS (%s)", esp_err_to_name(ret));
         }
-        return;
+        return -1;
     }
+    return 0;
 #endif
 }
 #if 0
