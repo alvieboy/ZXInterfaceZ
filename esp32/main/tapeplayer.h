@@ -8,6 +8,7 @@ extern "C" {
 void tapeplayer__init(void);
 void tapeplayer__stop(void);
 void tapeplayer__play(const char *filename);
+bool tapeplayer__isplaying(void);
 
 #ifdef __cplusplus
 }

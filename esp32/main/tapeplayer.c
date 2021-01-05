@@ -587,6 +587,10 @@ static void tapeplayer__task(void*data)
     }
 }
 
+bool tapeplayer__isplaying()
+{
+    return state != TAP_IDLE;
+}
 
 void tapeplayer__init()
 {

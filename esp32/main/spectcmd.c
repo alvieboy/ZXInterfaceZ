@@ -19,6 +19,9 @@
 #include "esp32/rom/crc.h"
 #include "rom.h"
 #include "log.h"
+#include "esxdos.h"
+#include "wsys.h"
+#include "tapeplayer.h"
 
 #define COMMAND_BUFFER_MAX 256+2
 
@@ -417,6 +420,107 @@ static int spectcmd__romcrc(const uint8_t *cmdbuf, unsigned len)
     return 0;
 }
 
+
+static int spectcmd__esxdos_diskinfo(const uint8_t *cmdbuf, unsigned len)
+{
+    NEED(1);
+    int r = esxdos__diskinfo(cmdbuf[0]);
+    spectcmd__removedata();
+    return r;
+}
+
+static int spectcmd__esxdos_driveinfo(const uint8_t *cmdbuf, unsigned len)
+{
+    NEED(1);
+    int r = esxdos__driveinfo(cmdbuf[0]);
+    spectcmd__removedata();
+    return r;
+}
+
+static int spectcmd__esxdos_close(const uint8_t *cmdbuf, unsigned len)
+{
+    NEED(1);
+    int r = esxdos__close(cmdbuf[0]);
+    spectcmd__removedata();
+    return r;
+}
+
+static int spectcmd__esxdos_open(const uint8_t *cmdbuf, unsigned len)
+{
+    char filename[255];
+    NEED(2);
+    uint8_t mode        = cmdbuf[0];
+    uint8_t filenamelen = cmdbuf[1];
+
+    NEED(filenamelen);
+    memcpy(filename, &cmdbuf[2], filenamelen);
+    filename[filenamelen] = '\0';
+
+    spectcmd__removedata();
+
+    int r = esxdos__open(filename, mode);
+
+    return r;
+}
+
+static int spectcmd__esxdos_read(const uint8_t *cmdbuf, unsigned len)
+{
+    NEED(3);
+    uint8_t fh = cmdbuf[0];
+    uint16_t readlen = (uint16_t)cmdbuf[1] + (((uint16_t)cmdbuf[2])<<8);
+    spectcmd__removedata();
+    return esxdos__read(fh, readlen);
+}
+
+static int spectcmd__loadtrap(const uint8_t *cmdbuf, unsigned len)
+{
+    uint8_t status = SPECTCMD_CMD_LOADTRAP;
+    spectcmd__removedata();
+
+
+    wsys__reset(WSYS_MODE_LOAD);
+    fpga__write_miscctrl(0x01); // Regular NMI handling (i.e., ends with RETN). This notifies the ROM firmware
+
+    // Ack with 0xFF if we need to return to spectrum immediatly.
+    if (fasttap__is_playing() || tapeplayer__isplaying())
+        status = 0xff;
+
+    ESP_LOGI(TAG, "Loading status %d", status);
+    fpga__load_resource_fifo(&status, 1, RESOURCE_DEFAULT_TIMEOUT);
+
+    return 0;
+}
+
+static int spectcmd__savetrap(const uint8_t *cmdbuf, unsigned len)
+{
+    NEED(17);
+    /*
+     save "a" SCREEN$
+
+     CMD FIFO write: 0x1767 0x17
+CMD FIFO write: 0x0367 0x03
+CMD FIFO write: 0x6167 0x61
+CMD FIFO write: 0x2067 0x20
+CMD FIFO write: 0x2067 0x20
+CMD FIFO write: 0x2067 0x20
+CMD FIFO write: 0x2067 0x20
+CMD FIFO write: 0x2067 0x20
+CMD FIFO write: 0x2067 0x20
+CMD FIFO write: 0x2067 0x20
+CMD FIFO write: 0x2067 0x20
+CMD FIFO write: 0x2067 0x20
+CMD FIFO write: 0x0067 0x00
+CMD FIFO write: 0x1b67 0x1b
+CMD FIFO write: 0x0067 0x00
+CMD FIFO write: 0x4067 0x40
+CMD FIFO write: 0x0d67 0x0d
+CMD FIFO write: 0x8067 0x80
+
+     */
+    spectcmd__removedata();
+    return 0;
+}
+
 static const spectcmd_handler_t spectcmd_handlers[] = {
     &spectcmd__load_resource, // 00 SPECTCMD_CMD_GETRESOURCE
     &spectcmd__setwifi,       // 01 SPECTCMD_CMD_SETWIFI
@@ -440,13 +544,23 @@ static const spectcmd_handler_t spectcmd_handlers[] = {
     &spectcmd__fast_load_data,// 13 SPECTCMD_CMD_FASTLOAD_DATA
     &spectcmd__playtape_fast, // 14 SPECTCMD_CMD_PLAYTAPE_FAST
     &spectcmd__romcrc,        // 15 SPECTCMD_CMD_ROMCRC
-    // FOPEN
-    // FCLOSE
-    // FREAD
-    // FWRITE
-    // READDIR
-    // CWD
+    &spectcmd__loadtrap,      // 16 SPECTCMD_CMD_LOADTRAP
+    &spectcmd__savetrap,      // 17 SPECTCMD_CMD_SAVETRAP
+    NULL,                     // 18
+    NULL,                     // 19
+    NULL,                     // 1A
+    NULL,                     // 1B
+    NULL,                     // 1C
+    NULL,                     // 1D
+    NULL,                     // 1E
+    NULL,                     // 1F
+    &spectcmd__esxdos_diskinfo, // 20
+    &spectcmd__esxdos_driveinfo, // 21
+    &spectcmd__esxdos_open, // 22
+    &spectcmd__esxdos_read, // 23
+    &spectcmd__esxdos_close, // 24
 };
+
 
 static int spectcmd__check()
 {

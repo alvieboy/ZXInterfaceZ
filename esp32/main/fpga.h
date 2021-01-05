@@ -26,8 +26,8 @@ typedef uint8_t fpga_status_t;
 #define FPGA_SPI_CMD_READ_REG32 (0xEE)
 #define FPGA_SPI_CMD_WRITE_REG32 (0xED)
 #define FPGA_SPI_CMD_SETEOF (0xEF)
-#define FPGA_SPI_CMD_READ_DATAFIFO (0xFC)
 #define FPGA_SPI_CMD_READ_CMDFIFO (0xFB)
+#define FPGA_SPI_CMD_WRITE_MISCCTRL (0xFC)
 #define FPGA_SPI_CMD_READ_ID (0x9E)
 #define FPGA_SPI_CMD_READ_PC (0x40)
 #define FPGA_SPI_CMD_READ_EXTRAM (0x50)
@@ -98,10 +98,12 @@ typedef uint8_t fpga_status_t;
 # define CONFIG1_MOUSE_ENABLE (1<<2)
 # define CONFIG1_AY_ENABLE (1<<3)
 # define CONFIG1_AY_READ_ENABLE (1<<4)
+# define CONFIG1_DIVMMC_COMPAT (1<<5)
 #define REG_KEYB1_DATA      0x03
 #define REG_KEYB2_DATA      0x04
 #define REG_JOY_DATA        0x05
 #define REG_MOUSE_DATA      0x05 /* Same as joy */
+
 #define REG_VOLUME(x)       (0x06+(x))
 
 #define FPGA_RESOURCE_FIFO_SIZE 1024 /* Should be 1024 */
@@ -196,15 +198,23 @@ int fpga__read_bit_data(uint8_t *data, unsigned len);
 int fpga__read_capture_block(uint16_t address, uint8_t *dest, int size);
 int fpga__write_capture_block(uint16_t address, const uint8_t *buffer, int size);
 
-int fpga__disable_hooks(void);
+int fpga__write_hook(uint8_t index, uint16_t start, uint8_t len, uint8_t flag);
+int fpga__disable_hook(uint8_t index);
 
-#define HOOK_ROM1(address) ((address)|(1<<(6+8)))
-#define HOOK_ROM0(address) ((address))
+int fpga__write_miscctrl(uint8_t value);
 
-int fpga__enable_hook(uint8_t index, uint16_t start, uint8_t len);
+//int fpga__disable_hooks(void);
+
+//#define HOOK_ROM1(address) ((address)|(1<<(6+8)))
+//#define HOOK_ROM0(address) ((address))
+
+//int fpga__enable_hook(uint8_t index, uint16_t start, uint8_t len);
 
 int fpga__readinterrupt(void);
 int fpga__ackinterrupt(uint8_t mask);
+
+int fpga__write_extram_block_from_file_nonblock(uint32_t address, int fd, int size,
+                                                int *writtensize);
 
 #ifdef __cplusplus
 }

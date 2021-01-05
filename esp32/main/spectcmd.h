@@ -22,11 +22,11 @@
 #define SPECTCMD_CMD_FASTLOAD (0x12)
 #define SPECTCMD_CMD_FASTLOAD_DATA (0x13)
 #define SPECTCMD_CMD_PLAYTAPE_FAST (0x14)
+#define SPECTCMD_CMD_ROMCRC (0x15)
+#define SPECTCMD_CMD_LOADTRAP (0x16)
 
-
-// System calls
-#define SPECTCMD_CMD_SYSCALL_OPEN (0x20)
-
+// Esxdos-like calls
+#define SPECTCMD_CMD_ESXDOS_DISKINFO (0x40)
 
 
 void spectcmd__request(void);
