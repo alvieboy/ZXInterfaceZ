@@ -44,6 +44,9 @@
 #include "hdlc_decoder.h"
 #include "scope.h"
 #include "model.h"
+#include "divcompat.h"
+#include "rom_hook.h"
+
 static int8_t videomode = 0;
 
 uint32_t loglevel;
@@ -80,13 +83,34 @@ static void io0_long_press()
     }
 }
 
+static void load_esxdos()
+{
+    const char *romname = "/spiffs/esxdos2.rom";
+    int f = rom__load_custom_from_file(romname, MEMLAYOUT_ROM1_BASEADDRESS);
+    if (f<0) {
+        ESP_LOGE(TAG, "Cannot load ROM %s", romname);
+        return;
+    }
+
+    divcompat__enable(0); // 48K only for now
+
+    ESP_LOGI(TAG, "Resetting to custom ROM");
+    if (fpga__reset_to_custom_rom(ROM_1, false)<0) {
+        ESP_LOGE(TAG, "Cannot reset");
+    }
+
+}
+
 static void event_button_switch(button_event_type_e type)
 {
-    if (type==BUTTON_RELEASED || type==BUTTON_LONG_RELEASED) {
+    if (type==BUTTON_RELEASED) { // || type==BUTTON_LONG_RELEASED) {
         ESP_LOGI(TAG, "Requesting NMI!");
-        wsys__reset();
-
+        wsys__reset(WSYS_MODE_NMI);
+        fpga__write_miscctrl(0x00); // Regular NMI handling (i.e., ends with RETN). This notifies the ROM firmware
         fpga__set_trigger(FPGA_FLAG_TRIG_FORCENMI_ON);
+    } else if (type==BUTTON_LONG_PRESSED) {
+        ESP_LOGI(TAG, "Loading ESXDOS");
+        load_esxdos();
     }
 }
 
@@ -97,7 +121,7 @@ static void event_button_io0(button_event_type_e type)
     }
     if (type==BUTTON_PRESSED) {
         ESP_LOGI(TAG, "IO0 pressed");
-        detect_spectrum();
+        //detect_spectrum();
     }
     if (type==BUTTON_LONG_PRESSED) {
         ESP_LOGI(TAG, "IO0 long pressed");
@@ -420,6 +444,10 @@ void app_main()
     ESP_LOGI(TAG, " Spectrum ROM version: %s", *rom__get_version() ? rom__get_version() : "unknown");
 
     detect_spectrum();
+
+    rom_hook__add_pre_set(0, 0x0767, 1); // LOAD
+    rom_hook__add_pre_set(0, 0x0970, 1); // SAVE
+    rom_hook__add_post_reset(0, 0x01FFE, 1); // Will have a RET instruction
 
     // Power on USB
     usb_ll__set_power(1);
