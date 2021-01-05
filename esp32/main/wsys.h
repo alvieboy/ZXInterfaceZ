@@ -1,3 +1,6 @@
+#ifndef __WSYS_H__
+#define __WSYS_H__
+
 #include <inttypes.h>
 
 #define EVENT_KBD 0
@@ -12,11 +15,15 @@ extern "C"
 {
 #endif
 
+typedef enum {
+    WSYS_MODE_NMI,
+    WSYS_MODE_LOAD
+} wsys_mode_t;
 
 void wsys__keyboard_event(uint16_t raw, char ascii);
 void wsys__nmiready(void);
 void wsys__nmileave(void);
-void wsys__reset(void);
+void wsys__reset(wsys_mode_t mode);
 void wsys__init(void);
 void wsys__send_to_fpga(void);
 void wsys__get_screen_from_fpga(void);
@@ -26,6 +33,7 @@ void wsys__send_command(uint8_t command);
 }
 #endif
 
+// C++.
 void wsys__eventloop_iter();
 
-
+#endif
