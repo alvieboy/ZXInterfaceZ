@@ -54,3 +54,12 @@ all: GENVERSION
 
 GENVERSION:
 	$(shell touch main/version.c)
+
+#$(eval $(call spiffs_create_partition_image,resources,spiffs))
+
+rle:	rle.c rle.h
+	gcc -O2 -o rle rle.c
+
+release: all $(BUILD_DIR_BASE)/resources.bin rle
+	mkdir -p release
+	$(PYTHON) genfirmware.py --version=$(GITVER) --compat=$(BOARDREV) --out=release/interfacez_firmware_$(BOARDREV)_$(GITVER)_$(BUILDDATE).izf
