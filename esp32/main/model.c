@@ -10,3 +10,17 @@ void model__set(model_t m)
 {
     model = m;
 }
+
+bool model__supports_ula_override()
+{
+    bool support = false;
+    switch(model) {
+    case MODEL_16K:
+    case MODEL_48K:
+        support = true;
+        break;
+    default:
+        break;
+    }
+    return support;
+}

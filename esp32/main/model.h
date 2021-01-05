@@ -5,6 +5,8 @@
 extern "C" {
 #endif
 
+#include <stdbool.h>
+
 typedef enum {
     MODEL_UNKNOWN,
     MODEL_16K,
@@ -17,6 +19,7 @@ typedef enum {
 model_t model__get(void);
 void model__set(model_t);
 
+bool model__supports_ula_override();
 
 #ifdef __cplusplus
 }
