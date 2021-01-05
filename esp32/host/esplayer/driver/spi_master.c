@@ -26,7 +26,10 @@ esp_err_t spi_device_polling_transmit(spi_device_handle_t handle, spi_transactio
 
     unsigned txlen = (ext->base.length/8);
     // Re-allocate so we can merge everyting
-    uint8_t *transaction = malloc( txlen + 16);
+    uint8_t *transaction = malloc( txlen + 32);
+    if (!transaction) {
+        abort();
+    }
     uint8_t *tptr = transaction;
 
     if (ext->base.flags & SPI_TRANS_VARIABLE_CMD) {

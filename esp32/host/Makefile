@@ -13,6 +13,7 @@ SRCPATH=$(shell pwd)
 # -Werror=missing-prototypes
 
 CFLAGS= -fpic -DPIC -Wall -Wextra -Wno-format \
+	-D_FORTIFY_SOURCE=1 -fstack-protector-strong \
 	-DGITVER=\"$(GITVER)\" \
 	-DBUILDDATE='"$(BUILDDATE)"' \
 	-DCONFIG_LOG_TIMESTAMP_SOURCE_RTOS \
@@ -148,6 +149,9 @@ adc.c                 \
 board.c               \
 scope.c               \
 log.c                 \
+divcompat.c           \
+esxdos.c              \
+rom_hook.c            \
 spectrum_kbd.c        \
 systemevent.c 	      \
 wsys/charmap.c        \
@@ -187,7 +191,8 @@ menus/settingsmenu.cpp \
 menus/videomodemenu.cpp \
 menus/wifimenu.cpp \
 menus/about.cpp \
-menus/audiowindow.cpp
+menus/audiowindow.cpp \
+menus/loadmenu.cpp
 
 
 
@@ -220,6 +225,7 @@ OBJS:=$(FREERTOS_OBJS) $(COBJ) $(CXXOBJ) \
 	esplayer/esp_netif.o \
 	esplayer/esp_wifi.o \
 	esplayer/esp_adc_cal.o \
+	esplayer/esp_timer.o \
 	$(ESP_IDF)/components/esp_http_server/src/httpd_parse.o \
 	$(ESP_IDF)/components/esp_http_server/src/httpd_txrx.o  \
 	$(ESP_IDF)/components/esp_http_server/src/httpd_sess.o  \
@@ -227,7 +233,7 @@ OBJS:=$(FREERTOS_OBJS) $(COBJ) $(CXXOBJ) \
 	$(ESP_IDF)/components/esp_http_server/src/httpd_uri.o   \
 	$(ESP_IDF)/components/esp_http_server/src/httpd_main.o  \
 	$(ESP_IDF)/components/esp_http_server/src/util/ctrl_sock.o  \
-	$(ESP_IDF)/components/nghttp/nghttp2/third-party/http-parser/http_parser.o
+	$(ESP_IDF)/components/nghttp/nghttp2/third-party/http-parser/http_parser.o 
 
 interfacez: libinterfacez.so main_standalone.o
 	$(CXX) -o interfacez main_standalone.o libinterfacez.so -lutil
