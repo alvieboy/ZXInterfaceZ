@@ -10,6 +10,7 @@
 #include "LogEmitter.h"
 #include "text.h"
 #include "interface.h"
+#include <getopt.h>
 
 extern "C" int fpga_set_comms_socket(int socket);
 extern "C" int interfacez_main(int,char**);
@@ -97,9 +98,39 @@ static int spi_transceive_fun(const uint8_t *tx, uint8_t *rx, unsigned size)
 }
 #endif
 
+const struct option longopts[] = {
+    { "traceaddress", 1, NULL, 0 },
+    { NULL, 0, NULL, 0 },
+};
 
-static int setupgui(int sock=-1)
+static int setupgui(int argc, char **argv, int sock=-1)
 {
+    int option_index;
+    bool trace_set = false;
+    char *endp;
+    uint16_t trace_address;
+
+    do {
+        int c = getopt_long(argc, argv, "",
+                            longopts, &option_index);
+        if (c<0)
+            break;
+        switch (c) {
+        case 0:
+            switch (option_index) {
+            case 0:
+                trace_address = strtoul(optarg, &endp, 0);
+                if (endp && *endp=='\0')
+                    trace_set = true;
+                break;
+            }
+            break;
+        default:
+            break;
+        }
+    } while (1);
+
+
     SpectrumWidget *spectrumWidget = new SpectrumWidget();
 
     QMainWindow *mainw = new EmulatorWindow();
@@ -192,6 +223,11 @@ static int setupgui(int sock=-1)
     iz->linkGPIO(nmi, 34);
     iz->linkGPIO(io0, 0);
 
+    if (trace_set) {
+        iz->enableTrace("trace.txt");
+        iz->addTraceAddressMatch(trace_address);
+    }
+
 #ifdef FPGA_USE_SOCKET_PROTOCOL
     iz->setCommsSocket(sock);
 #endif
@@ -223,12 +259,13 @@ int main(int argc, char**argv)
     if (socketpair(AF_UNIX, SOCK_STREAM, 0, &sockets[0])<0)
         return -1;
 
-    setupgui(sockets[1]);
+    setupgui(argc, argv, sockets[1]);
 #else
 
-    setupgui();
+    setupgui(argc, argv);
 
 #endif
+
 
     usleep(1000000);
     iz->start();
