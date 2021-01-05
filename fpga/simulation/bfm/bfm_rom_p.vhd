@@ -44,7 +44,10 @@ package bfm_rom_p is
 
   procedure romWrite(signal Cmd: out Cmd_Rom_type; a: in std_logic_vector(15 downto 0); d: in std_logic_vector(7 downto 0));
   procedure romWrite(signal Cmd: out Cmd_Rom_type; a: in natural; d: in std_logic_vector(7 downto 0));
-  
+
+  type romarray is array (natural range <>) of std_logic_vector(7 downto 0);
+
+  procedure romWriteArray(signal Cmd: out Cmd_Rom_type; a: in natural; d: in romarray);
 
 end package;
 
@@ -54,6 +57,17 @@ package body bfm_rom_p is
   is
   begin
     romWrite(Cmd, to_integer(unsigned(a)), d);
+  end procedure;
+
+  procedure romWriteArray(signal Cmd: out Cmd_Rom_type; a: in natural; d: in romarray)
+  is
+    variable av: natural;
+  begin
+    av := a;
+    for i in d'range loop
+      romWrite(Cmd, av, d(i));
+      av := av + 1;
+    end loop;
   end procedure;
 
   procedure romWrite(signal Cmd: out Cmd_Rom_type; a: in natural; d: in std_logic_vector(7 downto 0))

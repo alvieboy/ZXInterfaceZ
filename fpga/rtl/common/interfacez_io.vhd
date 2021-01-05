@@ -90,6 +90,9 @@ entity interfacez_io is
 
     page128_pmc_o         : out std_logic_vector(7 downto 0);
     page128_smc_o         : out std_logic_vector(7 downto 0);
+  
+    miscctrl_i            : in std_logic_vector(7 downto 0);
+    miscctrl_o            : out std_logic_vector(7 downto 0);
 
     trig_force_clearromcsonret_o  : out std_logic;
     disable_romcs_o       : out std_logic;
@@ -229,7 +232,7 @@ begin
         case adr_i(7 downto 0) is
           when SPECT_PORT_SCRATCH0 =>
             scratch0_r <= dat_i;
-          when SPECT_PORT_SCRATCH1 =>
+          when SPECT_PORT_MISCCTRL =>
             scratch1_r <= dat_i;
           when SPECT_PORT_CMD_FIFO_DATA => -- Command FIFO write.
             d_write_r <= dat_i;
@@ -285,8 +288,8 @@ begin
           when SPECT_PORT_SCRATCH0 =>
             dataread_r <= scratch0_r;
 
-          when SPECT_PORT_SCRATCH1 =>
-            dataread_r <= scratch1_r;
+          when SPECT_PORT_MISCCTRL =>
+            dataread_r <= miscctrl_i;--scratch1_r;
 
           when SPECT_PORT_CMD_FIFO_STATUS => -- Command FIFO status read
             dataread_r <= "0000000" & cmdfifo_full_i;
@@ -470,5 +473,6 @@ begin
   page128_pmc_o   <= page128_pmc_r;
   page128_smc_o   <= page128_smc_r;
   trig_force_clearromcsonret_o <= trig_force_clearromcsonret_r;
+  miscctrl_o      <= scratch1_r;
 
 end beh;

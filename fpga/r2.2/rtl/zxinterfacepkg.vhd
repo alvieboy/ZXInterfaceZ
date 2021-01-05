@@ -24,7 +24,7 @@ package zxinterfacepkg is
   -- 0 x 1 x x x 1 1
 
   constant SPECT_PORT_SCRATCH0              : std_logic_vector(7 downto 0) := "00100011";   -- x"23"
-  constant SPECT_PORT_SCRATCH1              : std_logic_vector(7 downto 0) := "00100111";   -- x"27"
+  constant SPECT_PORT_MISCCTRL              : std_logic_vector(7 downto 0) := "00100111";   -- x"27"
   constant SPECT_PORT_CMD_FIFO_STATUS       : std_logic_vector(7 downto 0) := "00101011";   -- x"2B"
   constant SPECT_PORT_RESOURCE_FIFO_STATUS  : std_logic_vector(7 downto 0) := "00101111";   -- x"2F"
   constant SPECT_PORT_RESOURCE_FIFO_DATA    : std_logic_vector(7 downto 0) := "00110011";   -- x"33"
@@ -35,10 +35,10 @@ package zxinterfacepkg is
   constant SPECT_PORT_CMD_FIFO_DATA         : std_logic_vector(7 downto 0) := "01100111";   -- x"67"
   constant SPECT_PORT_MEMSEL                : std_logic_vector(7 downto 0) := "01101011";   -- x"6B";
   constant SPECT_PORT_NMIREASON             : std_logic_vector(7 downto 0) := "01101111";   -- x"6F";
-  -- UNUSED: "01110011";
-  -- UNUSED: "01110111";
-  -- UNUSED: "01111011";
-  -- UNUSED: "01111111";
+  -- UNUSED: "01110011"; -- x"73"
+  -- UNUSED: "01110111"; -- x"77"
+  -- UNUSED: "01111011"; -- x"7b"
+  -- UNUSED: "01111111"; -- x"7f"
 
   constant SPECT_PORT_KEMPSTON_JOYSTICK       : std_logic_vector(15 downto 0) := "00000000" & "00011111";
   constant SPECT_PORT_KEMPSTON_JOYSTICK_MASK  : std_logic_vector(15 downto 0) := "00000000" & "11100001";
@@ -81,13 +81,46 @@ package zxinterfacepkg is
     bit_data      : std_logic_vector(31 downto 0);
   end record;
 
-  constant ROM_MAX_HOOKS: natural := 4;
 
-  type rom_hook_base_t  is array (0 to ROM_MAX_HOOKS-1) of unsigned(13 downto 0);
-  type rom_hook_len_t   is array (0 to ROM_MAX_HOOKS-1) of unsigned(5 downto 0);
+  constant ROM_MAX_HOOKS: natural := 8;
+
+  type rom_hookflag_t is record
+    valid     : std_logic;
+    romno     : std_logic; -- 0 or 1 for now.
+    prepost   : std_logic; -- '0': pre-trigger, '1': post-trigger
+    setreset  : std_logic; -- '0': reset ROMCS, '1': enable ROMCS
+    ranged    : std_logic; -- If setreset is '1', then ranged means if we apply ROMCS only on this range, of if we latch it.
+  end record;
+
+  type rom_hook_t is record
+    base    : unsigned(13 downto 0);
+    len     : unsigned(7 downto 0);  -- Max 256 bytes
+    flags   : rom_hookflag_t;
+  end record;
+
+
+  type rom_hook_array_t  is array (0 to ROM_MAX_HOOKS-1) of rom_hook_t;
+
+  function to_01(a: in std_logic_vector) return std_logic_vector;
 
 end package;
 
---package body zxinterfacepkg is
+package body zxinterfacepkg is
 
---end package body;
+  function to_01(a: in std_logic_vector) return std_logic_vector is
+    variable l: std_logic_vector(a'range);
+  begin
+    l:=a;
+    -- synthesis translate_off
+    l1: for i in a'low to a'high loop
+      if a(i)='H' or a(i)='1' then
+        l(i):='1';
+      else
+        l(i):='0';
+      end if;
+    end loop;
+    -- synthesis translate_on
+    return l;
+  end function;
+
+end package body;

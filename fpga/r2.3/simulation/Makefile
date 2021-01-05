@@ -1,4 +1,4 @@
-GHDLMAKEFLAGS=-m --ieee=synopsys -fexplicit
+GHDLMAKEFLAGS=-m --ieee=synopsys -fexplicit --std=00 -frelaxed -Wno-binding
 
 TESTS=t001 \
 t002 \

@@ -351,6 +351,7 @@ architecture beh of zxinterface is
   signal mode2a_s               : std_logic;
   signal page128_pmc_s          : std_logic_vector(7 downto 0);
   signal page128_smc_s          : std_logic_vector(7 downto 0);
+  signal miscctrl_s             : std_logic_vector(7 downto 0);
 
   function genvolume(vol: in std_logic_vector(7 downto 0)) return std_logic_vector is
   begin
@@ -381,16 +382,17 @@ architecture beh of zxinterface is
   signal nmi_m1fall_q_r         : std_logic;
 
 
-  signal hook_base_s            : rom_hook_base_t;
-  signal hook_len_s             : rom_hook_len_t;
-  signal hook_valid_s           : std_logic_vector(ROM_MAX_HOOKS-1 downto 0);
-  signal hook_rom_s             : std_logic_vector(ROM_MAX_HOOKS-1 downto 0);
-  signal hook_romcs_s           : std_logic;
-
+  signal hook_s                 : rom_hook_array_t;
+  signal hook_range_romcs_s     : std_logic;
+  signal hook_trig_force_romcs_on_s     : std_logic;
+  signal hook_trig_force_romcs_off_s    : std_logic;
   signal trig_force_clearromcsonret_s: std_logic;
   signal reqackn_sync_s         : std_logic;
   signal disable_romcs_s        : std_logic;
   signal nmi_entry_rd_p_s       : std_logic;
+
+  signal divmmc_det_s           : std_logic;
+  signal divmmc_compat_s        : std_logic;
 
 begin
 
@@ -582,6 +584,7 @@ begin
 
       page128_pmc_o   => page128_pmc_s,
       page128_smc_o   => page128_smc_s,
+      miscctrl_i      => miscctrl_s,
 
       trig_force_clearromcsonret_o => trig_force_clearromcsonret_s,
       disable_romcs_o => disable_romcs_s,
@@ -635,7 +638,7 @@ begin
   -- TODO: we should have more then one ROM here.
 
   rom_active_s    <= '0' when disable_romcs_s='1' else
-      rom_enable_s and (spect_forceromcs_bussync_s or hook_romcs_s);
+      rom_enable_s and (spect_forceromcs_bussync_s or hook_range_romcs_s);
   --io_active_s     <= io_enable_s;-- and NOT XRD_sync_s;
 
   data_o_valid_s  <= rom_active_s or io_enable_s;--io_active_s;
@@ -784,10 +787,9 @@ begin
     memromsel_o           => memromsel_s,
     memsel_we_o           => memsel_we_s,
     romsel_we_o           => romsel_we_s,
-    hook_base_o           => hook_base_s,
-    hook_len_o            => hook_len_s,
-    hook_valid_o          => hook_valid_s,
-    hook_rom_o            => hook_rom_s
+    hook_o                => hook_s,
+    divmmc_compat_o       => divmmc_compat_s,
+    miscctrl_o            => miscctrl_s
   );
 
   -- Main AHB intercon.
@@ -915,14 +917,23 @@ begin
       if forceromcs_on_s='1' then
         spect_forceromcs_s<='1';
       elsif forceromcs_off_s='1' or (forceromonretn_r='1' and retn_det_s='1')
-                                 or (forceromonret_r='1' and ret_det_s='1') then
+                                 or (forceromonret_r='1' and ret_det_s='1') 
+                                 or (divmmc_compat_s='1' and divmmc_det_s='1') then
         spect_forceromcs_s<='0';
+
         if (forceromonretn_r='1' and retn_det_s='1') then
           forceromonretn_r<='0';
         end if;
+
         if (forceromonret_r='1' and ret_det_s='1') then
           forceromonret_r<='0';
         end if;
+      end if;
+
+      if hook_trig_force_romcs_on_s='1' then
+        spect_forceromcs_s<='1';
+      elsif hook_trig_force_romcs_off_s='1' then
+        spect_forceromcs_s<='0';
       end if;
     end if;
   end process;
@@ -975,6 +986,7 @@ begin
       pc_valid_o  => pc_valid_s,
       retn_det_o  => retn_det_s,
       ret_det_o   => ret_det_s,
+      --divmmc_det_i => divmmc_det_s,
       nmi_access_o=> nmi_access_s
     );
 
@@ -1038,12 +1050,13 @@ begin
       a_i           => a_unlatched_s,
       rdn_i         => XRD_sync_s,
       mreqn_i       => XMREQ_sync_s,
-      hook_base_i   => hook_base_s,
-      hook_len_i    => hook_len_s,
-      hook_valid_i  => hook_valid_s,
-      hook_rom_i    => hook_rom_s,
+      rfsh_i        => XRFSH_sync_s,
+      m1_i          => XM1_sync_s,
+      hook_i        => hook_s,
       romsel_i      => page128_pmc_s(4),
-      force_romcs_o => hook_romcs_s
+      range_romcs_o => hook_range_romcs_s,
+      trig_force_romcs_on_o   => hook_trig_force_romcs_on_s,
+      trig_force_romcs_off_o  => hook_trig_force_romcs_off_s
     );
 
 
@@ -1201,7 +1214,7 @@ begin
       trig_s(24) <= not wait_s;
       trig_s(25) <= not nmi_r;
       trig_s(26) <= not spect_reset_s;
-      trig_s(27) <= spect_forceromcs_bussync_s or hook_romcs_s;
+      trig_s(27) <= spect_forceromcs_bussync_s or hook_range_romcs_s;
       trig_s(28) <= force_iorqula_s;
       trig_s(29) <= usb_int_s;
       trig_s(30) <= spec_nreq_s;   -- main interrupt
@@ -1286,8 +1299,8 @@ begin
   mosi_s          <= SPI_MOSI_i;
   SPI_MISO_o      <= miso_s;
 
-  force_romcs_s   <= (spect_forceromcs_bussync_s or hook_romcs_s) and not disable_romcs_s; -- Always enabled -- and not mode2a_s;
-  force_2aromcs_s <= (spect_forceromcs_bussync_s or hook_romcs_s) and mode2a_s and not disable_romcs_s; -- Only in 2A+ mode, due to VIDEO signal on same pin
+  force_romcs_s   <= (spect_forceromcs_bussync_s or hook_range_romcs_s) and not disable_romcs_s; -- Always enabled -- and not mode2a_s;
+  force_2aromcs_s <= (spect_forceromcs_bussync_s or hook_range_romcs_s) and mode2a_s and not disable_romcs_s; -- Only in 2A+ mode, due to VIDEO signal on same pin
 
     bit_int: entity work.bit_out generic map ( WIDTH=>1, START=>9)
               port map ( data_i(0) => '0', data_o(0) => FORCE_INT_o, bit_from_cpu_i => bit_from_cpu_s );

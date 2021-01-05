@@ -50,10 +50,22 @@ package bfm_qspiram_p is
   procedure qspiramRead(signal Cmd: out Cmd_QSPIRam_type; signal Dat: in Data_QSPIRam_type; a: in natural; d:out std_logic_vector(7 downto 0));
   procedure qspiramRead(signal Cmd: out Cmd_QSPIRam_type; signal Dat: in Data_QSPIRam_type; a: in std_logic_vector(23 downto 0); d:out std_logic_vector(7 downto 0));
   
+  type ramarray is array (natural range <>) of std_logic_vector(7 downto 0);
+  procedure qspiramWrite(signal Cmd: out Cmd_QSPIRam_type; a: in natural; d: in ramarray);
 
 end package;
 
 package body bfm_qspiram_p is
+
+  procedure qspiramWrite(signal Cmd: out Cmd_QSPIRam_type; a: in natural; d: in ramarray) is
+    variable a_v: natural;
+  begin
+    a_v := a;
+    for i in d'range loop
+      qspiramWrite(Cmd, a_v, d(i));
+      a_v := a_v + 1;
+    end loop;
+  end procedure;
 
   procedure qspiramWrite(signal Cmd: out Cmd_QSPIRam_type; a: in std_logic_vector(23 downto 0); d: in std_logic_vector(7 downto 0))
   is

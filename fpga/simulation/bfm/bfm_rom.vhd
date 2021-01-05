@@ -44,7 +44,7 @@ begin
 
   process
   begin
-  report "Wait";
+--  report "Wait";
     wait on Cmd_i.Cmd;
     if Cmd_i.Cmd = SETMEM then
       report "Writing memory " &str(Cmd_i.Address)&" data "&hstr(Cmd_i.Data);

@@ -106,10 +106,12 @@ entity systemctrl is
     memsel_we_o           : out std_logic;
     romsel_we_o           : out std_logic;
     -- ROM hookds
-    hook_base_o           : out rom_hook_base_t;
-    hook_len_o            : out rom_hook_len_t;
-    hook_valid_o          : out std_logic_vector(ROM_MAX_HOOKS-1 downto 0);
-    hook_rom_o            : out std_logic_vector(ROM_MAX_HOOKS-1 downto 0)
+    hook_o                : out rom_hook_array_t;
+    -- Misc
+    miscctrl_o            : out std_logic_vector(7 downto 0);
+    -- divMMC compatibility. Usage TBD
+    divmmc_compat_o       : out std_logic
+
   );
 end systemctrl;
 
@@ -145,11 +147,8 @@ architecture beh of systemctrl is
   signal do_read_fifo_r : std_logic;
   signal tapfifo_used_lsb_r : std_logic_vector(7 downto 0);
 
-  signal hook_base_r    : rom_hook_base_t;
-  signal hook_len_r     : rom_hook_len_t;
-  signal hook_valid_r   : std_logic_vector(ROM_MAX_HOOKS-1 downto 0);
-  signal hook_rom_r     : std_logic_vector(ROM_MAX_HOOKS-1 downto 0);
-
+  signal hook_r         : rom_hook_array_t;
+  signal miscctrl_r     : std_logic_vector(7 downto 0);
 begin
 
   ahb2rdwr_inst: entity work.ahb2rdwr
@@ -302,13 +301,19 @@ begin
       memsel_we_r           <= '0';
       romsel_we_r           <= '0';
       memromsel_r           <= (others => 'X');
-      hook_valid_r          <= (others => '0');
-      hook_rom_r            <= (others => '0');
-      hook_base_r           <= (others=>(others => 'X'));
-      hook_len_r            <= (others=>(others => 'X'));
-      --bit_from_cpu_o.tx_data_valid <= '0';
-      --bit_from_cpu_o.tx_data  <= (others => 'X');
-
+      hook_r                <= (others => (
+                                    base => (others => '0'),
+                                    len  => (others => '0'),
+                                    flags => (
+                                      valid=>'0',
+                                      romno=>'0',
+                                      prepost=>'0',
+                                      setreset=>'0',
+                                      ranged=> '0'
+                                    )
+                                  )
+                                );
+      miscctrl_r            <= (others => '0');
     elsif rising_edge(clk_i) then
 
       resfifo_reset_o       <= '0';
@@ -331,7 +336,7 @@ begin
 
       if wr_s='1' then
 
-        hook_index_v := to_integer(unsigned(addr_s(3 downto 2)));
+        hook_index_v := to_integer(unsigned(addr_s(4 downto 2)));
 
         case addr_s is
           when "0000000" => null;
@@ -367,7 +372,9 @@ begin
             romsel_we_r <= not dat_in_s(7);
           when "0010011" => null; -- Frame EOF not implemented
           when "0010100" => null; -- Resource FIFO write
-          when "0010101" | "0010111" => null; -- Command FIFO read
+          when "0010101" | "0010110" => null; -- Command FIFO read
+          when "0010111" =>
+            miscctrl_r  <= dat_in_s;
           when "0011000" => null; -- TAP fifo write
           when "0011001" => null; -- TAP command fifo write
           when "0011010" | "0011011"=> null; -- TAP command fifo usage read
@@ -390,15 +397,26 @@ begin
                "0110011" | "0110111" | "0111011" | "0111111" =>
             regs32_r( to_integer(unsigned(addr_s(5 downto 2)))) <= tempreg_r & dat_in_s;
 
-          when "1000000" | "1000100" | "1001000" | "1001100" => -- Hook low
-            hook_base_r(hook_index_v)(7 downto 0) <= unsigned(dat_in_s);
-          when "1000001" | "1000101" | "1001001" | "1001101" => -- Hook high
-            hook_base_r(hook_index_v)(13 downto 8) <= unsigned(dat_in_s(5 downto 0));
-            hook_rom_r(hook_index_v) <= dat_in_s(6); -- MSBs choose ROM.
-          when "1000010" | "1000110" | "1001010" | "1001110" => -- Hook len
-            hook_len_r(hook_index_v)(5 downto 0) <= unsigned(dat_in_s(5 downto 0));
-          when "1000011" | "1000111" | "1001011" | "1001111" => -- Hook active
-            hook_valid_r(hook_index_v) <= dat_in_s(0);
+          when "1000000" | "1000100" | "1001000" | "1001100" |
+               "1010000" | "1010100" | "1011000" | "1011100" => -- Hook low
+            hook_r(hook_index_v).base(7 downto 0) <= unsigned(dat_in_s);
+
+          when "1000001" | "1000101" | "1001001" | "1001101" |
+               "1010001" | "1010101" | "1011001" | "1011101" => -- Hook high
+            hook_r(hook_index_v).base(13 downto 8)  <= unsigned(dat_in_s(5 downto 0));
+
+          when "1000010" | "1000110" | "1001010" | "1001110" !
+               "1010010" | "1010110" | "1011010" | "1011110" => -- Hook len
+            hook_r(hook_index_v).len                <= unsigned(dat_in_s(7 downto 0));
+
+          when "1000011" | "1000111" | "1001011" | "1001111" |
+               "1010011" | "1010111" | "1011011" | "1011111" => -- Hook flags
+
+            hook_r(hook_index_v).flags.romno        <= dat_in_s(0);
+            hook_r(hook_index_v).flags.ranged       <= dat_in_s(4);
+            hook_r(hook_index_v).flags.prepost      <= dat_in_s(5);
+            hook_r(hook_index_v).flags.setreset     <= dat_in_s(6);
+            hook_r(hook_index_v).flags.valid        <= dat_in_s(7);
 
 
           when others =>
@@ -453,6 +471,7 @@ begin
   mouse_en_o            <= regs32_r(2)(2);
   ay_en_o               <= regs32_r(2)(3);
   ay_en_reads_o         <= regs32_r(2)(4);
+  divmmc_compat_o       <= regs32_r(2)(5);
 
   kbd_force_press_o     <= regs32_r(4)(7 downto 0) & regs32_r(3);
 
@@ -472,12 +491,9 @@ begin
   memsel_we_o           <= memsel_we_r;
   romsel_we_o           <= romsel_we_r;
 
-  hook_base_o           <= hook_base_r;
-  hook_len_o            <= hook_len_r;
-  hook_valid_o          <= hook_valid_r;
-  hook_rom_o            <= hook_rom_r;
+  hook_o                <= hook_r;
 
-
+  miscctrl_o            <= miscctrl_r;
 end beh;
 
 
