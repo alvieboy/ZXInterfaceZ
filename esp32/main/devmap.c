@@ -9,17 +9,18 @@
 #include "devmap.h"
 
 enum map_type {
-        MAP_KEYBOARD,
-        MAP_JOYSTICK,
-        MAP_NMI,
-        MAP_MOUSE
+    MAP_NONE,
+    MAP_KEYBOARD,
+    MAP_JOYSTICK,
+    MAP_NMI,
+    MAP_MOUSE
 };
 
 typedef struct devmap_e {
     struct devmap_e *next;
     enum map_type map:8;
     unsigned index:8;
-    uint16_t analog_threshold;
+    int16_t analog_threshold;
     unsigned action_value:16;
 } devmap_e_t;
 
@@ -85,6 +86,39 @@ static const devmap_d_t devmap[] = {
 #define DEVMAP_JSON_FILENAME "/config/devmap.jsn"
 #define TAG "Devmap"
 
+static struct {
+    const char *name;
+    enum map_type map;
+} map_entries[] = {
+    { "keyboard", MAP_KEYBOARD },
+    { "joystick", MAP_JOYSTICK },
+    { "nmi", MAP_NMI },
+    { "mouse", MAP_MOUSE },
+};
+
+            
+static const char *devmap__map_name_from_type(enum map_type type)
+{
+    int i;
+    for (i=0;i<sizeof(map_entries)/sizeof(map_entries[0]);i++) {
+        if (map_entries[i].map == type) {
+            return map_entries[i].name;
+        }
+    }
+    return "unknown";
+}
+
+static enum map_type devmap__parse_map(const char *str)
+{
+    int i;
+    for (i=0;i<sizeof(map_entries)/sizeof(map_entries[0]);i++) {
+        if (strcmp(map_entries[i].name, str)==0) {
+            return map_entries[i].map;
+        }
+    }
+    return MAP_NONE;
+}
+
 static int devmap__parse_usb_id(const char *str, uint32_t *target_device)
 {
     char hex[5];
@@ -118,6 +152,17 @@ static int devmap__parse_usb_id(const char *str, uint32_t *target_device)
     return 0;
 }
 
+static void devmap__free_entries(devmap_e_t *d)
+{
+    if (!d)
+        return;
+
+    if (d->next)
+        devmap__free_entries(d->next);
+    else
+        free(d);
+}
+
 static void devmap__free_d(devmap_d_t *d)
 {
     if (d->serial)
@@ -126,9 +171,51 @@ static void devmap__free_d(devmap_d_t *d)
         free(d->manufacturer);
     if (d->product)
         free(d->product);
+    if (d->entries)
+        devmap__free_entries(d->entries);
     free(d);
 }
 
+static devmap_e_t *devmap__parse_entries(const char *filename)
+{
+    devmap_e_t *e_root = NULL, *c;
+    cJSON *root = json__load_from_file(filename);
+    if (root) {
+
+        cJSON *entries = cJSON_GetObjectItemCaseSensitive(root, "entries");
+        cJSON *entry;
+
+        cJSON_ArrayForEach(entry, entries) {
+            c = malloc(sizeof(devmap_e_t));
+            if (!c) {
+                devmap__free_entries(e_root);
+                return NULL;
+            }
+            // Append to list
+            c->next = e_root;
+            e_root = c;
+            const char *mapstr = json__get_string(entry,"map");
+            c->map = devmap__parse_map(mapstr);
+            c->index = json__get_integer(entry, "index");
+            c->analog_threshold = json__get_integer_default(entry, "threshold", 0);
+            if (c->map == MAP_KEYBOARD) {
+                const char *keybname = json__get_string(entry,"value");
+                c->action_value = keyboard__get_key_by_name(keybname);
+            } else {
+                c->action_value = json__get_integer_default(entry, "value", 0);
+            }
+            ESP_LOGI(TAG, "New map entry %s idx=%d thresh=%d action=%d",
+                     devmap__map_name_from_type(c->map),
+                     c->index,
+                     c->analog_threshold,
+                     c->action_value);
+        }
+    } else {
+        ESP_LOGE(TAG, "Could not parse '%s'", filename);
+    }
+    cJSON_Delete(root);
+    return e_root;
+}
 
 void devmap__init()
 {
@@ -161,6 +248,16 @@ void devmap__init()
         dm->manufacturer = json__get_string_alloc(device,"manufacturer");
         dm->product = json__get_string_alloc(device,"product");
 
+        // Load config file
+        const char *configfile = json__get_string(device,"config");
+        if (configfile) {
+            // Parse it
+            dm->entries = devmap__parse_entries(configfile);
+            if (!dm->entries) {
+                ESP_LOGE(TAG,"Could not load entries for '%s' (%s)", id, configfile?configfile:"null");
+            }
+        }
+
         ESP_LOGI(TAG,"Loaded %s", id);
         dm->next = root_devmap;
         root_devmap = dm;
@@ -170,17 +267,7 @@ void devmap__init()
 
 }
 
-            
-static const char *devmap__map_name_from_type(enum map_type type)
-{
-    switch (type) {
-    case MAP_KEYBOARD: return "keyboard";
-    case MAP_JOYSTICK: return "joystick";
-    case MAP_NMI:      return "nmi";
-    case MAP_MOUSE:    return "mouse";
-    default:           return "unknown";
-    }
-}
+
 
 static int devmap__save_to_file(const char *filename, const devmap_d_t *devmap)
 {
