@@ -7,6 +7,7 @@
 #include "model.h"
 #include "tzx.h"
 #include "log.h"
+#include "rom_hook.h"
 
 #define FASTTAP "FASTTAP"
 
@@ -18,34 +19,40 @@
 static int fasttap_fd = -1;
 static int fasttap_size= -1;
 static struct tzx *fasttap_tzx;
-
+static int8_t hooks[3] = {-1};
 static int fasttap__install_hooks(model_t model)
 {
+    uint8_t rom = 0;
     switch (model) {
     case MODEL_16K: /* Fall-through */
     case MODEL_48K:
         ESP_LOGI(FASTTAP, "Hooking to ROM0");
-        fpga__enable_hook(0, HOOK_ROM0(0x56C), 2);   // LD-START
-        fpga__enable_hook(1, HOOK_ROM0(0x59E), 1);   // "RET NC" on LD-SYNC, set NOP
-        fpga__enable_hook(2, HOOK_ROM0(0x5C8), 17);  // LD-MARKER
+        rom = 0;
         break;
     case MODEL_128K:
         ESP_LOGI(FASTTAP, "Hooking to ROM1");
-        fpga__enable_hook(0, HOOK_ROM1(0x56C), 2);   // LD-START
-        fpga__enable_hook(1, HOOK_ROM1(0x59E), 1);   // "RET NC" on LD-SYNC, set NOP
-        fpga__enable_hook(2, HOOK_ROM1(0x5C8), 17);  // LD-MARKER
+        rom = 1;
         break;
     default:
         ESP_LOGE(FASTTAP, "No hooks available for model %d", (int)model);
         return -1;
         break;
     }
+
+    hooks[0] = rom_hook__add_pre_set_ranged( rom, 0x056C, 2); // LD-START
+    hooks[1] = rom_hook__add_pre_set_ranged( rom, 0x059E, 1);   // "RET NC" on LD-SYNC, set NOP
+    hooks[2] = rom_hook__add_pre_set_ranged( rom, 0x05C8, 17);  // LD-MARKER
+
     return 0;
 }
 
 static void fasttap__remove_hooks()
 {
-    fpga__disable_hooks();
+    int i;
+    for (i=0;i<3; i++) {
+        rom_hook__remove(hooks[i]);
+        hooks[i] = -1;
+    }
 }
 
 static int fasttap__prepare_tap();
@@ -99,6 +106,31 @@ int fasttap__prepare(const char *filename)
         close(fasttap_fd);
         fasttap_fd = -1;
     }
+    return r;
+}
+
+static int fasttap__file_finished()
+{
+    if (fasttap_fd<0) {
+        ESP_LOGI(FASTTAP, "No FASTTAP file loaded");
+        return -1;
+    }
+
+    unsigned pos = (unsigned)lseek(fasttap_fd, 0, SEEK_CUR);
+
+    ESP_LOGI(FASTTAP, "Compare pos, current %d max %d", pos, fasttap_size);
+
+    if (pos < fasttap_size)
+        return 1;
+
+    return 0;
+}
+
+int fasttap__is_playing(void)
+{
+    int r = fasttap__file_finished();
+    if (r<0)
+        return 0;
     return r;
 }
 

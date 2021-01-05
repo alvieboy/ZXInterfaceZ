@@ -8,6 +8,7 @@ extern "C" {
 int fasttap__prepare(const char *filename);
 int fasttap__next(void);
 void fasttap__stop(void);
+int fasttap__is_playing(void);
 
 #ifdef __cplusplus
 }
