@@ -25,6 +25,9 @@ struct MenuEntryList {
     const MenuEntry &operator[](int idx) const {
         return entries[idx];
     }
+    MenuEntry &operator[](int idx) {
+        return entries[idx];
+    }
     int size() const { return sz; }
     int sz;
     MenuEntry entries[];
