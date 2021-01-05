@@ -199,7 +199,6 @@ _endl1: HALT
         include	"graphics.asm"
         include	"print.asm"
         include	"regdebug.asm"
-	include "keybtest.asm"
         include "utils.asm"
         ; WARNING WARNING -  this does need correct placement in ROM
         ; Make sure it does not overlap with other routines.
@@ -207,6 +206,7 @@ _endl1: HALT
         include "romcrc.asm"
 	include "nmihandler.asm"
 	include	"charmap.asm"
+	include "keybtest.asm"
 	include "snaram.asm"
         include "z80restore.asm"
        

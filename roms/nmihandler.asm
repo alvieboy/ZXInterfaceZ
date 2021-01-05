@@ -100,8 +100,7 @@ lone:
         ; Save border.
         IN	A, (PORT_ULA)
         OUT	(C), A	   	; Ram: 0x401B
-        DEBUGSTR "Serving NMI\n"
-
+;        DEBUGSTR "Serving NMI\n"
         CALL	NMIPROCESS_VIDEOONLY
 
 NMIRESTORE:
@@ -172,13 +171,26 @@ _l2:
         IN	D,(C)           ; Ram: 0x2003
         IN	L,(C)           ; Ram: 0x2004
         IN	H,(C)           ; Ram: 0x2005
-	; Last one is C.
+	
+        ; Before we leave, check if we ought to return with RETN or regular RET
+        ; This is indicated by MISCCTRL register
+        IN	A, (PORT_MISCCTRL)
+        OR	A
+        JR	NZ, _return_with_ret
+        ; Last one is C.
         XOR	A
         OUT	(PORT_RAM_ADDR_0), A        ; Ram: 0x2000
         IN	C, (C)
         ; SP is "good" here.
 	POP 	AF
         RETN
+_return_with_ret:
+        XOR	A
+        OUT	(PORT_RAM_ADDR_0), A        ; Ram: 0x2000
+        IN	C, (C)
+        ; SP is "good" here.
+	POP 	AF
+        RET
         
 
 ; Returns NZ if we have a key

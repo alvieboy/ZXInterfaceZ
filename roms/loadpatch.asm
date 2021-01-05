@@ -88,3 +88,79 @@ LOAD_ERROR:
 	CCF
         RET
 
+
+ORG	$0767
+        PUSH	IX ; Same as 48K ROM
+RET0767:
+	PUSH	AF
+
+
+	PUSH	BC
+	LD	A, CMD_LOADTRAP
+        CALL	WRITECMDFIFO
+        ; Wait for acknowledle
+_retry1:
+	CALL	READRESFIFO
+        CP	$FF
+	POP	BC
+
+        JR	Z, RETIMMED ; If FF, we need to return immeditaly
+
+
+	; AF is still in stack. NMI handler expects
+        ; return address then AF, cause it will pop AF before returning.
+        ; So we need to swap them
+        EX	DE, HL
+        LD	HL, RET2
+        EX 	(SP), HL
+        ; HL now contains AF.
+        PUSH	HL
+        EX	DE, HL
+        
+        JP	NMIHANDLER
+	; Go back to Spectrum.
+RETIMMED:
+	POP	AF 
+RET2:        
+        LD	DE, RET0767
+        ;PUSH	AF
+        ;POP	IX
+        ;LD	DE, $0552 ; test for break!
+        PUSH	DE
+
+        JP 	RETTOMAINROM
+	HALT
+
+
+
+
+ORG	$0970	; SA_CONTRL
+	PUSH	HL	; Same as ROM
+RET0970:
+	PUSH	BC
+        
+	LD	A, CMD_SAVETRAP
+        CALL	WRITECMDFIFO
+
+        ; Push header (17 bytes)
+        PUSH	IX
+        LD	B, 17
+_sendheader:
+        LD      A, (IX)
+        CALL	WRITECMDFIFO
+        INC	IX
+        DJNZ    _sendheader
+        
+        ; start to HL, length to DE.
+        POP	IX
+
+	POP	BC
+        LD	DE, RET0970
+        PUSH	DE
+        JP 	RETTOMAINROM
+
+        
+        
+        DI
+        HALT
+

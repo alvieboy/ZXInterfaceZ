@@ -46,3 +46,7 @@ RESTOREREGS_NOROM:
         IM	0		; FILL IM X
         EI			; FILL EI or DI, depending. We should time this so that no interrupt can come before JP
 RETINST:RETN
+
+ORG	$1FFE
+RETTOMAINROM:
+	RET
