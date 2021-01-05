@@ -27,7 +27,7 @@ void resource__init(void);
 struct resource *resource__find(uint8_t id);
 void resource__register(uint8_t id, struct resource *res);
 int resource__sendtofifo(struct resource *res);
-
+int resource__sendrawbuffer(uint8_t type, const uint8_t *buffer, uint16_t len);
 
 
 #endif

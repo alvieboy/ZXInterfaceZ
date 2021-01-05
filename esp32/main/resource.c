@@ -84,3 +84,27 @@ int resource__sendtofifo(struct resource *res)
 
     return (res->sendToFifo(res));
 }
+
+int resource__sendrawbuffer(uint8_t type, const uint8_t *buffer, uint16_t len)
+{
+    // Reset resource fifo.
+    fpga__set_trigger(FPGA_FLAG_TRIG_RESOURCEFIFO_RESET);
+
+    int r = fpga__load_resource_fifo(&type, sizeof(type), RESOURCE_DEFAULT_TIMEOUT);
+    if (r<0)
+        return r;
+
+    if (type==0xff)
+        return 0;
+
+    r = fpga__load_resource_fifo((uint8_t*)&len, sizeof(len), RESOURCE_DEFAULT_TIMEOUT);
+
+    if (r<0)
+        return r;
+
+    if (len>0) {
+        return fpga__load_resource_fifo(buffer, len, RESOURCE_DEFAULT_TIMEOUT);
+    } else {
+        return 0;
+    }
+}
