@@ -1,0 +1,12 @@
+{
+  "devices": [
+        { 
+        	"id": "0e8f:0003",
+                "manufacturer": "My gamepad",
+                "product": "My gamepad",
+                "serial": "01298321732",
+                "config": "/config/0e8f0003.jsn"
+        }
+
+  ]
+}

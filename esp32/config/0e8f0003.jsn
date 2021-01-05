@@ -1,0 +1,17 @@
+{
+	"entries" : [
+        	{ "map": "nmi", "index": 14, "value": 1 },
+                { "map": "keyboard", "index": 15, "value": "enter" },
+                { "map": "keyboard", "index": 6, "value": "q" },
+                { "map": "keyboard", "index": 7, "value": "a" },
+                { "map": "keyboard", "index": 4, "value": "o" },
+                { "map": "keyboard", "index": 5, "value": "p" },
+                { "map": "keyboard", "index": 12, "value": "o" },
+                { "map": "keyboard", "index": 13, "value": "p" },
+                { "map": "keyboard", "index": 8, "value": "m" },
+                { "map": "keyboard", "index": 2, "threshold": 64, "value": "p" },
+                { "map": "keyboard", "index": 2, "threshold": -64, "value": "o" },
+                { "map": "keyboard", "index": 3, "threshold": 64, "value": "a" },
+                { "map": "keyboard", "index": 3, "threshold": -64, "value": "q" }
+        ]
+}
