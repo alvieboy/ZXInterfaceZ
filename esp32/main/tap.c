@@ -2,6 +2,7 @@
 #include "byteops.h"
 #include "esp_log.h"
 #include "minmax.h"
+#include "byteorder.h"
 
 #define TAG "TAP"
 
