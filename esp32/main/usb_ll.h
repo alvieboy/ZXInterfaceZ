@@ -39,16 +39,18 @@ int usb_ll__submit_request(uint8_t channel, uint16_t epmemaddr,
                            usb_dpid_t pid, uint8_t seq, uint8_t *data, uint8_t datalen,
                            int (*reap)(uint8_t channel, uint8_t status,void*), void*);
 
-//int usb_ll__device_addressed(struct usb_device_info *);
-
 int usb_ll__alloc_channel(uint8_t devaddr,
                           eptype_t eptype,
                           uint8_t maxsize,
-                          uint8_t epnum);
+                          uint8_t epnum,
+                          void *userdata);
 
 int usb_ll__release_channel(uint8_t channel);
 int usb_ll__read_in_block(uint8_t channel, uint8_t *target, uint8_t *rxlen);
 void usb_ll__reset(void);
 void usb_ll__dump_info(void);
-
+#ifdef __linux__
+void usb_ll__idle(void);
+uint8_t usb_ll__get_address(void);
+#endif
 #endif

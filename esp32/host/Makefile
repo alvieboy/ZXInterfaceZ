@@ -12,13 +12,13 @@ SRCPATH=$(shell pwd)
 
 # -Werror=missing-prototypes
 
-CFLAGS= -fpic -DPIC -Wall -Wextra -Wno-format \
+CFLAGS= -fpic -DPIC -Wall -Wextra -Wno-format -Wno-unused-variable -Wno-unused-parameter \
 	-D_FORTIFY_SOURCE=1 -fstack-protector-strong \
 	-DGITVER=\"$(GITVER)\" \
 	-DBUILDDATE='"$(BUILDDATE)"' \
 	-DCONFIG_LOG_TIMESTAMP_SOURCE_RTOS \
 	-O0 -g -Wall -Wextra -DIDF_VER=\"0.1\" \
-	$(shell pkg-config --cflags glib-2.0) \
+	$(shell pkg-config --cflags glib-2.0 libusb-1.0) \
 	-I$(FREERTOSKERNEL)/include \
        -I$(FREERTOSKERNEL)/portable/GCC/Linux \
        -I$(FREERTOS)/ \
@@ -120,11 +120,11 @@ tapeplayer.c          \
 usb_descriptor.c      \
 usb_driver.c          \
 usb_driver_list.c     \
-usbh.c                \
 usb_hid.c             \
 usb_block.c           \
+usbhub.c              \
+usb_device.c          \
 hid.c                 \
-usb_ll.c              \
 usb_mouse.c           \
 version.c             \
 version_resource.c    \
@@ -214,6 +214,8 @@ OBJS:=$(FREERTOS_OBJS) $(COBJ) $(CXXOBJ) \
 	bit.o \
 	strlcpy.o \
 	buttons.o \
+	usb_ll.o \
+	usbh.o   \
 	cjson/cJSON.o \
 	cjson/cJSON_Utils.o \
 	esplayer/nvs_flash.o \
@@ -239,7 +241,7 @@ interfacez: libinterfacez.so main_standalone.o
 	$(CXX) -o interfacez main_standalone.o libinterfacez.so -lutil
 
 libinterfacez.so: $(OBJS) 
-	$(CXX) $(CFLAGS) -shared -o libinterfacez.so $(OBJS) -lpthread -lutil  -lm $(shell pkg-config --libs glib-2.0)
+	$(CXX) $(CFLAGS) -shared -o libinterfacez.so $(OBJS) -lpthread -lutil  -lm $(shell pkg-config --libs glib-2.0 libusb-1.0)
 
 clean:
 	rm -f $(OBJS)

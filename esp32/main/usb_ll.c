@@ -38,7 +38,8 @@ void usb_ll__channel_set_interval(uint8_t chan, uint8_t interval)
 int usb_ll__alloc_channel(uint8_t devaddr,
                           eptype_t eptype,
                           uint8_t maxsize,
-                          uint8_t epnum)
+                          uint8_t epnum,
+                          void *userdata)
 {
     uint8_t mask = 1;
     uint8_t chnum = 0;
@@ -271,7 +272,8 @@ int usb_ll__init()
     usb_ll__alloc_channel(0x00,
                           EP_TYPE_CONTROL,
                           64,
-                          0);
+                          0,
+                          NULL);
     // Set up chan0
     //channel_conf[0].memaddr = 0x0000;
 

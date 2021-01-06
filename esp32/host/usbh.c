@@ -68,7 +68,7 @@ static void usbh__ll_task(void *pvParam)
     TickType_t tick;
     while (1) {
 #ifdef __linux__
-        tick = 2;
+        tick = 1;
 #else
         tick = portMAX_DELAY;
 #endif
@@ -172,13 +172,6 @@ static void usbh__main_task(void *pvParam)
         }
     }
 }
-
-
-
-
-
-
-
 
 static void usbh__request_completed(struct usb_request *req);
 static int usbh__send_ack(struct usb_request *req);
@@ -335,72 +328,22 @@ static int usbh__control_request_completed_reply(uint8_t chan, uint8_t stat, str
     uint8_t rxlen = 0;
 
     if (stat & 1) {
+        // For libusb, all completes immediatly
+
 
         switch (req->control_state) {
         case CONTROL_STATE_SETUP:
+
             /* Setup completed. If we have a data phase, send data */
             req->size_transferred = 0;
             req->seq = 1;
 
-            USBHDEBUG("Requested size: %d\n", req->length);
-            if (req->length) {
-                req->control_state = CONTROL_STATE_DATA;
-                req->retries = 3;
-                usbh__issue_setup_data_request(req);
-
-
-
-            } else  {
-                // No data phase.
-                req->control_state = CONTROL_STATE_STATUS;
-
-                if (req->direction==REQ_HOST_TO_DEVICE) {
-                    // Wait ack
-                    return usbh__wait_ack(req);
-                } else {
-                    return usbh__send_ack(req);
-                }
-
-            }
-            break;
-
-
-        case CONTROL_STATE_DATA:
-
-            // IN request
             if (req->direction==REQ_DEVICE_TO_HOST) {
-                rxlen = usbh__request_data_remain(req, req->epsize);
                 usb_ll__read_in_block(chan, req->rptr, &rxlen);
-            } else {
-
             }
             req->rptr += rxlen;
             req->size_transferred += rxlen;
-            req->seq = !req->seq;
 
-            if (usbh__request_data_remain(req, rxlen)>0) {
-                USBHDEBUG("Still data to go");
-                return usbh__issue_setup_data_request(req);
-            } else {
-                USBHDEBUG("Entering status phase");
-
-                req->control_state = CONTROL_STATE_STATUS;
-
-                if (req->direction==REQ_HOST_TO_DEVICE) {
-                    // Wait ack
-                    USBHDEBUG("Wait ACK");
-                    return usbh__wait_ack(req);
-                } else {
-                    req->retries = 3;
-                    USBHDEBUG("Send ACK");
-                    return usbh__send_ack(req);
-                }
-
-            }
-
-            break;
-
-        case CONTROL_STATE_STATUS:
             usbh__request_completed(req);
         }
 

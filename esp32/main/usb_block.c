@@ -208,13 +208,15 @@ static int usb_block__probe(struct usb_device *dev, struct usb_interface *i)
     self->in_epchan = usb_ll__alloc_channel(dev->address,
                                             EP_TYPE_BULK,
                                             ep_in->wMaxPacketSize,
-                                            ep_in->bEndpointAddress
+                                            ep_in->bEndpointAddress,
+                                            dev
                                            );
 
     self->out_epchan = usb_ll__alloc_channel(dev->address,
                                              EP_TYPE_BULK,
                                              ep_out->wMaxPacketSize,
-                                             ep_out->bEndpointAddress
+                                             ep_out->bEndpointAddress,
+                                             dev
                                             );
 
     usb_ll__channel_set_interval(self->in_epchan, ep_in->bInterval);

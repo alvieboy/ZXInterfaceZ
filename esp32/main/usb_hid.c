@@ -293,7 +293,8 @@ static int usb_hid__probe(struct usb_device *dev, struct usb_interface *i)
             h->epchan = usb_ll__alloc_channel(dev->address,
                                               0x03, // Interrupt endpoint
                                               ep->wMaxPacketSize,
-                                              ep->bEndpointAddress
+                                              ep->bEndpointAddress,
+                                              dev
                                              );
             usb_ll__channel_set_interval(h->epchan, ep->bInterval);
 

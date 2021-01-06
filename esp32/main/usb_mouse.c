@@ -131,7 +131,8 @@ static int usb_mouse__probe(struct usb_device *dev, struct usb_interface *i)
                 m->epchan = usb_ll__alloc_channel(dev->address,
                                                   0x03, // Interrupt endpoint
                                                   ep->wMaxPacketSize,
-                                                  ep->bEndpointAddress
+                                                  ep->bEndpointAddress,
+                                                  dev
                                                  );
                 ESP_LOGI(TAG, "usb_mouse: setting interval");
                 usb_ll__channel_set_interval(m->epchan, ep->bInterval);

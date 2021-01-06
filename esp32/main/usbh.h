@@ -4,39 +4,13 @@
 #include "esp_attr.h"
 #include "usb_ll.h"
 #include "usb_defs.h"
+#include "usb_device.h"
 
 typedef enum {
     DETACHED,
     GET_CONFIG1,
     GET_CONFIG2
 } host_state_t;
-
-struct usb_driver;
-
-struct usb_interface
-{
-    int8_t numsettings;
-    uint8_t claimed;
-    uint8_t descriptorlen[2]; // Max 2 alt settings.
-    const struct usb_driver *drv;
-    void *drvdata; // Driver-specific data
-    usb_interface_descriptor_t *descriptors[2]; // Max 2 alt settings.
-};
-
-struct usb_device
-{
-    uint8_t ep0_chan;
-    uint8_t ep0_size;
-    uint8_t address;
-    uint8_t claimed;
-    usb_device_descriptor_t device_descriptor;
-    usb_config_descriptor_t config_descriptor_short;
-    usb_config_descriptor_t *config_descriptor;
-    char *vendor;
-    char *product;
-    char *serial;
-    struct usb_interface interfaces[0];
-};
 
 #define REQ_DEVICE_TO_HOST 0
 #define REQ_HOST_TO_DEVICE 1
@@ -61,11 +35,9 @@ struct usb_request
     uint8_t direction:1;
     uint8_t control_state:2;
     uint8_t channel:3;
-};
-
-struct usb_device_entry {
-    struct usb_device_entry *next;
-    struct usb_device *dev;
+#ifdef __linux__
+    void *pvt;
+#endif
 };
 
 int usbh__init(void);
@@ -87,5 +59,6 @@ const struct usb_device_entry *usbh__get_devices(void);
 uint32_t usbh__get_device_id(const struct usb_device *dev);
 
 void IRAM_ATTR usb__isr_handler(void* arg);
+char *usbh__string_unicode8_to_char(const uint8_t  *src, unsigned len);
 
 #endif
