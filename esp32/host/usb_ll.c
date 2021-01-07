@@ -36,11 +36,12 @@ static int usb_ll_do_open(uint16_t vid, uint16_t pid)
     int status;
 
     device = usb_ll__open_vid_pid(vid, pid, &device_handle);
+    if (device) {
+        libusb_set_auto_detach_kernel_driver(device_handle, 1);
+        status = libusb_claim_interface(device_handle, 0);
+    }
 
-    libusb_set_auto_detach_kernel_driver(device_handle, 1);
-    status = libusb_claim_interface(device_handle, 0);
-    if (status<0)
-        return status;
+    return status;
 }
 
 int usb_attach(const char *id)
@@ -106,7 +107,7 @@ static struct libusb_device *usb_ll__open_vid_pid(uint16_t vid, uint16_t pid,str
             }
         }
     }
-    fprintf(stderr, "USB: Cannot find USB device\n");
+    fprintf(stderr, "USB: Cannot find USB device vid=%04x pid=%04x\n", vid, pid);
     libusb_free_device_list(devs, 1);
 
     return NULL;

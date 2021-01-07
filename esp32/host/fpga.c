@@ -151,7 +151,7 @@ void interface__rawpindata(uint64_t p)
 
 void interface__connectusb(const char *id)
 {
-    usb_attach("0e8f:0003");
+    usb_attach(id);
 }
 
 #ifdef FPGA_USE_SOCKET_PROTOCOL

@@ -125,6 +125,8 @@ int usb_block__get_max_lun(struct usb_block *self)
         self->max_lun = -1;
         return -1;
     }
+
+    USBBLOCKDEBUG("Max LUN: %d\n",self->max_lun);
     return 0;
 }
 

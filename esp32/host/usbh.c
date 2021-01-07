@@ -74,7 +74,6 @@ static void usbh__ll_task(void *pvParam)
 #endif
         if (xQueueReceive(usb_cmd_queue, &cmd, tick)==pdTRUE)
         {
-            printf("TASK\n");
             if (cmd.cmd==USB_CMD_INTERRUPT) {
                 usb_ll__interrupt();
             } else {

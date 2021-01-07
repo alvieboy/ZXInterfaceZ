@@ -286,14 +286,12 @@ static int console__reset(int argc, char **argv)
     fpga__reset_spectrum();
     return 0;
 }
-
 static int console__debug(int argc, char **argv)
 {
     ESP_LOGI(CTAG, "Enabling ALL debug");
     loglevel = 0xffffffff;
     return 0;
 }
-
 
 static struct {
     const char *cmd;

@@ -161,10 +161,11 @@ int usbhub__port_reset(struct usb_hub *hub)
     dev.product = NULL;
     dev.serial = NULL;
 
-    ESP_LOGI(USBHUBTAG, "Resetting BUS");
+    ESP_LOGI(USBHUBTAG, "Resetting BUS now");
 
     hub->reset();
 
+    ESP_LOGI(USBHUBTAG, "Resetting BUS done");
     USBHUBDEBUG("Requesting device descriptor");
 
     if (usbh__get_descriptor(&dev,
