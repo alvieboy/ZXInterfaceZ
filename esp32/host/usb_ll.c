@@ -123,7 +123,11 @@ int usb_ll__init(void)
 
     loglevel |= (DEBUG_ZONE_USBLL|DEBUG_ZONE_USBH);
     libusb_init(&libusbctx);
+#if LIBUSB_API_VERSION >= 0x01000106
     libusb_set_option(libusbctx, LIBUSB_OPTION_LOG_LEVEL, LIBUSB_LOG_LEVEL_WARNING);
+#else
+    libusb_set_debug(libusbctx, LIBUSB_LOG_LEVEL_WARNING);
+#endif
 
     // trigger interrupt after 1 sec.
     return 0;
