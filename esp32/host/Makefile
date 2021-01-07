@@ -17,6 +17,7 @@ CFLAGS= -fpic -DPIC -Wall -Wextra -Wno-format -Wno-unused-variable -Wno-unused-p
 	-DGITVER=\"$(GITVER)\" \
 	-DBUILDDATE='"$(BUILDDATE)"' \
 	-DCONFIG_LOG_TIMESTAMP_SOURCE_RTOS \
+	-DFPGA_USE_SOCKET_PROTOCOL=1 \
 	-O0 -g -Wall -Wextra -DIDF_VER=\"0.1\" \
 	$(shell pkg-config --cflags glib-2.0 libusb-1.0) \
 	-I$(FREERTOSKERNEL)/include \

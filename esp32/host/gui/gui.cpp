@@ -11,6 +11,10 @@
 #include "text.h"
 #include "interface.h"
 #include <getopt.h>
+#include <QMenu>
+#include <QMenuBar>
+#include <QAction>
+#include <libusb.h>
 
 extern "C" int fpga_set_comms_socket(int socket);
 extern "C" int interfacez_main(int,char**);
@@ -65,10 +69,15 @@ void LogEmitter::log(int level, const char *tag, char *fmt, va_list ap)
 
 extern "C" void ansi_get_stylesheet(char *dest);
 
-#ifndef FPGA_USE_SOCKET_PROTOCOL
+#define FPGA_USE_SOCKET_PROTOCOL
 
+#ifndef FPGA_USE_SOCKET_PROTOCOL
+#error Still Unsupported
+
+#include <mqueue.h>
 struct MyLinkClient: public LinkClient
 {
+
     MyLinkClient(InterfaceZ*me): LinkClient(me)
     {
     }
@@ -83,6 +92,9 @@ struct MyLinkClient: public LinkClient
     }
     virtual QString getError() override {
         return QString("Unknown");
+    }
+    virtual void connectUSB(const char *id) {
+        interface__connectusb(id);
     }
     void close() override {
     }
@@ -103,6 +115,62 @@ const struct option longopts[] = {
     { NULL, 0, NULL, 0 },
 };
 
+static int populateUSB(QMenu *menu, InterfaceZ *intf)
+{
+    struct libusb_context *ctx;
+    libusb_device *dev, **devs;
+    int i, status;
+    struct libusb_device_descriptor desc;
+    struct usb_device_handle *devhandle;
+
+
+    if (libusb_init(&ctx)<0) {
+        fprintf(stderr,"USB: cannot open libusb\n");
+        return -1;
+    }
+
+    if (libusb_get_device_list(ctx, &devs) < 0) {
+        fprintf(stderr, "USB: Cannot get device list\n");
+        return -1;
+    }
+    for (i=0; (dev=devs[i]) != NULL; i++) {
+        status = libusb_get_device_descriptor(dev, &desc);
+        if (status >= 0) {
+            char *name = (char*)malloc(10);
+            sprintf(name, "%04x:%04x", desc.idVendor, desc.idProduct);
+            char vp[128];
+
+            struct libusb_device_handle *handle;
+
+            int i = libusb_open(dev, &handle);
+            if (i>=0) {
+
+                (void)libusb_get_string_descriptor_ascii(handle, desc.iManufacturer, (unsigned char*)vp, sizeof(vp));
+                QString fulldesc = QString(name) + " - " + vp+ " ";
+
+                (void)libusb_get_string_descriptor_ascii(handle, desc.iProduct, (unsigned char*)vp, sizeof(vp));
+                fulldesc += vp;
+
+                QAction *usbAct = new QAction(fulldesc);
+
+                QObject::connect(usbAct, &QAction::triggered, [name,intf]{ intf->sendConnectUSB(name); } );
+                menu->addAction(usbAct);
+            }
+            libusb_close(handle);
+
+        }
+
+    }
+    libusb_free_device_list(devs, 1);
+    libusb_exit(ctx);
+
+    //QAction *exitAct = new QAction("&", mainw);
+    //QObject::connect(exitAct, &QAction::triggered, mainwidget, &EmulatorWindow::close);
+
+    //usbMenu->addAction(exitAct);
+    return 0;
+}
+
 static int setupgui(int argc, char **argv, int sock=-1)
 {
     int option_index;
@@ -120,6 +188,7 @@ static int setupgui(int argc, char **argv, int sock=-1)
             switch (option_index) {
             case 0:
                 trace_address = strtoul(optarg, &endp, 0);
+                printf("TRACE SET\n");
                 if (endp && *endp=='\0')
                     trace_set = true;
                 break;
@@ -160,6 +229,20 @@ static int setupgui(int argc, char **argv, int sock=-1)
 
     l->addLayout(hl);
     l->addWidget(spectrumWidget);
+
+    QMenuBar *menuBar = mainw->menuBar();
+
+    QMenu *fileMenu = menuBar->addMenu("&File");
+    QAction *exitAct = new QAction("&Exit", mainw);
+    exitAct->setShortcuts(QKeySequence::Quit);
+    exitAct->setStatusTip("Exit");
+    QObject::connect(exitAct, &QAction::triggered, mainwidget, &EmulatorWindow::close);
+
+    fileMenu->addAction(exitAct);
+
+
+    QMenu *usbMenu = menuBar->addMenu("&USB");
+    QMenu *connectMenu = usbMenu->addMenu("&Connect");
 
     edit = new QPlainTextEdit();
     l->addWidget(edit);
@@ -230,7 +313,7 @@ static int setupgui(int argc, char **argv, int sock=-1)
 
 #ifdef FPGA_USE_SOCKET_PROTOCOL
     iz->setCommsSocket(sock);
-#endif
+#else
 
     localClient = new MyLinkClient(iz);
 
@@ -238,7 +321,9 @@ static int setupgui(int argc, char **argv, int sock=-1)
 
     iz->addClient(localClient);
 
+#endif
 
+    populateUSB(connectMenu, iz);
 
     QObject::connect( spectrumWidget, &SpectrumWidget::NMI, iz, &InterfaceZ::onNMI);
 

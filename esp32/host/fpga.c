@@ -16,6 +16,7 @@
 #include "driver/gpio.h"
 #include "fpga.h"
 #include "interface.h"
+#include "usb_link.h"
 
 static xQueueHandle fpga_spi_queue = NULL;
 static SemaphoreHandle_t spi_sem;
@@ -28,6 +29,7 @@ static uint8_t writebuf[8192];
 static unsigned writebufptr = 0;
 static unsigned hdlcrxlen = 0;
 
+#define FPGA_USE_SOCKET_PROTOCOL
 
 #ifdef FPGA_USE_SOCKET_PROTOCOL
 static int emulator_socket = -1;
@@ -39,10 +41,12 @@ extern uint64_t pinstate;
 
 void fpga_do_transaction(uint8_t *buffer, size_t len);
 
+#ifndef FPGA_USE_SOCKET_PROTOCOL
 int interface__set_comms_fun(spi_transceive_fun_t fun)
 {
     spi_transceive = fun;
 }
+#endif
 
 #ifdef FPGA_USE_SOCKET_PROTOCOL
 static void hdlc_writer(void *userdata, const uint8_t c)
@@ -145,6 +149,11 @@ void interface__rawpindata(uint64_t p)
     pinstate = p;
 }
 
+void interface__connectusb(const char *id)
+{
+    usb_attach("0e8f:0003");
+}
+
 #ifdef FPGA_USE_SOCKET_PROTOCOL
 void hdlc_data(void *user, const uint8_t *data, unsigned datalen)
 {
@@ -181,6 +190,13 @@ void hdlc_data(void *user, const uint8_t *data, unsigned datalen)
             ((uint64_t)data[8] << 0);
         printf("**** GPIO update %016lx ****\n", pinstate);
 
+        break;
+    case 0x03:
+        printf("USB connection\n");
+        uint8_t len = data[1];
+        char *newid = malloc(len);
+        strncpy(newid, &data[2], len);
+        interface__connectusb(newid);
         break;
     }
 }

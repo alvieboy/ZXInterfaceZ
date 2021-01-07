@@ -21,7 +21,7 @@ int interface__set_comms_fun(
 
 void interface__gpio_trigger(int num);
 void interface__rawpindata(uint64_t);
-
+void interface__connectusb(const char *id);
 #endif
 
 

@@ -74,6 +74,7 @@ static void usbh__ll_task(void *pvParam)
 #endif
         if (xQueueReceive(usb_cmd_queue, &cmd, tick)==pdTRUE)
         {
+            printf("TASK\n");
             if (cmd.cmd==USB_CMD_INTERRUPT) {
                 usb_ll__interrupt();
             } else {
@@ -529,7 +530,7 @@ int usbh__init()
     usb_cplt_queue = xQueueCreate(4, sizeof(struct usbresponse));
 
     xTaskCreate(usbh__ll_task, "usbh_ll_task", 4096, NULL, 10, NULL);
-    xTaskCreate(usbh__main_task, "usbh_main_task", 4096, NULL, 10, NULL);
+    xTaskCreate(usbh__main_task, "usbh_main_task", 4096, NULL, 11, NULL);
 
     root_hub.reset = &usbh__reset;
 

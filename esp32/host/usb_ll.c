@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include "log.h"
 
+struct libusb_context *libusbctx;
 struct libusb_device *device;
 struct libusb_device_handle *device_handle;
 
@@ -75,6 +76,7 @@ int usb_attach(const char *id)
     int r =usb_ll_do_open(vid,pid);
     if (r==0) {
         // propagate
+        usb__trigger_interrupt();
     }
 }
 
@@ -86,7 +88,7 @@ static struct libusb_device *usb_ll__open_vid_pid(uint16_t vid, uint16_t pid,str
     struct usb_device_handle *devhandle;
 
 
-    if (libusb_get_device_list(NULL, &devs) < 0) {
+    if (libusb_get_device_list(libusbctx, &devs) < 0) {
         fprintf(stderr, "USB: Cannot get device list\n");
         return NULL;
     }
@@ -119,12 +121,10 @@ int usb_ll__init(void)
     }
 
     loglevel |= (DEBUG_ZONE_USBLL|DEBUG_ZONE_USBH);
-    libusb_init(NULL);
-//    libusb_set_option(NULL, LIBUSB_OPTION_LOG_LEVEL, LIBUSB_LOG_LEVEL_DEBUG);
-    usb_attach("0e8f:0003");
+    libusb_init(&libusbctx);
+    libusb_set_option(libusbctx, LIBUSB_OPTION_LOG_LEVEL, LIBUSB_LOG_LEVEL_WARNING);
 
     // trigger interrupt after 1 sec.
-    usb__trigger_interrupt();
     return 0;
 }
 
@@ -278,16 +278,19 @@ int usb_ll__read_in_block(uint8_t channel, uint8_t *target, uint8_t *rxlen)
     return 0;
 }
 
+
 void usb_ll__reset(void)
 {
     if (device_handle) {
+        printf("USB reset device\n");
         libusb_reset_device(device_handle);
+        printf("USB reset device done\n");
     }
 }
 
 void usb_ll__idle()
 {
-    libusb_handle_events(NULL);
+    libusb_handle_events(libusbctx);
 }
 
 uint8_t usb_ll__get_address(void)

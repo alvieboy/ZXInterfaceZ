@@ -204,10 +204,13 @@ int interfacez_main(int argc, char **argv)
         return -1;
     printf("Start WiFi task\n");
     xTaskCreate(wifi_task, "wifi_scan", 4096, NULL, 8, &h);
+
     printf("Start Event task\n");
     xTaskCreate(event_task, "event_scan", 4096, NULL, 8, &h);
+
     printf("Start main task\n");
     xTaskCreate(wrap_app_main, "main", 4096, NULL, 4, &h);
+
     vTaskStartScheduler();
 }
 

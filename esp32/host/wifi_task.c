@@ -50,7 +50,7 @@ void wifi_task(void *data)
     printf("Waiting for scan requests\n");
     while (1) {
         if (xQueueReceive(scan_queue, &resp, portMAX_DELAY)==pdTRUE) {
-            printf("Scan request received\n");
+            printf("Wifi request received\n");
             switch (resp) {
             case WIFI_CMD_SCAN:
                 printf("Requested scan\n");
