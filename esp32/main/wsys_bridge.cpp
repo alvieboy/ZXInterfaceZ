@@ -28,6 +28,9 @@ static wsys_mode_t wsys_mode = WSYS_MODE_NMI;
 static xQueueHandle wsys_evt_queue = NULL;
 volatile bool can_update = false;
 
+static void wsys_systemevent_handleevent(const systemevent_t *event, void*user);
+
+
 void wsys__keyboard_event(uint16_t raw, char ascii)
 {
     struct wsys_event evt;
@@ -186,6 +189,8 @@ void wsys__init()
 
     ESP_ERROR_CHECK(esp_timer_create(&keyboard_timer_args, &keyboard_timer_handle));
     ESP_ERROR_CHECK(esp_timer_start_periodic(keyboard_timer_handle, 20000));
+
+    systemevent__register_handler(0xFF, wsys_systemevent_handleevent, NULL);
 }
 
 
@@ -204,7 +209,8 @@ void wsys__send_command(uint8_t command)
     fpga__write_extram_block(0x021B00, &command, 1);
 }
 
-void systemevent__handleevent(const systemevent_t *event)
+
+static void wsys_systemevent_handleevent(const systemevent_t *event, void*user)
 {
     struct wsys_event evt;
     evt.type = EVENT_SYSTEM;
