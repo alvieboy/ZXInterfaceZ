@@ -2,6 +2,7 @@
 #define __USB_DEFS_H__
 
 #include "byteorder.h"
+#include "struct_assert.h"
 
 #define  USB_LEN_DESC_HDR                               0x02
 #define  USB_LEN_DEV_DESC                               0x12
@@ -70,12 +71,9 @@
 #define  USB_DESC_HID_REPORT                ((USB_DESC_TYPE_HID_REPORT << 8) & 0xFF00)
 #define  USB_DESC_HID                       ((USB_DESC_TYPE_HID << 8) & 0xFF00)
 
-
-
 typedef union
 {
     uint8_t data[8];
-
     struct
     {
         uint8_t bmRequestType;
@@ -84,12 +82,16 @@ typedef union
         le_uint16_t wIndex;
         le_uint16_t wLength;
     };
-} usb_setup_t;
+} __attribute__((packed)) usb_setup_t;
+
+ASSERT_STRUCT_SIZE(usb_setup_t, 8);
 
 typedef struct {
     uint8_t bLength;
     uint8_t bDescriptorType;
-} usb_descriptor_header_t;
+} __attribute__((packed)) usb_descriptor_header_t;
+
+ASSERT_STRUCT_SIZE(usb_descriptor_header_t, 2);
 
 typedef struct {
   uint8_t bLength;
@@ -106,7 +108,9 @@ typedef struct {
   uint8_t iProduct;
   uint8_t iSerialNumber;
   uint8_t bNumConfigurations;
-} usb_device_descriptor_t;
+} __attribute__((packed)) usb_device_descriptor_t;
+
+ASSERT_STRUCT_SIZE(usb_device_descriptor_t, 18);
 
 typedef struct
 {
@@ -116,7 +120,9 @@ typedef struct
   uint8_t bmAttributes;
   le_uint16_t wMaxPacketSize;
   uint8_t bInterval;
-} usb_endpoint_descriptor_t;
+} __attribute__((packed)) usb_endpoint_descriptor_t;
+
+ASSERT_STRUCT_SIZE(usb_endpoint_descriptor_t, 7);
 
 typedef struct
 {
@@ -129,8 +135,9 @@ typedef struct
   uint8_t bInterfaceSubClass;
   uint8_t bInterfaceProtocol;
   uint8_t iInterface;
-} usb_interface_descriptor_t;
+} __attribute__((packed)) usb_interface_descriptor_t;
 
+ASSERT_STRUCT_SIZE(usb_interface_descriptor_t, 9);
 
 typedef struct
 {
@@ -142,16 +149,8 @@ typedef struct
   uint8_t iConfiguration;
   uint8_t bmAttributes;
   uint8_t bMaxPower;
-} usb_config_descriptor_t;
+} __attribute__((packed)) usb_config_descriptor_t;
 
+ASSERT_STRUCT_SIZE(usb_config_descriptor_t, 9);
 
-/*
-struct usb_device_info {
-    union {
-        uint8_t device_descriptor[USB_LEN_DEV_DESC];
-        usb_device_descriptor_t desc;
-    };
-    uint8_t address;
-};
-*/
 #endif

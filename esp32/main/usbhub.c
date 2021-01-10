@@ -25,6 +25,7 @@ static void usbhub__device_free(struct usb_device *dev)
 static char *usbhub__get_device_string(struct usb_device *dev,uint16_t index)
 {
     uint8_t local_string_descriptor[256];
+    uint16_t size_transferred;
 
     if (index<1)
         return NULL;
@@ -33,7 +34,8 @@ static char *usbhub__get_device_string(struct usb_device *dev,uint16_t index)
                              USB_REQ_TYPE_STANDARD | USB_REQ_RECIPIENT_DEVICE,
                              USB_DESC_STRING | index,
                              (uint8_t*)local_string_descriptor,
-                             sizeof(local_string_descriptor)) <0) {
+                             sizeof(local_string_descriptor),
+                             &size_transferred) <0) {
         return NULL;
     }
     uint8_t len = local_string_descriptor[0];
@@ -152,9 +154,11 @@ int usbhub__port_reset(struct usb_hub *hub)
 {
     struct usb_device dev;
     usb_config_descriptor_t cd;
+    uint16_t size_transferred;
+    bool retry_device_descriptor = false;
 
     dev.ep0_chan = 0;
-    dev.ep0_size = 64; // Default
+    dev.ep0_size = 64; // Default. THIS IS wrong, we don't yet know the EP0 size. The minimum size is 8, so we can fetch the EP0 size itself.
     dev.address = 0;
     dev.claimed = 0;
     dev.vendor = NULL;
@@ -167,17 +171,39 @@ int usbhub__port_reset(struct usb_hub *hub)
 
     ESP_LOGI(USBHUBTAG, "Resetting BUS done");
     USBHUBDEBUG("Requesting device descriptor");
+    do {
+        retry_device_descriptor = false;
+        if (usbh__get_descriptor(&dev,
+                                 USB_REQ_TYPE_STANDARD | USB_REQ_RECIPIENT_DEVICE,
+                                 USB_DESC_DEVICE,
+                                 &dev.device_descriptor_b[0],
+                                 USB_LEN_DEV_DESC,
+                                 &size_transferred)<0) {
+            ESP_LOGE(USBHUBTAG, "Cannot fetch device descriptor");
+            return -1;
+        }
 
-    if (usbh__get_descriptor(&dev,
-                             USB_REQ_TYPE_STANDARD | USB_REQ_RECIPIENT_DEVICE,
-                             USB_DESC_DEVICE,
-                             (uint8_t*)&dev.device_descriptor,
-                             USB_LEN_DEV_DESC)<0) {
-        ESP_LOGE(USBHUBTAG, "Cannot fetch device descriptor");
-        return -1;
-    }
+        if (size_transferred<USB_LEN_DEV_DESC) {
+            // Short read. EP size is probably less than 64.
+            if (size_transferred<8) {
+                // Too short to evaluate EP size.
+                ESP_LOGE(USBHUBTAG,"EP0 data too small to evaluate EP size");
+                return -1;
+            }
+            // Get EP0 size
+            uint8_t newep0size = dev.device_descriptor.bMaxPacketSize;
+            if (newep0size==dev.ep0_size) {
+                ESP_LOGE(USBHUBTAG,"EP0 size inconsistent");
+                return -1;
+            }
+            dev.ep0_size = newep0size;
+            USBHUBDEBUG("Descriptor too short, retrying");
+            retry_device_descriptor = true;
+        }
+    } while (retry_device_descriptor);
+
     BUFFER_LOGI(USBHUBTAG, "Device descriptor",
-                (uint8_t*)&dev.device_descriptor,
+                &dev.device_descriptor_b[0],
                 sizeof(dev.device_descriptor));
 
 
@@ -218,7 +244,8 @@ int usbhub__port_reset(struct usb_hub *hub)
                              USB_REQ_TYPE_STANDARD | USB_REQ_RECIPIENT_DEVICE,
                              USB_DESC_CONFIGURATION,
                              (uint8_t*)&cd,
-                             USB_LEN_CFG_DESC) <0) {
+                             USB_LEN_CFG_DESC,
+                             &size_transferred) <0 || (size_transferred!=USB_LEN_CFG_DESC)) {
         ESP_LOGE(USBHUBTAG, "Cannot fetch configuration descriptor");
         return -1;
     }
@@ -243,8 +270,9 @@ int usbhub__port_reset(struct usb_hub *hub)
                              USB_REQ_TYPE_STANDARD | USB_REQ_RECIPIENT_DEVICE,
                              USB_DESC_CONFIGURATION,
                              (uint8_t*)dev.config_descriptor,
-                             configlen
-                            )<0) {
+                             configlen,
+                             &size_transferred
+                            )<0 || (size_transferred!=configlen)) {
         ESP_LOGE(USBHUBTAG, "Cannot read full config descriptor!");
         free(dev.config_descriptor);
         return -1;

@@ -46,7 +46,8 @@ int usbh__get_descriptor(struct usb_device *dev,
                          uint8_t  req_type,
                          uint16_t value,
                          uint8_t* target,
-                         uint16_t length);
+                         uint16_t length,
+                         uint16_t *size_transferred);
 
 int usbh__claim_interface(struct usb_device *dev, struct usb_interface *intf);
 int usbh__set_configuration(struct usb_device *dev, uint8_t configidx);

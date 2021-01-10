@@ -414,12 +414,58 @@ static int usbh__control_request_completed_reply(uint8_t chan, uint8_t stat, str
     return 0;
 
 }
+
+static int usbh__bulk_request_completed_reply(uint8_t chan, uint8_t stat, struct usb_request *req)
+{
+    uint8_t rxlen = 0;
+
+    if (stat & 1) {
+        // IN request
+        if (req->direction==REQ_DEVICE_TO_HOST) {
+            rxlen = usbh__request_data_remain(req, req->epsize);
+            usb_ll__read_in_block(chan, req->rptr, &rxlen);
+        } else {
+
+        }
+        req->rptr += rxlen;
+        req->size_transferred += rxlen;
+        req->seq = !req->seq;
+
+        if (usbh__request_data_remain(req, rxlen)>0) {
+            USBHDEBUG("Still data to go");
+            return usbh__issue_setup_data_request(req);
+        } else {
+#if 0
+            if (req->direction==REQ_HOST_TO_DEVICE) {
+                // Wait ack
+                USBHDEBUG("Wait ACK");
+                return usbh__wait_ack(req);
+            } else {
+                req->retries = 3;
+                USBHDEBUG("Send ACK");
+                return usbh__send_ack(req);
+            }
+#endif
+            usbh__request_completed(req);
+        }
+    } else {
+        ESP_LOGE(USBHTAG, "Request failed 0x%02x",stat);
+        usbh__request_failed(req);
+        return -1;
+    }
+    return 0;
+
+}
+
+
 int usbh__request_completed_reply(uint8_t chan, uint8_t stat, void *data)
 {
     struct usb_request *req = (struct usb_request*)data;
 
     if (req->control) {
         return usbh__control_request_completed_reply(chan,stat,req);
+    } else {
+        return usbh__bulk_request_completed_reply(chan,stat,req);
     }
 
     return 0;
@@ -448,6 +494,7 @@ static void usbh__submit_request_to_ll(struct usb_request *req)
                                usbh__request_completed_reply,
                                req);
     } else {
+        USBHDEBUG("Submitting BULK %p", req);
         if (req->direction==REQ_DEVICE_TO_HOST) {
             usb_ll__submit_request(req->channel,
                                    req->epmemaddr,
@@ -477,7 +524,8 @@ int usbh__get_descriptor(struct usb_device *dev,
                          uint8_t  req_type,
                          uint16_t value,
                          uint8_t* target,
-                         uint16_t length)
+                         uint16_t length,
+                         uint16_t *size_transferred)
 {
     struct usb_request req = {0};
 
@@ -514,6 +562,8 @@ int usbh__get_descriptor(struct usb_device *dev,
     if (usbh__wait_completion(&req)<0) {
         return -1;
     }
+    if (size_transferred)
+        *size_transferred = req.size_transferred;
 
     return 0;
 }

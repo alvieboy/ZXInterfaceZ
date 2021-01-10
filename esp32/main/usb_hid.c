@@ -193,6 +193,7 @@ static int usb_hid__probe(struct usb_device *dev, struct usb_interface *i)
     usb_interface_descriptor_t *intf = i->descriptors[0];
     int intf_len = i->descriptorlen[0];
     bool valid = false;
+    uint16_t size_transferred;
 
     HIDDEBUG("     ***** PROBING INTERFACE %d altSetting %d **** class=%02x\n",
           intf->bInterfaceNumber,
@@ -259,7 +260,8 @@ static int usb_hid__probe(struct usb_device *dev, struct usb_interface *i)
                                  USB_REQ_TYPE_STANDARD | USB_REQ_RECIPIENT_INTERFACE,
                                  USB_DESC_HID_REPORT | intf->bInterfaceNumber ,
                                  report_desc,
-                                 report_desc_len);
+                                 report_desc_len,
+                                 &size_transferred);
     if (r<0) {
         ESP_LOGE(HIDTAG, "Cannot read HID report descriptor");
         free( report_desc );

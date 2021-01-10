@@ -23,12 +23,18 @@ struct chconf
     int (*completion)(uint8_t channel, uint8_t status, void *userdata);
     void *userdata;
     uint16_t memaddr;
+    uint8_t maxsize;
 };
 
 #define MAX_USB_CHANNELS 8
 
 static struct chconf channel_conf[MAX_USB_CHANNELS] = {0};
 static uint8_t channel_alloc_bitmap = 0; // Channel 0 reserved
+
+uint8_t usb_ll__get_channel_maxsize(uint8_t channel)
+{
+    return channel_conf[channel].maxsize;
+}
 
 void usb_ll__channel_set_interval(uint8_t chan, uint8_t interval)
 {
@@ -65,13 +71,16 @@ int usb_ll__alloc_channel(uint8_t devaddr,
     buf[2] = 0x80 | (devaddr & 0x7F);
     buf[3] = 0xFF;
     buf[4] = 0xFF;
+
     USBLLDEBUG("Alloc channel (%d): ", chnum);
+
     if (DEBUG_ENABLED(DEBUG_ZONE_USBLL)) {
         dump__buffer(buf, 5);
     }
     fpga__write_usb_block(USB_REG_CHAN_CONF1(chnum), buf, 5);
 
     channel_conf[chnum].memaddr = 0x40 * chnum;
+    channel_conf[chnum].maxsize = maxsize;
 
     return chnum;
 }
@@ -235,7 +244,7 @@ int usb_ll__read_in_block(uint8_t channel, uint8_t *target, uint8_t *rxlen)
         }
 
         inlen = trans_size;
-        USBLLDEBUG( "Reading IN block from %04x", channel_conf[channel].memaddr);
+        USBLLDEBUG( "Reading IN block from %04x (%d bytes)", channel_conf[channel].memaddr, trans_size);
         fpga__read_usb_block(USB_REG_DATA( channel_conf[channel].memaddr ), target, inlen);
         USBLLDEBUG("Response from device:");
         if (DEBUG_ENABLED(DEBUG_ZONE_USBLL)) {

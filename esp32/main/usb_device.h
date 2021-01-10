@@ -25,8 +25,14 @@ struct usb_device
     uint8_t address;
     uint8_t claimed;
     struct usb_hub *hub;
-    usb_device_descriptor_t device_descriptor;
-    usb_config_descriptor_t config_descriptor_short;
+    union {
+        uint8_t device_descriptor_b[18];
+        usb_device_descriptor_t device_descriptor;
+    };
+    union {
+        uint8_t config_descriptor_short_b[9];
+        usb_config_descriptor_t config_descriptor_short;
+    };
     usb_config_descriptor_t *config_descriptor;
     char *vendor;
     char *product;
