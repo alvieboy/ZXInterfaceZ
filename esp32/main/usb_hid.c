@@ -201,11 +201,13 @@ static int usb_hid__probe(struct usb_device *dev, struct usb_interface *i)
           intf->bInterfaceClass);
 
     if (intf->bInterfaceClass == 0x03) {
+        /*
         if (intf->bInterfaceSubClass == 0x00) { // Not boot
             if (intf->bInterfaceProtocol == 0x00) { // Not mouse/keyboard
                 valid = true;
             }
-        }
+            }*/
+        valid = true;
     }
 
     if (!valid)
