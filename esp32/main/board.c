@@ -33,7 +33,7 @@ void board__init()
 
 static bool board__inrail(unsigned mv)
 {
-    ESP_LOGI(TAG, "Check rails %d : %d %d\n",
+    ESP_LOGI(TAG, "Check rails %d : low %d high %d",
              supply_rail_voltage,
              mv-VOLTAGE_DELTA_MV,
              mv+VOLTAGE_DELTA_MV);
