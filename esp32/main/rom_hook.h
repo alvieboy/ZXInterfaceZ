@@ -6,6 +6,7 @@ extern "C" {
 #endif
 
 #include <inttypes.h>
+#include "model.h"
 
 #define ROM_HOOK_FLAG_ACTIVE (1<<7)
 #define ROM_HOOK_FLAG_SETRESET (1<<6)
@@ -15,6 +16,12 @@ extern "C" {
 
 int rom_hook__add(uint16_t start, uint8_t len, uint8_t flags);
 void rom_hook__remove(int hook);
+
+int rom_hook__enable_defaults();
+void rom_hook__disable_defaults();
+
+
+
 static inline int rom_hook__add_post_set_ranged(uint8_t rom, uint16_t start, uint8_t len);
 static inline int rom_hook__add_pre_set_ranged(uint8_t rom, uint16_t start, uint8_t len);
 
