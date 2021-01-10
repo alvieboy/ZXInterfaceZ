@@ -29,7 +29,9 @@ static int fasttap__install_hooks(model_t model)
         ESP_LOGI(FASTTAP, "Hooking to ROM0");
         rom = 0;
         break;
-    case MODEL_128K:
+    case MODEL_128K: /* Fall-through */
+    case MODEL_2APLUS:/* Fall-through */
+    case MODEL_3A:
         ESP_LOGI(FASTTAP, "Hooking to ROM1");
         rom = 1;
         break;
