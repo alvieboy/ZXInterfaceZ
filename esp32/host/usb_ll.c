@@ -31,6 +31,11 @@ static struct epchannel channels[NUM_CHANNELS];
 static struct libusb_device *usb_ll__open_vid_pid(uint16_t vid, uint16_t pid,
                                                  struct libusb_device_handle**handle);
 
+uint8_t usb_ll__get_channel_maxsize(uint8_t channel)
+{
+    return channels[channel].maxsize;
+}
+
 static int usb_ll_do_open(uint16_t vid, uint16_t pid)
 {
     int status;

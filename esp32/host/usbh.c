@@ -449,7 +449,8 @@ int usbh__get_descriptor(struct usb_device *dev,
                          uint8_t  req_type,
                          uint16_t value,
                          uint8_t* target,
-                         uint16_t length)
+                         uint16_t length,
+                         uint16_t *transfer_size)
 {
     struct usb_request req = {0};
 
@@ -486,6 +487,8 @@ int usbh__get_descriptor(struct usb_device *dev,
     if (usbh__wait_completion(&req)<0) {
         return -1;
     }
+
+    *transfer_size = length;
 
     return 0;
 }
