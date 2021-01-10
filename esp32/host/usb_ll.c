@@ -156,7 +156,7 @@ struct usb_ll_internal_callback
 static void usb_ll__libusb_transfer_callback(struct libusb_transfer *transfer)
 {
     void *userdata = transfer->user_data;
-//    fprintf(stderr,"USB: Request completed, actual_length=%d\n", transfer->actual_length);
+    fprintf(stderr,"USB: Request completed, actual_length=%d\n", transfer->actual_length);
     // Save data into channel
 
     struct usb_ll_internal_callback *cbd = (struct usb_ll_internal_callback*)userdata;
@@ -170,12 +170,19 @@ static void usb_ll__libusb_transfer_callback(struct libusb_transfer *transfer)
     switch (transfer->status) {
     case LIBUSB_TRANSFER_COMPLETED:
         switch (transfer->type) {
-        case LIBUSB_TRANSFER_TYPE_CONTROL:
         case LIBUSB_TRANSFER_TYPE_BULK:
         case LIBUSB_TRANSFER_TYPE_INTERRUPT:
+            epc->in_datalen = transfer->actual_length;
+            BUFFER_LOGI("USBLL", "RX-BULK", epc->in_data, transfer->actual_length);
+            break;
+
+        case LIBUSB_TRANSFER_TYPE_CONTROL:
             if (transfer->actual_length>0) {
 
+                fprintf(stderr,"USB: copying data to %p\n", epc->in_data);
                 memcpy(epc->in_data, libusb_control_transfer_get_data(transfer), transfer->actual_length);
+                BUFFER_LOGI("USBLL", "RX-CTRL", epc->in_data, transfer->actual_length);
+
                 epc->in_datalen = transfer->actual_length;
             }
 
@@ -215,7 +222,18 @@ int usb_ll__submit_request(uint8_t channel, uint16_t epmemaddr,
     epc->out_datalen = datalen;
 
     switch (pid) {
-    case PID_IN: /* Fall-through */
+    case PID_IN:
+        printf("usb_ll: IN request into %p\n", epc->in_data);
+        libusb_fill_bulk_transfer(t,
+                                  device_handle,
+                                  epc->epnum,
+                                  //data,
+                                  epc->in_data,
+                                  datalen,
+                                  &usb_ll__libusb_transfer_callback,
+                                  localcallback,
+                                  1000);
+        break;
     case PID_OUT:
         libusb_fill_bulk_transfer(t,
                                   device_handle,
@@ -240,6 +258,10 @@ int usb_ll__submit_request(uint8_t channel, uint16_t epmemaddr,
 
     //fprintf(stderr,"USB: Submitting request type %d\n", pid);
     r = libusb_submit_transfer(t);
+    if (r<0) {
+        fprintf(stderr,"USB: Error submitting request chan=%d pid=%d EP=%d\n", channel, pid, epc->epnum);
+        
+    }
     //fprintf(stderr,"USB: Submitted request type %d: %d\n",pid, r);
     return r;
 }
@@ -274,6 +296,7 @@ int usb_ll__read_in_block(uint8_t channel, uint8_t *target, uint8_t *rxlen)
 {
     struct epchannel *epc = &channels[channel];
     if (epc->in_datalen) {
+        printf("usb_ll: read from %p len %d\n", epc->in_data, epc->in_datalen);
         memcpy(target, epc->in_data, epc->in_datalen);
         *rxlen = epc->in_datalen;
     }

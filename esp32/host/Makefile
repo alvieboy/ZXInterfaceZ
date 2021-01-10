@@ -37,6 +37,8 @@ CFLAGS= -fpic -DPIC -Wall -Wextra -Wno-format -Wno-unused-variable -Wno-unused-p
        -I$(ESP_IDF)/components/esp_wifi/include/ \
        -I$(ESP_IDF)/components/esp_timer/include/ \
        -I$(ESP_IDF)/components/fatfs/vfs/ \
+       -I$(ESP_IDF)/components/vfs/include/  \
+       -I$(ESP_IDF)/components/fatfs/diskio/ \
        -I$(ESP_IDF)/components/fatfs/src/ \
        -I$(ESP_IDF)/components/wear_levelling/include/ \
        -I$(ESP_IDF)/components/esp_netif/include/ \
@@ -123,6 +125,8 @@ usb_driver.c          \
 usb_driver_list.c     \
 usb_hid.c             \
 usb_block.c           \
+scsidev.c             \
+scsi_diskio.c         \
 usbhub.c              \
 usb_device.c          \
 hid.c                 \

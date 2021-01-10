@@ -355,6 +355,30 @@ static int usbh__control_request_completed_reply(uint8_t chan, uint8_t stat, str
         return -1;
     }
     return 0;
+}
+
+static int usbh__bulk_request_completed_reply(uint8_t chan, uint8_t stat, struct usb_request *req)
+{
+    uint8_t rxlen = 0;
+
+    if (stat & 1) {
+        req->size_transferred = 0;
+        //req->seq = 1;
+
+        if (req->direction==REQ_DEVICE_TO_HOST) {
+            ESP_LOGI(USBHTAG, "Copying data to user rptr=%p", req->rptr);
+            usb_ll__read_in_block(chan, req->rptr, &rxlen);
+        }
+        req->rptr += rxlen;
+        req->size_transferred += rxlen;
+
+        usbh__request_completed(req);
+    } else {
+        ESP_LOGE(USBHTAG, "Request failed 0x%02x",stat);
+        usbh__request_failed(req);
+        return -1;
+    }
+    return 0;
 
 }
 int usbh__request_completed_reply(uint8_t chan, uint8_t stat, void *data)
@@ -363,6 +387,8 @@ int usbh__request_completed_reply(uint8_t chan, uint8_t stat, void *data)
 
     if (req->control) {
         return usbh__control_request_completed_reply(chan,stat,req);
+    } else {
+        return usbh__bulk_request_completed_reply(chan,stat,req);
     }
 
     return 0;
@@ -392,6 +418,7 @@ static void usbh__submit_request_to_ll(struct usb_request *req)
                                req);
     } else {
         if (req->direction==REQ_DEVICE_TO_HOST) {
+            USBHDEBUG("Submitting BULK IN %p", req);
             usb_ll__submit_request(req->channel,
                                    req->epmemaddr,
                                    PID_IN,
@@ -402,6 +429,8 @@ static void usbh__submit_request_to_ll(struct usb_request *req)
                                    req);
         } else {
             if (req->length) {
+                USBHDEBUG("Submitting BULK OUT %p", req);
+
                 usb_ll__submit_request(req->channel,
                                        req->epmemaddr,
                                        PID_OUT,
