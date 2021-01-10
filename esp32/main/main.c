@@ -445,9 +445,7 @@ void app_main()
 
     detect_spectrum();
 
-    rom_hook__add_pre_set(0, 0x0767, 1); // LOAD
-    rom_hook__add_pre_set(0, 0x0970, 1); // SAVE
-    rom_hook__add_post_reset(0, 0x01FFE, 1); // Will have a RET instruction
+    rom_hook__enable_defaults();
 
     // Power on USB
     usb_ll__set_power(1);
