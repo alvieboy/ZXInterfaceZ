@@ -1,7 +1,5 @@
 #include <inttypes.h>
 
-
-
 #if defined(__XTENSA__)
 
 #ifndef bswap_16
@@ -42,5 +40,7 @@ typedef uint16_t le_uint16_t;
 typedef uint32_t le_uint32_t;
 #define __le16(x) (x)
 #define __le32(x) (x)
+#define __be16(x) __bswap_16(x)
+#define __be32(x) __bswap_32(x)
 
 #endif
