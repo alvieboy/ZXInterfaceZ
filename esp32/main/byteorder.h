@@ -14,7 +14,7 @@
 #endif
 
 #define __be16(x) bswap_16(x)
-#define __be32(x) bswap_16(x)
+#define __be32(x) bswap_32(x)
 
 #define __le16(x) (x)
 #define __le32(x) (x)
