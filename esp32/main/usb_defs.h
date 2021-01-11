@@ -4,6 +4,11 @@
 #include "byteorder.h"
 #include "struct_assert.h"
 
+typedef enum {
+    USB_LOW_SPEED,
+    USB_FULL_SPEED
+} usb_speed_t;
+
 #define  USB_LEN_DESC_HDR                               0x02
 #define  USB_LEN_DEV_DESC                               0x12
 #define  USB_LEN_CFG_DESC                               0x09

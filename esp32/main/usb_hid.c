@@ -142,9 +142,7 @@ static int usb_hid__transfer_completed(uint8_t channel, uint8_t status, void*use
 static int usb_hid__submit_in(struct usb_hid *m)
 {
     return usb_ll__submit_request(m->epchan,
-                                  0x0080, // TBD
                                   PID_IN,
-                                  m->seq,      // TODO: Check seq.
                                   &m->payload[0],
                                   64, // Report descriptor size!!!
                                   usb_hid__transfer_completed,

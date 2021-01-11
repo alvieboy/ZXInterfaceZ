@@ -69,6 +69,7 @@ struct scsi_cdb_read_10 {
     uint8_t control;
 } __attribute__((packed));
 
+
 struct scsi_sbc_inquiry_data
 {
     uint8_t device_type:5;
@@ -121,6 +122,12 @@ struct scsi_sbc_sense_data
     uint8_t additional_sense_len;
     uint8_t sense_data[10];
 }__attribute__((packed));
+
+struct scsi_sbc_read_capacity
+{
+    be_uint32_t lba;
+    be_uint32_t blocksize;
+} __attribute__((packed));
 
 
 #define SBC_CMD_TEST_UNIT_READY                   (0x00)

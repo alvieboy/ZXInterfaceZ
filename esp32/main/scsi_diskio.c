@@ -16,6 +16,7 @@ static void ff_diskio_register_scsidev(BYTE pdrv, scsidev_t* dev);
 
 static DSTATUS ff_scsidev_initialize(unsigned char pdrv)
 {
+    ESP_LOGI(TAG,"initialise");
     //scsidev_t *self = scsi_devices[pdrv];
     return 0;
 }
@@ -23,6 +24,7 @@ static DSTATUS ff_scsidev_initialize(unsigned char pdrv)
 static DSTATUS ff_scsidev_status(unsigned char pdrv)
 {
     scsidev_t *self = scsi_devices[pdrv];
+    ESP_LOGI(TAG,"status");
     if (self==NULL)
         return -1;
     return 0;
@@ -37,12 +39,15 @@ static DRESULT ff_scsidev_read(unsigned char pdrv, unsigned char* buff, uint32_t
 {
     scsidev_t *self = scsi_devices[pdrv];
     uint8_t status;
-
+    ESP_LOGI(TAG,"read sector=%d count=%d", sector, count);
     if (self==NULL)
         return -1;
+
     int r = scsidev__read(self, buff, sector, count, &status);
+
     if (r<0)
         return r;
+
     return ff_scsi_status_to_dresult(status);
 }
 
@@ -50,6 +55,7 @@ static DRESULT ff_scsidev_write(unsigned char pdrv, const unsigned char* buff, u
 {
     scsidev_t *self = scsi_devices[pdrv];
     uint8_t status;
+    ESP_LOGI(TAG,"write");
 
     if (self==NULL)
         return -1;
@@ -64,7 +70,30 @@ static DRESULT ff_scsidev_ioctl(unsigned char pdrv, unsigned char cmd, void* buf
     scsidev_t *self = scsi_devices[pdrv];
     if (self==NULL)
         return -1;
+
+    ESP_LOGI(TAG, "IOCTL SCSI device 0x%02x %p", pdrv, self);
+
+    ESP_LOGI(TAG,"IOCTL 0x%02x", cmd);
+
+    switch (cmd) {
+    case CTRL_SYNC:
+        return RES_OK;
+        break;
+    case GET_SECTOR_COUNT:
+        ESP_LOGI(TAG,"Get sector count: %u", self->sector_count);
+
+        *((DWORD*) buff) = self->sector_count;
+        return RES_OK;
+    case GET_SECTOR_SIZE:
+        ESP_LOGI(TAG,"Get sector size: %u", self->sector_size);
+        *((WORD*) buff) = self->sector_size;
+        return RES_OK;
+    case GET_BLOCK_SIZE:
+        break;
+    }
+
     ESP_LOGE(TAG,"Unsupported IOCTL 0x%02x", cmd);
+
     return -1;
 }
 
@@ -87,7 +116,7 @@ static esp_err_t mount_to_vfs_fat(const esp_vfs_fat_mount_config_t *mount_config
     esp_err_t err;
     ff_diskio_register_scsidev(pdrv, card);
 
-    ESP_LOGD(TAG, "using pdrv=%i", pdrv);
+    ESP_LOGI(TAG, "using pdrv=%i", pdrv);
     char drv[3] = {(char)('0' + pdrv), ':', 0};
 
     // connect FATFS to VFS
@@ -95,7 +124,7 @@ static esp_err_t mount_to_vfs_fat(const esp_vfs_fat_mount_config_t *mount_config
     if (err == ESP_ERR_INVALID_STATE) {
         // it's okay, already registered with VFS
     } else if (err != ESP_OK) {
-        ESP_LOGD(TAG, "esp_vfs_fat_register failed 0x(%x)", err);
+        ESP_LOGE(TAG, "esp_vfs_fat_register failed 0x(%x)", err);
         goto fail;
     }
 
@@ -144,6 +173,7 @@ fail:
 static void ff_diskio_register_scsidev(BYTE pdrv, scsidev_t* dev)
 {
     scsi_devices[pdrv] = dev;
+    ESP_LOGI(TAG, "Registering SCSI device 0x%02x", pdrv);
     ff_diskio_register(pdrv, &scsidev_impl);
 }
 

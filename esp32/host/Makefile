@@ -159,6 +159,7 @@ esxdos.c              \
 rom_hook.c            \
 spectrum_kbd.c        \
 systemevent.c 	      \
+storage.c             \
 wsys/charmap.c        \
 wsys/tomthumb.c        
 

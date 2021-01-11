@@ -46,6 +46,7 @@
 #include "model.h"
 #include "divcompat.h"
 #include "rom_hook.h"
+#include "storage.h"
 
 static int8_t videomode = 0;
 
@@ -431,6 +432,7 @@ void app_main()
     netcmd__init();
     tapeplayer__init();
     devmap__init();
+    storage__init();
     usbh__init();
     keyboard__init();
     audio__init();

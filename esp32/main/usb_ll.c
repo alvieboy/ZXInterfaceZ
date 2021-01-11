@@ -24,6 +24,9 @@ struct chconf
     void *userdata;
     uint16_t memaddr;
     uint8_t maxsize;
+    uint8_t epnum;
+    uint8_t eptype;
+    uint8_t seq:1;
 };
 
 #define MAX_USB_CHANNELS 8
@@ -34,6 +37,19 @@ static uint8_t channel_alloc_bitmap = 0; // Channel 0 reserved
 uint8_t usb_ll__get_channel_maxsize(uint8_t channel)
 {
     return channel_conf[channel].maxsize;
+}
+
+void usb_ll__set_channel_maxsize(uint8_t channel, uint8_t maxsize)
+{
+    channel_conf[channel].maxsize = maxsize;
+}
+
+void usb_ll__set_devaddr(uint8_t channel, uint8_t addr)
+{
+    uint8_t val = 0x80 | (addr & 0x7F);
+
+    fpga__write_usb_block(USB_REG_CHAN_CONF3(channel), &val, 1);
+
 }
 
 void usb_ll__channel_set_interval(uint8_t chan, uint8_t interval)
@@ -81,6 +97,10 @@ int usb_ll__alloc_channel(uint8_t devaddr,
 
     channel_conf[chnum].memaddr = 0x40 * chnum;
     channel_conf[chnum].maxsize = maxsize;
+    channel_conf[chnum].epnum = epnum;
+    channel_conf[chnum].eptype = eptype;
+
+    usb_ll__reset_channel(chnum);
 
     return chnum;
 }
@@ -98,6 +118,17 @@ int usb_ll__read_status(uint8_t regs[4])
 {
     int r = fpga__read_usb_block(USB_REG_STATUS, regs, 4);
     return r;
+}
+
+int usb_ll__reset_channel(uint8_t channel)
+{
+    channel_conf[channel].seq = channel_conf[channel].eptype==EP_TYPE_CONTROL?1:0;
+    return 0;
+}
+
+void usb_ll__set_seq(uint8_t channel, uint8_t seq)
+{
+    channel_conf[channel].seq = seq&1;
 }
 
 static void usb_ll__channel_interrupt(uint8_t channel)
@@ -144,6 +175,11 @@ static void usb_ll__channel_interrupt(uint8_t channel)
 
     fpga__write_usb(USB_REG_CHAN_INTCLR(channel), clr);
 
+    if (clr & 0x01) {
+        // Completed.
+        usb_ll__ack_received(channel);
+    }
+
     c->completion( channel, clr, c->userdata );
 }
 
@@ -161,7 +197,7 @@ void usb_ll__interrupt()
 
 
     if (regs[1] & USB_INTPEND_CONN) {
-        usb_ll__connected_callback();
+        usb_ll__connected_callback((regs[0] >> 7) & 1);
     }
 
     if (regs[1] & USB_INTPEND_DISC) {
@@ -189,30 +225,41 @@ void usb_ll__interrupt()
 }
 
 
-int usb_ll__submit_request(uint8_t channel, uint16_t epmemaddr,
-                           usb_dpid_t pid, uint8_t seq, uint8_t *data, uint8_t datalen,
-                          int (*reap)(uint8_t channel, uint8_t status, void*), void*userdata)
+void usb_ll__ack_received(uint8_t channel)
+{
+    struct chconf *conf = &channel_conf[channel];
+//    if (conf->eptype !=EP_TYPE_CONTROL) {
+    conf->seq = !conf->seq;
+    //    }
+}
+
+int usb_ll__submit_request(uint8_t channel,
+                           usb_dpid_t pid,
+                           uint8_t *data, uint8_t datalen,
+                           int (*reap)(uint8_t channel, uint8_t status, void*), void*userdata)
 {
     uint8_t regconf[3];
-    USBLLDEBUG("Submitting request PID %d", (int)pid);
+    struct chconf *conf = &channel_conf[channel];
+
+    USBLLDEBUG("Submitting request EP=%d PID %d seq=%d", conf->epnum, (int)pid, conf->seq);
     // Write epmem data
     if ((pid != PID_IN) && (data!=NULL)) {
-        USBLLDEBUG("Copying data %p -> epmem@%04x", data, epmemaddr);
+        USBLLDEBUG("Copying data %p -> epmem@%04x", data, conf->memaddr);
         if (DEBUG_ENABLED(DEBUG_ZONE_USBLL)) {
             dump__buffer(data,datalen);
         }
-        fpga__write_usb_block(USB_REG_DATA(epmemaddr), data, datalen);
+        fpga__write_usb_block(USB_REG_DATA(conf->memaddr), data, datalen);
     }
     uint8_t retries = 3;
 
-    regconf[0] = (uint8_t)pid | ((seq&1)<<2) | ((epmemaddr>>8)<<3) | (retries << 5);
-    regconf[1] = epmemaddr & 0xFF;
+    regconf[0] = (uint8_t)pid | ((conf->seq&1)<<2) | ((conf->memaddr>>8)<<3) | (retries << 5);
+    regconf[1] = conf->memaddr & 0xFF;
     regconf[2] = 0x80 | (datalen & 0x7F);
 
 
-    channel_conf[channel].completion = reap;
-    channel_conf[channel].userdata = userdata;
-    channel_conf[channel].memaddr = epmemaddr;
+    conf->completion = reap;
+    conf->userdata = userdata;
+    //channel_conf[channel].memaddr = epmemaddr;
 
     fpga__write_usb_block(USB_REG_CHAN_TRANS1(channel), regconf, 3);
 
@@ -277,14 +324,6 @@ int usb_ll__init()
     };
 
     fpga__write_usb_block(USB_REG_STATUS, regval, 4);
-
-    usb_ll__alloc_channel(0x00,
-                          EP_TYPE_CONTROL,
-                          64,
-                          0,
-                          NULL);
-    // Set up chan0
-    //channel_conf[0].memaddr = 0x0000;
 
     return 0;
 }

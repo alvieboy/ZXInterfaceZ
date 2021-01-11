@@ -21,7 +21,7 @@ struct usb_interface
 struct usb_device
 {
     uint8_t ep0_chan;
-    uint8_t ep0_size;
+    //uint8_t ep0_size;
     uint8_t address;
     uint8_t claimed;
     struct usb_hub *hub;

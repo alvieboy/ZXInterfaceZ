@@ -10,6 +10,7 @@
 static uint8_t scsi_id = 0;
 
 static int scsidev__ensure_ready(scsidev_t *dev);
+static int scsidev__read_capacity(scsidev_t *dev, uint8_t *status, struct scsi_sbc_read_capacity *data);
 
 static void scsidev__register(scsidev_t *dev)
 {
@@ -43,6 +44,36 @@ static void scsidev__dump_inquiry_info(struct scsi_sbc_inquiry_data *data)
 
 }
 
+static int scsidev__read_size(scsidev_t *dev)
+{
+    struct scsi_sbc_read_capacity cap;
+    uint8_t status;
+    int r = scsidev__read_capacity(dev, &status, &cap);
+    if (r<0) {
+        ESP_LOGE(SCSIDEVTAG,"Error requesting capacity");
+        return r;
+    }
+    if (status!=0x00) {
+        // TBD: recover.
+        if (scsidev__ensure_ready(dev)<0)
+            return -1;
+        r = scsidev__read_capacity(dev, &status, &cap);
+        if (r<0) {
+            ESP_LOGE(SCSIDEVTAG,"Error requesting capacity");
+            return r;
+        }
+    }
+    if (status!=0x00) {
+        ESP_LOGE(SCSIDEVTAG,"Error status %02x requesting capacity", status);
+        return -1;
+    }
+
+    dev->sector_count = __be32(cap.lba);
+    dev->sector_size = (uint16_t)__be32(cap.blocksize);
+
+    ESP_LOGI(SCSIDEVTAG,"Device: %u sectors of %u bytes", dev->sector_count, dev->sector_size);
+    return 0;
+}
 
 int scsidev__init(scsidev_t *dev, const struct scsiblockfn *fn, void *pvt)
 {
@@ -52,11 +83,6 @@ int scsidev__init(scsidev_t *dev, const struct scsiblockfn *fn, void *pvt)
     dev->pvt = pvt;
 
 
-    if (scsidev__ensure_ready(dev)<0) {
-        ESP_LOGE(SCSIDEVTAG, "Unit NOT ready!");
-        return -1;
-    }
-
     ESP_LOGI(SCSIDEVTAG, "Sending INQUIRY");
     if (scsidev__inquiry(dev, &status, &inquiry)<0) {
         ESP_LOGE(SCSIDEVTAG, "Sending INQUIRY failed!");
@@ -64,6 +90,16 @@ int scsidev__init(scsidev_t *dev, const struct scsiblockfn *fn, void *pvt)
     }
 
     scsidev__dump_inquiry_info(&inquiry);
+
+    if (scsidev__ensure_ready(dev)<0) {
+        ESP_LOGE(SCSIDEVTAG, "Unit NOT ready!");
+        return -1;
+    }
+
+    if (scsidev__read_size(dev)<0) {
+        ESP_LOGE(SCSIDEVTAG, "Cannot read capacity!");
+        return -1;
+    }
 
     scsidev__register(dev);
 
@@ -74,14 +110,16 @@ int scsidev__init(scsidev_t *dev, const struct scsiblockfn *fn, void *pvt)
 
 static int scsidev__request_sense(scsidev_t *dev, uint8_t *status, struct scsi_sbc_sense_data *data)
 {
-    memset(dev->cdb, 0, sizeof(dev->cdb_request_sense));
+    struct scsi_cdb_request_sense *cdb_request_sense = (struct scsi_cdb_request_sense *)dev->cdb;
 
-    dev->cdb_request_sense.opcode = SBC_CMD_REQUEST_SENSE;
-    dev->cdb_request_sense.length = sizeof(struct scsi_sbc_sense_data);
+    memset(dev->cdb, 0, sizeof(dev->cdb));
+
+    cdb_request_sense->opcode = SBC_CMD_REQUEST_SENSE;
+    cdb_request_sense->length = sizeof(struct scsi_sbc_sense_data);
 
     return dev->fn->read(dev->pvt,
                          dev->cdb,
-                         sizeof(dev->cdb_inquiry),
+                         sizeof(struct scsi_cdb_request_sense),
                          (uint8_t*)data,
                          sizeof(struct scsi_sbc_sense_data),
                          status
@@ -92,33 +130,56 @@ static int scsidev__request_sense(scsidev_t *dev, uint8_t *status, struct scsi_s
 
 int scsidev__inquiry(scsidev_t *dev, uint8_t *status, struct scsi_sbc_inquiry_data *data)
 {
-    memset(dev->cdb, 0, sizeof(dev->cdb_inquiry));
+    struct scsi_cdb_inquiry *cdb_inquiry = (struct scsi_cdb_inquiry*)dev->cdb;
 
-    dev->cdb_inquiry.opcode = SBC_CMD_INQUIRY;
-    dev->cdb_inquiry.length = __be16(sizeof(struct scsi_sbc_inquiry_data));
+    memset(dev->cdb, 0, sizeof(dev->cdb));
+
+    cdb_inquiry->opcode = SBC_CMD_INQUIRY;
+    cdb_inquiry->length = __be16(sizeof(struct scsi_sbc_inquiry_data));
 
     return dev->fn->read(dev->pvt,
                          dev->cdb,
-                         sizeof(dev->cdb_inquiry),
+                         sizeof(struct scsi_cdb_inquiry),
                          (uint8_t*)data,
                          sizeof(struct scsi_sbc_inquiry_data),
                          status
                         );
 }
 
+static int scsidev__read_capacity(scsidev_t *dev, uint8_t *status, struct scsi_sbc_read_capacity *data)
+{
+    struct scsi_cdb_read_capacity_10 *cdb_inquiry = (struct scsi_cdb_read_capacity_10*)dev->cdb;
+
+    memset(dev->cdb, 0, sizeof(dev->cdb));
+
+    cdb_inquiry->opcode = SBC_CMD_READ_CAPACITY;
+
+    return dev->fn->read(dev->pvt,
+                         dev->cdb,
+                         sizeof(struct scsi_cdb_read_capacity_10),
+                         (uint8_t*)data,
+                         sizeof(struct scsi_sbc_read_capacity),
+                         status
+                        );
+}
+
 static int scsidev__test_unit_ready(scsidev_t *dev, uint8_t *status)
 {
-    memset(dev->cdb, 0, sizeof(dev->cdb_test_unit_ready));
+    struct scsi_cdb_test_unit_ready * cdb_test_unit_ready = (struct scsi_cdb_test_unit_ready*)dev->cdb;
 
-    dev->cdb_inquiry.opcode = SBC_CMD_TEST_UNIT_READY;
+    memset(dev->cdb, 0, sizeof(dev->cdb));
 
-    int r = dev->fn->read(dev->pvt,
-                          dev->cdb,
-                          sizeof(dev->cdb_test_unit_ready),
-                          NULL,
-                          0,
-                          status
-                         );
+    cdb_test_unit_ready->opcode = SBC_CMD_TEST_UNIT_READY;
+
+    BUFFER_LOGI(SCSIDEVTAG,"TestUnitReady", dev->cdb, sizeof(dev->cdb));
+
+    int r = dev->fn->write(dev->pvt,
+                           dev->cdb,
+                           sizeof(struct scsi_cdb_test_unit_ready),
+                           NULL,
+                           0,
+                           status
+                          );
     if (r<0)
         return -1;
 
@@ -164,19 +225,21 @@ static int scsidev__ensure_ready(scsidev_t *dev)
 
 }
 
-int scsidev__read(scsidev_t *dev, uint8_t *target, sector_t sector, unsigned size, uint8_t *status)
+int scsidev__read(scsidev_t *dev, uint8_t *target, sector_t sector, unsigned sector_count, uint8_t *status)
 {
-    memset(dev->cdb, 0, sizeof(dev->cdb_read_10));
+    struct scsi_cdb_read_10 *cdb_read_10 = (struct scsi_cdb_read_10*)dev->cdb;
 
-    dev->cdb_read_10.opcode = SBC_CMD_READ_10;
-    dev->cdb_read_10.length = __be16(size);
-    dev->cdb_read_10.lba = __be32(sector);
+    memset(dev->cdb, 0, sizeof(dev->cdb));
+
+    cdb_read_10->opcode = SBC_CMD_READ_10;
+    cdb_read_10->length = __be16(sector_count);
+    cdb_read_10->lba = __be32(sector);
 
     return dev->fn->read(dev->pvt,
                          dev->cdb,
-                         sizeof(dev->cdb_read_10),
+                         sizeof(struct scsi_cdb_read_10),
                          target,
-                         size,
+                         sector_count * dev->sector_size,
                          status
                         );
 

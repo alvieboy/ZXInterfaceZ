@@ -37,9 +37,10 @@ static struct usb_hub root_hub = { 0 };
 #define USB_CMD_INTERRUPT 0
 #define USB_CMD_SUBMITREQUEST 1
 
-#define USB_STAT_ATTACHED 1
-#define USB_REQUEST_COMPLETED_OK 2
-#define USB_REQUEST_COMPLETED_FAIL 3
+#define USB_STAT_ATTACHED_FULLSPEED 1
+#define USB_STAT_ATTACHED_LOWSPEED 2
+#define USB_REQUEST_COMPLETED_OK 3
+#define USB_REQUEST_COMPLETED_FAIL 4
 
 
 
@@ -49,13 +50,16 @@ static int usbh__control_request_completed_reply(uint8_t chan, uint8_t stat, str
 static int usbh__request_completed_reply(uint8_t chan, uint8_t stat, void *req);
 static int usbh__issue_setup_data_request(struct usb_request *req);
 
-void usb_ll__connected_callback()
+void usb_ll__connected_callback(uint8_t fullspeed)
 {
     struct usbresponse resp;
 
     // Connected device.
     ESP_LOGI(USBHTAG,"USB connection event");
-    resp.status = USB_STAT_ATTACHED;
+    if (fullspeed)
+        resp.status = USB_STAT_ATTACHED_FULLSPEED;
+    else
+        resp.status = USB_STAT_ATTACHED_LOWSPEED;
 
     if (xQueueSend(usb_cplt_queue, &resp, 0)!=pdTRUE) {
         ESP_LOGE(USBHTAG, "Cannot queue!!!");
@@ -163,9 +167,10 @@ static void usbh__main_task(void *pvParam)
         if (xQueueReceive(usb_cplt_queue, &resp, portMAX_DELAY)==pdTRUE)
         {
             USBHDEBUG(" >>> got status %d", resp.status);
-            if (resp.status == USB_STAT_ATTACHED) {
-                // Attached.
-                usbhub__port_reset(&root_hub);
+            if (resp.status == USB_STAT_ATTACHED_FULLSPEED) {
+                usbhub__port_reset(&root_hub, USB_FULL_SPEED);
+            } else if (resp.status == USB_STAT_ATTACHED_LOWSPEED) {
+                usbhub__port_reset(&root_hub, USB_LOW_SPEED);
             }
         } else {
             ESP_LOGE(USBHTAG, "Queue error!!!");
@@ -226,18 +231,19 @@ static inline int usbh__request_data_remain(const struct usb_request*req, unsign
 
     // TODO: ensure this is smaller than EP size
     int remain = req->length - req->size_transferred;
+    uint8_t epsize = usb_ll__get_channel_maxsize(req->channel);
 
-    if (remain > req->epsize) {
-        remain = req->epsize;
+    if (remain > epsize) {
+        remain = epsize;
     }
     USBHDEBUG("Chan %d: remain %d length req %d transferred %d", req->channel,
               remain,
               req->length,
               req->size_transferred);
 
-    if (remain>0 && (last_transaction < req->epsize)) {
+    if (remain>0 && (last_transaction < epsize)) {
         USBHDEBUG("Chan %d: Short response (%d epsize %d), returning 0", req->channel,
-                  last_transaction, req->epsize);
+                  last_transaction, epsize);
         return 0;
     }
 
@@ -247,10 +253,9 @@ static inline int usbh__request_data_remain(const struct usb_request*req, unsign
 static int usbh__send_ack(struct usb_request *req)
 {
     // Send ack
+    usb_ll__set_seq(req->channel, 1);
     return usb_ll__submit_request(req->channel,
-                                  req->epmemaddr,
                                   PID_OUT,
-                                  req->control ? '1': req->seq,      // TODO: Check seq.
                                   NULL,
                                   0,
                                   usbh__request_completed_reply,
@@ -260,9 +265,7 @@ static int usbh__send_ack(struct usb_request *req)
 static int usbh__wait_ack(struct usb_request *req)
 {
     return usb_ll__submit_request(req->channel,
-                                  req->epmemaddr,
                                   PID_IN,
-                                  req->seq,      // TODO: Check seq.
                                   NULL,
                                   0,
                                   usbh__request_completed_reply,
@@ -272,14 +275,12 @@ static int usbh__wait_ack(struct usb_request *req)
 
 static int usbh__issue_setup_data_request(struct usb_request *req)
 {
-    int remain = usbh__request_data_remain(req, req->epsize);
+    int remain = usbh__request_data_remain(req, usb_ll__get_channel_maxsize(req->channel));
 
     if (req->direction==REQ_DEVICE_TO_HOST) {
         // send IN request.
         return usb_ll__submit_request(req->channel,
-                                      req->epmemaddr,
                                       PID_IN,
-                                      req->seq,
                                       req->rptr,
                                       remain,
                                       usbh__request_completed_reply,
@@ -287,9 +288,7 @@ static int usbh__issue_setup_data_request(struct usb_request *req)
     } else {
         // send OUT request.
         return usb_ll__submit_request(req->channel,
-                                      req->epmemaddr,
                                       PID_OUT,
-                                      req->seq,
                                       req->rptr,
                                       remain,
                                       usbh__request_completed_reply,
@@ -340,7 +339,8 @@ static int usbh__control_request_completed_reply(uint8_t chan, uint8_t stat, str
         case CONTROL_STATE_SETUP:
             /* Setup completed. If we have a data phase, send data */
             req->size_transferred = 0;
-            req->seq = 1;
+            //req->seq = 1;
+            usb_ll__reset_channel(req->channel);
 
             USBHDEBUG("Requested size: %d\n", req->length);
             if (req->length) {
@@ -369,14 +369,14 @@ static int usbh__control_request_completed_reply(uint8_t chan, uint8_t stat, str
 
             // IN request
             if (req->direction==REQ_DEVICE_TO_HOST) {
-                rxlen = usbh__request_data_remain(req, req->epsize);
+                rxlen = usbh__request_data_remain(req, usb_ll__get_channel_maxsize(req->channel));
                 usb_ll__read_in_block(chan, req->rptr, &rxlen);
             } else {
 
             }
             req->rptr += rxlen;
             req->size_transferred += rxlen;
-            req->seq = !req->seq;
+            //req->seq = !req->seq;
 
             if (usbh__request_data_remain(req, rxlen)>0) {
                 USBHDEBUG("Still data to go");
@@ -422,14 +422,14 @@ static int usbh__bulk_request_completed_reply(uint8_t chan, uint8_t stat, struct
     if (stat & 1) {
         // IN request
         if (req->direction==REQ_DEVICE_TO_HOST) {
-            rxlen = usbh__request_data_remain(req, req->epsize);
+            rxlen = usbh__request_data_remain(req, usb_ll__get_channel_maxsize(req->channel));
             usb_ll__read_in_block(chan, req->rptr, &rxlen);
         } else {
 
         }
         req->rptr += rxlen;
         req->size_transferred += rxlen;
-        req->seq = !req->seq;
+        //req->seq = !req->seq;
 
         if (usbh__request_data_remain(req, rxlen)>0) {
             USBHDEBUG("Still data to go");
@@ -484,11 +484,12 @@ void usbh__submit_request(struct usb_request *req)
 static void usbh__submit_request_to_ll(struct usb_request *req)
 {
     if (req->control) {
-        USBHDEBUG("Submitting %p", req);
+        USBHDEBUG("Submitting CONTROL %p", req);
+
+        usb_ll__set_seq(req->channel, 0);
+
         usb_ll__submit_request(req->channel,
-                               req->epmemaddr,
                                PID_SETUP,
-                               0, // Always use DATA0
                                req->setup.data,
                                sizeof(req->setup),
                                usbh__request_completed_reply,
@@ -497,9 +498,7 @@ static void usbh__submit_request_to_ll(struct usb_request *req)
         USBHDEBUG("Submitting BULK %p", req);
         if (req->direction==REQ_DEVICE_TO_HOST) {
             usb_ll__submit_request(req->channel,
-                                   req->epmemaddr,
                                    PID_IN,
-                                   req->seq,
                                    req->target,
                                    req->length > 64 ? 64: req->length,
                                    usbh__request_completed_reply,
@@ -507,9 +506,7 @@ static void usbh__submit_request_to_ll(struct usb_request *req)
         } else {
             if (req->length) {
                 usb_ll__submit_request(req->channel,
-                                       req->epmemaddr,
                                        PID_OUT,
-                                       req->seq,
                                        req->target,
                                        req->length > 64 ? 64: req->length,
                                        usbh__request_completed_reply,
@@ -538,7 +535,7 @@ int usbh__get_descriptor(struct usb_device *dev,
     req.control = 1;
     req.retries = 3;
     req.channel = dev->ep0_chan;
-    req.epsize = dev->ep0_size;
+    //req.epsize = dev->ep0_size;
 
 
     req.setup.bmRequestType = req_type | USB_DEVICE_TO_HOST;

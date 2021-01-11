@@ -9,6 +9,7 @@
 #include <string.h>
 #include "scsidev.h"
 #include "struct_assert.h"
+#include "log.h"
 
 #define USBBLOCKTAG "USBBLOCK"
 #define USBBLOCKDEBUG(x...) ESP_LOGI(USBBLOCKTAG,x)
@@ -83,6 +84,10 @@ struct usb_block
 
 #define CSWSIGNATURE (0x53425355)
 
+
+static int usb_block__check_csw(const usb_block_csw_t *csw, uint32_t tag, uint8_t *status_out);
+
+
 int usb_block__reset(struct usb_block *self)
 {
     struct usb_request req = {0};
@@ -140,7 +145,7 @@ int usb_block__get_max_lun(struct usb_block *self)
     req.setup.wLength = __le16(1);
 
     req.channel =  self->dev->ep0_chan;
-    req.epsize =  self->dev->ep0_size;
+    //req.epsize =  self->dev->ep0_size;
 
     USBBLOCKDEBUG("Submitting GET MAX LUN request");
     usbh__submit_request(&req);
@@ -328,7 +333,8 @@ int usb_block__command_transfer_completed(uint8_t channel, uint8_t status,void*s
 }
 
 static int usb_block__send_command(struct usb_block *blk,
-                                   uint8_t lun, const uint8_t *command_data,
+                                   uint8_t lun,
+                                   const uint8_t *command_data,
                                    uint8_t command_len,
                                    unsigned datalen,
                                    uint8_t flags)
@@ -348,25 +354,16 @@ static int usb_block__send_command(struct usb_block *blk,
     blk->cbw.rsvd2=0;
 
     memcpy(&blk->cbw.CBWCB[0], command_data, command_len);
+    if (command_len<16) {
+        memset(&blk->cbw.CBWCB[command_len], 0xFF, 16-command_len);
+    }
 
-    // Send it over the wire
-#if 0
-    return usb_ll__submit_request(blk->out_epchan,
-                                  0x0080, // TBD - epmemaddr
-                                  PID_OUT,
-                                  blk->out_seq,      // TODO: Check seq.
-                                  (uint8_t*)&blk->cbw,
-                                  command_len,
-                                  usb_block__command_transfer_completed,
-                                  blk);
-#endif
-
-    ESP_LOGI(USBBLOCKTAG,"Sending request channel %d", blk->out_epchan);
+    ESP_LOGI(USBBLOCKTAG,"Sending request channel %d command_len %d", blk->out_epchan, command_len);
 
     struct usb_request req = {0};
 
     req.device = blk->dev;
-    req.seq = blk->out_seq;
+    //req.seq = blk->out_seq;
     req.target = &blk->cbw.b[0];
     req.length = sizeof(blk->cbw);
     req.rptr = NULL;
@@ -374,7 +371,12 @@ static int usb_block__send_command(struct usb_block *blk,
     req.direction = REQ_HOST_TO_DEVICE;
     req.control = 0;
     req.channel = blk->out_epchan;
-    req.epsize  = usb_ll__get_channel_maxsize(blk->out_epchan);
+    //req.epsize  = usb_ll__get_channel_maxsize(blk->out_epchan);
+
+    BUFFER_LOGI(USBBLOCKTAG,"CBW", blk->cbw.b, sizeof(blk->cbw));
+
+
+
 
     usbh__submit_request(&req);
     int r = usbh__wait_completion(&req);
@@ -390,17 +392,43 @@ static int usb_block__send_command(struct usb_block *blk,
 
 
 
+static int usb_block__send_data(struct usb_block *blk,
+                                uint8_t lun,
+                                uint8_t *data,
+                                unsigned datalen)
+{
+    ESP_LOGI(USBBLOCKTAG,"Sending OUT request channel %d len %d", blk->out_epchan, datalen);
+
+    struct usb_request req = {0};
+
+    req.device = blk->dev;
+    //req.seq = blk->out_seq;
+    req.target = data,
+    req.length = datalen,
+    req.rptr = data;
+    req.size_transferred = 0;
+    req.direction = REQ_HOST_TO_DEVICE;
+    req.control = 0;
+    req.channel = blk->out_epchan;
+    //req.epsize  = usb_ll__get_channel_maxsize(blk->out_epchan);
+
+
+    usbh__submit_request(&req);
+    int r = usbh__wait_completion(&req);
+
+    return r;
+}
+
 static int usb_block__wait_reply(struct usb_block *blk,
-                                 uint8_t lun,
-                                 uint8_t *resp,
-                                 unsigned datalen)
+                                uint8_t lun,
+                                uint8_t *resp,
+                                unsigned datalen)
 {
     ESP_LOGI(USBBLOCKTAG,"Sending IN request channel %d len %d", blk->out_epchan, datalen);
 
     struct usb_request req = {0};
 
     req.device = blk->dev;
-    req.seq = blk->in_seq;
     req.target = resp,
     req.length = datalen,
     req.rptr = resp;
@@ -408,7 +436,7 @@ static int usb_block__wait_reply(struct usb_block *blk,
     req.direction = REQ_DEVICE_TO_HOST;
     req.control = 0;
     req.channel = blk->in_epchan;
-    req.epsize  = usb_ll__get_channel_maxsize(blk->in_epchan);
+    //req.epsize  = usb_ll__get_channel_maxsize(blk->out_epchan);
 
 
     usbh__submit_request(&req);
@@ -466,19 +494,24 @@ static int usb_block__scsi_read(void *pvt,
         return -1;
     }
 
-    if (__le32(csw.dCSWSignature)!=CSWSIGNATURE) {
-        ESP_LOGI(USBBLOCKTAG,"Invalid CSW signature %08x", __le32(csw.dCSWSignature));
+    return usb_block__check_csw(&csw, tag, status_out);
+
+}
+
+static int usb_block__check_csw(const usb_block_csw_t *csw, uint32_t tag, uint8_t *status_out)
+{
+    if (__le32(csw->dCSWSignature)!=CSWSIGNATURE) {
+        ESP_LOGI(USBBLOCKTAG,"Invalid CSW signature %08x", __le32(csw->dCSWSignature));
         return -1;
     }
 
-    if (__le32(csw.dCSWTag)!=tag) {
+    if (__le32(csw->dCSWTag)!=tag) {
         ESP_LOGI(USBBLOCKTAG,"Invalid TAG");
         return -1;
     }
 
-    *status_out = csw.bCSWStatus;
-
-    return r;
+    *status_out = csw->bCSWStatus;
+    return 0;
 }
 
 static int usb_block__scsi_write(void *pvt,
@@ -490,7 +523,9 @@ static int usb_block__scsi_write(void *pvt,
 {
     struct usb_block *self = (struct usb_block *)pvt;
 
-//    usb_block_csw_t csw;
+    usb_block_csw_t csw;
+
+    uint32_t tag = self->tag;
 
     int r = usb_block__send_command(self,
                                     0x00, // LUNself->lun,
@@ -502,13 +537,13 @@ static int usb_block__scsi_write(void *pvt,
 
     if (r<0)
         return r;
-#if 0
-    if (rx_targetlen) {
+
+    if (tx_len) {
         // Data phase
-        r = usb_block__wait_reply(self,
+        r = usb_block__send_data(self,
                                   0x00, // LUNuint8_t lun,
-                                  rx_target,
-                                  rx_targetlen);
+                                  (uint8_t*)tx_target,
+                                  tx_len);
     }
 
     r = usb_block__wait_reply(self,
@@ -516,9 +551,10 @@ static int usb_block__scsi_write(void *pvt,
                               &csw,
                               sizeof(csw));
 
-    *status_out = 0;
-#endif
-    return r;
+    if (r<0)
+        return r;
+
+    return usb_block__check_csw(&csw, tag, status_out);
 }
 
 

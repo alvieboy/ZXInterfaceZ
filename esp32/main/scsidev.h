@@ -6,8 +6,8 @@
 typedef uint32_t sector_t;
 
 struct scsiblockfn {
-    int (*write)(void *, uint8_t *cdb, unsigned cdb_size, const uint8_t *data, unsigned datalen, uint8_t *status_out);
-    int (*read)(void *, uint8_t *cdb, unsigned cdb_size, uint8_t *data, unsigned datalen, uint8_t *status_out);
+    int (*write)(void *, uint8_t *cdb, unsigned cdb_size, const uint8_t *data, unsigned sector_count, uint8_t *status_out);
+    int (*read)(void *, uint8_t *cdb, unsigned cdb_size, uint8_t *data, unsigned sector_count, uint8_t *status_out);
 };
 
 typedef struct
@@ -15,15 +15,18 @@ typedef struct
     //uint8_t lun;
     union {
         uint8_t cdb[16];
-        struct scsi_cdb_inquiry cdb_inquiry;
+/*        struct scsi_cdb_inquiry cdb_inquiry;
         struct scsi_cdb_test_unit_ready cdb_test_unit_ready;
         struct scsi_cdb_request_sense cdb_request_sense;
         struct scsi_cdb_read_10 cdb_read_10;
+        */
     };
     void *pvt;
     char backend[8];
     const struct scsiblockfn *fn;
     uint8_t id;
+    uint32_t sector_count;
+    uint16_t sector_size;
 } scsidev_t;
 
 

@@ -64,9 +64,7 @@ static int usb_mouse__transfer_completed(uint8_t channel, uint8_t status, void*u
 static int usb_mouse__submit_in(struct usb_mouse *m)
 {
     return usb_ll__submit_request(m->epchan,
-                                  0x0080, // TBD
                                   PID_IN,
-                                  m->seq,      // TODO: Check seq.
                                   &m->payload[0],
                                   8, // Report descriptor size!!!
                                   usb_mouse__transfer_completed,

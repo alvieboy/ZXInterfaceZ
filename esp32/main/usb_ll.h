@@ -29,14 +29,15 @@ void usb_ll__in_completed_callback(uint8_t channel, uint8_t status);
 void usb_ll__out_completed_callback(uint8_t channel, uint8_t status);
 void usb_ll__setup_completed_callback(uint8_t channel, uint8_t status);
 */
-void usb_ll__connected_callback(void);
+void usb_ll__connected_callback(uint8_t fullspeed);
 void usb_ll__disconnected_callback(void);
 void usb_ll__overcurrent_callback(void);
 
 void usb_ll__channel_set_interval(uint8_t chan, uint8_t interval);
 
-int usb_ll__submit_request(uint8_t channel, uint16_t epmemaddr,
-                           usb_dpid_t pid, uint8_t seq, uint8_t *data, uint8_t datalen,
+int usb_ll__submit_request(uint8_t channel, 
+                           usb_dpid_t pid,
+                           uint8_t *data, uint8_t datalen,
                            int (*reap)(uint8_t channel, uint8_t status,void*), void*);
 
 int usb_ll__alloc_channel(uint8_t devaddr,
@@ -46,6 +47,12 @@ int usb_ll__alloc_channel(uint8_t devaddr,
                           void *userdata);
 
 uint8_t usb_ll__get_channel_maxsize(uint8_t channel);
+void usb_ll__set_channel_maxsize(uint8_t channel, uint8_t maxsize);
+int usb_ll__reset_channel(uint8_t channel);
+void usb_ll__ack_received(uint8_t channel);
+void usb_ll__set_seq(uint8_t channel, uint8_t seq);
+void usb_ll__set_devaddr(uint8_t channel, uint8_t addr);
+
 
 int usb_ll__release_channel(uint8_t channel);
 int usb_ll__read_in_block(uint8_t channel, uint8_t *target, uint8_t *rxlen);

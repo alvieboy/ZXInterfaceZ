@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "log.h"
+#include "usb_defs.h"
 
 struct libusb_context *libusbctx;
 struct libusb_device *device;
@@ -30,6 +31,15 @@ static struct epchannel channels[NUM_CHANNELS];
 
 static struct libusb_device *usb_ll__open_vid_pid(uint16_t vid, uint16_t pid,
                                                  struct libusb_device_handle**handle);
+
+void usb_ll__set_channel_maxsize(uint8_t channel, uint8_t maxsize)
+{
+    channels[channel].maxsize = maxsize;
+}
+
+void usb_ll__set_devaddr(uint8_t channel, uint8_t addr)
+{
+}
 
 uint8_t usb_ll__get_channel_maxsize(uint8_t channel)
 {
@@ -204,8 +214,9 @@ static void usb_ll__libusb_transfer_callback(struct libusb_transfer *transfer)
 
 }
 
-int usb_ll__submit_request(uint8_t channel, uint16_t epmemaddr,
-                           usb_dpid_t pid, uint8_t seq, uint8_t *data, uint8_t datalen,
+int usb_ll__submit_request(uint8_t channel,
+                           usb_dpid_t pid,
+                           uint8_t *data, uint8_t datalen,
                            int (*reap)(uint8_t channel, uint8_t status,void*), void*reapdata)
 {
     struct libusb_transfer *t = libusb_alloc_transfer(0);
@@ -334,6 +345,6 @@ uint8_t usb_ll__get_address(void)
 #if 1
 void usb_ll__interrupt()
 {
-    usb_ll__connected_callback();
+    usb_ll__connected_callback(USB_FULL_SPEED);
 }
 #endif

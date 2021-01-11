@@ -44,6 +44,7 @@ static inline void systemevent__send_with_ctx(uint8_t type, uint8_t event, void*
     systemevent_t ev;
     ev.type = type;
     ev.event = event;
+    ev.ctxdata = ctx;
     systemevent__send_event(&ev);
 }
 

@@ -26,15 +26,15 @@ struct usb_request
     uint8_t *rptr;
     uint16_t length;
     uint16_t size_transferred;
-    uint16_t epmemaddr;
-    uint8_t epsize;
+    //uint16_t epmemaddr;
+    //uint8_t epsize;
     uint8_t retries;
     usb_setup_t setup; // For setup requests
-    uint8_t seq:1;
+    //uint8_t seq:1;
     uint8_t control:1;
     uint8_t direction:1;
     uint8_t control_state:2;
-    uint8_t channel:3;
+    uint8_t channel:4;
 #ifdef __linux__
     void *pvt;
 #endif
