@@ -48,7 +48,7 @@ begin
     spiPayload_in_s(0) <= x"61"; -- USB write
     spiPayload_in_s(1) <= x"00";
     spiPayload_in_s(2) <= x"00"; -- Address
-    spiPayload_in_s(3) <= x"01"; -- Power ON
+    spiPayload_in_s(3) <= x"20"; -- Power ON
     spiPayload_in_s(4) <= x"00"; -- n/a
     spiPayload_in_s(5) <= x"FF"; -- All interrupts enabled.
     spiPayload_in_s(6) <= x"00"; --
@@ -106,7 +106,7 @@ begin
     spiPayload_in_s(0) <= x"61"; -- USB write
     spiPayload_in_s(1) <= x"00";
     spiPayload_in_s(2) <= x"00"; -- Adresss
-    spiPayload_in_s(3) <= "00010000"; -- RESET active
+    spiPayload_in_s(3) <= "00110000"; -- RESET active, PWRON
     Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 4, spiPayload_in_s, spiPayload_out_s);
 
     --wait for 1 us;
@@ -122,7 +122,7 @@ begin
     Check("008: Device on USB bus", spiPayload_out_s(4)(0), '1');
     Check("009: USB in reset", spiPayload_out_s(4)(4), '1');
 
-    wait for 20 us;
+    wait for 15 us;
 
     stamp := Usbdevice_Data.ResetStamp - stamp;
     Check("010: USB reset in time", stamp > 0 us and stamp < 10 us);
