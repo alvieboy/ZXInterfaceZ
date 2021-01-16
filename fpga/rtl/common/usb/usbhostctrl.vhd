@@ -119,7 +119,7 @@ ARCHITECTURE rtl OF usbhostctrl is
   signal cnt_cplt_s      : std_logic_vector(7 downto 0);
 
 
-  constant C_SOF_TIMEOUT: natural   := altsim(48000, 4800); -- 1ms synth, 100us simulation
+  constant C_SOF_TIMEOUT: natural   := altsim(48000, 48000); -- 1ms 
   constant C_ATTACH_DELAY: natural  := altsim(480000, 4);-- 48000; -- 10 ms
   constant C_NUM_CHANNELS: natural  := 8;
   constant C_RESET_DELAY: natural   := altsim(48000*50,500); -- 50 ms
@@ -273,6 +273,7 @@ ARCHITECTURE rtl OF usbhostctrl is
   signal trans_strobe_s     : std_logic;
   signal trans_data_seq_s   : std_logic;
   signal trans_seq_valid_s  : std_logic;
+  signal trans_speed_s      : std_logic;
   signal phy_txactive_s     : std_logic;
   signal fs_ce_s            : std_logic;
 	signal dbg_fs_ce_r		: std_logic;
@@ -306,7 +307,8 @@ BEGIN
     rst              => rstinv,         -- i
     phy_tx_mode      => tx_mode_s,      -- i
     usb_rst          => usb_rst_phy,    -- o
-    XcvrSelect_i     => r.speed,        -- i
+    XcvrSelect_i     => Phy_XcvrSelect,--r.speed,        -- i
+    HostXcvrSelect_i => r.speed,
     fs_ce_o          => fs_ce_s,
     txdp             => vpo_s,          -- o
     txdn             => vmo_s,          -- o
@@ -346,6 +348,7 @@ BEGIN
     trans_daddr_s   <= (others => 'X');
     trans_ep_s      <= (others => 'X');
     trans_data_seq_s<='X';
+    trans_speed_s   <= 'X';--not r.ch(r.channel).trans.lowspeed;
     --trans_addr_s    <= (others => 'X');
     read_data_s     <= (others => '0');
 
@@ -410,8 +413,8 @@ BEGIN
               w.ch(wch).conf.maxsize   := dat_in_s(5 downto 0);
             when "0001" =>
               --w.ch(wch).conf.oddframe  := dat_in_s(7);
-              --w.ch(wch).conf.lowspeed  := dat_in_s(6);
               w.ch(wch).conf.direction := dat_in_s(7);
+              w.ch(wch).conf.lowspeed  := dat_in_s(6);
               w.ch(wch).conf.epnum     := dat_in_s(3 downto 0);
 
             when "0010" =>
@@ -532,7 +535,7 @@ BEGIN
             read_data_s(5 downto 0) <= r.ch(wch).conf.maxsize;
           when "0001" =>
             --read_data_s(7)          <= r.ch(wch).conf.oddframe;
-            --read_data_s(6)          <= r.ch(wch).conf.lowspeed;
+            read_data_s(6)          <= r.ch(wch).conf.lowspeed;
             read_data_s(7)          <= r.ch(wch).conf.direction;
             read_data_s(3 downto 0) <= r.ch(wch).conf.epnum;
           --
@@ -616,22 +619,26 @@ BEGIN
         --
         -- sync   pid  +packet  crc
         --
-        -- 8    + 8    598[s]  + 2    (616)
+        -- 8    + 8    512[s]  + 16    528 bits, 105 blocks of 5 bits. 3 extra bits. 633 bits MAX. 649 bits incl. sync+pid
+        -- 8    + 8    64[s]   + 16    80 bits, 96 bits MAX. 112 bits incl. sync+pid     4600.
 
         --34 bits time for ack/nack . 38 bits for token.
-        if r.speed='1' then
-          if r.sof_count > ((616+34+38)*4) then
+
+        -- Counter starts at 4799
+
+        if ch.conf.lowspeed='0' then -- High speed (64 bytes)
+          if r.sof_count > ((649+34+38)*4) then
             can_issue_request := true;
           end if;
-        else
-          if r.sof_count > ((616+34+38)*4*8) then
+        else                      -- Low speed (8 bytes)
+          if r.sof_count > ((112+34+38)*4*8) then -- TBD: this is wrong!
             can_issue_request := true;
           end if;
         end if;
         -- synthesis translate_off
-          if r.sof_count > 100 then
-            can_issue_request := true;
-          end if;
+        --  if r.sof_count > 100 then
+        --    can_issue_request := true;
+        --  end if;
         -- synthesis translate_on
 
         if ch.conf.enabled='1' then
@@ -705,6 +712,7 @@ BEGIN
       when SOF1 =>
         trans_pid_s     <= USBF_T_PID_SOF;
         trans_strobe_s  <= '1';
+        trans_speed_s   <= r.sr.fulllowspeed;
 
         if trans_status_s=COMPLETED then
           -- For all interrupt EPs, decrease counters
@@ -732,6 +740,7 @@ BEGIN
         trans_ep_s        <= r.ch(r.channel).conf.epnum;
         trans_addr_s      <= r.ch(r.channel).conf.address;
         trans_data_seq_s  <= r.ch(r.channel).trans.seq;
+        trans_speed_s     <= not r.ch(r.channel).conf.lowspeed;
 
         case trans_status_s is
           when ACK =>
@@ -770,7 +779,7 @@ BEGIN
         trans_ep_s      <= r.ch(r.channel).conf.epnum;
         trans_addr_s    <= r.ch(r.channel).conf.address;
         trans_data_seq_s  <= r.ch(r.channel).trans.seq;
-
+        trans_speed_s     <= not r.ch(r.channel).conf.lowspeed;
         case trans_status_s is
           when COMPLETED =>
             w.ch(r.channel).trans.cnt    := '0';
@@ -840,6 +849,7 @@ BEGIN
         trans_ep_s        <= r.ch(r.channel).conf.epnum;
         trans_addr_s      <= r.ch(r.channel).conf.address;
         trans_data_seq_s  <= r.ch(r.channel).trans.seq;
+        trans_speed_s     <= not r.ch(r.channel).conf.lowspeed;
 
         case trans_status_s is
           when COMPLETED  | ACK=>
@@ -1022,7 +1032,8 @@ BEGIN
   port map (
     usbclk_i          => usbclk_i,
     ausbrst_i         => ausbrst_i,
-    speed_i           => r.speed,
+    speed_i           => trans_speed_s,
+    hostspeed_i       => r.speed,
     fs_ce_i           => fs_ce_s,
     usb_rst_i         => usb_rst_phy,
     -- Transmission
@@ -1050,6 +1061,7 @@ BEGIN
     phy_rxvalid_i     => Phy_RxValid,
     phy_rxdata_i      => Phy_DataIn,
     phy_rxerror_i     => Phy_RxError,
+    phy_xcvrSelect_o  => Phy_XcvrSelect,
 
     -- Connection to EPMEM
 
@@ -1119,6 +1131,7 @@ BEGIN
             when OUT1                 => dbg_o(7 downto 5) <= "101";
             when SOF1                 => dbg_o(7 downto 5) <= "110";
             when SETUP1               => dbg_o(7 downto 5) <= "111";
+            when others               => dbg_o(7 downto 5) <= "111";
         end case; 
 
         if fs_ce_s='1' then

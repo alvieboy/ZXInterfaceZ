@@ -60,12 +60,12 @@ entity usb_tx_phy is
   port (
     clk              : in  std_logic;
     rst              : in  std_logic;
-    fs_ce            : in  std_logic;
     phy_mode         : in  std_logic;
     -- Transciever Interface
     txdp, txdn, txoe : out std_logic;
     -- UTMI Interface
     XcvrSelect_i     : in  std_logic; -- '0'
+    Polarity_i       : in  std_logic;
     DataOut_i        : in  std_logic_vector(7 downto 0);
     TxValid_i        : in  std_logic;
     TxReady_o        : out std_logic
@@ -101,6 +101,14 @@ architecture RTL of usb_tx_phy is
   signal txoe_r1, txoe_r2   : std_logic;
   signal fs_ce_q            : std_logic;
   signal ls_eop             : std_logic;
+  signal skip_eop           : std_logic;
+  signal skip_eop_r         : std_logic;
+  signal xcvrsel            : std_logic;
+  signal xcvrsel_2          : std_logic;
+  signal xcvrsel_3          : std_logic;
+  signal fs_ce              : std_logic;
+  signal switch_speed       : std_logic;
+  signal switch_speed_r     : std_logic;
 
   type state_type is (
     IDLE_STATE,
@@ -113,6 +121,19 @@ architecture RTL of usb_tx_phy is
   signal state, next_state  : state_type;
 
 begin
+
+--======================================================================================--
+  -- TX clock                                                                           --
+--======================================================================================--
+
+  txclkgen: entity work.usb_txclkgen
+  port map (
+    clk_i     => clk,
+    arstn_i   => rst,
+    speed_i   => xcvrsel_3,--XcvrSelect_i,
+    srst_i    => switch_speed_r,
+    tick_o    => fs_ce
+  );
 
   ls_eop <= '1' when XcvrSelect_i='0' and DataOut_i=x"A5" else '0';
 
@@ -151,7 +172,7 @@ begin
     elsif rising_edge(clk) then
       if ld_sop_d  ='1' or ls_eop='1' then
         tx_ip <= '1';
-      elsif eop_done ='1' then
+      elsif eop_done ='1' or switch_speed='1' then
         tx_ip <= '0';
       end if;
     end if;
@@ -321,9 +342,17 @@ begin
   begin
     if rst ='0' then
       append_eop <= '0';
+      skip_eop_r <= '0';
     elsif rising_edge(clk) then
+       if fs_ce='1' then
+         skip_eop_r <= '0';
+       end if;
       if ld_eop_d ='1' then
-        append_eop <= '1';
+        if skip_eop='0' then
+          append_eop <= '1';
+        else
+          skip_eop_r <= '1';
+        end if;
       elsif append_eop_sync2 ='1' then
         append_eop <= '0';
       end if;
@@ -344,7 +373,7 @@ begin
           append_eop_sync2 <= append_eop_sync1;
         end if;
         append_eop_sync3 <= append_eop_sync2 or -- Make sure always 2 bit wide
-                            (append_eop_sync3 and not append_eop_sync4);
+                            (append_eop_sync3 and not append_eop_sync4) or skip_eop_r;
         append_eop_sync4 <= append_eop_sync3;
       end if;
     end if;
@@ -383,15 +412,15 @@ begin
       txdp <= 'X';--XcvrSelect_i;
       txdn <= 'X';--not XcvrSelect_i;
     elsif rising_edge(clk) then
-      if fs_ce ='1' then
+--      if fs_ce ='1' then
         if phy_mode ='1' then
-          txdp <= (not append_eop_sync3 and (sd_nrzi_o xor not XcvrSelect_i));
-          txdn <= (not append_eop_sync3 and (sd_nrzi_o xor XcvrSelect_i));
+          txdp <= (not append_eop_sync3 and (sd_nrzi_o xor not Polarity_i));
+          txdn <= (not append_eop_sync3 and (sd_nrzi_o xor Polarity_i));
         else
           txdp <= sd_nrzi_o;
           txdn <= append_eop_sync3;
         end if;
-      end if;
+--      end if;
     end if;
   end process;
 
@@ -408,7 +437,43 @@ begin
     end if;
   end process;
 
-  p_next_state: process (rst, state, TxValid_i, data_done, sft_done_e, eop_done, fs_ce, DataOut_i, XcvrSelect_i)
+  process(clk,rst)
+  begin
+    if rst='0' then
+      skip_eop <= '0';
+    elsif rising_edge(clk) then
+
+      if fs_ce='1' then
+        xcvrsel_2 <= xcvrsel;
+        xcvrsel_3 <= xcvrsel_2;
+      end if;
+
+      case (state) is
+        when IDLE_STATE =>
+          if TxValid_i='1' then
+            --if DataOut_i(3 downto 0)=x"C" then -- Special case, PRE PID
+            --  skip_eop <= '1';
+            --else
+            --  skip_eop <= '0';
+            --end if;
+            xcvrsel   <= XcvrSelect_i;
+            xcvrsel_2 <= XcvrSelect_i;
+            xcvrsel_3 <= XcvrSelect_i;
+          end if;
+        when DATA_STATE =>
+          if sft_done_e='1' then
+            xcvrsel   <= XcvrSelect_i;
+          end if;
+        when others =>
+          null;
+      end case;
+
+
+    end if;
+  end process;
+
+
+  p_next_state: process (rst, state, TxValid_i, data_done, sft_done_e, eop_done, fs_ce, DataOut_i, XcvrSelect_i, skip_eop)
   begin
     --if rst='0' then
     --  next_state <= IDLE_STATE;
@@ -429,6 +494,8 @@ begin
                            end if;
         when DATA_STATE => if data_done ='0' and sft_done_e ='1' then
                              next_state <= EOP1_STATE;
+                           elsif sft_done_e='1' and xcvrsel/=XcvrSelect_i then
+                            next_state <= WAIT_STATE;--SOP_STATE;
                            ELSE
                              next_state <= DATA_STATE;
                           end if;
@@ -452,8 +519,13 @@ begin
     --end if;
   end process;
 
-  ld_sop_d  <= TxValid_i  when state = IDLE_STATE else '0';
-  ld_data_d <= sft_done_e when state = SOP_STATE or (state = DATA_STATE and data_done ='1') else '0';
+
+  switch_speed <= '1' when (state = DATA_STATE AND sft_done_e='1' and xcvrsel/=XcvrSelect_i) else '0';
+
+  ld_sop_d  <= TxValid_i  when state = IDLE_STATE
+          --or switch_speed='1'
+          else '0';
+  ld_data_d <= sft_done_e when state = SOP_STATE or (state = DATA_STATE and data_done ='1' and switch_speed='0') else '0';
   ld_eop_d  <= sft_done_e when state = Data_STATE and data_done ='0' else
              '1' when state = IDLE_STATE and ls_eop='1' else
   '0';

@@ -39,6 +39,7 @@ entity usb_txclkgen is
   port (
     clk_i     : in std_logic; -- 48Mhz
     arstn_i   : in std_logic;
+    srst_i    : in std_logic;
     speed_i   : in std_logic; -- '0': Low-speed, '1': High-speed
     tick_o    : out std_logic
   );
@@ -58,7 +59,11 @@ begin
     if arstn_i='0' then
       pll_counter_r <= (others => '0');
     elsif rising_edge(clk_i) then
-      pll_counter_r <= pll_counter_r + 1;
+      if srst_i='1' then
+        pll_counter_r <= (others =>'0');
+      else
+        pll_counter_r <= pll_counter_r + 1;
+      end if;
     end if;
   end process;
 

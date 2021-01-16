@@ -172,7 +172,7 @@ pid_DATA2 <= pid_DATA2_i;
 pid_MDATA <= pid_MDATA_i;
 pid_ACK <= pid_ACK_i;
 pid_NACK <= pid_NACK_i;
-
+--pid_PRE  <= pid_PRE_i;
 
 process(clk,rst)
 begin

@@ -63,6 +63,7 @@ entity usb_phy is
 
     -- UTMI Interface
     XcvrSelect_i     : in std_logic;
+    HostXcvrSelect_i : in std_logic;
     DataOut_i        : in  std_logic_vector(7 downto 0);
     TxValid_i        : in  std_logic;
     TxReady_o        : out std_logic;
@@ -101,17 +102,6 @@ begin
   LineState_o  <= LineState;
   txoe         <= txoe_out;
 
---======================================================================================--
-  -- TX clock                                                                           --
---======================================================================================--
-
-  txclkgen: entity work.usb_txclkgen
-  port map (
-    clk_i     => clk,
-    arstn_i   => rst,
-    speed_i   => XcvrSelect_i,
-    tick_o    => tx_ce
-  );
 
 --======================================================================================--
   -- TX Phy                                                                             --
@@ -121,7 +111,6 @@ begin
   port map (
     clk        => clk,
     rst        => rst,
-    fs_ce      => tx_ce,
     phy_mode   => phy_tx_mode,
     -- Transciever Interface
     txdp       => txdp,
@@ -129,6 +118,7 @@ begin
     txoe       => txoe_out,
     -- UTMI Interface
     XcvrSelect_i => XcvrSelect_i,
+    Polarity_i    => HostXcvrSelect_i,
     DataOut_i  => DataOut_i,
     TxValid_i  => TxValid_i,
     TxReady_o  => TxReady_o

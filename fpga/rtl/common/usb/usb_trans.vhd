@@ -16,6 +16,8 @@ ENTITY usb_trans IS
     -- Transmission
     pid_i       : in std_logic_vector(3 downto 0);
     speed_i     : in std_logic;
+    hostspeed_i : in std_logic;
+
     fs_ce_i     : in std_logic;
     usb_rst_i   : in std_logic;
 
@@ -40,7 +42,7 @@ ENTITY usb_trans IS
     phy_rxvalid_i     : in std_logic;
     phy_rxdata_i      : in std_logic_vector(7 downto 0);
     phy_rxerror_i     : in std_logic;
-
+    phy_xcvrselect_o  : out std_logic;
     -- Connection to EPMEM
 
     urd_o       : out std_logic;
@@ -90,23 +92,29 @@ architecture beh of usb_trans is
     SEND_ACK,
     SEND_NACK,
     CRCERROR,
-    COMPLETE
+    COMPLETE,
+    DELAY4
   );
 
   -- Debug counters
 
+  -- host looks like 583ns.
   constant C_DEFAULT_ITG : natural := 4; --((3)*4); -- 3 bit times
-  constant C_RX_TIMEOUT  : natural := 7+8+8+8; --((7+8)*4); -- 7+8 bit times
+  constant C_RX_TIMEOUT_LS  : natural := 18;  -- USB 2.0 spec 7.1.19.1
+  constant C_RX_TIMEOUT_FS  : natural := 816; -- USB 2.0 spec 7.1.19.2
 
   type regs_type is record
     token_data  : std_logic_vector(10 downto 0); -- Frame or Addr/EP pair
     pid         : std_logic_vector(3 downto 0);
+    pid_q       : std_logic_vector(3 downto 0);
     txsize      : std_logic_vector(6 downto 0);
     addr        : unsigned(9 downto 0);
     state       : state_type;
     txcrc16     : std_logic_vector(15 downto 0);
-    rxtimeout   : natural range 0 to C_RX_TIMEOUT-1;
+    rxtimeout   : natural range 0 to C_RX_TIMEOUT_FS-1;
     seq         : std_logic;
+    speed       : std_logic;
+    delay       : unsigned(1 downto 0);
     seq_valid     : std_logic;
     pd_resetn     : std_logic;
     cnt_ack       : unsigned(7 downto 0);
@@ -226,6 +234,8 @@ begin
   udata_o <= rx_data_st;
   dsize_o <= r.txsize; -- Reused for RX
 
+  phy_xcvrselect_o  <= r.speed;
+
   process(usbclk_i, r, pid_i, daddr_i, dsize_i,data_seq_i,strobe_i,frame_i, addr_i, ep_i,
     phy_txactive_i, phy_txready_i, phy_rxactive_i, crc5_out_s, udata_i, crc16_out_s, rx_data_valid,
     rx_data_done,pid_ACK,pid_NACK, ausbrst_i, speed_i, fs_ce_i,crc16_err,seq_err,pid_STALL,
@@ -240,34 +250,62 @@ begin
     uwr_o             <= '0';
     status_o          <= BUSY;
     crc16_in_s        <= (others => 'X');
-
     w.pd_resetn       := '1'; -- Default out of reset
+    w.delay           := (others => 'X');
 
     case r.state is
       when IDLE =>
         status_o          <= IDLE;
         w.pid         := pid_i;
+        w.pid_q       := pid_i;
         w.token_data  := ep_i & addr_i;
         w.addr        := unsigned(daddr_i);
         w.txsize      := dsize_i;
         w.txcrc16     := (others => 'X');
         w.seq         := data_seq_i;
+        w.speed       := speed_i;
 
         if strobe_i='1' then
           if pid_i=USBF_T_PID_SOF then
             w.token_data  := frame_i;
+            w.speed       := hostspeed_i; -- Force HOST speed for SOF packets
+            w.state       := SENDPID;
+          elsif speed_i='0' and hostspeed_i='1' then
+            w.speed       := hostspeed_i;
+            w.pid         := USBF_T_PID_PRE;
+            w.state       := SENDPID;
+          else
+            --w.speed       := hostspeed_i;
+            w.state       := SENDPID;
           end if;
+        end if;
+      when DELAY4 =>
+
+        status_o    <= IDLE;
+        w.pid       := r.pid_q;
+        if r.delay=0 then
           w.state := SENDPID;
+          w.speed := speed_i;
+        else
+          w.delay := r.delay -1;
         end if;
 
       when SENDPID =>
+        --phy_xcvrselect_o  <= hostspeed_i;
         phy_txdata_o      <= genpid(r.pid);
         phy_data_valid_o  <= '1';
         w.txcrc16         := (others => '1');
         status_o          <= BUSY;
+
         if phy_txready_i='1' then
-          if is_token_pid(r.pid) then
+          if is_pre_pid(r.pid) then
+            --w.state       := FLUSH;
+            w.pid   := r.pid_q;
+            w.speed := '0';
+          elsif is_token_pid(r.pid) then
+
             w.state       := TOKEN1;
+
           elsif is_data_pid(r.pid) then
             if r.txsize/=0 then
               urd_o         <= '1';
@@ -284,7 +322,7 @@ begin
           end if;
 
           -- Special case EOP generation
-          if r.pid=USBF_T_PID_SOF and speed_i='0' then
+          if r.pid=USBF_T_PID_SOF and hostspeed_i='0' then
             w.state := FLUSH;
           end if;
 
@@ -325,20 +363,40 @@ begin
               -- synthesis translate_off
               if rising_edge(usbclk_i) then report "Moving to data RX stage"; end if;
               -- synthesis translate_on
-              w.rxtimeout   := C_RX_TIMEOUT - 1;
+              if speed_i='0' then
+                w.rxtimeout   := C_RX_TIMEOUT_LS - 1;
+              else
+                w.rxtimeout   := C_RX_TIMEOUT_FS - 1;
+              end if;
               w.state       := WAIT_RX;
             elsif r.pid=USBF_T_PID_SETUP or r.pid=USBF_T_PID_OUT then
               -- Move to data stage.
               if r.seq='0' then
                 w.pid         := USBF_T_PID_DATA0;
+                w.pid_q       := USBF_T_PID_DATA0;
               else
                 w.pid         := USBF_T_PID_DATA1;
+                w.pid_q       := USBF_T_PID_DATA1;
               end if;
+
+              if speed_i='0' and hostspeed_i='1' then
+                w.speed       := hostspeed_i;
+                w.pid         := USBF_T_PID_PRE;
+              end if;
+
+
               w.state       := SENDPID;
               -- synthesis translate_off
               if rising_edge(usbclk_i) then report "Set up data stage"; end if;
               -- synthesis translate_on
-  
+            elsif r.pid=USBF_T_PID_PRE then
+              --w.state       := DELAY4;
+              --w.delay       := "11";
+              w.state := SENDPID;
+              w.speed := speed_i;
+              w.pid   := r.pid_q;
+
+
             else
               -- synthesis translate_off
               if rising_edge(usbclk_i) then report "Transaction completed"; end if;
@@ -595,8 +653,10 @@ begin
       r.txsize      <= (others => 'X');
       r.addr        <= (others => 'X');
       r.txcrc16     <= (others => 'X');
-      r.rxtimeout   <= C_RX_TIMEOUT-1;
+      r.rxtimeout   <= C_RX_TIMEOUT_FS-1;
       r.seq         <= 'X';
+      r.speed       <= 'X';
+      r.delay       <= (others => 'X');
 
       if C_USB_TRANS_USE_COUNTERS then
         r.cnt_ack         <= (others => '0');

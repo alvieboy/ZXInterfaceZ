@@ -48,6 +48,8 @@ package usbpkg is
   function is_token_pid(pidin: std_logic_vector(3 downto 0)) return boolean;
   function is_data_pid(pidin: std_logic_vector(3 downto 0)) return boolean;
   function is_handshake_pid(pidin: std_logic_vector(3 downto 0)) return boolean;
+  function is_pre_pid(pidin: std_logic_vector(3 downto 0)) return boolean;
+
   function needack(pidin: std_logic_vector(3 downto 0)) return boolean;
   function needdata(pidin: std_logic_vector(3 downto 0)) return boolean;
   function inv(value: in std_logic_vector) return std_logic_vector;
@@ -83,6 +85,11 @@ package body usbpkg is
   function is_token_pid(pidin: std_logic_vector(3 downto 0)) return boolean is
   begin
     return pidin(1 downto 0)="01";
+  end function;
+
+  function is_pre_pid(pidin: std_logic_vector(3 downto 0)) return boolean is
+  begin
+    return pidin = USBF_T_PID_PRE;
   end function;
 
   function is_data_pid(pidin: std_logic_vector(3 downto 0)) return boolean is

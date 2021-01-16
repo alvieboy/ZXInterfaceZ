@@ -156,6 +156,7 @@ begin
 
     -- UTMI Interface
     XcvrSelect_i     => speed_s,
+    HostXcvrSelect_i => speed_s,
     DataOut_i        => DataOut_s,
     TxValid_i        => TxValid_s,
     TxReady_o        => TxReady_s,
@@ -281,6 +282,7 @@ begin
         Data_o.SOFStamp <= now;
       end if;
     elsif token_valid'event and token_valid='1' then
+    report "******* PID ********";
     if pid_SOF='1' then
       Data_o.SOFStamp <= now;
       report "******* SOF ******** frame=" & str(to_integer(unsigned(frame_no)));
@@ -297,6 +299,9 @@ begin
     if pid_ACK='1' then
       report "******* ACK token ********";
     end if;
+    if pid_PRE='1' then
+      report "******* PRE token ********";
+    end if;
     end if;
   end process;
 
@@ -311,7 +316,7 @@ begin
   begin
     wait on crc16_err, rx_data_valid, rx_data_done, token_valid;
     if crc16_err='1' then
-      report "CRC16 error detected!!!!" severity failure;
+      report "CRC16 error detected!!!!";
     else
       if rx_data_valid='1' then
         report "USB data " &hstr(rx_data_st);

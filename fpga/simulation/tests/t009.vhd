@@ -30,7 +30,7 @@ begin
     );
 
     Usbdevice_Cmd.Enabled <= true;
-    Usbdevice_Cmd.FullSpeed <= false;
+    Usbdevice_Cmd.FullSpeed <= true;
 
     wait for 2 us;
 
@@ -139,7 +139,7 @@ begin
     Check("012: Device on USB bus", spiPayload_out_s(4)(0), '1');
     Check("013: USB NOT in reset", spiPayload_out_s(4)(4), '0');
 
-    wait on Usbdevice_Data.SOFStamp for 100 us;
+    wait on Usbdevice_Data.SOFStamp for 10 us;
 
     checkInterrupt('1');
     --Check("014: USB not interrupt", CtrlPins_Data.USB_INTn, '1');
@@ -167,18 +167,24 @@ begin
 
     spiPayload_in_s(0) <= x"61"; -- USB write
     spiPayload_in_s(1) <= x"00";
-    spiPayload_in_s(2) <= x"40"; -- Adresss
+    spiPayload_in_s(2) <= x"80"; -- Adresss
 
     spiPayload_in_s(3) <= x"3F"; -- EPtype 0, max size 64
-    spiPayload_in_s(4) <= x"20"; -- Ep 0, OUT
-    spiPayload_in_s(5) <= x"9C"; -- Address 28, enabled
+    spiPayload_in_s(4) <= x"00"; -- Ep 0, OUT, High-speed
+    spiPayload_in_s(5) <= x"80"; -- Address 0, enabled
     spiPayload_in_s(6) <= x"FF"; -- All interrupts enabled
-    spiPayload_in_s(7) <= x"FF"; -- All interrupt clear
-    spiPayload_in_s(8) <= x"03"; -- Transaction 1: dpid 11
-    spiPayload_in_s(9) <= x"00";  -- epaddr
-    spiPayload_in_s(10) <= x"86"; -- Transaction 1: size 6, count 1
 
-    Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 11, spiPayload_in_s, spiPayload_out_s);
+    spiPayload_in_s(7) <= x"FF"; -- All interrupt clear
+    spiPayload_in_s(8) <= x"01"; -- Interval
+    spiPayload_in_s(9) <= x"00"; --
+    spiPayload_in_s(10) <= x"00"; --
+
+
+    spiPayload_in_s(11) <= x"03"; -- Transaction 1: dpid 11
+    spiPayload_in_s(12) <= x"00";  -- epaddr
+    spiPayload_in_s(13) <= x"86"; -- Transaction 1: size 6, count 1
+
+    Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 14, spiPayload_in_s, spiPayload_out_s);
 
     wait on CtrlPins_Data.IO27 for 200 us;
 
