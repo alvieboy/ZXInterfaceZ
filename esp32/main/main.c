@@ -449,9 +449,6 @@ void app_main()
 
     rom_hook__enable_defaults();
 
-    // Power on USB
-    usb_ll__set_power(1);
-
     unsigned iter = 0;
     while(1) {
         uint8_t c;
