@@ -14,6 +14,16 @@ static scsidev_t* scsi_devices[FF_VOLUMES] = { NULL };
 
 static void ff_diskio_register_scsidev(BYTE pdrv, scsidev_t* dev);
 
+static BYTE ff_diskio_get_pdrv_card(const scsidev_t *d)
+{
+    int i;
+    for (i=0;i<FF_VOLUMES;i++) {
+        if (scsi_devices[i]==d)
+            return i;
+    }
+    return 0xFF;
+}
+
 static DSTATUS ff_scsidev_initialize(unsigned char pdrv)
 {
     ESP_LOGI(TAG,"initialise");
@@ -201,5 +211,24 @@ esp_err_t vfs_fat_scsi_mount(const char* base_path,
     return err;
 }
 
+esp_err_t vfs_fat_scsi_umount(scsidev_t *dev, const char *mountpoint)
+{
+    BYTE pdrv = ff_diskio_get_pdrv_card(dev);
+
+    if (pdrv == 0xff) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    char drv[3] = {(char)('0' + pdrv), ':', 0};
+    f_mount(0, drv, 0);
+
+    ff_diskio_unregister(pdrv);
+
+    esp_err_t err = esp_vfs_fat_unregister_path(mountpoint);
+
+    ff_diskio_unregister_scsidev(pdrv, dev);
+
+    return err;
+}
 
 #endif

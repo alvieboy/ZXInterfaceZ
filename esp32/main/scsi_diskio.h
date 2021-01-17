@@ -8,5 +8,6 @@ esp_err_t vfs_fat_scsi_mount(const char* base_path,
                              scsidev_t *dev,
                              const esp_vfs_fat_mount_config_t* mount_config);
 
+esp_err_t vfs_fat_scsi_umount(scsidev_t *dev, const char *mountpoint);
 
 #endif
