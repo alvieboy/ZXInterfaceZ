@@ -18,6 +18,8 @@ begin
     --Check("103: USB interrupt", CtrlPins_Data.USB_INTn, '0');
     end procedure;
 
+    constant test_high_speed: boolean := true;
+
   begin
 
     logger_start("T009","USB");
@@ -30,7 +32,7 @@ begin
     );
 
     Usbdevice_Cmd.Enabled <= true;
-    Usbdevice_Cmd.FullSpeed <= true;
+    Usbdevice_Cmd.FullSpeed <= test_high_speed;
 
     wait for 2 us;
 
@@ -89,7 +91,11 @@ begin
 
     Check("002: Device on USB bus", spiPayload_out_s(4)(0), '1');
     --Check("003: Connection event on USB bus", spiPayload_out_s(4)(1), '1');
-    Check("004: Low-speed operation", spiPayload_out_s(4)(6), '0');
+    if test_high_speed then
+      Check("004: High-speed operation", spiPayload_out_s(4)(6), '1');
+    else
+      Check("004: Low-speed operation", spiPayload_out_s(4)(6), '0');
+    end if;
 
     spiPayload_in_s(0) <= x"60"; -- USB read
     spiPayload_in_s(1) <= x"00";
@@ -149,14 +155,28 @@ begin
     spiPayload_in_s(0) <= x"61"; -- USB write
     spiPayload_in_s(1) <= x"04";
     spiPayload_in_s(2) <= x"00"; -- Adresss
-    spiPayload_in_s(3) <= x"80"; -- bmRequestType
-    spiPayload_in_s(4) <= x"06"; -- get descriptor
-    spiPayload_in_s(5) <= x"01"; --
+
+    --spiPayload_in_s(3) <= x"80"; -- bmRequestType
+    --spiPayload_in_s(4) <= x"06"; -- get descriptor
+    --spiPayload_in_s(5) <= x"01"; --
+    --spiPayload_in_s(6) <= x"00"; -- device
+    --spiPayload_in_s(7) <= x"00";
+    --spiPayload_in_s(8) <= x"00"; -- wIndex
+    --spiPayload_in_s(9) <= x"00";
+    --spiPayload_in_s(10) <= x"3F"; -- wLength
+
+    -- Payload with bit stuff on last CRC16 bit
+
+    spiPayload_in_s(3) <= x"ab"; -- bmRequestType
+    spiPayload_in_s(4) <= x"00"; -- get descriptor
+    spiPayload_in_s(5) <= x"00"; --
     spiPayload_in_s(6) <= x"00"; -- device
     spiPayload_in_s(7) <= x"00";
     spiPayload_in_s(8) <= x"00"; -- wIndex
     spiPayload_in_s(9) <= x"00";
-    spiPayload_in_s(10) <= x"12"; -- wLength
+    spiPayload_in_s(10) <= x"00"; -- wLength
+
+
     Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 11, spiPayload_in_s, spiPayload_out_s);
 
 
@@ -170,7 +190,12 @@ begin
     spiPayload_in_s(2) <= x"80"; -- Adresss
 
     spiPayload_in_s(3) <= x"3F"; -- EPtype 0, max size 64
-    spiPayload_in_s(4) <= x"00"; -- Ep 0, OUT, High-speed
+    if test_high_speed then
+      spiPayload_in_s(4) <= x"00"; -- Ep 0, OUT, High-speed
+    else
+      spiPayload_in_s(4) <= x"40"; -- Ep 0, OUT, Low-speed
+    end if;
+
     spiPayload_in_s(5) <= x"80"; -- Address 0, enabled
     spiPayload_in_s(6) <= x"FF"; -- All interrupts enabled
 
@@ -182,7 +207,7 @@ begin
 
     spiPayload_in_s(11) <= x"03"; -- Transaction 1: dpid 11
     spiPayload_in_s(12) <= x"00";  -- epaddr
-    spiPayload_in_s(13) <= x"86"; -- Transaction 1: size 6, count 1
+    spiPayload_in_s(13) <= x"88"; -- Transaction 1: size 8, count 1
 
     Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 14, spiPayload_in_s, spiPayload_out_s);
 

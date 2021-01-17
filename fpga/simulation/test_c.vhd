@@ -142,3 +142,12 @@ configuration t018 of tb_top is
         end for;
     end for;
 end t018;
+
+
+configuration t019 of tb_top is
+    for sim
+        for tbc: tbc_device
+            use entity work.tbc_device(t019);
+        end for;
+    end for;
+end t019;
