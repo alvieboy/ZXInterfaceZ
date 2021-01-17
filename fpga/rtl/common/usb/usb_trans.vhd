@@ -270,12 +270,12 @@ begin
             w.token_data  := frame_i;
             w.speed       := hostspeed_i; -- Force HOST speed for SOF packets
             w.state       := SENDPID;
-          elsif speed_i='0' and hostspeed_i='1' then
-            w.speed       := hostspeed_i;
-            w.pid         := USBF_T_PID_PRE;
-            w.state       := SENDPID;
+--          elsif speed_i='0' and hostspeed_i='1' then
+--            w.speed       := hostspeed_i;
+--            w.pid         := USBF_T_PID_PRE;
+--            w.state       := SENDPID;
           else
-            --w.speed       := hostspeed_i;
+            w.speed       := speed_i;--hostspeed_i;
             w.state       := SENDPID;
           end if;
         end if;
@@ -379,10 +379,10 @@ begin
                 w.pid_q       := USBF_T_PID_DATA1;
               end if;
 
-              if speed_i='0' and hostspeed_i='1' then
-                w.speed       := hostspeed_i;
-                w.pid         := USBF_T_PID_PRE;
-              end if;
+              --if speed_i='0' and hostspeed_i='1' then
+              --  w.speed       := hostspeed_i;
+              --  w.pid         := USBF_T_PID_PRE;
+              --end if;
 
 
               w.state       := SENDPID;

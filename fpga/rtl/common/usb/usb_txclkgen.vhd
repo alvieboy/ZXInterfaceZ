@@ -57,12 +57,12 @@ begin
   process(clk_i, arstn_i)
   begin
     if arstn_i='0' then
-      pll_counter_r <= (others => '0');
+      pll_counter_r <= "00011";
     elsif rising_edge(clk_i) then
       if srst_i='1' then
-        pll_counter_r <= (others =>'0');
+        pll_counter_r <= "00011";
       else
-        pll_counter_r <= pll_counter_r + 1;
+        pll_counter_r <= pll_counter_r - 1;
       end if;
     end if;
   end process;

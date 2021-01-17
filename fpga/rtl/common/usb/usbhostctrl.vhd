@@ -119,7 +119,7 @@ ARCHITECTURE rtl OF usbhostctrl is
   signal cnt_cplt_s      : std_logic_vector(7 downto 0);
 
 
-  constant C_SOF_TIMEOUT: natural   := altsim(48000, 48000); -- 1ms 
+  constant C_SOF_TIMEOUT: natural   := altsim(48000, 4800*2); -- 1ms, 100us
   constant C_ATTACH_DELAY: natural  := altsim(480000, 4);-- 48000; -- 10 ms
   constant C_NUM_CHANNELS: natural  := 8;
   constant C_RESET_DELAY: natural   := altsim(48000*50,500); -- 50 ms

@@ -109,16 +109,16 @@ begin
 
   i_tx_phy: entity work.usb_tx_phy
   port map (
-    clk        => clk,
-    rst        => rst,
-    phy_mode   => phy_tx_mode,
+    clk_i       => clk,
+    arstn_i     => rst,
+    OpMode_i    => phy_tx_mode,
     -- Transciever Interface
     txdp       => txdp,
     txdn       => txdn,
-    txoe       => txoe_out,
+    txoen_o    => txoe_out,
     -- UTMI Interface
     XcvrSelect_i => XcvrSelect_i,
-    Polarity_i    => HostXcvrSelect_i,
+    TermSelect_i    => HostXcvrSelect_i,
     DataOut_i  => DataOut_i,
     TxValid_i  => TxValid_i,
     TxReady_o  => TxReady_o
