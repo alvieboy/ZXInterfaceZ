@@ -2,8 +2,55 @@
 #include "log.h"
 #include "scsidev.h"
 #include "scsi_diskio.h"
+#include <string.h>
 
 #define STORAGETAG "STORAGE"
+
+#define MAX_MOUNTED_DEVICES 4
+
+struct {
+    char *basepath;
+    void *dev;
+} mount_devices[MAX_MOUNTED_DEVICES] = {0};
+
+
+static int storage__register_mount_device(const char *basepath, void *dev)
+{
+    int i;
+    for (i=0;i<MAX_MOUNTED_DEVICES;i++) {
+        if (mount_devices[i].basepath==0) {
+            mount_devices[i].basepath = strdup(basepath);
+            mount_devices[i].dev = dev;
+            return 0;
+        }
+    }
+    return -1;
+}
+
+static int storage__unregister_mount_device(const char *basepath)
+{
+    int i;
+    for (i=0;i<MAX_MOUNTED_DEVICES;i++) {
+        if (strcmp(mount_devices[i].basepath, basepath)==0) {
+            free(mount_devices[i].basepath);
+            mount_devices[i].basepath = NULL;
+            mount_devices[i].dev = 0;
+            return 0;
+        }
+    }
+    return -1;
+}
+
+static const char *storage__get_mountpoint(void *dev)
+{
+    int i;
+    for (i=0;i<MAX_MOUNTED_DEVICES;i++) {
+        if (dev == mount_devices[i].dev) {
+            return mount_devices[i].basepath;
+        }
+    }
+    return NULL;
+}
 
 void storage__attach_scsidev(scsidev_t *dev)
 {
@@ -25,7 +72,18 @@ void storage__attach_scsidev(scsidev_t *dev)
     if (r!=ESP_OK) {
         ESP_LOGE(STORAGETAG,"Cannot register filesystem");
     }
+    storage__register_mount_device(name, dev);
 #endif
+}
+
+void storage__detach_scsidev(scsidev_t *dev)
+{
+    const char *mp = storage__get_mountpoint(dev);
+    if (mp==NULL)
+        return;
+
+    vfs_fat_scsi_umount(dev, mp);
+    storage__unregister_mount_device(mp);
 }
 
 static void storage__handleevent(const systemevent_t *event, void*user)
@@ -36,6 +94,10 @@ static void storage__handleevent(const systemevent_t *event, void*user)
     case SYSTEMEVENT_STORAGE_BLOCKDEV_ATTACH:
         storage__attach_scsidev(event->ctxdata);
         break;
+    case SYSTEMEVENT_STORAGE_BLOCKDEV_DETACH:
+        storage__detach_scsidev(event->ctxdata);
+        break;
+
     default:
         break;
     }
