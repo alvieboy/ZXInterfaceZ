@@ -160,6 +160,7 @@ rom_hook.c            \
 spectrum_kbd.c        \
 systemevent.c 	      \
 storage.c             \
+usbhubdev.c           \
 wsys/charmap.c        \
 wsys/tomthumb.c        
 

@@ -4,6 +4,7 @@
 #include <freertos/semphr.h>
 #include <stdlib.h>
 #include <vector>
+#include <algorithm>
 
 static bool initialized = false;
 
@@ -17,7 +18,9 @@ struct esp_timer {
     unsigned cnt;
 };
 
-static std::vector<struct esp_timer *> timers;
+typedef std::vector<struct esp_timer *> timerlist_t;
+
+static timerlist_t timers;
 
 static void esp_timer_lock()
 {
@@ -31,6 +34,16 @@ static void esp_timer_unlock()
     xSemaphoreGive(timer_sem);
 }
 
+esp_err_t esp_timer_delete(struct esp_timer *timer)
+{
+    esp_timer_lock();
+    timerlist_t::iterator i;
+    i = std::find(timers.begin(), timers.end(), timer);
+    if (i!=timers.end())
+        timers.erase(i);
+    esp_timer_unlock();
+    return 0;
+}
 
 extern "C" void esp_timer_task(void*)
 {

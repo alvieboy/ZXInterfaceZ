@@ -20,6 +20,7 @@ struct epchannel
     void *user;
     uint8_t out_data[512];
     uint8_t in_data[512];
+    uint8_t fullspeed:1;
     unsigned out_datalen;
     unsigned in_datalen;
     bool indataready;
@@ -282,10 +283,17 @@ int usb_ll__submit_request(uint8_t channel,
     return r;
 }
 
+void usb_ll__set_seq(uint8_t channel, uint8_t seq)
+{
+    //channel_conf[channel].seq = seq&1;
+}
+
+
 int usb_ll__alloc_channel(uint8_t devaddr,
                           eptype_t eptype,
                           uint8_t maxsize,
                           uint8_t epnum,
+                          uint8_t fullspeed,
                           void *userdata)
 {
     int i;
@@ -296,6 +304,7 @@ int usb_ll__alloc_channel(uint8_t devaddr,
             channels[i].maxsize = maxsize;
             channels[i].epnum = epnum;
             channels[i].user = userdata;
+            channels[i].fullspeed = fullspeed;
             channels[i].indataready = false;
             return i;
         }
