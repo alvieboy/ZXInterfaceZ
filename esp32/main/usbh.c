@@ -5,6 +5,7 @@
 #include "freertos/task.h"
 #include "freertos/event_groups.h"
 #include "freertos/queue.h"
+#include "freertos/semphr.h"
 #include "usbh.h"
 #include "usb_driver.h"
 #include "usb_descriptor.h"
@@ -19,16 +20,18 @@
 
 static xQueueHandle usb_cmd_queue = NULL;
 static xQueueHandle usb_cplt_queue = NULL;
+static SemaphoreHandle_t transaction_sem;
 
 struct usbcmd
 {
-    int cmd;
+    uint8_t cmd;
     void *data;
 };
 
 struct usbresponse
 {
     int status;
+    int param;
     void *data;
 };
 
@@ -50,21 +53,44 @@ static int usbh__control_request_completed_reply(uint8_t chan, uint8_t stat, str
 static int usbh__request_completed_reply(uint8_t chan, uint8_t stat, void *req);
 static int usbh__issue_setup_data_request(struct usb_request *req);
 
+static void usbh__lock_transaction()
+{
+    if (xSemaphoreTake( transaction_sem,  portMAX_DELAY )!= pdTRUE) {
+        ESP_LOGE(TAG, "Cannot take semaphore");
+        return;
+    }
+}
+
+static void usbh__unlock_transaction()
+{
+    xSemaphoreGive(transaction_sem);
+}
+
 void usb_ll__connected_callback(uint8_t fullspeed)
+{
+    usbh__hub_port_connected(&root_hub, 1, fullspeed?USB_FULL_SPEED:USB_LOW_SPEED);
+
+}
+void usbh__hub_port_connected(struct usb_hub *h, int port, usb_speed_t speed)
 {
     struct usbresponse resp;
 
     // Connected device.
-    ESP_LOGI(USBHTAG,"USB connection event");
-    if (fullspeed)
+    ESP_LOGI(USBHTAG,"USB connection event, speed %s", speed==USB_FULL_SPEED?"FULL":"LOW");
+    if (speed == USB_FULL_SPEED)
         resp.status = USB_STAT_ATTACHED_FULLSPEED;
     else
         resp.status = USB_STAT_ATTACHED_LOWSPEED;
+
+    resp.param = port;
+    resp.data = h;
 
     if (xQueueSend(usb_cplt_queue, &resp, 0)!=pdTRUE) {
         ESP_LOGE(USBHTAG, "Cannot queue!!!");
     }
 }
+
+
 
 static void usbh__ll_task(void *pvParam)
 {
@@ -167,10 +193,13 @@ static void usbh__main_task(void *pvParam)
         if (xQueueReceive(usb_cplt_queue, &resp, portMAX_DELAY)==pdTRUE)
         {
             USBHDEBUG(" >>> got status %d", resp.status);
+
+            struct usb_hub *h = resp.data;
+
             if (resp.status == USB_STAT_ATTACHED_FULLSPEED) {
-                usbhub__port_reset(&root_hub, USB_FULL_SPEED);
+                usbhub__port_reset(h, resp.param, USB_FULL_SPEED);
             } else if (resp.status == USB_STAT_ATTACHED_LOWSPEED) {
-                usbhub__port_reset(&root_hub, USB_LOW_SPEED);
+                usbhub__port_reset(h, resp.param, USB_LOW_SPEED);
             }
         } else {
             ESP_LOGE(USBHTAG, "Queue error!!!");
@@ -476,6 +505,9 @@ void usbh__submit_request(struct usb_request *req)
     struct usbcmd cmd;
     cmd.cmd = USB_CMD_SUBMITREQUEST;
     cmd.data = req;
+
+    usbh__lock_transaction();
+
     xQueueSend( usb_cmd_queue, &cmd, portMAX_DELAY);
     taskYIELD();
 }
@@ -517,6 +549,53 @@ static void usbh__submit_request_to_ll(struct usb_request *req)
     }
 }
 
+int usbh__control_msg(struct usb_device *dev,
+                      uint8_t request,
+                      uint8_t type,
+                      uint16_t value,
+                      uint16_t index,
+                      uint8_t * data,
+                      uint16_t length,
+                      int timeout_ticks,
+                      unsigned *size_transferred)
+{
+    struct usb_request req = {0};
+
+    req.device = dev;
+    req.target = data;
+    req.length = length;
+    req.rptr = data;
+    req.size_transferred = 0;
+    if (type & USB_DEVICE_TO_HOST)
+        req.direction = REQ_DEVICE_TO_HOST;
+    else
+        req.direction = REQ_HOST_TO_DEVICE;
+
+    req.control = 1;
+    req.retries = 3;
+    req.channel = dev->ep0_chan;
+
+    USBHDEBUG("Control request type %02x", type);
+
+    req.setup.bmRequestType = type;
+    req.setup.bRequest = request;
+    req.setup.wValue = __le16(value);
+    req.setup.wIndex = __le16(index);
+    req.setup.wLength = __le16(length);
+
+    usbh__submit_request(&req);
+
+    // Wait.
+    if (usbh__wait_completion(&req, timeout_ticks)<0) {
+        return -1;
+    }
+
+    if (size_transferred)
+        *size_transferred = req.size_transferred;
+
+    return 0;
+}
+
 int usbh__get_descriptor(struct usb_device *dev,
                          uint8_t  req_type,
                          uint16_t value,
@@ -556,7 +635,7 @@ int usbh__get_descriptor(struct usb_device *dev,
     usbh__submit_request(&req);
 
     // Wait.
-    if (usbh__wait_completion(&req)<0) {
+    if (usbh__wait_completion(&req, DESCRIPTOR_FETCH_DEFAULT_TIMEOUT)<0) {
         return -1;
     }
     if (size_transferred)
@@ -604,7 +683,7 @@ int usbh__set_configuration(struct usb_device *dev, uint8_t configidx)
     usbh__submit_request(&req);
 
     // Wait.
-    if (usbh__wait_completion(&req)<0) {
+    if (usbh__wait_completion(&req, SET_ADDRESS_DEFAULT_TIMEOUT)<0) {
         ESP_LOGE(USBHTAG,"Device not accepting address!");
         return -1;
     }
@@ -627,26 +706,62 @@ uint32_t usbh__get_device_id(const struct usb_device*dev)
     return id;
 }
 
+static int usbh__hub_get_ports(struct usb_hub *h)
+{
+    return 1;
+}
+
+static int usbh__hub_set_power(struct usb_hub *h, int port, int power)
+{
+    ESP_LOGI(USBHTAG,"Set power, port %d, val=%d\n", port, power);
+    if (port==1) {
+        usb_ll__set_power(power!=0);
+        return 0;
+    }
+    return -1;
+}
+
+static int usbh__hub_reset(struct usb_hub *h, int port)
+{
+    if (port==1) {
+        usbh__reset();
+        return 0;
+    }
+    return -1;
+}
+
 int usbh__init()
 {
     usb_cmd_queue  = xQueueCreate(4, sizeof(struct usbcmd));
     usb_cplt_queue = xQueueCreate(4, sizeof(struct usbresponse));
 
+    transaction_sem = xSemaphoreCreateMutex();
+    if (transaction_sem==NULL) {
+        ESP_ERROR_CHECK(-1);
+    }
+
     xTaskCreate(usbh__ll_task, "usbh_ll_task", 4096, NULL, 10, NULL);
     xTaskCreate(usbh__main_task, "usbh_main_task", 4096, NULL, 10, NULL);
 
-    root_hub.reset = &usbh__reset;
+    root_hub.init = NULL;
+    root_hub.reset = &usbh__hub_reset;
+    root_hub.get_ports = &usbh__hub_get_ports;
+    root_hub.set_power = &usbh__hub_set_power;
 
     usb_ll__init();
+
+    usbhub__new(&root_hub);
 
     return 0;
 }
 
-int usbh__wait_completion(struct usb_request *req)
+int usbh__wait_completion(struct usb_request *req, unsigned timeout_ticks)
 {
     struct usbresponse resp;
-    if (xQueueReceive(usb_cplt_queue, &resp, portMAX_DELAY)==pdTRUE)
+    if (xQueueReceive(usb_cplt_queue, &resp, timeout_ticks)==pdTRUE)
     {
+        usbh__unlock_transaction();
+
         USBHDEBUG("USB completed status %d", resp.status);
         if (resp.status == USB_REQUEST_COMPLETED_OK) {
             if (resp.data == req) {
@@ -665,6 +780,14 @@ int usbh__wait_completion(struct usb_request *req)
                 return -1;
             }
        }
+    } else {
+        usbh__lock_transaction();
     }
     return -1;
+}
+
+void usb_ll__disconnected_callback()
+{
+    ESP_LOGE("USB", "Disconnected callback");
+    usbhub__port_disconnect(&root_hub, 1);
 }

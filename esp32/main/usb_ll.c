@@ -27,6 +27,7 @@ struct chconf
     uint8_t epnum;
     uint8_t eptype;
     uint8_t seq:1;
+    uint8_t fullspeed:1;
 };
 
 #define MAX_USB_CHANNELS 8
@@ -61,6 +62,7 @@ int usb_ll__alloc_channel(uint8_t devaddr,
                           eptype_t eptype,
                           uint8_t maxsize,
                           uint8_t epnum,
+                          uint8_t fullspeed,
                           void *userdata)
 {
     uint8_t mask = 1;
@@ -83,7 +85,11 @@ int usb_ll__alloc_channel(uint8_t devaddr,
     fpga__write_usb_block(USB_REG_CHAN_TRANS1(chnum),buf,3);
 
     buf[0] = (((uint8_t)eptype)<<6) | (maxsize & 0x3F);
-    buf[1] = epnum; // fixme.
+    uint8_t c1 = epnum;
+    if (!fullspeed)
+        c1 |= (1<<6); // Low-speed indicator
+
+    buf[1] = c1; // fixme.
     buf[2] = 0x80 | (devaddr & 0x7F);
     buf[3] = 0xFF;
     buf[4] = 0xFF;
@@ -99,6 +105,7 @@ int usb_ll__alloc_channel(uint8_t devaddr,
     channel_conf[chnum].maxsize = maxsize;
     channel_conf[chnum].epnum = epnum;
     channel_conf[chnum].eptype = eptype;
+    channel_conf[chnum].fullspeed = fullspeed;
 
     usb_ll__reset_channel(chnum);
 
@@ -197,7 +204,7 @@ void usb_ll__interrupt()
 
 
     if (regs[1] & USB_INTPEND_CONN) {
-        usb_ll__connected_callback((regs[0] >> 7) & 1);
+        usb_ll__connected_callback((regs[0] >> 6) & 1);
     }
 
     if (regs[1] & USB_INTPEND_DISC) {

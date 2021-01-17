@@ -4,6 +4,7 @@
 #include "esp_attr.h"
 #include "usb_ll.h"
 #include "usb_defs.h"
+#include <stdbool.h>
 
 struct usb_driver;
 struct usb_hub;
@@ -23,8 +24,12 @@ struct usb_device
     uint8_t ep0_chan;
     //uint8_t ep0_size;
     uint8_t address;
-    uint8_t claimed;
+    uint8_t claimed:1;
+    uint8_t fullspeed:1;
+    uint8_t has_siblings:1;
     struct usb_hub *hub;
+    uint8_t hub_port;
+    struct usb_hub *self_hub;
     union {
         uint8_t device_descriptor_b[18];
         usb_device_descriptor_t device_descriptor;
@@ -47,6 +52,13 @@ struct usb_device_entry {
 
 const struct usb_device_entry *usbdevice__get_devices();
 void usbdevice__add_device(struct usb_device *dev);
-
+static inline bool usbdevice__ishub(struct usb_device *dev) {
+    return dev->self_hub!=NULL;
+}
+static inline struct usb_hub *usbdevice__to_hub(struct usb_device *dev) {
+    return dev->self_hub;
+}
+struct usb_device *usbdevice__find_by_hub_port(const struct usb_hub *h, int port);
+void usbdevice__disconnect(struct usb_device *dev);
 
 #endif

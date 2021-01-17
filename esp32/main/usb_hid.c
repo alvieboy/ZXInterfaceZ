@@ -9,6 +9,8 @@
 #include "hid.h"
 #include <string.h>
 #include "log.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 
 #define HIDTAG "HID"
 #define HIDDEBUG(x...) LOG_DEBUG(DEBUG_ZONE_HID, HIDTAG, x)
@@ -296,6 +298,7 @@ static int usb_hid__probe(struct usb_device *dev, struct usb_interface *i)
                                               0x03, // Interrupt endpoint
                                               ep->wMaxPacketSize,
                                               ep->bEndpointAddress,
+                                              dev->fullspeed,
                                               dev
                                              );
             usb_ll__channel_set_interval(h->epchan, ep->bInterval);
@@ -316,6 +319,7 @@ static int usb_hid__probe(struct usb_device *dev, struct usb_interface *i)
 }
 
 #define USB_HID_REQ_SET_IDLE (0x0A)
+#define HID_IDLE_REQUEST_TIMEOUT (500 / portTICK_RATE_MS)
 
 static int usb_hid__set_idle(struct usb_device *dev, usb_interface_descriptor_t *intf)
 {
@@ -340,7 +344,7 @@ static int usb_hid__set_idle(struct usb_device *dev, usb_interface_descriptor_t 
     usbh__submit_request(&req);
 
     // Wait.
-    if (usbh__wait_completion(&req)<0) {
+    if (usbh__wait_completion(&req, HID_IDLE_REQUEST_TIMEOUT)<0) {
         ESP_LOGE(HIDTAG,"Device not accepting idle!");
         return -1;
     }

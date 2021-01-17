@@ -44,6 +44,7 @@ int usb_ll__alloc_channel(uint8_t devaddr,
                           eptype_t eptype,
                           uint8_t maxsize,
                           uint8_t epnum,
+                          uint8_t fullspeed,
                           void *userdata);
 
 uint8_t usb_ll__get_channel_maxsize(uint8_t channel);

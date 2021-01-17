@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include "log.h"
 #include "usbhub.h"
+#include "usb_driver.h"
 
 static struct usb_device_entry *usb_devices = NULL;
 
@@ -26,15 +27,38 @@ void usbdevice__add_device(struct usb_device *dev)
 
 }
 
-void usb_ll__disconnected_callback()
+struct usb_device *usbdevice__find_by_hub_port(const struct usb_hub *h, int port)
+{
+    struct usb_device_entry *e = usb_devices;
+    while (e) {
+        if ((e->dev->hub == h) && (e->dev->hub_port ==port))
+            return e->dev;
+    }
+    return NULL;
+}
+
+void usbdevice__disconnect(struct usb_device *dev)
 {
     ESP_LOGE("USB", "Disconnected callback");
 
-    while (usb_devices) {
-        // Disconnect this device
-        usbhub__device_disconnect(usb_devices->dev);
-        struct usb_device_entry *next = usb_devices->next;
-        free(usb_devices);
-        usb_devices = next;
+    struct usb_device_entry *e = usb_devices;
+    struct usb_device_entry *prev = NULL;
+
+    do {
+        if (e->dev == dev) {
+            if (prev) {
+                prev->next = e->next;
+            } else {
+                usb_devices = e->next;
+            }
+            free(e);
+            break;
+        }
+        prev = e;
+    } while (e);
+
+    for (int i=0;i< (dev->config_descriptor->bNumInterfaces);i++) {
+        usb_driver__disconnect(dev, &dev->interfaces[i]);
     }
+
 }

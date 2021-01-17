@@ -143,7 +143,7 @@ static int usbhub__assign_address(struct usb_device *dev)
     usbh__submit_request(&req);
 
     // Wait.
-    if (usbh__wait_completion(&req)<0) {
+    if (usbh__wait_completion(&req, SET_ADDRESS_DEFAULT_TIMEOUT)<0) {
         ESP_LOGE(USBHUBTAG, "Device not accepting address!");
         return -1;
     }
@@ -156,7 +156,7 @@ static int usbhub__assign_address(struct usb_device *dev)
     return 0;
 }
 
-int usbhub__port_reset(struct usb_hub *hub, usb_speed_t speed)
+int usbhub__port_reset(struct usb_hub *hub, int port, usb_speed_t speed)
 {
     struct usb_device dev;
     usb_config_descriptor_t cd;
@@ -175,14 +175,15 @@ int usbhub__port_reset(struct usb_hub *hub, usb_speed_t speed)
                                          EP_TYPE_CONTROL,
                                          speed == USB_FULL_SPEED ? 64 : 8,
                                          0x00,
+                                         speed==USB_FULL_SPEED?1:0,
                                          &dev
                                         );
     retries = 3;
 
     do {
-        ESP_LOGI(USBHUBTAG, "Resetting BUS now");
+        ESP_LOGI(USBHUBTAG, "Resetting BUS now, port %d", port);
 
-        hub->reset();
+        hub->reset(hub, port);
 
         ESP_LOGI(USBHUBTAG, "Resetting BUS done");
 
@@ -246,6 +247,7 @@ int usbhub__port_reset(struct usb_hub *hub, usb_speed_t speed)
             );
 
     dev.hub = hub;
+    dev.hub_port = port;
 
     // Update EP0 size
 
@@ -343,14 +345,47 @@ err1:
     return -1;
 }
 
-void usbhub__device_disconnect(struct usb_device *dev)
+void usbhub__port_disconnect(struct usb_hub *hub, int port)
 {
-    // Release all interfaces
-    unsigned i;
-    for (i=0;i< (dev->config_descriptor->bNumInterfaces);i++) {
-        struct usb_interface *intf = &dev->interfaces[i];
-        if (intf->drv)
-            intf->drv->disconnect( dev, intf );
+    ESP_LOGI(USBHUBTAG,"HUB port disconnect, port %d", port);
+    struct usb_device *dev = usbdevice__find_by_hub_port(hub, port);
+    if (dev) {
+        usbdevice__disconnect(dev);
+        // Release EP0
+        usb_ll__release_channel(dev->ep0_chan);
+    }
+}
+
+int usbhub__poweron(struct usb_hub *h)
+{
+    int i;
+    int ports = h->get_ports(h);
+
+    for (i=1; i<=ports;i++) {
+        if (h->set_power(h, i, 1)<0)
+            return -1;
+    }
+    return 0;
+}
+
+int usbhub__overcurrent(struct usb_hub *h, int port)
+{
+    ESP_LOGE(USBHUBTAG,"OVERCURRENT, disabling port");
+    h->set_power(h, port, 0);
+    usbhub__port_disconnect(h, port);
+    return 0;
+}
+
+void usbhub__new(struct usb_hub *h)
+{
+    ESP_LOGI(USBHUBTAG,"New HUB detected with %d ports", h->get_ports(h));
+
+    if (usbhub__poweron(h)<0) {
+
+        ESP_LOGE(USBHUBTAG,"Cannot power on");
+        return;
     }
 
+    if (h->init)
+        h->init(h);
 }

@@ -1,9 +1,12 @@
 #include "usb_driver.h"
+#include "usbhubdev.h"
 #include "usb_mouse.h"
 #include "usb_hid.h"
 #include "usb_block.h"
+
 const struct usb_driver *usb_driver_list[] =
 {
+    &usb_hub_driver,
     &usb_mouse_driver,
     &usb_hid_driver,
     &usb_block_driver,

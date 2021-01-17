@@ -76,6 +76,24 @@ typedef enum {
 #define  USB_DESC_HID_REPORT                ((USB_DESC_TYPE_HID_REPORT << 8) & 0xFF00)
 #define  USB_DESC_HID                       ((USB_DESC_TYPE_HID << 8) & 0xFF00)
 
+#define USB_PORT_FEAT_CONNECTION	0
+#define USB_PORT_FEAT_ENABLE		1
+#define USB_PORT_FEAT_SUSPEND		2
+#define USB_PORT_FEAT_OVER_CURRENT	3
+#define USB_PORT_FEAT_RESET		4
+#define USB_PORT_FEAT_L1		5
+#define USB_PORT_FEAT_POWER		8
+#define USB_PORT_FEAT_LOWSPEED		9
+#define USB_PORT_FEAT_C_CONNECTION	16
+#define USB_PORT_FEAT_C_ENABLE		17
+#define USB_PORT_FEAT_C_SUSPEND		18
+#define USB_PORT_FEAT_C_OVER_CURRENT	19
+#define USB_PORT_FEAT_C_RESET		20
+#define USB_PORT_FEAT_TEST              21
+#define USB_PORT_FEAT_INDICATOR         22
+#define USB_PORT_FEAT_C_PORT_L1         23
+
+
 typedef union
 {
     uint8_t data[8];

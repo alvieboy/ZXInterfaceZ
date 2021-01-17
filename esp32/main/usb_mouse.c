@@ -130,6 +130,7 @@ static int usb_mouse__probe(struct usb_device *dev, struct usb_interface *i)
                                                   0x03, // Interrupt endpoint
                                                   ep->wMaxPacketSize,
                                                   ep->bEndpointAddress,
+                                                  dev->fullspeed,
                                                   dev
                                                  );
                 ESP_LOGI(TAG, "usb_mouse: setting interval");

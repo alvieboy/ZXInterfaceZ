@@ -87,6 +87,7 @@ struct usb_block
 
 static int usb_block__check_csw(const usb_block_csw_t *csw, uint32_t tag, uint8_t *status_out);
 
+#define USBBLOCK_DEFAULT_REQUEST_TIMEOUT (1000/portTICK_RATE_MS)
 
 int usb_block__reset(struct usb_block *self)
 {
@@ -112,7 +113,7 @@ int usb_block__reset(struct usb_block *self)
     USBBLOCKDEBUG("Submitting reset request");
     usbh__submit_request(&req);
 
-    if (usbh__wait_completion(&req)<0) {
+    if (usbh__wait_completion(&req, USBBLOCK_DEFAULT_REQUEST_TIMEOUT )<0) {
         ESP_LOGE(USBBLOCKTAG,"Device not resetting!");
         return -1;
     }
@@ -150,7 +151,7 @@ int usb_block__get_max_lun(struct usb_block *self)
     USBBLOCKDEBUG("Submitting GET MAX LUN request");
     usbh__submit_request(&req);
 
-    if (usbh__wait_completion(&req)<0) {
+    if (usbh__wait_completion(&req, USBBLOCK_DEFAULT_REQUEST_TIMEOUT)<0) {
         ESP_LOGE(USBBLOCKTAG,"Device not responding");
         self->max_lun = -1;
         return -1;
@@ -265,6 +266,7 @@ static int usb_block__probe(struct usb_device *dev, struct usb_interface *i)
                                             EP_TYPE_BULK,
                                             ep_in->wMaxPacketSize,
                                             ep_in->bEndpointAddress,
+                                            dev->fullspeed,
                                             dev
                                            );
 
@@ -272,6 +274,7 @@ static int usb_block__probe(struct usb_device *dev, struct usb_interface *i)
                                              EP_TYPE_BULK,
                                              ep_out->wMaxPacketSize,
                                              ep_out->bEndpointAddress,
+                                             dev->fullspeed,
                                              dev
                                             );
 
@@ -379,7 +382,7 @@ static int usb_block__send_command(struct usb_block *blk,
 
 
     usbh__submit_request(&req);
-    int r = usbh__wait_completion(&req);
+    int r = usbh__wait_completion(&req, USBBLOCK_DEFAULT_REQUEST_TIMEOUT);
 
     if (r==0) {
         blk->tag++;
@@ -414,7 +417,7 @@ static int usb_block__send_data(struct usb_block *blk,
 
 
     usbh__submit_request(&req);
-    int r = usbh__wait_completion(&req);
+    int r = usbh__wait_completion(&req, USBBLOCK_DEFAULT_REQUEST_TIMEOUT);
 
     return r;
 }
@@ -440,7 +443,7 @@ static int usb_block__wait_reply(struct usb_block *blk,
 
 
     usbh__submit_request(&req);
-    int r = usbh__wait_completion(&req);
+    int r = usbh__wait_completion(&req, USBBLOCK_DEFAULT_REQUEST_TIMEOUT);
 
     return r;
 }
@@ -548,7 +551,7 @@ static int usb_block__scsi_write(void *pvt,
 
     r = usb_block__wait_reply(self,
                               0x00, // LUNuint8_t lun,
-                              &csw,
+                              (uint8_t*)&csw,
                               sizeof(csw));
 
     if (r<0)
