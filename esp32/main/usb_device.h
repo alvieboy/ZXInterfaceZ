@@ -5,6 +5,7 @@
 #include "usb_ll.h"
 #include "usb_defs.h"
 #include <stdbool.h>
+#include <stdlib.h>
 
 struct usb_driver;
 struct usb_hub;

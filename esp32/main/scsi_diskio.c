@@ -230,5 +230,11 @@ esp_err_t vfs_fat_scsi_umount(scsidev_t *dev, const char *mountpoint)
 
     return err;
 }
+#else
+
+esp_err_t vfs_fat_scsi_umount(scsidev_t *dev, const char *mountpoint)
+{
+    return 0;
+}
 
 #endif
