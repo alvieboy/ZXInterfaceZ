@@ -70,6 +70,7 @@ entity usb_rx_phy is
     rxd, rxdp, rxdn : in  std_logic;
     -- UTMI Interface
     XcvrSelect_i    : in std_logic;
+    TermSelect_i    : in std_logic;
     DataIn_o        : out std_logic_vector(7 downto 0);
     RxValid_o       : out std_logic;
     RxActive_o      : out std_logic;
@@ -198,8 +199,8 @@ begin
     end if;
   end process;
 
-  j   <= (not rxdp_s and rxdn_s) xor XcvrSelect_i;
-  k   <= (rxdp_s and not rxdn_s ) xor XcvrSelect_i;
+  j   <= (not rxdp_s and rxdn_s) xor TermSelect_i;
+  k   <= (rxdp_s and not rxdn_s ) xor TermSelect_i;
 
   se0 <= not rxdp_s and not rxdn_s;
 

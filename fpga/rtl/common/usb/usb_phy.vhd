@@ -160,6 +160,7 @@ begin
     rxdn       => rxdn_filtered_s,
     -- UTMI Interface
     XcvrSelect_i => XcvrSelect_i,
+    TermSelect_i    => HostXcvrSelect_i,
     DataIn_o   => DataIn_o,
     RxValid_o  => RxValid_o,
     RxActive_o => RxActive_o,
