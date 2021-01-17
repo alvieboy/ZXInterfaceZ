@@ -71,7 +71,7 @@ static inline void IRAM_ATTR button__check(int index, uint32_t gpio_num)
         }
     }
     if (event.type!=BUTTON_IDLE) {
-        xQueueSendFromISR(button_event_queue, &event, NULL);
+        xQueueSendFromISR(button_event_queue, &event, 0);
     }
 }
 
