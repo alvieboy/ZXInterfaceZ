@@ -20,6 +20,7 @@
 
 static xQueueHandle usb_cmd_queue = NULL;
 static xQueueHandle usb_cplt_queue = NULL;
+static xQueueHandle usb_evt_queue = NULL;
 static SemaphoreHandle_t transaction_sem;
 
 struct usbcmd
@@ -85,7 +86,7 @@ void usbh__hub_port_connected(struct usb_hub *h, int port, usb_speed_t speed)
     resp.param = port;
     resp.data = h;
 
-    if (xQueueSend(usb_cplt_queue, &resp, 0)!=pdTRUE) {
+    if (xQueueSend(usb_evt_queue, &resp, 0)!=pdTRUE) {
         ESP_LOGE(USBHTAG, "Cannot queue!!!");
     }
 }
@@ -189,8 +190,8 @@ static void usbh__main_task(void *pvParam)
     struct usbresponse resp;
 
     while (1) {
-        USBHDEBUG("Wait for completion responses");
-        if (xQueueReceive(usb_cplt_queue, &resp, portMAX_DELAY)==pdTRUE)
+        USBHDEBUG("Wait for event responses");
+        if (xQueueReceive(usb_evt_queue, &resp, portMAX_DELAY)==pdTRUE)
         {
             USBHDEBUG(" >>> got status %d", resp.status);
 
@@ -250,6 +251,7 @@ static void usbh__request_failed(struct usb_request *req)
     struct usbresponse resp;
     resp.status = USB_REQUEST_COMPLETED_FAIL;
     resp.data = req;
+    USBHDEBUG("Queueing FAIL response");
     xQueueSend(usb_cplt_queue, &resp, portMAX_DELAY);
     taskYIELD();
 }
@@ -430,6 +432,7 @@ static int usbh__control_request_completed_reply(uint8_t chan, uint8_t stat, str
             break;
 
         case CONTROL_STATE_STATUS:
+            USBHDEBUG("Req STATUS complete");
             usbh__request_completed(req);
         }
 
@@ -657,6 +660,7 @@ static void usbh__request_completed(struct usb_request *req)
     resp.status = USB_REQUEST_COMPLETED_OK;
     resp.data = req;
     xQueueSend(usb_cplt_queue, &resp, portMAX_DELAY);
+    USBHDEBUG("Queued COMPLETE request req=%p", req);
     taskYIELD();
 }
 
@@ -732,8 +736,9 @@ static int usbh__hub_reset(struct usb_hub *h, int port)
 
 int usbh__init()
 {
-    usb_cmd_queue  = xQueueCreate(4, sizeof(struct usbcmd));
-    usb_cplt_queue = xQueueCreate(4, sizeof(struct usbresponse));
+    usb_cmd_queue  = xQueueCreate(2, sizeof(struct usbcmd));
+    usb_cplt_queue = xQueueCreate(2, sizeof(struct usbresponse));
+    usb_evt_queue = xQueueCreate(2, sizeof(struct usbresponse));
 
     transaction_sem = xSemaphoreCreateMutex();
     if (transaction_sem==NULL) {
@@ -758,6 +763,7 @@ int usbh__init()
 int usbh__wait_completion(struct usb_request *req, unsigned timeout_ticks)
 {
     struct usbresponse resp;
+    USBHDEBUG("Wait for completion req %p", req);
     if (xQueueReceive(usb_cplt_queue, &resp, timeout_ticks)==pdTRUE)
     {
         usbh__unlock_transaction();
@@ -781,7 +787,8 @@ int usbh__wait_completion(struct usb_request *req, unsigned timeout_ticks)
             }
        }
     } else {
-        usbh__lock_transaction();
+        ESP_LOGE(USBHTAG, "Completion error %p", req);
+        usbh__unlock_transaction();
     }
     return -1;
 }
