@@ -421,7 +421,7 @@ static int usbhubdev__check_ports(struct usb_hub_dev *self)
 
 static int usbhubdev__get_port_status(struct usb_device *dev, int port, void *data, uint16_t value, uint16_t length)
 {
-    ESP_LOGI(TAG, "Get port %d status", port);
+    ESP_LOGD(TAG, "Get port %d status", port);
     return usbh__control_msg(dev,
                              USB_REQ_GET_STATUS,
                              USB_DEVICE_TO_HOST | USB_RT_PORT,
@@ -446,7 +446,10 @@ void usbhubdev__disconnect(struct usb_device *dev, struct usb_interface *intf)
 {
     struct usb_hub_dev *self = (struct usb_hub_dev*)intf->drvdata;
 
+    ESP_LOGI(TAG,"HUB disconnected");
 #ifndef USBHUB_USE_INTERRUPT
+    esp_timer_stop(self->portchangetimer);
+
     esp_timer_delete(self->portchangetimer);
 #endif
 
