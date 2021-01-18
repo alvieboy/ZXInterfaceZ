@@ -39,7 +39,7 @@ struct usb_device *usbdevice__find_by_hub_port(const struct usb_hub *h, int port
 
 void usbdevice__disconnect(struct usb_device *dev)
 {
-    ESP_LOGE("USB", "Disconnected callback");
+    ESP_LOGE("USBDEVICE", "Disconnected callback");
 
     struct usb_device_entry *e = usb_devices;
     struct usb_device_entry *prev = NULL;
@@ -58,6 +58,7 @@ void usbdevice__disconnect(struct usb_device *dev)
     } while (e);
 
     for (int i=0;i< (dev->config_descriptor->bNumInterfaces);i++) {
+        ESP_LOGI("USBDEVICE", "Disconnecting interface %d",i);
         usb_driver__disconnect(dev, &dev->interfaces[i]);
     }
 
