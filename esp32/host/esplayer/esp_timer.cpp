@@ -45,6 +45,13 @@ esp_err_t esp_timer_delete(struct esp_timer *timer)
     return 0;
 }
 
+esp_err_t esp_timer_stop(struct esp_timer *timer)
+{
+    esp_timer_lock();
+    timer->active = false;
+    esp_timer_unlock();
+}
+
 extern "C" void esp_timer_task(void*)
 {
     while (1) {
