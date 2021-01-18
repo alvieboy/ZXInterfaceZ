@@ -170,6 +170,7 @@ int usbhub__port_reset(struct usb_hub *hub, int port, usb_speed_t speed)
     dev.vendor = NULL;
     dev.product = NULL;
     dev.serial = NULL;
+    dev.fullspeed = (speed == USB_FULL_SPEED?1:0);
 
     dev.ep0_chan = usb_ll__alloc_channel(dev.address,
                                          EP_TYPE_CONTROL,
@@ -353,6 +354,8 @@ void usbhub__port_disconnect(struct usb_hub *hub, int port)
         usbdevice__disconnect(dev);
         // Release EP0
         usb_ll__release_channel(dev->ep0_chan);
+    } else {
+        ESP_LOGE(USBHUBTAG, "Could not find attached driver on port %d", port);
     }
 }
 
