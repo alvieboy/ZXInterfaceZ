@@ -28,6 +28,7 @@ struct chconf
     uint8_t eptype;
     uint8_t seq:1;
     uint8_t fullspeed:1;
+    uint8_t active:1;
 };
 
 #define MAX_USB_CHANNELS 8
@@ -106,6 +107,7 @@ int usb_ll__alloc_channel(uint8_t devaddr,
     channel_conf[chnum].epnum = epnum;
     channel_conf[chnum].eptype = eptype;
     channel_conf[chnum].fullspeed = fullspeed;
+    channel_conf[chnum].active = 0;
 
     usb_ll__reset_channel(chnum);
 
@@ -117,7 +119,14 @@ int usb_ll__release_channel(uint8_t channel)
     // Stop EP
     fpga__write_usb(USB_REG_CHAN_CONF3(channel), 0);
 
+    struct chconf *c = &channel_conf[channel];
     channel_alloc_bitmap &= ~(1<<channel);
+
+    if (c->active) {
+        c->active = false;
+        c->completion( channel, 0xff, c->userdata );
+    }
+
     return 0;
 }
 
@@ -144,7 +153,7 @@ static void usb_ll__channel_interrupt(uint8_t channel)
 
     if (intpend<0)
         return;
-#ifdef ENABLE_DEBUG_USBLL
+//#ifdef ENABLE_DEBUG_USBLL
     {
         char t[64];
         t[0] = '\0';
@@ -175,7 +184,7 @@ static void usb_ll__channel_interrupt(uint8_t channel)
 
         USBLLDEBUG("Channel %d intpend %02x [%s]", channel, intpend, t);
     }
-#endif
+//#endif
     uint8_t clr = intpend;
 
     struct chconf *c = &channel_conf[channel];
@@ -186,7 +195,7 @@ static void usb_ll__channel_interrupt(uint8_t channel)
         // Completed.
         usb_ll__ack_received(channel);
     }
-
+    c->active = 0;
     c->completion( channel, clr, c->userdata );
 }
 
@@ -248,7 +257,9 @@ int usb_ll__submit_request(uint8_t channel,
     uint8_t regconf[3];
     struct chconf *conf = &channel_conf[channel];
 
-    USBLLDEBUG("Submitting request EP=%d PID %d seq=%d", conf->epnum, (int)pid, conf->seq);
+    conf->active = 1;
+
+    USBLLDEBUG("Submitting request EP=%d PID %d seq=%d fs=%d", conf->epnum, (int)pid, conf->seq, conf->fullspeed);
     // Write epmem data
     if ((pid != PID_IN) && (data!=NULL)) {
         USBLLDEBUG("Copying data %p -> epmem@%04x", data, conf->memaddr);
