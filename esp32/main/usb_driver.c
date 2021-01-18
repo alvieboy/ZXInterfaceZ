@@ -3,6 +3,7 @@
 #include "usbh.h"
 #include <stdlib.h>
 #include "usb_descriptor.h"
+#include "log.h"
 
 extern const struct usb_driver *usb_driver_list[];
 extern const unsigned usb_driver_list_count;
@@ -24,8 +25,14 @@ int usb_driver__disconnect(struct usb_device *dev, struct usb_interface *intf)
 {
     if (intf->drv) {
         if (intf->drv->disconnect) {
+            ESP_LOGI("USBDRIVER", "Disconnecting driver");
             intf->drv->disconnect(dev, intf);
+        } else {
+            ESP_LOGE("USBDRIVER", "Driver does not implement disconnect!");
         }
+    } else {
+        ESP_LOGE("USBDRIVER", "No driver mapped to interface");
+        return -1;
     }
     return 0;
 }
