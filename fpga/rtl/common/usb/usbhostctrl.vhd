@@ -376,7 +376,8 @@ BEGIN
     end loop;
 
     --if r.int_holdoff=0 then
-      int_s <= (or_reduce(interrupt_v) or r.intpendr.connectdetect or r.intpendr.overcurrent) and r.intconfr.ginten;
+      int_s <= (or_reduce(interrupt_v) or r.intpendr.connectdetect or r.intpendr.overcurrent
+        or r.intpendr.disconnectdetect ) and r.intconfr.ginten;
     --else
     --  int_s <= '0';
     --  w.int_holdoff := r.int_holdoff - 1;
