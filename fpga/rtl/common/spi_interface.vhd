@@ -272,7 +272,7 @@ begin
 
         when INDEXED_3 =>
           if dat_valid_s='1' then
-            ahb_address_r(2 downto 0) <= dat_s(2 downto 0);
+            ahb_address_r(4 downto 2) <= dat_s(2 downto 0);
             if ahb_write_r='1' then
               state_r <= WRINC;
             else

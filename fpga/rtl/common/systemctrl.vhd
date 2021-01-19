@@ -194,7 +194,6 @@ begin
       bit_from_cpu_o.rx_read  <= '0';
       pc_latch_r              <= (others => 'X');
       tapfifo_used_lsb_r      <= (others => 'X');
-      tempreg_r               <= (others => 'X');
 
 
     elsif rising_edge(clk_i) then
@@ -314,6 +313,9 @@ begin
                                   )
                                 );
       miscctrl_r            <= (others => '0');
+      regs32_r              <= (others => (others => '0') );
+      tempreg_r               <= (others => 'X');
+
     elsif rising_edge(clk_i) then
 
       resfifo_reset_o       <= '0';
@@ -332,7 +334,6 @@ begin
       memromsel_r           <= (others => 'X');
       --bit_from_cpu_o.tx_data_valid <= '0';
       --bit_from_cpu_o.tx_data  <= (others => 'X');
-      regs32_r              <= (others => (others => '0') );
 
       if wr_s='1' then
 
@@ -395,7 +396,7 @@ begin
             tempreg_r(7 downto 0) <= dat_in_s;
           when "0100011" | "0100111" | "0101011" | "0101111" |
                "0110011" | "0110111" | "0111011" | "0111111" =>
-            regs32_r( to_integer(unsigned(addr_s(5 downto 2)))) <= tempreg_r & dat_in_s;
+            regs32_r( to_integer(unsigned(addr_s(4 downto 2)))) <= tempreg_r & dat_in_s;
 
           when "1000000" | "1000100" | "1001000" | "1001100" |
                "1010000" | "1010100" | "1011000" | "1011100" => -- Hook low
