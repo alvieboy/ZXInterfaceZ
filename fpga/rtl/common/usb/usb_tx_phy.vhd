@@ -153,7 +153,7 @@ begin
   shift_data_s <= '1' when (state_r=SOP or state_r=DATA)
         and bit_tick_s='1' else '0';
 
-  load_data_s <= '1' when shift_data_s='1' and std_logic_vector(bit_count_r)="111" else '0';
+  load_data_s <= '1' when shift_data_s='1' and std_logic_vector(bit_count_r)="111" and stuff_r='0' else '0';
 
   need_stuff_s <= '1' when std_logic_vector(ones_count_r)="110" else '0';
 
