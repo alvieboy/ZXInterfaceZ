@@ -51,9 +51,6 @@ static bool filecompare(const FileEntry &a, const FileEntry &b)
     const char *pa = a.str();
     const char *pb = b.str();
 
-    WSYS_LOGI( "CMP %p %p", &a, &b);
-    WSYS_LOGI( "CMPPA %s %s", pa, pb);
-
     uint8_t type_a = a.flags();
     uint8_t type_b = b.flags();
 
@@ -69,6 +66,9 @@ bool FileChooserDialog::buildMountpointList()
 
     const struct mountpoints *mp = __get_mountpoints();
     int i;
+
+    if (mp->count==0)
+        return false;
 
     for (i=0;i<mp->count;i++) {
         FileEntry entry(1, mp->mounts[i]);
@@ -204,7 +204,9 @@ void FileChooserDialog::activate(uint8_t index)
 
 int FileChooserDialog::exec()
 {
-    buildDirectoryList();
+    if (!buildDirectoryList())
+        return -1;
+
     WSYS_LOGI( "Loaded directory list");
     return Dialog::exec();
 }
