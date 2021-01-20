@@ -54,6 +54,43 @@ begin
 
     wait for 2 us;
 
+    -- Disable ULA hack, activate keyboard
+
+    spiPayload_in_s(0) <= x"EE";
+    spiPayload_in_s(1) <= x"02";
+    spiPayload_in_s(2) <= x"00";
+    spiPayload_in_s(3) <= x"00";
+    spiPayload_in_s(4) <= x"00";
+    spiPayload_in_s(5) <= x"0F"; -- KBD, Joy,Mouse,AY
+
+    Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 6, spiPayload_in_s, spiPayload_out_s);
+
+    spiPayload_in_s(0) <= x"EC";
+    spiPayload_in_s(1) <= x"00";
+    spiPayload_in_s(2) <= x"00";
+    spiPayload_in_s(3) <= x"00";
+
+    Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 4, spiPayload_in_s, spiPayload_out_s);
+
+    SpectrumReadIO(Spectrum_Cmd, Spectrum_Data, x"fefe", data);
+
+    Check("Idle data with keyboard", data, x"fe");
+    -- Inject keyboard at 1st column
+
+    spiPayload_in_s(0) <= x"EE";
+    spiPayload_in_s(1) <= x"03";
+    spiPayload_in_s(2) <= x"00";
+    spiPayload_in_s(3) <= x"00";
+    spiPayload_in_s(4) <= x"00";
+    spiPayload_in_s(5) <= x"01"; -- Key pressed
+    Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 6, spiPayload_in_s, spiPayload_out_s);
+
+    SpectrumReadIO(Spectrum_Cmd, Spectrum_Data, x"fefe", data);
+    Check("Idle data with keyboard", data, x"be");
+
+    wait for 1 us;
+
+
     FinishTest(
       SysClk_Cmd,
       SpectClk_Cmd

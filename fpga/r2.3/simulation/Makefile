@@ -3,6 +3,7 @@ GHDLMAKEFLAGS=-m --ieee=synopsys -fexplicit --std=00 -frelaxed -Wno-binding
 TESTS=t001 \
 t002 \
 t004 \
+t005 \
 t007 \
 t008 \
 t010 \

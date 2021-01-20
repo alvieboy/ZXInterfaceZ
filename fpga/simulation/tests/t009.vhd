@@ -166,7 +166,7 @@ begin
     --spiPayload_in_s(10) <= x"3F"; -- wLength
 
     -- Payload with bit stuff on last CRC16 bit
-
+    if false then
     spiPayload_in_s(3) <= x"ab"; -- bmRequestType
     spiPayload_in_s(4) <= x"00"; -- get descriptor
     spiPayload_in_s(5) <= x"00"; --
@@ -175,7 +175,16 @@ begin
     spiPayload_in_s(8) <= x"00"; -- wIndex
     spiPayload_in_s(9) <= x"00";
     spiPayload_in_s(10) <= x"00"; -- wLength
-
+    else
+    spiPayload_in_s(3) <= x"C1"; -- bmRequestType
+    spiPayload_in_s(4) <= x"FE"; -- GET MAX LUN
+    spiPayload_in_s(5) <= x"00"; --
+    spiPayload_in_s(6) <= x"00"; -- device
+    spiPayload_in_s(7) <= x"00";
+    spiPayload_in_s(8) <= x"00"; -- wIndex
+    spiPayload_in_s(9) <= x"00";
+    spiPayload_in_s(10) <= x"00"; -- wLength
+    end if;
 
     Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 11, spiPayload_in_s, spiPayload_out_s);
 
