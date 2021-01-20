@@ -8,8 +8,10 @@
 #include <stdarg.h>
 
 #define CWD_MAX 255
+
 static char cwd[CWD_MAX];
 static uint8_t init = 0;
+static struct mountpoints system_mountpoints = { 0 };
 
 static void init_cwd()
 {
@@ -192,21 +194,33 @@ char *fullpath(const char *name, char *dest, int maxlen)
     return d;
 }
 
-static const struct {
-    struct mountpoints m;
-    const char *entries[1];
-} mpoints = {
-    .m  = {
-        1
-    },
-    .entries = {
-        "sdcard"
+
+void register_mountpoint(const char *path)
+{
+    int current = system_mountpoints.count;
+    system_mountpoints.mounts[current] = path;
+    system_mountpoints.count++;
+}
+
+void unregister_mountpoint(const char *path)
+{
+    int i;
+    for (i=0;i<system_mountpoints.count;i++) {
+        if (strcmp(system_mountpoints.mounts[i], path)==0) {
+            i++;
+            while (i<system_mountpoints.count) {
+                system_mountpoints.mounts[i-1] = system_mountpoints.mounts[i];
+            }
+            system_mountpoints.count--;
+            return;
+        }
     }
-};
+}
+
 
 const struct mountpoints *__get_mountpoints()
 {
-    return &mpoints.m;
+    return &system_mountpoints;
 }
 
 int file_size(const char *path, const char *filename)

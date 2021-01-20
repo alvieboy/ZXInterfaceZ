@@ -51,9 +51,11 @@ static inline bool ext_match(const char *fileext, const char *reqext)
     return strcmpi(fileext,reqext)==0;
 }
 
+#define MAX_MOUNTPOINTS 4
+
 struct mountpoints {
     int count;
-    const char *mounts[0];
+    const char *mounts[MAX_MOUNTPOINTS];
 };
 
 char *fullpath(const char *name, char *dest, int maxlen);
@@ -65,6 +67,9 @@ FILE *__fopen(const char *path, const char *mode);
 
 
 const struct mountpoints *__get_mountpoints(void);
+void register_mountpoint(const char *path);
+void unregister_mountpoint(const char *path);
+
 
 typedef enum {
     TYPE_INVALID,

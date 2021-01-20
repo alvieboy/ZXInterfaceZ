@@ -3,6 +3,7 @@
 #include "scsidev.h"
 #include "scsi_diskio.h"
 #include <string.h>
+#include "fileaccess.h"
 
 #define STORAGETAG "STORAGE"
 
@@ -21,6 +22,7 @@ static int storage__register_mount_device(const char *basepath, void *dev)
         if (mount_devices[i].basepath==0) {
             mount_devices[i].basepath = strdup(basepath);
             mount_devices[i].dev = dev;
+            register_mountpoint(&basepath[1]);
             return 0;
         }
     }
@@ -35,6 +37,7 @@ static int storage__unregister_mount_device(const char *basepath)
             free(mount_devices[i].basepath);
             mount_devices[i].basepath = NULL;
             mount_devices[i].dev = 0;
+            unregister_mountpoint(&basepath[1]);
             return 0;
         }
     }

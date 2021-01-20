@@ -6,6 +6,7 @@
 #include <sys/types.h>
 #include <dirent.h>
 #include "sdcard.h"
+#include "fileaccess.h"
 
 #ifndef __linux__
 
@@ -51,6 +52,7 @@ void sdcard__init()
         return;
     }
     ESP_LOGI(TAG, "SDMMC card mounted");
+    register_mountpoint("sdcard");
 #if 0
     {
         DIR *d;
