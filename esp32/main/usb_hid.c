@@ -16,21 +16,64 @@
 #define HIDDEBUG(x...) LOG_DEBUG(DEBUG_ZONE_HID, HIDTAG, x)
 #define HIDLOG(x...) ESP_LOGI(HIDTAG, x)
 
-static int usb_hid__set_idle(struct usb_device *dev, usb_interface_descriptor_t *intf);
+static int usb_hid__set_idle(struct usb_device *dev, usb_interface_descriptor_t *intf, uint8_t report);
+
+struct usb_hid_report_payload
+{
+    uint8_t len;
+    uint8_t *data;
+};
 
 struct usb_hid
 {
     hid_device_t hiddev;
-    uint8_t epchan:7;
-    uint8_t seq:1;
+    uint8_t epchan;
+    uint8_t max_report_size;
+   // uint8_t seq:1;
     struct usb_device *dev;
     struct usb_interface *intf;
     struct hid *hid;
     uint8_t *report_desc;
-    uint8_t payload[64];
-    uint8_t prev_payload[64];
-    uint8_t prev_size;
+    uint8_t num_reports;
+    struct usb_hid_report_payload *payloads;
 };
+
+static void usb_hid__allocate_payloads(struct usb_hid *hid)
+{
+    struct hid *h =  hid->hid;
+    unsigned max_report_size = 0;
+    int count = hid__number_of_reports(h);
+    if (count<1)  {
+        ESP_LOGE(HIDTAG, "No reports found!");
+        hid->payloads = NULL;
+        return;
+    }
+    hid->payloads = calloc( count, sizeof(struct usb_hid_report_payload) );
+    if (!hid->payloads) {
+        ESP_LOGE(HIDTAG, "Cannot allocate memory");
+    }
+    hid_report_t *report = h->reports;
+    for (int i=0;i<count;i++) {
+        unsigned this_report_size = (report->size + 7) >> 3; // Make sure we have at least 1 byte.
+        hid->payloads[i].data = malloc( this_report_size );
+        hid->payloads[i].len = 0;
+        if (this_report_size>max_report_size)
+            max_report_size = this_report_size;
+    }
+    hid->num_reports = count;
+    hid->max_report_size = max_report_size;
+}
+
+static void usb_hid__free_payloads(struct usb_hid *hid)
+{
+    if (hid->payloads) {
+        for (int i=0;i<hid->num_reports;i++) {
+            free( hid->payloads[i].data );
+        }
+    }
+    free(hid->payloads);
+}
+
 
 uint32_t usb_hid__get_id(const struct usb_hid *usbhid)
 {
@@ -45,7 +88,7 @@ const char *usb_hid__get_serial(const struct usb_hid *usbhid)
 
 static int usb_hid__submit_in(struct usb_hid *h);
 
-static void usb_hid__parse_report(struct usb_hid *hid)
+static void usb_hid__parse_report(struct usb_hid *hid, const uint8_t *payload, int payload_size)
 {
     uint8_t new_value;
     uint8_t old_value;
@@ -55,67 +98,89 @@ static void usb_hid__parse_report(struct usb_hid *hid)
         return;
 
     struct hid *h = hid->hid;
+
     unsigned entry_index = 0;
 
-    if (h->reports == NULL) {
-        return;
-    } else {
-        // Fast compare.
-        if (hid->prev_size) {
-            if (memcmp(hid->payload, hid->prev_payload, hid->prev_size)==0)
-                return;
+    uint8_t report_id = 0;
+    uint8_t report_index = 0;
+
+    if (hid__has_multiple_reports(h)) {
+        if (payload_size<2) {
+            ESP_LOGE(HIDTAG,"Multiple reports for device, but only %d bytes", payload_size);
+            return;
         }
-
-        hid_report_t *rep = h->reports;
-        hid_field_t *field = rep->fields;
-
-        HIDDEBUG("Field ");
-        while (field) {
-            int i;
-            HIDDEBUG(" > start %d len %d", field->report_offset, field->report_size);
-            for (i=0;i<field->report_count;i++) {
-
-                propagate = false;
-
-                HIDDEBUG(" >> index %d", i);
-
-                if (hid_extract_field_aligned(field, i, hid->payload, &new_value)<0)
-                    return;
-
-                if (hid->prev_size) {
-                    if (hid_extract_field_aligned(field, i, hid->prev_payload, &old_value)<0)
-                        return;
-                }
-                // Compare
-                if (hid->prev_size) {
-                    if (new_value!=old_value)
-                        propagate = true;
-                } else {
-                    propagate = true;
-                }
-                if (propagate) {
-
-                    HIDLOG("Field changed start %d len %d (entry index %d) prev %d now %d",
-                           field->report_offset + (i*field->report_size),
-                           field->report_size,
-                           entry_index,
-                           old_value,
-                           new_value
-                          );
-
-                    hid__field_entry_changed_callback((hid_device_t*)hid, field, entry_index, new_value);
-                }
-                entry_index++;
-            }
-            field = field->next;
-        }
+        // Extract report index.
+        report_id = *payload++;
+        payload_size--;
     }
+
+    hid_report_t *report = hid__find_report_by_id(h, report_id, &report_index);
+    if (!report || (report_index > hid->num_reports) ) {
+        ESP_LOGE(HIDTAG,"Cannot find report with id %d", report_id);
+        return;
+    }
+    // Get payload pointer.
+
+    struct usb_hid_report_payload *stored_payload = &hid->payloads[report_index];
+
+
+    // Fast compare.
+    if (stored_payload->len == payload_size ) {
+        if (memcmp(payload, stored_payload->data, payload_size)==0)
+            return;
+    }
+
+    hid_field_t *field = report->fields;
+
+    HIDDEBUG("Field ");
+    while (field) {
+        int i;
+        HIDDEBUG(" > start %d len %d", field->report_offset, field->report_size);
+        for (i=0;i<field->report_count;i++) {
+
+            propagate = false;
+
+            HIDDEBUG(" >> index %d", i);
+
+            if (hid__extract_field_aligned(field, i, payload, &new_value)<0)
+                goto out;
+
+            if ( stored_payload->len > 0 ) {
+                if (hid__extract_field_aligned(field, i, stored_payload->data, &old_value)<0)
+                    goto out;
+                if (new_value!=old_value)
+                    propagate = true;
+            } else {
+                propagate = true;
+            }
+            if (propagate) {
+
+                HIDLOG("Field changed start %d len %d (entry index %d) prev %d now %d",
+                       field->report_offset + (i*field->report_size),
+                       field->report_size,
+                       entry_index,
+                       old_value,
+                       new_value
+                      );
+
+                hid__field_entry_changed_callback((hid_device_t*)hid, field, entry_index, new_value);
+            }
+            entry_index++;
+        }
+        field = field->next;
+    }
+out:
+    memcpy(stored_payload->data, payload, payload_size);
+    stored_payload->len = payload_size;
+
 }
 
 static int usb_hid__transfer_completed(uint8_t channel, uint8_t status, void*userdata)
 {
     struct usb_hid *h = (struct usb_hid*)userdata;
-    uint8_t rxlen = 64;
+    uint8_t payload[64];
+    uint8_t rxlen = sizeof(payload);
+
     if (!h) {
         ESP_LOGE(HIDTAG, "Invalid private pointer!!!");
         return -1;
@@ -124,14 +189,14 @@ static int usb_hid__transfer_completed(uint8_t channel, uint8_t status, void*use
 
         HIDDEBUG("got data stat %d", status);
         // Fetch data from ....
-        usb_ll__read_in_block(h->epchan, h->payload, &rxlen);
+        usb_ll__read_in_block(h->epchan, payload, &rxlen);
         HIDDEBUG("Parsing report");
-        usb_hid__parse_report(h);
+        usb_hid__parse_report(h, payload, rxlen);
 
-        HIDDEBUG("Copying data");
-        h->seq = !h->seq;
-        memcpy(h->prev_payload, h->payload, rxlen);
-        h->prev_size = rxlen;
+        //HIDDEBUG("Copying data");
+        //h->seq = !h->seq;
+        //memcpy(h->prev_payload, h->payload, rxlen);
+        //h->prev_size = rxlen;
     } else {
         ESP_LOGE(HIDTAG,"error %d, resubmitting", status);
     }
@@ -143,10 +208,14 @@ static int usb_hid__transfer_completed(uint8_t channel, uint8_t status, void*use
 
 static int usb_hid__submit_in(struct usb_hid *m)
 {
+    unsigned size = m->max_report_size;
+    if (m->num_reports>1)
+        size++; // Include report ID
+
     return usb_ll__submit_request(m->epchan,
                                   PID_IN,
-                                  &m->payload[0],
-                                  64, // Report descriptor size!!!
+                                  NULL,
+                                  size, // Report descriptor size!!!
                                   usb_hid__transfer_completed,
                                   m);
 }
@@ -245,9 +314,6 @@ static int usb_hid__probe(struct usb_device *dev, struct usb_interface *i)
     if (usbh__set_configuration(dev, dev->config_descriptor->bConfigurationValue)<0)
         return -1;
 
-    if (usb_hid__set_idle(dev, intf)<0)
-        return -1;
-
     // Get report descriptor
 
     unsigned report_desc_len = __le16(hidd->wItemLength);
@@ -275,19 +341,41 @@ static int usb_hid__probe(struct usb_device *dev, struct usb_interface *i)
         dump__buffer(report_desc, report_desc_len);
     }
 
-    struct hid *hid = hid_parse(report_desc, report_desc_len);
+    struct hid *hid = hid__parse(report_desc, report_desc_len);
 
     if (NULL==hid) {
+        free( report_desc );
+        return -1;
     }
+
+#if 0
+    // Send SET_IDLE request for all relevant reports
+    const hid_report_t *report = hid->reports;
+    while (report) {
+        if (usb_hid__set_idle(dev, intf, report->id)<0) {
+            free( report_desc );
+            return -1;
+        }
+        report = report->next;
+    };
+#else
+    if (usb_hid__set_idle(dev, intf, 0)<0) {
+        free( report_desc );
+        return -1;
+    }
+
+#endif
 
     struct usb_hid *h =  malloc(sizeof(struct usb_hid)); // TBD.
 
     h->hiddev.bus = HID_BUS_USB;
     h->dev = dev;
     h->intf = i;
-    h->seq = 0;
-    h->prev_size= 0;
+    //h->seq = 0;
     h->hid = hid;
+
+    usb_hid__allocate_payloads(h);
+
 
     if (ep->bEndpointAddress & 0x80) {
         // In endpoint
@@ -321,7 +409,7 @@ static int usb_hid__probe(struct usb_device *dev, struct usb_interface *i)
 #define USB_HID_REQ_SET_IDLE (0x0A)
 #define HID_IDLE_REQUEST_TIMEOUT (500 / portTICK_RATE_MS)
 
-static int usb_hid__set_idle(struct usb_device *dev, usb_interface_descriptor_t *intf)
+static int usb_hid__set_idle(struct usb_device *dev, usb_interface_descriptor_t *intf, uint8_t report)
 {
     struct usb_request req = {0};
 
@@ -335,7 +423,7 @@ static int usb_hid__set_idle(struct usb_device *dev, usb_interface_descriptor_t 
 
     req.setup.bmRequestType = USB_REQ_RECIPIENT_INTERFACE | USB_REQ_TYPE_CLASS | USB_HOST_TO_DEVICE;
     req.setup.bRequest = USB_HID_REQ_SET_IDLE;
-    req.setup.wValue = __le16(0);
+    req.setup.wValue = __le16(0 | report);
     req.setup.wIndex = __le16(intf->bInterfaceNumber);
     req.setup.wLength = __le16(0);
 
@@ -364,9 +452,10 @@ static void usb_hid__disconnect(struct usb_device *dev, struct usb_interface *in
     usb_ll__release_channel(h->epchan);
 
     if (h->hid) {
-        hid_free(h->hid);
+        hid__free(h->hid);
     }
 
+    usb_hid__free_payloads(h);
     free(h);
     intf->drvdata = NULL;
 

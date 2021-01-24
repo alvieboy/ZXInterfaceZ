@@ -6,6 +6,7 @@
 #include "usb_defs.h"
 #include <stdbool.h>
 #include <stdlib.h>
+#include "object.h"
 
 struct usb_driver;
 struct usb_hub;
@@ -22,6 +23,7 @@ struct usb_interface
 
 struct usb_device
 {
+    struct object obj;
     uint8_t ep0_chan;
     //uint8_t ep0_size;
     uint8_t address;
@@ -51,8 +53,31 @@ struct usb_device_entry {
     struct usb_device *dev;
 };
 
+static inline struct usb_device *obj_to_usb_device(struct object *o)
+{
+    return (struct usb_device *)o;
+}
+
+struct usb_device *usbdevice__new(usb_speed_t speed, struct usb_hub *hub, int port);
+static inline void usbdevice__put(struct usb_device *dev)
+{
+    object__put(&dev->obj);
+}
+
+static inline struct usb_device *usbdevice__get(struct usb_device *dev)
+{
+    return (struct usb_device*)object__get(&dev->obj);
+}
+
+
+void usbdevice__init(void);
+int usbdevice__allocate_address(void);
+void usbdevice__release_address(int address);
+
 const struct usb_device_entry *usbdevice__get_devices();
 void usbdevice__add_device(struct usb_device *dev);
+
+
 static inline bool usbdevice__ishub(struct usb_device *dev) {
     return dev->self_hub!=NULL;
 }
@@ -61,5 +86,6 @@ static inline struct usb_hub *usbdevice__to_hub(struct usb_device *dev) {
 }
 struct usb_device *usbdevice__find_by_hub_port(const struct usb_hub *h, int port);
 void usbdevice__disconnect(struct usb_device *dev);
+
 
 #endif

@@ -8,6 +8,7 @@ static const uint8_t page0_idx_table[] = {
     0x04, // Joystick CA 4.1
     0x05, // Game Pad CA 4.1
     0x06, // Keyboard CA 4.1
+    0x07, // Keuboard/keypad
     0x30, // X DV 4.2
     0x31, // Y DV 4.2
     0x32, // Z DV 4.2
@@ -33,6 +34,7 @@ static const char *page0_str_table[] = {
     "Joystick",
     "Game Pad",
     "Keyboard",
+    "Keyboard/keypad",
     "X axis",
     "Y axis",
     "Z axis",

@@ -31,6 +31,7 @@ typedef struct
 
 
 int scsidev__init(scsidev_t *dev, const struct scsiblockfn *, void *pvt);
+int scsidev__deinit(scsidev_t *dev);
 
 int scsidev__inquiry(scsidev_t *dev, uint8_t *status, struct scsi_sbc_inquiry_data *data);
 

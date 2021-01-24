@@ -37,7 +37,7 @@ void usb_ll__channel_set_interval(uint8_t chan, uint8_t interval);
 
 int usb_ll__submit_request(uint8_t channel, 
                            usb_dpid_t pid,
-                           uint8_t *data, uint8_t datalen,
+                           const uint8_t *txdata, uint8_t datalen,
                            int (*reap)(uint8_t channel, uint8_t status,void*), void*);
 
 int usb_ll__alloc_channel(uint8_t devaddr,

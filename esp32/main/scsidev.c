@@ -4,19 +4,41 @@
 #include "byteorder.h"
 #include "systemevent.h"
 #include <stdio.h>
+#include "bitmap_allocator.h"
+#include "esp_assert.h"
 
 #define SCSIDEVTAG "SCSIDEV"
 
-static uint8_t scsi_id = 0;
+static bool scsidev_initialised = false;
+
+static bitmap32_t scsi_id_bitmap;
 
 static int scsidev__ensure_ready(scsidev_t *dev);
 static int scsidev__read_capacity(scsidev_t *dev, uint8_t *status, struct scsi_sbc_read_capacity *data);
 
+static void scsidev__initialize()
+{
+    bitmap_allocator__init(&scsi_id_bitmap);
+}
+
 static void scsidev__register(scsidev_t *dev)
 {
-    dev->id = scsi_id;
-    scsi_id++;
+    if (!scsidev_initialised)
+        scsidev__initialize();
+
+    int newid = bitmap_allocator__alloc(&scsi_id_bitmap);
+
+    assert(newid>=0);
+
+    dev->id = newid;
 }
+
+int scsidev__unregister(scsidev_t *dev)
+{
+    bitmap_allocator__release(&scsi_id_bitmap, dev->id);
+    return 0;
+}
+
 
 void scsidev__getname(scsidev_t *dev, char *out)
 {
@@ -105,6 +127,13 @@ int scsidev__init(scsidev_t *dev, const struct scsiblockfn *fn, void *pvt)
 
     systemevent__send_with_ctx(SYSTEMEVENT_TYPE_STORAGE, SYSTEMEVENT_STORAGE_BLOCKDEV_ATTACH, dev);
 
+    return 0;
+}
+
+int scsidev__deinit(scsidev_t *dev)
+{
+    scsidev__unregister(dev);
+    systemevent__send_with_ctx(SYSTEMEVENT_TYPE_STORAGE, SYSTEMEVENT_STORAGE_BLOCKDEV_DETACH, dev);
     return 0;
 }
 

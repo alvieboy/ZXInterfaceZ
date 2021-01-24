@@ -6,7 +6,6 @@
 
 struct usb_hub
 {
-    uint8_t usb_address;
     int (*init)(struct usb_hub *);
     int (*reset)(struct usb_hub *,int port);
     int (*get_ports)(struct usb_hub *);

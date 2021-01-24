@@ -286,6 +286,10 @@ static int usb_block__probe(struct usb_device *dev, struct usb_interface *i)
 
     if (usb_block__get_max_lun(self)<0) {
         ESP_LOGE(USBBLOCKTAG,"Cannot get max LUN from device");
+
+        usb_ll__release_channel(self->in_epchan);
+        usb_ll__release_channel(self->out_epchan);
+
         free(self);
         return -1;
     }
@@ -316,6 +320,8 @@ static void usb_block__disconnect(struct usb_device *dev, struct usb_interface *
     // Cancel any pending requests
     usb_ll__release_channel(b->in_epchan);
     usb_ll__release_channel(b->out_epchan);
+
+    scsidev__deinit(&b->scsidev);
 
     free(b);
     intf->drvdata = NULL;

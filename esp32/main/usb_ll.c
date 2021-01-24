@@ -251,7 +251,7 @@ void usb_ll__ack_received(uint8_t channel)
 
 int usb_ll__submit_request(uint8_t channel,
                            usb_dpid_t pid,
-                           uint8_t *data, uint8_t datalen,
+                           const uint8_t *txdata, uint8_t datalen,
                            int (*reap)(uint8_t channel, uint8_t status, void*), void*userdata)
 {
     uint8_t regconf[3];
@@ -261,12 +261,12 @@ int usb_ll__submit_request(uint8_t channel,
 
     USBLLDEBUG("Submitting request EP=%d PID %d seq=%d fs=%d", conf->epnum, (int)pid, conf->seq, conf->fullspeed);
     // Write epmem data
-    if ((pid != PID_IN) && (data!=NULL)) {
-        USBLLDEBUG("Copying data %p -> epmem@%04x", data, conf->memaddr);
+    if ((pid != PID_IN) && (txdata!=NULL)) {
+        USBLLDEBUG("Copying data %p -> epmem@%04x", txdata, conf->memaddr);
         if (DEBUG_ENABLED(DEBUG_ZONE_USBLL)) {
-            dump__buffer(data,datalen);
+            dump__buffer(txdata,datalen);
         }
-        fpga__write_usb_block(USB_REG_DATA(conf->memaddr), data, datalen);
+        fpga__write_usb_block(USB_REG_DATA(conf->memaddr), txdata, datalen);
     }
     uint8_t retries = 3;
 

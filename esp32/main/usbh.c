@@ -754,6 +754,7 @@ int usbh__init()
     root_hub.set_power = &usbh__hub_set_power;
 
     usb_ll__init();
+    usbdevice__init();
 
     usbhub__new(&root_hub);
 

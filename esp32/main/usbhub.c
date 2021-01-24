@@ -11,21 +11,6 @@
 #define USBHUBTAG "USBHUB"
 #define USBHUBDEBUG(x...) LOG_DEBUG(DEBUG_ZONE_USBH, USBHUBTAG ,x)
 
-static void usbhub__device_free(struct usb_device *dev)
-{
-    usb_ll__release_channel(dev->ep0_chan);
-
-    if (dev->config_descriptor)
-        free(dev->config_descriptor);
-
-    if (dev->vendor)
-        free(dev->vendor);
-    if (dev->product)
-        free(dev->product);
-    if (dev->serial)
-        free(dev->serial);
-}
-
 static char *usbhub__get_device_string(struct usb_device *dev,uint16_t index)
 {
     uint8_t local_string_descriptor[256];
@@ -106,15 +91,6 @@ static int usbhub__parse_interfaces(struct usb_device *dev)
     return -1;
 }
 
-static uint8_t usbhub__allocate_address(struct usb_hub *hub)
-{
-    hub->usb_address++;
-    if (hub->usb_address>127) {
-        hub->usb_address = 1;
-    }
-    return hub->usb_address;
-}
-
 static int usbhub__assign_address(struct usb_device *dev)
 {
 #ifdef __linux__
@@ -122,7 +98,7 @@ static int usbhub__assign_address(struct usb_device *dev)
 #else
     struct usb_request req = {0};
 
-    uint8_t newaddress = usbhub__allocate_address(dev->hub);
+    uint8_t newaddress = usbdevice__allocate_address();
 
     req.device = dev;
     req.target = NULL;
@@ -158,27 +134,19 @@ static int usbhub__assign_address(struct usb_device *dev)
 
 int usbhub__port_reset(struct usb_hub *hub, int port, usb_speed_t speed)
 {
-    struct usb_device dev;
+    struct usb_device *dev;
+
     usb_config_descriptor_t cd;
+
     uint16_t size_transferred;
     bool retry_device_descriptor = false;
     int r;
     int retries;
 
-    dev.address = 0;
-    dev.claimed = 0;
-    dev.vendor = NULL;
-    dev.product = NULL;
-    dev.serial = NULL;
-    dev.fullspeed = (speed == USB_FULL_SPEED?1:0);
+    dev = usbdevice__new(speed, hub, port);
+    if (!dev)
+        return -1;
 
-    dev.ep0_chan = usb_ll__alloc_channel(dev.address,
-                                         EP_TYPE_CONTROL,
-                                         speed == USB_FULL_SPEED ? 64 : 8,
-                                         0x00,
-                                         speed==USB_FULL_SPEED?1:0,
-                                         &dev
-                                        );
     retries = 3;
 
     do {
@@ -192,10 +160,10 @@ int usbhub__port_reset(struct usb_hub *hub, int port, usb_speed_t speed)
         USBHUBDEBUG("Requesting device descriptor");
         do {
             retry_device_descriptor = false;
-            if (usbh__get_descriptor(&dev,
+            if (usbh__get_descriptor(dev,
                                      USB_REQ_TYPE_STANDARD | USB_REQ_RECIPIENT_DEVICE,
                                      USB_DESC_DEVICE,
-                                     &dev.device_descriptor_b[0],
+                                     &dev->device_descriptor_b[0],
                                      USB_LEN_DEV_DESC,
                                      &size_transferred)<0) {
                 ESP_LOGE(USBHUBTAG, "Cannot fetch device descriptor");
@@ -212,13 +180,13 @@ int usbhub__port_reset(struct usb_hub *hub, int port, usb_speed_t speed)
                     break;
                 }
                 // Get EP0 size
-                uint8_t newep0size = dev.device_descriptor.bMaxPacketSize;
-                if (newep0size==usb_ll__get_channel_maxsize(dev.ep0_chan)) {
+                uint8_t newep0size = dev->device_descriptor.bMaxPacketSize;
+                if (newep0size==usb_ll__get_channel_maxsize(dev->ep0_chan)) {
                     ESP_LOGE(USBHUBTAG,"EP0 size inconsistent");
                     r = -1;
                     break;
                 }
-                usb_ll__set_channel_maxsize(dev.ep0_chan, newep0size);
+                usb_ll__set_channel_maxsize(dev->ep0_chan, newep0size);
                 USBHUBDEBUG("Descriptor too short, retrying");
                 retry_device_descriptor = true;
             } else {
@@ -234,43 +202,36 @@ int usbhub__port_reset(struct usb_hub *hub, int port, usb_speed_t speed)
 
     if (r<0){
         ESP_LOGE(USBHUBTAG,"Cannot enumerate device!");
+
         return r;
     }
 
     BUFFER_LOGI(USBHUBTAG, "Device descriptor",
-                &dev.device_descriptor_b[0],
-                sizeof(dev.device_descriptor));
+                &dev->device_descriptor_b[0],
+                sizeof(dev->device_descriptor));
 
 
     ESP_LOGI(USBHUBTAG," new USB device, vid=0x%04x pid=0x%04x",
-             __le16(dev.device_descriptor.idVendor),
-             __le16(dev.device_descriptor.idProduct)
+             __le16(dev->device_descriptor.idVendor),
+             __le16(dev->device_descriptor.idProduct)
             );
 
-    dev.hub = hub;
-    dev.hub_port = port;
-
-    // Update EP0 size
-
-    //dev.ep0_size = dev.device_descriptor.bMaxPacketSize;
-
-    if (usbhub__assign_address(&dev)<0) {
+    if (usbhub__assign_address(dev)<0) {
+        usbdevice__put(dev);
         return -1;
     }
 
-    USBHUBDEBUG(" assigned address %d", dev.address);
+    USBHUBDEBUG(" assigned address %d", dev->address);
 
     // Allocate channel for EP0
 
-    dev.config_descriptor = NULL;
-
-    USBHUBDEBUG("Allocated channel %d for EP0 of %d\n", dev.ep0_chan, dev.address);
+    USBHUBDEBUG("Allocated channel %d for EP0 of %d\n", dev->ep0_chan, dev->address);
     // Get configuration header. (9 bytes)
 
     // Get strings.
-    usbhub__get_device_strings(&dev);
+    usbhub__get_device_strings(dev);
 
-    if (usbh__get_descriptor(&dev,
+    if (usbh__get_descriptor(dev,
                              USB_REQ_TYPE_STANDARD | USB_REQ_RECIPIENT_DEVICE,
                              USB_DESC_CONFIGURATION,
                              (uint8_t*)&cd,
@@ -287,17 +248,17 @@ int usbhub__port_reset(struct usb_hub *hub, int port, usb_speed_t speed)
 
     uint16_t configlen = __le16(cd.wTotalLength);
 
-    dev.config_descriptor = malloc(configlen);
+    dev->config_descriptor = malloc(configlen);
 
-    if (dev.config_descriptor==NULL) {
+    if (dev->config_descriptor==NULL) {
         ESP_LOGE(USBHUBTAG,"Cannot allocate memory");
         goto err1;
     }
 
-    if (usbh__get_descriptor(&dev,
+    if (usbh__get_descriptor(dev,
                              USB_REQ_TYPE_STANDARD | USB_REQ_RECIPIENT_DEVICE,
                              USB_DESC_CONFIGURATION,
-                             (uint8_t*)dev.config_descriptor,
+                             (uint8_t*)dev->config_descriptor,
                              configlen,
                              &size_transferred
                             )<0 || (size_transferred!=configlen)) {
@@ -305,44 +266,44 @@ int usbhub__port_reset(struct usb_hub *hub, int port, usb_speed_t speed)
         goto err2;
     }
 
-    // Allocate a proper device/interfaces.
-    struct usb_device *newdev = (struct usb_device*) malloc (
-                                                             sizeof(struct usb_device) +
-                                                             sizeof(struct usb_interface) * (dev.config_descriptor->bNumInterfaces)
-                                                            );
-    memcpy(newdev, &dev, sizeof(dev));
+    dev = (struct usb_device*)object__realloc(&dev->obj,
+                                              sizeof(struct usb_device) +
+                                              sizeof(struct usb_interface) * (dev->config_descriptor->bNumInterfaces));
 
     int i;
-    for (i=0;i< (dev.config_descriptor->bNumInterfaces);i++) {
-        newdev->interfaces[i].numsettings = -1;
-        newdev->interfaces[i].claimed = 0;
+    for (i=0;i< (dev->config_descriptor->bNumInterfaces);i++) {
+        dev->interfaces[i].numsettings = -1;
+        dev->interfaces[i].claimed = 0;
     }
 
     // Create the interface structures
-    usbhub__parse_interfaces(newdev);
+    usbhub__parse_interfaces(dev);
 
     USBHUBDEBUG("Finding USB driver");
 
-    for (i=0;i< (dev.config_descriptor->bNumInterfaces);i++) {
+    for (i=0;i< (dev->config_descriptor->bNumInterfaces);i++) {
 
-        usb_driver__probe(newdev, &newdev->interfaces[i]);
+        usb_driver__probe(dev, &dev->interfaces[i]);
 
     }
 
-    if (newdev->claimed==0) {
+    if (dev->claimed==0) {
         // No driver.
-        usbhub__device_free(newdev);
+        usbdevice__put(dev);
+        //usbhub__device_free(newdev);
     } else {
         // Add to list.
-        usbdevice__add_device(newdev);
+        usbdevice__add_device(dev);
     }
 
     return 0;
 
 err2:
-    free(dev.config_descriptor);
+//    free(dev->config_descriptor);
 err1:
-    usb_ll__release_channel(dev.ep0_chan);
+    //    usb_ll__release_channel(dev->ep0_chan);
+    usbdevice__put(dev);
+
     return -1;
 }
 
@@ -354,6 +315,8 @@ void usbhub__port_disconnect(struct usb_hub *hub, int port)
         usbdevice__disconnect(dev);
         // Release EP0
         usb_ll__release_channel(dev->ep0_chan);
+        if (dev->address>0)
+            usbdevice__release_address(dev->address);
     } else {
         ESP_LOGE(USBHUBTAG, "Could not find attached driver on port %d", port);
     }

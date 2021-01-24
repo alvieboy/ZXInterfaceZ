@@ -30,3 +30,39 @@ const char* hid__get_driver_name(const hid_device_t*hiddev)
     }
     return NULL;
 }
+
+bool hid__has_multiple_reports(struct hid *h)
+{
+    if (h->reports && h->reports->next!=NULL)
+        return true;
+    return false;
+
+}
+int hid__number_of_reports(struct hid *h)
+{
+    hid_report_t * report = h->reports;
+    int count = 0;
+    do {
+        if (report) {
+            count ++;
+            report = report->next;
+        }
+    } while (report);
+    return count;
+}
+
+hid_report_t *hid__find_report_by_id(struct hid *h, uint8_t report_id, uint8_t *report_index_out)
+{
+    int idx = 0;
+
+    hid_report_t *report = h->reports;
+    while (report) {
+        if (report->id==report_id) {
+            *report_index_out = idx;
+            return report;
+        }
+        idx++;
+        report = report->next;
+    }
+    return NULL;
+}
