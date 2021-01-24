@@ -33,14 +33,20 @@
 #include "usbd_ctlreq.h"
 #include "usbd_core.h"
 
+typedef uint8_t report_t[8];
+
 typedef struct  {
     uint8_t state;
     uint8_t protocol;
     uint8_t idlestate;
     uint8_t altsetting;
+
+    uint8_t report_len[2];
+    report_t report_data[2];
+    uint8_t report_tx;
 } usbhid_t;
 
-uint8_t usbhid__sendreport(USBD_HandleTypeDef  *pdev, uint8_t *report, uint16_t len);
+uint8_t usbhid__sendreport(USBD_HandleTypeDef  *pdev, uint8_t reportid, uint8_t *report, uint16_t len);
 uint8_t usbhid__get_idle(USBD_HandleTypeDef *pdev);
 uint8_t usbhid__begin(USBD_HandleTypeDef *device, USBD_DescriptorsTypeDef *desc);
 

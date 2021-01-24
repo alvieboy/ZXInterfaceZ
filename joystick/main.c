@@ -100,10 +100,16 @@ static void gpio__setup()
     __HAL_RCC_GPIOB_CLK_ENABLE();
     __HAL_RCC_GPIOC_CLK_ENABLE();
 
-    __HAL_RCC_USART1_CLK_ENABLE();
+    __HAL_RCC_USART1_CLK_DISABLE();
+    __HAL_RCC_USART2_CLK_DISABLE();
+    __HAL_RCC_USART3_CLK_DISABLE();
+    __HAL_RCC_USART4_CLK_DISABLE();
 
     __HAL_RCC_SPI1_CLK_DISABLE();
+    __HAL_RCC_SPI2_CLK_DISABLE();
     __HAL_RCC_I2C1_CLK_DISABLE();
+    __HAL_RCC_I2C2_CLK_DISABLE();
+    __HAL_RCC_CAN1_CLK_DISABLE();
 
     __HAL_RCC_ADC1_CLK_DISABLE();
 
@@ -116,11 +122,17 @@ void tick__handler(void)
 {
 }
 
-static void tx(uint8_t report, bool changed)
+static void tx(uint8_t reportid, uint8_t report, bool changed)
 {
+    uint8_t data[2];
+
     if (usbd__hid_get_idle()==0 && !changed)
         return;
-    usbd__sendreport(&report, 1);
+
+    data[0] = reportid;
+    data[1] = report;
+
+    usbd__sendreport(0, data, 2);
 }
 
 
@@ -172,7 +184,7 @@ static void update_joystick_report(void *rptptr,
 static bool check_joysticks()
 {
     uint8_t new_report[2] = {0};
-    bool changed = false;
+    bool changed[2] = {false,false};
 
     // Generate reports based on pin settings.
     ARRAY_FOR_EACH(index, joysticks) {
@@ -186,10 +198,11 @@ static bool check_joysticks()
     ARRAY_FOR_EACH(index, joysticks) {
         if (report[index]!=new_report[index]) {
             report[index] = new_report[index];
-            changed = true;
+            changed[index] = true;
         }
     }
-    tx(report[0], changed);
+    tx(1, report[0], changed[0]);
+    tx(2, report[1], changed[1]);
     return true;
 }
 
@@ -209,8 +222,8 @@ static void joysticktimer_callback(void*user)
 {
     check_joysticks();
 
-    pin__write(LED1, !pin__read(J1_6));
-    pin__write(LED2, !pin__read(J1_9));
+    pin__write(LED1, !pin__read(J2_4));
+    pin__write(LED2, !pin__read(J2_3));
 }
 
 int main()
@@ -226,7 +239,9 @@ int main()
     joystick__set_usage(&joysticks[0], &atari_joy_conf);
     joystick__set_usage(&joysticks[1], &atari_joy_conf);
 
+//    pin__set_input(MAKEPIN(PORT_A,15));
     usbd__init();
+
 
     TimerInit( &ledTimer, &ledtimer_callback, NULL);
     TimerSetPersistent( &ledTimer, 1);

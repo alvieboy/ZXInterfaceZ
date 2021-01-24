@@ -40,6 +40,7 @@ USBD_HandleTypeDef  USBD_Device;
 
 extern USBD_DescriptorsTypeDef VCP_Desc;
 
+#if 0
 static void usbd__forcereset(void)
 {
     GPIO_InitTypeDef init;
@@ -58,20 +59,23 @@ static void usbd__forcereset(void)
     init.Speed = GPIO_SPEED_FREQ_LOW;
     HAL_GPIO_Init( GPIOA, &init );
 }
+#endif
 
 extern USBD_DescriptorsTypeDef Desc;
 
 void usbd__init(void)
 {
+#if 0
     usbd__forcereset();
-
+#endif
     usbhid__begin(&USBD_Device, &Desc);
 }
 
-int usbd__sendreport(uint8_t *report,
+int usbd__sendreport(uint8_t id,
+                     uint8_t *report,
                      uint16_t len)
 {
-    return usbhid__sendreport(&USBD_Device, report, len);
+    return usbhid__sendreport(&USBD_Device, id, report, len);
 }
 
 int usbd__hid_get_idle()

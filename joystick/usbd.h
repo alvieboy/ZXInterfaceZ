@@ -34,7 +34,8 @@
 #include <stdbool.h>
 
 void usbd__init(void);
-int usbd__sendreport(uint8_t *report,
+int usbd__sendreport(uint8_t id,
+                     uint8_t *report,
                      uint16_t len);
 
 int usbd__hid_get_idle(void);

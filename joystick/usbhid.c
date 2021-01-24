@@ -27,6 +27,7 @@
   ******************************************************************************
   */
 #include "usbhid.h"
+#include <stdbool.h>
 
 static uint8_t usbhid__init(USBD_HandleTypeDef *pdev, uint8_t cfgidx);
 static uint8_t usbhid__deinit(USBD_HandleTypeDef *pdev,uint8_t cfgidx);
@@ -61,46 +62,43 @@ static USBD_ClassTypeDef usbhid_class =
 #define HID_FS_BINTERVAL 10
 
 #define USB_HID_DESC_SIZ 9
-/*
-static uint8_t usbhid__reportDescriptor[] =
-{
-  0x05, 0x01,                    // USAGE_PAGE (Generic Desktop)
-  0x09, 0x05,                    // USAGE (Game Pad)
-  0xa1, 0x01,                    // COLLECTION (Application)
 
-  0x85, 0x03,                    //   REPORT_ID (3)
-  0x09, 0x01,                    //   USAGE (Pointer)
-  0xa1, 0x00,                    //   COLLECTION (Physical)
-  0x09, 0x30,                    //     USAGE (X)
-  0x09, 0x31,                    //     USAGE (Y)
-  0x15, 0xff,                    //     LOGICAL_MINIMUM (-1)
-  0x25, 0x01,                    //     LOGICAL_MAXIMUM (1)
-  0x95, 0x02,                    //     REPORT_COUNT (2)
-  0x75, 0x02,                    //     REPORT_SIZE (2) ; two bits to represent each axis
-  0x81, 0x02,                    //     INPUT (Data,Var,Abs)
-  0xc0,                          //   END_COLLECTION
-
-  0x05, 0x09,                    //   USAGE_PAGE (Button)
-  0x19, 0x01,                    //   USAGE_MINIMUM (Button 1)
-  0x29, 0x03,                    //   USAGE_MAXIMUM (Button 3)
-  0x15, 0x00,                    //   LOGICAL_MINIMUM (0)
-  0x25, 0x01,                    //   LOGICAL_MAXIMUM (1)
-  0x95, 0x01,                    //   REPORT_COUNT (3) ; 3 button
-  0x75, 0x01,                    //   REPORT_SIZE (1)
-  0x81, 0x02,                    //   INPUT (Data,Var,Abs)
-
-  0x95, 0x01,                    //   REPORT_COUNT (1) ; to pad out the bits into a number divisible by 8
-  0x81, 0x03,                    //   INPUT (Const,Var,Abs)
-
-  0xc0,                          // END_COLLECTION
-};
-*/
 static uint8_t usbhid__reportDescriptor[]  =
 {
   0x05, 0x01, // Item(Global): Usage Page, data= [ 0x01 ] 1 Generic Desktop Controls
   0x09, 0x04, // Usage, data= [ 0x04 ] 4 Joystick
   0xA1, 0x01, // Collection, data= [ 0x01 ] 1 Application
+  0xA1, 0x02, // Collection, data= [ 0x02 ] 2 Logical
+      0x85, 0x01, // Report ID (1)
+      0x75, 0x02, // Report Size 2
+      0x95, 0x02, // Report Count 2
+      0x15, 0xFF, // Logical Minimum (-1)
+      0x25, 0x01, // Logical Maximum (1)
+      0x35, 0xFF, // Physical Minimum -1
+      0x45, 0x01, // Physical Maximum (1)
+      0x09, 0x30, // Usage, data= [ 0x30 ] 48 Direction-X
+      0x09, 0x31, // Usage, data= [ 0x31 ] 49 Direction-Y
+      0x81, 0x02, // Input, data= [ 0x02 ] 2 Data Variable Absolute No_Wrap Linear Preferred_State No_Null_Position Non_Volatile Bitfield
+
+      0x75, 0x01, // Report Size, data= [ 0x01 ] 1
+      0x95, 0x03, // Report Count, data= [ 0x03 ] 3
+      0x15, 0x00, // Logical Minimum (0)
+      0x25, 0x01, // Logical Maximum, data= [ 0x01 ] 1
+      0x35, 0x00, // Physical Minimum 0
+      0x45, 0x01, // Physical Maximum, data= [ 0x01 ] 1
+      0x05, 0x09, // Usage Page, data= [ 0x09 ] 9 Buttons
+      0x19, 0x01, // Usage Minimum, data= [ 0x01 ] 1 Button 1 (Primary)
+      0x29, 0x03, // Usage Maximum, data= [ 0x03 ] 1 Button 3
+      0x81, 0x02, // Input, data= [ 0x02 ] 2 Data Variable Absolute No_Wrap Linear Preferred_State No_Null_Position Non_Volatile Bitfield
+
+      0x95, 0x01, // Report Count 1
+      0x81, 0x03, // Input, const
+    0xC0,       // End collection
+  0xC0,  // End collection
+  0xA1, 0x01, // Collection, data= [ 0x01 ] 1 Application
+    0x05, 0x01, // Usage Page, data= [ 0x09 ] 1 Generic Desktop Controls
     0xA1, 0x02, // Collection, data= [ 0x02 ] 2 Logical
+      0x85, 0x02, // Report ID (2)
       0x75, 0x02, // Report Size 2
       0x95, 0x02, // Report Count 2
       0x15, 0xFF, // Logical Minimum (-1)
@@ -126,6 +124,7 @@ static uint8_t usbhid__reportDescriptor[]  =
       0x81, 0x03, // Input, const
     0xC0,       // End collection
   0xC0  // End collection
+
 };
 
 
@@ -217,66 +216,6 @@ __ALIGN_BEGIN static uint8_t usbhid__DeviceQualifierDesc[]  __ALIGN_END =
   0x00,
 };
 
-#if 0
-
-__ALIGN_BEGIN static uint8_t HID_MOUSE_ReportDesc[HID_REPORT_DESC_SIZE]  __ALIGN_END =
-{
-  0x05, 0x01, // Item(Global): Usage Page, data= [ 0x01 ] 1 Generic Desktop Controls
-  0x09, 0x04, // Usage, data= [ 0x04 ] 4 Joystick
-  0xA1, 0x01, // Collection, data= [ 0x01 ] 1 Application
-    0xA1, 0x02, // Collection, data= [ 0x02 ] 2 Logical
-      0x75, 0x08, // Report Size, data= [ 0x08 ] 8
-      0x95, 0x05, // Report Count, data= [ 0x05 ] 5
-      0x15, 0x00, // Logical Minimum, data= [ 0x00 ] 0
-      0x26, 0xFF, 0x00, // Logical Maximum, data= [ 0xff 0x00 ] 255
-      0x35, 0x00,// Physical Minimum, data= [ 0x00 ] 0
-      0x46, 0xFF, 0x00, // Physical Maximum, data= [ 0xff 0x00 ] 255
-      0x09, 0x30, // Usage, data= [ 0x30 ] 48 Direction-X
-      0x09, 0x31, // Usage, data= [ 0x31 ] 49 Direction-Y
-      0x09, 0x32, // Usage, data= [ 0x32 ] 50 Direction-Z
-      0x09, 0x32, // Usage, data= [ 0x32 ] 50 Direction-Z
-      0x09, 0x35, // Usage, data= [ 0x35 ] 53 Rotate-Z
-      0x81, 0x02, // Input, data= [ 0x02 ] 2 Data Variable Absolute No_Wrap Linear Preferred_State No_Null_Position Non_Volatile Bitfield
-
-      0x75, 0x04, // Report Size, data= [ 0x04 ] 4
-      0x95, 0x01, // Report Count, data= [ 0x01 ] 1
-      0x25, 0x07, // Logical Maximum, data= [ 0x07 ] 7
-      0x46, 0x3B, 0x01, // Physical Maximum, data= [ 0x3b 0x01 ] 315
-      0x65, 0x14, //Unit, data= [ 0x14 ] 20 System: English Rotation, Unit: Degrees
-      0x09, 0x39, // Usage, data= [ 0x39 ] 57 Hat Switch
-      0x81, 0x42, // Input, data= [ 0x42 ] 66 Data Variable Absolute No_Wrap Linear Preferred_State Null_State Non_Volatile Bitfield
-      0x65, 0x00, // Unit, data= [ 0x00 ] 0 System: None, Unit: (None)
-
-      0x75, 0x01, // Report Size, data= [ 0x01 ] 1
-      0x95, 0x0C, // Report Count, data= [ 0x0c ] 12
-      0x25, 0x01, // Logical Maximum, data= [ 0x01 ] 1
-      0x45, 0x01, // Physical Maximum, data= [ 0x01 ] 1
-      0x05, 0x09, // Usage Page, data= [ 0x09 ] 9 Buttons
-      0x19, 0x01, // Usage Minimum, data= [ 0x01 ] 1 Button 1 (Primary)
-      0x29, 0x0C, // Usage Maximum, data= [ 0x0c ] 12 (null)
-      0x81, 0x02, // Input, data= [ 0x02 ] 2 Data Variable Absolute No_Wrap Linear Preferred_State No_Null_Position Non_Volatile Bitfield
-      0x06, 0x00, 0xFF, // Usage Page, data= [ 0x00 0xff ] 65280 (null)
-
-
-      0x75, 0x01, // Report Size, data= [ 0x01 ] 1
-      0x95, 0x08, // Report Count, data= [ 0x08 ] 8
-      0x25, 0x01, // Logical Maximum, data= [ 0x01 ] 1
-      0x45, 0x01, // Physical Maximum, data= [ 0x01 ] 1
-      0x09, 0x01, // Usage, data= [ 0x01 ] 1 (null)
-      0x81, 0x02, // Input, data= [ 0x02 ] 2 Data Variable Absolute No_Wrap Linear Preferred_State No_Null_Position Non_Volatile Bitfield
-    0xC0,       // End collection
-    0xA1, 0x02, // Collection, data= [ 0x02 ] 2 Logical
-      0x75, 0x08, // Report Size, data= [ 0x08 ] 8
-      0x95, 0x07, // Report Count, data= [ 0x07 ] 7
-      0x46, 0xFF, 0x00, // Physical Maximum, data= [ 0xff 0x00 ] 255
-      0x26, 0xFF, 0x00, // Logical Maximum, data= [ 0xff 0x00 ] 255
-      0x09, 0x02, // Usage, data= [ 0x02 ] 2 (null)
-      0x91, 0x02, // Output, data= [ 0x02 ] 2 Data Variable Absolute No_Wrap Linear Preferred_State No_Null_Position Non_Volatile Bitfield
-    0xC0, // End collection
-  0xC0  // End collection
-};
-
-#endif
 
 #define HID_EPIN_ADDR 0x81
 #define HID_EPOUT_ADDR 0x01
@@ -442,6 +381,7 @@ static uint8_t usbhid__setup(USBD_HandleTypeDef *pdev,
     return USBD_OK;
 }
 
+
 /**
  * @brief  usbhid__SendReport
  *         Send HID Report
@@ -450,24 +390,35 @@ static uint8_t usbhid__setup(USBD_HandleTypeDef *pdev,
  * @retval status
  */
 uint8_t usbhid__sendreport(USBD_HandleTypeDef  *pdev,
+                           uint8_t id,
                            uint8_t *report,
                            uint16_t len)
 {
-    usbhid_t     *hhid = (usbhid_t*)pdev->pClassData;
+    usbhid_t *hhid = (usbhid_t*)pdev->pClassData;
 
     if (pdev->dev_state == USBD_STATE_CONFIGURED )
     {
-        if(hhid->state == HID_IDLE)
-        {
+        __disable_irq();
+
+        uint8_t rid = id;
+        memcpy(&hhid->report_data[rid], report, len);
+        hhid->report_len[rid] = len;
+        hhid->report_tx = rid;
+
+        __enable_irq();
+
+        if(hhid->state == HID_IDLE) {
             hhid->state = HID_BUSY;
             USBD_LL_Transmit (pdev,
                               HID_EPIN_ADDR,
-                              report,
-                              len);
+                              hhid->report_data[rid],
+                              hhid->report_len[rid]);
+
         }
     }
     return USBD_OK;
 }
+
 
 static uint8_t  *usbhid__getcfgdesc (uint16_t *length)
 {
@@ -476,14 +427,31 @@ static uint8_t  *usbhid__getcfgdesc (uint16_t *length)
 }
 
 
-static uint8_t  usbhid__datain (USBD_HandleTypeDef *pdev,
+/* Called within USB IRQ context */
+static uint8_t usbhid__datain(USBD_HandleTypeDef *pdev,
                               uint8_t epnum)
 {
-  
-  /* Ensure that the FIFO is empty before a new transfer, this condition could 
-  be caused by  a new transfer before the end of the previous transfer */
-  ((usbhid_t *)pdev->pClassData)->state = HID_IDLE;
-  return USBD_OK;
+    int i;
+    usbhid_t *self  = (usbhid_t *)pdev->pClassData;
+
+    if (epnum == HID_EPIN_ADDR) {
+
+        // Clear report we just sent out.
+        self->report_len[ self->report_tx ] = 0;
+
+        for (i=0;i<2;i++) {
+            if (self->report_len[i]>0) {
+                self->report_tx = i;
+                return USBD_LL_Transmit (pdev,
+                                         HID_EPIN_ADDR,
+                                         self->report_data[i],
+                                         self->report_len[i]);
+            }
+        }
+    }
+    self->state = HID_IDLE;
+
+    return USBD_OK;
 }
 
 static uint8_t  *usbhid__getdevicequalifierdesc (uint16_t *length)
