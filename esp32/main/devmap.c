@@ -337,6 +337,7 @@ static const devmap_d_t *devmap__find(const hid_device_t *dev)
         default:
             break;
         }
+        devmap = devmap->next;
     }
     return NULL;
 }
