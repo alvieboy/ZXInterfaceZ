@@ -161,6 +161,8 @@ spectrum_kbd.c        \
 systemevent.c 	      \
 storage.c             \
 usbhubdev.c           \
+object.c              \
+bitmap_allocator.c    \
 wsys/charmap.c        \
 wsys/tomthumb.c        
 

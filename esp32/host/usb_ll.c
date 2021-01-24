@@ -217,7 +217,7 @@ static void usb_ll__libusb_transfer_callback(struct libusb_transfer *transfer)
 
 int usb_ll__submit_request(uint8_t channel,
                            usb_dpid_t pid,
-                           uint8_t *data, uint8_t datalen,
+                           const uint8_t *data, uint8_t datalen,
                            int (*reap)(uint8_t channel, uint8_t status,void*), void*reapdata)
 {
     struct libusb_transfer *t = libusb_alloc_transfer(0);
@@ -234,13 +234,16 @@ int usb_ll__submit_request(uint8_t channel,
     struct epchannel *epc = &channels[channel];
     int r;
 
-    memcpy( epc->out_data, data, datalen);
-
-    epc->out_datalen = datalen;
+    if (data) {
+        memcpy( epc->out_data, data, datalen);
+        epc->out_datalen = datalen;
+    } else {
+        epc->out_datalen = 0;
+    }
 
     switch (pid) {
     case PID_IN:
-        printf("usb_ll: IN request into %p\n", epc->in_data);
+        printf("usb_ll: IN request into %p len %d\n", epc->in_data, datalen);
         libusb_fill_bulk_transfer(t,
                                   device_handle,
                                   epc->epnum,
