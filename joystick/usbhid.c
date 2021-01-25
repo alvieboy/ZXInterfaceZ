@@ -95,8 +95,11 @@ static uint8_t usbhid__reportDescriptor[]  =
       0x81, 0x03, // Input, const
     0xC0,       // End collection
   0xC0,  // End collection
+
+
+  0x05, 0x01, // Usage Page, data= [ 0x09 ] 1 Generic Desktop Controls
+  0x09, 0x04, // Usage, data= [ 0x04 ] 4 Joystick
   0xA1, 0x01, // Collection, data= [ 0x01 ] 1 Application
-    0x05, 0x01, // Usage Page, data= [ 0x09 ] 1 Generic Desktop Controls
     0xA1, 0x02, // Collection, data= [ 0x02 ] 2 Logical
       0x85, 0x02, // Report ID (2)
       0x75, 0x02, // Report Size 2
