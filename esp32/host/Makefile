@@ -163,6 +163,7 @@ storage.c             \
 usbhubdev.c           \
 object.c              \
 bitmap_allocator.c    \
+save.c                \
 wsys/charmap.c        \
 wsys/tomthumb.c        
 
@@ -175,6 +176,7 @@ wsys/widgetgroup.cpp       \
 wsys/bin.cpp      \
 wsys/menu.cpp      \
 wsys/indexedmenu.cpp      \
+wsys/filelistmenu.cpp      \
 wsys/callbackmenu.cpp      \
 wsys/menuwindow.cpp      \
 wsys/menuwindowindexed.cpp      \
@@ -195,13 +197,16 @@ wsys/editbox.cpp \
 wsys/wifiscanner.cpp \
 wsys/inputdialog.cpp \
 wsys/slider.cpp \
+wsys/filesavedialog.cpp \
+wsys/frame.cpp \
 menus/nmimenu.cpp \
 menus/settingsmenu.cpp \
 menus/videomodemenu.cpp \
 menus/wifimenu.cpp \
 menus/about.cpp \
 menus/audiowindow.cpp \
-menus/loadmenu.cpp
+menus/loadmenu.cpp \
+menus/savemenu.cpp 
 
 
 
