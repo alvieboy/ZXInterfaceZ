@@ -17,7 +17,8 @@ extern "C"
 
 typedef enum {
     WSYS_MODE_NMI,
-    WSYS_MODE_LOAD
+    WSYS_MODE_LOAD,
+    WSYS_MODE_SAVE
 } wsys_mode_t;
 
 void wsys__keyboard_event(uint16_t raw, char ascii);
