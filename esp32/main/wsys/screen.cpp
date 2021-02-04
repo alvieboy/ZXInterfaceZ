@@ -12,6 +12,8 @@ static std::vector<Window*> window_cleanup;
 typedef std::vector<Window*>::const_iterator window_iter_t;
 static Widget *kbdfocuswidget = NULL;
 
+static Window * screen__getActiveWindow();
+
 void screen__init()
 {
     //windows.clear();
@@ -48,10 +50,16 @@ void screen__destroyAll()
 void screen__addWindow(Window*win, uint8_t x, uint8_t y)
 {
     WSYS_LOGI( "Adding screen window");
+
+    Window *current =screen__getActiveWindow();
+    if (current)
+        current->focusOut();
+
     windows.push_back(win);
     win->move(x, y);
     win->setVisible(true);
     win->setdamage(DAMAGE_WINDOW);
+    win->focusIn();
 }
 
 void screen__addWindowCentered(Window*win)
@@ -188,6 +196,7 @@ void screen__removeWindow(Window*w)
 {
     if (std::find(windows.begin(), windows.end(), w)!=windows.end()) {
         windows.pop_back();
+        w->focusOut(); // Do we need this ?
         screen__damage(w);
         screen__add_to_cleanup(w);
     }
