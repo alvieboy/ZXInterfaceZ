@@ -55,19 +55,21 @@ screenptr_t screenptr_t::drawvalue(const uint8_t data)
     return temp;
 }
 
-void screenptr_t::nextpixelline()
+void screenptr_t::nextpixelline(int amt)
 {
     // Increment Y by 1 (Y0)
-    off.h++;
-    if ((off.h&0x7)==0) {
-        // Overflow Y6.
-        uint16_t l = off.l;
-        l+=32;
-        if (!(l&0x100)) {
+    while (amt--) {
+        off.h++;
+        if ((off.h&0x7)==0) {
+            // Overflow Y6.
+            uint16_t l = off.l;
+            l+=32;
+            if (!(l&0x100)) {
             // Fix up, we added too much to Y6.
-            off.h-=8;
+                off.h-=8;
+            }
+            off.l = l&0xff;
         }
-        off.l = l&0xff;
     }
 }
 

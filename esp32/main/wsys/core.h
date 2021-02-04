@@ -181,7 +181,7 @@ struct screenptr_t {
     void fromxy(uint8_t x, uint8_t y) {
         off.v = getxyscreenstart(x,y);
     }
-    void nextpixelline();
+    void nextpixelline(int amt=1);
     void nextcharline(int amt=1);
     screenptr_t drawchar(const uint8_t *data);
     screenptr_t drawascii(char);
