@@ -93,10 +93,10 @@ public:
 
             return l;
         }
-    const MenuEntry *getEntry(int index) {
+    const MenuEntry *getEntry(int index) const {
         return &m_entries->entries[index];
     }
-    const MenuEntry *getEntry() {
+    const MenuEntry *getEntry() const {
         return &m_entries->entries[m_selectedEntry];
     }
 
@@ -104,6 +104,8 @@ public:
     Signal<uint8_t> &selectionChanged() { return m_selectionChanged; }
     void setActiveEntry(uint8_t entry);
     //static const char *strtablehelp(uint8_t index) { return
+    virtual void focusIn() override;
+    virtual void focusOut() override;
 protected:
     void chooseNext();
     void choosePrev();

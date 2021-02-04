@@ -12,6 +12,7 @@ Menu::Menu(Widget *parent): Widget(parent)
     m_selectedEntry = 0;
     m_entries = NULL;
     m_helpdisplayer = NULL;
+    setFocusPolicy(true);
 }
      /*
 void Menu::setHelp(const char *helpstrings[], HelpDisplayer *displayer)
@@ -43,7 +44,7 @@ bool Menu::handleEvent(uint8_t type, u16_8_t code)
     if (type!=0)
         return false;
 
-    char c = spectrum_kbd__to_ascii(code.v);
+    unsigned char c = spectrum_kbd__to_ascii(code.v);
     
     WSYS_LOGI( "Menu event kbd 0x%02x", c);
     bool handled = true;
@@ -132,12 +133,16 @@ void Menu::updateSelection()
 
     WSYS_LOGI("selected entry %d offset %d", m_selectedEntry, m_displayOffset);
     while (pos < height()) {
-        if (currententry < maxentries && currententry==m_selectedEntry) {
-            const MenuEntry &ref = (*m_entries)[currententry];
-            if (ref.flags & MENU_FLAGS_DISABLED) {
-                attrval = MENU_COLOR_DISABLED;
+        if (hasFocus()) {
+            if (currententry < maxentries && currententry==m_selectedEntry) {
+                const MenuEntry &ref = (*m_entries)[currententry];
+                if (ref.flags & MENU_FLAGS_DISABLED) {
+                    attrval = MENU_COLOR_DISABLED;
+                } else {
+                    attrval = MENU_COLOR_SELECTED;
+                }
             } else {
-                attrval = MENU_COLOR_SELECTED;
+                attrval = MENU_COLOR_NORMAL;
             }
         } else {
             attrval = MENU_COLOR_NORMAL;
@@ -237,4 +242,16 @@ uint8_t Menu::getMinimumWidth() const
             len=clen;
     }
     return len;
+}
+
+void Menu::focusIn()
+{
+    WSYS_LOGI("Focus in");
+    setdamage(DAMAGE_SELECTION);
+}
+
+void Menu::focusOut()
+{
+    WSYS_LOGI("Focus out");
+    setdamage(DAMAGE_SELECTION);
 }
