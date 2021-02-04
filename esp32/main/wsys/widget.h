@@ -54,9 +54,14 @@ public:
     static void setBGLine(attrptr_t attrptr, int width,  uint8_t value);
     void grabKeyboardFocus();
     void releaseKeyboardFocus();
+    void setFocusPolicy(bool focus) { m_canfocus=focus; }
+    virtual bool canFocus() const { return m_canfocus; }
+    virtual void focusIn() {};
+    virtual void focusOut() {};
+    bool hasFocus() const { return m_hasfocus; }
+    virtual void setFocus(bool focus);
+
 protected:
-
-
     virtual void drawImpl() = 0;
 
     void recalculateScreenPointers();
@@ -66,6 +71,8 @@ protected:
     uint8_t m_x,m_y,m_w,m_h;
     bool m_visible;
     uint8_t m_damage;
+    bool m_canfocus;
+    bool m_hasfocus;
 };
 
 #endif

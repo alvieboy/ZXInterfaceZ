@@ -127,3 +127,22 @@ void Widget::releaseKeyboardFocus()
 {
     screen__releaseKeyboardFocus(this);
 }
+
+void Widget::setFocus(bool focus)
+{
+    if (!canFocus()) {
+#ifdef __linux__
+        WSYS_LOGI("NOT focusing %s\n",typeid(*this).name());
+#endif
+        return;
+    }
+#ifdef __linux__
+    WSYS_LOGI("setFocus %d %s\n",focus, typeid(*this).name());
+#endif
+    m_hasfocus=focus;
+
+    if (focus)
+        focusIn();
+    else
+        focusOut();
+}
