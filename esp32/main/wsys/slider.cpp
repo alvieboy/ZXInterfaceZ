@@ -97,7 +97,7 @@ bool SliderBase::handleEvent(uint8_t type, u16_8_t code)
     if (type!=0)
         return handled;
 
-    char c = spectrum_kbd__to_ascii(code.v);
+    unsigned char c = spectrum_kbd__to_ascii(code.v);
     do {
         if (c==KEY_UNKNOWN)
             break;
