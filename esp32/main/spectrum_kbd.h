@@ -20,7 +20,7 @@
 extern "C" {
 #endif
 
-char spectrum_kbd__to_ascii(uint16_t value);
+unsigned char spectrum_kbd__to_ascii(uint16_t value);
 
 #ifdef __cplusplus
 }
