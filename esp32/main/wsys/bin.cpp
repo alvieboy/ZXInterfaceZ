@@ -8,12 +8,28 @@ Bin::Bin(Widget *parent): WidgetGroup(parent), m_child(NULL)
 {
 }
 
+void Bin::focusIn()
+{
+    WSYS_LOGI("Focus IN child %p", m_child);
+#ifdef __linux__
+    WSYS_LOGI(" > %s", typeid(*m_child).name());
+#endif
+    if (m_child)
+        m_child->setFocus(true);
+}
+void Bin::focusOut()
+{
+    WSYS_LOGI("Focus OUT child");
+    if (m_child)
+        m_child->setFocus(false);
+}
+
+
 void Bin::setChild(Widget *c)
 {
     m_child = c;
     c->setParent(this);
     WSYS_LOGI( "resize due to addchild");
-
     resizeEvent();
     setdamage(DAMAGE_CHILD);
 }

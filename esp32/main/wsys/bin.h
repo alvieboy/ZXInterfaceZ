@@ -11,6 +11,8 @@ public:
     virtual void draw(bool force=false) override;
     void removeChild(Widget *c);
     virtual bool handleEvent(uint8_t type, u16_8_t code) override;
+    virtual void focusIn();
+    virtual void focusOut();
 protected:
 
     virtual void setChild(Widget *);
