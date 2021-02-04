@@ -37,7 +37,7 @@ bool Button::handleEvent(uint8_t type, u16_8_t code)
     if (type!=0)
         return false;
 
-    char c = spectrum_kbd__to_ascii(code.v);
+    unsigned char c = spectrum_kbd__to_ascii(code.v);
     if ((m_accel != 0xff) && (c==m_accel)) {
         m_clicked.emit();
         return true;
