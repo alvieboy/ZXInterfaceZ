@@ -83,6 +83,7 @@ bool sdcard__isconnected(void)
 
 void sdcard__init()
 {
+    register_mountpoint("sdcard");
 }
 
 #endif
