@@ -3,9 +3,11 @@
 #include "spectrum_kbd.h"
 #include "charmap.h"
 
-EditBox::EditBox(const char *text, Widget *parent): Widget(parent), m_text(text)
+EditBox::EditBox(const char *text, Widget *parent): Widget(parent)
 {
-    m_editable = false;
+    //m_editable = false;
+    if (text)
+        m_text = text;
     redraw();
 }
 
@@ -24,7 +26,9 @@ void EditBox::drawImpl()
 
     attrptr+=len;
 
-    if (m_editable) {
+    WSYS_LOGI("EditBox: has focus %d policy %d\n", hasFocus(), canFocus());
+
+    if (hasFocus()) {
         setBGLine(m_attrptr, m_w, MAKECOLORA(BLACK, BLUE|GREEN, BRIGHT));
         *attrptr = MAKECOLORA(BLACK, WHITE, BRIGHT|FLASH);
         screenptr.drawascii('L');
@@ -33,14 +37,25 @@ void EditBox::drawImpl()
     }
 }
 
+void EditBox::focusIn()
+{
+    WSYS_LOGI("Focus in");
+    redraw();
+}
 
+void EditBox::focusOut()
+{
+    WSYS_LOGI("Focus out");
+    redraw();
+}
 
 bool EditBox::handleEvent(uint8_t type, u16_8_t code)
 {
-    if (!m_editable || (type!=0))
-        return false;
+    int ret = false;
+    if (type!=0)
+        return ret;
 
-    char c = spectrum_kbd__to_ascii(code.v);
+    unsigned char c = spectrum_kbd__to_ascii(code.v);
 
     switch (c) {
     case KEY_BACKSPACE:
@@ -48,9 +63,11 @@ bool EditBox::handleEvent(uint8_t type, u16_8_t code)
             m_text.pop_back();
             redraw();
         }
+        ret=true;
         break;
     case KEY_ENTER:
         m_enter.emit();
+        ret=true;
         break;
     default:
         if (IS_PRINTABLE(c)) {
@@ -58,22 +75,25 @@ bool EditBox::handleEvent(uint8_t type, u16_8_t code)
                 m_text+=c;
                 redraw();
             }
+            ret=true;
         }
         break;
     }
 
-    return true;
+    return ret;
 }
 
 
 void EditBox::setEditable(bool e)
 {
-    if (m_editable!=e) {
+    setFocusPolicy(e);
+    /*if (m_editable!=e) {
         if (e)
             grabKeyboardFocus();
         else
             releaseKeyboardFocus();
     }
     m_editable=e;
+    */
     redraw();
 };

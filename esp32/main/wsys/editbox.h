@@ -15,6 +15,8 @@ public:
     virtual bool handleEvent(uint8_t type, u16_8_t code);
     void setEditable(bool e);
     Signal<> &enter() { return m_enter; }
+    virtual void focusIn();
+    virtual void focusOut();
 private:
     std::string m_text;
     bool m_editable;
