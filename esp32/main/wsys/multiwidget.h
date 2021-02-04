@@ -10,6 +10,7 @@ class MultiWidget: public WidgetGroup
 public:
     MultiWidget(Widget *parent): WidgetGroup(parent), m_numchilds(0)
     {
+        m_focusWidget = NULL;
     }
 
     virtual void resizeEvent() = 0;
@@ -21,8 +22,15 @@ public:
 
     virtual void draw(bool force=false) override;
     virtual void setdamage(uint8_t mask);
-
+    virtual void focusIn() override;
+    virtual void focusOut() override;
+    virtual void focusNext();
 protected:
+    int getChild(Widget *c);
+    Widget *findNextFocusable(int start);
+
+
+    Widget *m_focusWidget;
     uint8_t m_numchilds;
     Widget *m_childs[MULTIWIDGET_MAX_CHILDS];
 };
