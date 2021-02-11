@@ -9,6 +9,8 @@
 #include "dump.h"
 #include "list.h"
 
+#if 0
+
 static bool filter_match(struct directory_resource *res, struct dirent *e)
 {
     const char *ext;
@@ -283,3 +285,4 @@ uint16_t directory_resource__len(struct resource *res)
     return 1 + dr->alloc_size;
 }
 
+#endif
