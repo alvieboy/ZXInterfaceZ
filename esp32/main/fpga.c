@@ -740,6 +740,40 @@ int fpga__write_extram_block_from_file_nonblock(uint32_t address, int fd, int si
     return 0;
 }
 
+int fpga__read_extram_block_into_file(uint32_t address, int fd, int size, uint8_t *checksum)
+{
+    uint8_t chunk[128];
+
+    while (size) {
+        int chunksize = MIN(size, sizeof(chunk));
+        int r = fpga__read_extram_block(address, chunk, chunksize);
+        if (r<0)
+            return -1;
+        if (checksum) {
+            uint8_t lchecksum = 0;
+            for (int i=0; i<chunksize; i++) {
+                lchecksum ^= chunk[i];
+            }
+            (*checksum) ^= lchecksum;
+        }
+        r = write(fd, chunk, chunksize);
+        if (r!=chunksize) {
+            ESP_LOGE(TAG, "Short write into file: %s", strerror(errno));
+            return -1;
+        }
+        address += chunksize;
+        size -= chunksize;
+    }
+    return 0;
+}
+
+
+
+
+
+
+
+
 int fpga__isBITmode(void)
 {
     int f = fpga__get_status();
