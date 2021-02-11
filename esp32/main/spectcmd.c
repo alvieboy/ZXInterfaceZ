@@ -22,6 +22,8 @@
 #include "esxdos.h"
 #include "wsys.h"
 #include "tapeplayer.h"
+#include "save.h"
+#include "memlayout.h"
 
 #define COMMAND_BUFFER_MAX 256+2
 
@@ -57,7 +59,7 @@ static int spectcmd__set_filter(const uint8_t *cmdbuf, unsigned len)
 
     spectcmd__removedata();
 
-    directory_resource__set_filter(&directoryresource, cmdbuf[0]);
+    //directory_resource__set_filter(&directoryresource, cmdbuf[0]);
 
     return 0;
 }
@@ -300,7 +302,7 @@ static int spectcmd__kbddata(const uint8_t *cmdbuf, unsigned len)
 
     ESP_LOGD(TAG, "KBD: %04x", key);
 
-    char c = spectrum_kbd__to_ascii(key);
+    unsigned char c = spectrum_kbd__to_ascii(key);
     //if (c >= ' ') {
         //ESP_LOGI(TAG," > Key '%c'", c);
     //}
@@ -493,31 +495,61 @@ static int spectcmd__loadtrap(const uint8_t *cmdbuf, unsigned len)
 
 static int spectcmd__savetrap(const uint8_t *cmdbuf, unsigned len)
 {
-    NEED(17);
-    /*
-     save "a" SCREEN$
+    uint8_t status;
+    NEED(3);
+    uint16_t size = (((uint16_t)cmdbuf[0])<<8) + cmdbuf[1];
+    uint8_t type = cmdbuf[2];
 
-     CMD FIFO write: 0x1767 0x17
-CMD FIFO write: 0x0367 0x03
-CMD FIFO write: 0x6167 0x61
-CMD FIFO write: 0x2067 0x20
-CMD FIFO write: 0x2067 0x20
-CMD FIFO write: 0x2067 0x20
-CMD FIFO write: 0x2067 0x20
-CMD FIFO write: 0x2067 0x20
-CMD FIFO write: 0x2067 0x20
-CMD FIFO write: 0x2067 0x20
-CMD FIFO write: 0x2067 0x20
-CMD FIFO write: 0x2067 0x20
-CMD FIFO write: 0x0067 0x00
-CMD FIFO write: 0x1b67 0x1b
-CMD FIFO write: 0x0067 0x00
-CMD FIFO write: 0x4067 0x40
-CMD FIFO write: 0x0d67 0x0d
-CMD FIFO write: 0x8067 0x80
+    if (type==0) {
+        ESP_LOGI(TAG,"Save %d bytes, wait header\n", size);
+        NEED(size);
+    }
 
-     */
+    ESP_LOGI(TAG,"Request save %d bytes, type %d\n", size, type);
+
     spectcmd__removedata();
+
+    if (size==18) {
+        save__set_data_from_header(&cmdbuf[3], size);
+    }
+
+    switch (save__get_tape_mode()) {
+
+    case TAPE_NO_TAPE:
+        wsys__reset(WSYS_MODE_SAVE);
+        fpga__write_miscctrl(0x01); // Non-regular NMI handling (i.e., ends with RET). This notifies the ROM firmware
+        status = SPECTCMD_CMD_SAVETRAP;
+        fpga__load_resource_fifo(&status, 1, RESOURCE_DEFAULT_TIMEOUT);
+        break;
+    case TAPE_PHYSICAL:
+        // Saving to physical tape.
+        status = 0xFF; // Don't enter menu
+        fpga__load_resource_fifo(&status, 1, RESOURCE_DEFAULT_TIMEOUT);
+        status = 0xFF; // Don't copy data
+        fpga__load_resource_fifo(&status, 1, RESOURCE_DEFAULT_TIMEOUT);
+        break;
+    case TAPE_TAP: /* Fall-through */
+    case TAPE_TZX:
+        status = 0xFF; // Don't enter menu
+        fpga__load_resource_fifo(&status, 1, RESOURCE_DEFAULT_TIMEOUT);
+        status = 0x00; // copy data
+        fpga__load_resource_fifo(&status, 1, RESOURCE_DEFAULT_TIMEOUT);
+        break;
+    }
+    return 0;
+}
+
+static int spectcmd__savedata(const uint8_t *cmdbuf, unsigned len)
+{
+    uint8_t status;
+    NEED(2);
+    uint16_t size = (((uint16_t)cmdbuf[0])<<8) + cmdbuf[1];
+
+    ESP_LOGI(TAG,"Request save data %d bytes", size);
+    spectcmd__removedata();
+
+    save__append_from_extram(MEMLAYOUT_TAPE_WORKAREA, size);
+
     return 0;
 }
 
@@ -546,7 +578,7 @@ static const spectcmd_handler_t spectcmd_handlers[] = {
     &spectcmd__romcrc,        // 15 SPECTCMD_CMD_ROMCRC
     &spectcmd__loadtrap,      // 16 SPECTCMD_CMD_LOADTRAP
     &spectcmd__savetrap,      // 17 SPECTCMD_CMD_SAVETRAP
-    NULL,                     // 18
+    &spectcmd__savedata,      // 18 SPECTCMD_CMD_SAVEDATA,
     NULL,                     // 19
     NULL,                     // 1A
     NULL,                     // 1B
