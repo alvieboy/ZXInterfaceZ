@@ -1,4 +1,117 @@
 ; patches for LD-BYTES 
+
+; SA-LEADER
+;
+ORG $04D7
+	LD	B, A ; As in original ROM
+
+	PUSH	HL
+        LD	HL, SAVEFINISHED    ; Return address.
+        EX	(SP), HL
+
+	PUSH	AF
+        PUSH	BC
+        
+	LD	A, CMD_SAVETRAP
+        CALL	WRITECMDFIFO
+	LD	A, D
+        CALL    WRITECMDFIFO
+	LD	A, E
+        CALL    WRITECMDFIFO
+        
+        ; We have type in A'
+        EX	AF, AF'
+        LD	C, A
+        EX	AF, AF'
+        LD	A, C
+
+        CALL    WRITECMDFIFO
+        ; For headers, we immediatly send header data
+        CP	$00
+        JR	NZ, _nodata
+        CALL	SENDTAPEDATAFIFO
+_nodata:	
+        ; Wait for acknowledle
+	CALL	READRESFIFO
+        CP	$FF
+
+        POP	BC
+
+        JR	Z, EXITNOSAVE
+
+        ; Enter NMI menu
+	
+        ; AF is still in stack. 
+        ; This will return to SAVEFINSIHED
+        JP	NMIHANDLER
+EXITNOSAVE:
+	; Remove from stack (to dummy), since we did not call NMIHANDLER
+        ;INC	SP
+        ;INC	SP
+        ;POP	HL
+        POP	AF
+	;
+SAVEFINISHED:
+	; Check if we need to send data.
+        PUSH	AF
+        PUSH	BC
+        CALL	READRESFIFO
+        CP	$FF
+        POP	BC
+        JR	Z, _goback
+
+        ; TBD: Write data to RAM.
+	PUSH	IX
+        PUSH	DE
+        ; Set up pointer
+        LD	A, $02
+        OUT	(PORT_RAM_ADDR_2), A
+        LD	A, $80
+        OUT	(PORT_RAM_ADDR_1), A
+        XOR	A
+        OUT	(PORT_RAM_ADDR_0), A
+        
+        PUSH	BC
+        EX	AF, AF'
+        LD	C, A
+        EX	AF, AF'
+        LD	A, C
+        POP	BC
+        OUT	(PORT_RAM_DATA), A
+	INC	IX
+
+_wloop:	LD	A, (IX)
+	INC	IX
+        OUT	(PORT_RAM_DATA), A
+        DEC	DE
+        LD	A, E
+        OR	D
+        JR	NZ, _wloop
+        POP	DE
+        POP	IX
+
+	LD	A, CMD_SAVEDATA
+        CALL	WRITECMDFIFO
+	LD	A, D
+        CALL    WRITECMDFIFO
+	LD	A, E
+        CALL    WRITECMDFIFO
+
+
+        POP	AF
+	PUSH	HL
+        LD	HL, $053E    ; Return address. Holds a RET.
+        EX	(SP), HL
+        JP 	RETTOMAINROM
+_goback:
+	POP	AF
+	PUSH	HL
+        LD	HL, $04D8    ; Return address.
+        EX	(SP), HL
+        
+        JP 	RETTOMAINROM
+;	RET
+	;ENDLESS
 ORG $056C
 	JR $059F
 
@@ -164,3 +277,23 @@ _sendheader:
         DI
         HALT
 
+
+SENDTAPEDATAFIFO:
+	; Need to send data to FIFO
+        PUSH	IX
+	PUSH	DE
+_write:
+        LD	A, (IX)
+        CALL	WRITECMDFIFO
+        INC	IX
+        DEC 	DE
+        LD	A, E
+        OR	D
+        JR 	NZ, _write
+
+        POP	DE
+        POP     IX
+        RET
+
+SENDTAPEDATARAM:
+	RET

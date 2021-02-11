@@ -195,7 +195,6 @@ _endl1: HALT
 	include "debug.asm"
         include "string.asm"
         include "keyboard.asm"
-        include	"resource.asm"
         include	"graphics.asm"
         include	"print.asm"
         include	"regdebug.asm"
@@ -203,6 +202,7 @@ _endl1: HALT
         ; WARNING WARNING -  this does need correct placement in ROM
         ; Make sure it does not overlap with other routines.
         include "loadpatch.asm"
+        include	"resource.asm"
         include "romcrc.asm"
 	include "nmihandler.asm"
 	include	"charmap.asm"
