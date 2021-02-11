@@ -23,6 +23,8 @@ static int storage__register_mount_device(const char *basepath, void *dev)
             mount_devices[i].basepath = strdup(basepath);
             mount_devices[i].dev = dev;
             register_mountpoint(&basepath[1]);
+            systemevent__send(SYSTEMEVENT_TYPE_STORAGE,
+                              SYSTEMEVENT_STORAGE_ATTACHMOUNTPOINT);
             return 0;
         }
     }
@@ -38,6 +40,8 @@ static int storage__unregister_mount_device(const char *basepath)
             mount_devices[i].basepath = NULL;
             mount_devices[i].dev = 0;
             unregister_mountpoint(&basepath[1]);
+            systemevent__send(SYSTEMEVENT_TYPE_STORAGE,
+                              SYSTEMEVENT_STORAGE_DETACHMOUNTPOINT);
             return 0;
         }
     }
@@ -75,8 +79,8 @@ void storage__attach_scsidev(scsidev_t *dev)
     if (r!=ESP_OK) {
         ESP_LOGE(STORAGETAG,"Cannot register filesystem");
     }
-    storage__register_mount_device(name, dev);
 #endif
+    storage__register_mount_device(name, dev);
 }
 
 void storage__detach_scsidev(scsidev_t *dev)
@@ -94,10 +98,10 @@ static void storage__handleevent(const systemevent_t *event, void*user)
     ESP_LOGI(STORAGETAG, "Storage event 0x%02x ctx=%p", event->event, event->ctxdata);
 
     switch (event->event) {
-    case SYSTEMEVENT_STORAGE_BLOCKDEV_ATTACH:
+    case SYSTEMEVENT_BLOCKDEV_ATTACH:
         storage__attach_scsidev(event->ctxdata);
         break;
-    case SYSTEMEVENT_STORAGE_BLOCKDEV_DETACH:
+    case SYSTEMEVENT_BLOCKDEV_DETACH:
         storage__detach_scsidev(event->ctxdata);
         break;
 
@@ -108,5 +112,5 @@ static void storage__handleevent(const systemevent_t *event, void*user)
 
 void storage__init()
 {
-    systemevent__register_handler(SYSTEMEVENT_TYPE_STORAGE, storage__handleevent, NULL);
+    systemevent__register_handler(SYSTEMEVENT_TYPE_BLOCKDEV, storage__handleevent, NULL);
 }
