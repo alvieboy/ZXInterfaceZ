@@ -4,6 +4,7 @@ use IEEE.numeric_std.all;
 library work;
 use work.zxinterfacepkg.all;
 use work.ahbpkg.all;
+use work.usbpkg.all;
 -- synthesis translate_off
 use work.txt_util.all;
 -- synthesis translate_on
@@ -394,6 +395,7 @@ architecture beh of zxinterface is
   signal divmmc_det_s           : std_logic;
   signal divmmc_compat_s        : std_logic;
 
+  signal micidle_s              : std_logic_vector(7 downto 0);
 begin
 
   rst48_inst: entity work.rstgen
@@ -727,7 +729,7 @@ begin
     page128_pmc_i   => page128_pmc_s,
     page128_smc_i   => page128_smc_s,
 
-
+    micidle_i       => micidle_s,
 
     resfifo_reset_o => resfifo_reset_s,
     resfifo_wr_o    => resfifo_wr_s,
@@ -1251,6 +1253,24 @@ begin
        );
     end block;
   end generate capinst;
+
+  -- MIC detetor
+
+  micdet_i: entity work.activity_detector
+    generic map (
+      -- tstate tick runs at ~3.5Mhz.
+      -- We want each LSB of the counter to hold 50ms.
+      -- TBD: perhaps we can link this to 50Hz tick?
+      PRESCALE  => altsim(1749990, 1749)
+    )
+    port map (
+      clk_i     => clk_i,
+      arst_i    => arst_i,
+      tick_i    => tstate_s,
+      dat_i     => mic_s,
+      idlecnt_o => micidle_s
+    );
+
 
 --  ainst: entity work.audiorec
 --  port map (

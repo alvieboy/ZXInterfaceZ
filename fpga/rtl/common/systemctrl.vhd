@@ -77,6 +77,8 @@ entity systemctrl is
     cmdfifo_int_i         : in std_logic;
     usb_int_i             : in std_logic;
     spect_int_i           : in std_logic;
+    -- Mic
+    micidle_i             : in std_logic_vector(7 downto 0);
 
     --cmdfifo_intack_o      : out std_logic; -- Interrupt acknowledge
 
@@ -233,7 +235,8 @@ begin
           when "0010001" => -- PC MSB
             dat_out_s   <= pc_latch_r;
           when "0010010" => null;-- Write-only
-          when "0010011" => null;-- Write-only
+          when "0010011" =>
+            dat_out_s   <= micidle_i;
           when "0010100" => null;-- Write-only
           -- CMD fifo.
           --when "010101" =>

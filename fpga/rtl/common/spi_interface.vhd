@@ -199,6 +199,9 @@ begin
           when x"FC" => -- Write MISCCTRL register
             ahb_address_r   <= to_01("00XXXXXXXXX10XXXXX0010111"); ahb_write_r <= '1'; ahb_inc_r <= '0';
             state_r         <= WRINC;
+          when x"FD" => -- Read MICIDLE register
+            ahb_address_r   <= to_01("00XXXXXXXXX10XXXXX0010011"); ahb_write_r <= '0'; ahb_inc_r <= '0';
+            state_r         <= RDWR;
           when x"9E" | x"9F" => -- Read ID
             ahb_address_r   <= to_01("00XXXXXXXXX10XXXXX0000000"); ahb_write_r <= '0'; ahb_inc_r <= '1';
             state_r         <= RDWR;
