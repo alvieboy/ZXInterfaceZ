@@ -125,7 +125,8 @@ int scsidev__init(scsidev_t *dev, const struct scsiblockfn *fn, void *pvt)
 
     scsidev__register(dev);
 
-    systemevent__send_with_ctx(SYSTEMEVENT_TYPE_STORAGE, SYSTEMEVENT_STORAGE_BLOCKDEV_ATTACH, dev);
+    systemevent__send_with_ctx(SYSTEMEVENT_TYPE_BLOCKDEV,
+                               SYSTEMEVENT_BLOCKDEV_ATTACH, dev);
 
     return 0;
 }
@@ -133,7 +134,8 @@ int scsidev__init(scsidev_t *dev, const struct scsiblockfn *fn, void *pvt)
 int scsidev__deinit(scsidev_t *dev)
 {
     scsidev__unregister(dev);
-    systemevent__send_with_ctx(SYSTEMEVENT_TYPE_STORAGE, SYSTEMEVENT_STORAGE_BLOCKDEV_DETACH, dev);
+    systemevent__send_with_ctx(SYSTEMEVENT_TYPE_BLOCKDEV,
+                               SYSTEMEVENT_BLOCKDEV_DETACH, dev);
     return 0;
 }
 
