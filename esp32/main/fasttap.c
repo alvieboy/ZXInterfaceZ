@@ -8,13 +8,14 @@
 #include "tzx.h"
 #include "log.h"
 #include "rom_hook.h"
+#include "memlayout.h"
 
 #define FASTTAP "FASTTAP"
 
-#define FASTTAP_ADDRESS_STATUS 0x028000
-#define FASTTAP_ADDRESS_LENLSB 0x028001
-#define FASTTAP_ADDRESS_LENMSB 0x028002
-#define FASTTAP_ADDRESS_DATA   0x028003
+#define FASTTAP_ADDRESS_STATUS MEMLAYOUT_TAPE_WORKAREA
+#define FASTTAP_ADDRESS_LENLSB (FASTTAP_ADDRESS_STATUS+1)
+#define FASTTAP_ADDRESS_LENMSB (FASTTAP_ADDRESS_STATUS+2)
+#define FASTTAP_ADDRESS_DATA   (FASTTAP_ADDRESS_STATUS+3)
 
 static int fasttap_fd = -1;
 static int fasttap_size= -1;
