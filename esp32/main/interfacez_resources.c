@@ -29,7 +29,7 @@ struct opstatus_resource opstatusresource = {
     .status = 0xFF,
     .str = ""
 };
-
+#if 0
 struct directory_resource directoryresource = {
     .r = DIRECTORY_RESOURCE_DEF,
     .alloc_size = 0,
@@ -37,7 +37,7 @@ struct directory_resource directoryresource = {
     .entries = 0,
     .filter = 0
 };
-
+#endif
 struct int8_resource videomodeconfigresource = {
     .r = INT8_RESOURCE_DEF,
     .valptr = NULL,
