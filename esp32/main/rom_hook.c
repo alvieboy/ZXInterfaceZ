@@ -57,7 +57,9 @@ int rom_hook__enable_defaults()
     }
 
     rom_hook_defaults[0] = rom_hook__add_pre_set(rom, 0x0767, 1); // LOAD
-    rom_hook_defaults[1] = rom_hook__add_pre_set(rom, 0x0970, 1); // SAVE
+//    rom_hook_defaults[1] = rom_hook__add_pre_set(rom, 0x0970, 1); // SAVE
+//    rom_hook_defaults[1] = rom_hook__add_pre_set(rom, 0x04FB, 1); // SAVE
+    rom_hook_defaults[1] = rom_hook__add_pre_set(rom, 0x04D7, 1); // SAVE
     rom_hook_defaults[2] = rom_hook__add_post_reset(rom, 0x01FFE, 1); // Will have a RET instruction
 
     return 0;
