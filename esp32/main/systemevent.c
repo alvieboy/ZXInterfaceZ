@@ -10,23 +10,34 @@ static struct {
     void *user;
 } systemevent_handlers[MAX_SYSTEMEVENT_HANDLERS] = {};
 
-void systemevent__register_handler(uint8_t mask, systemevent_handler_t handler, void *user)
+systemevent_handlerid_t systemevent__register_handler(uint8_t mask, systemevent_handler_t handler, void *user)
 {
-    int i;
+    unsigned i;
     for (i=0; i<ARRAY_SIZE(systemevent_handlers);i++) {
         if (systemevent_handlers[i].mask==0) {
             systemevent_handlers[i].mask = mask;
             systemevent_handlers[i].handler = handler;
             systemevent_handlers[i].user = user;
-            return;
+            return i;
         }
     }
     ESP_LOGE("SYSTEMEVENT","Too many handlers!");
+    return -1;
+}
+
+int systemevent__unregister_handler(systemevent_handlerid_t handler)
+{
+    if (handler<0 || handler>=(int)ARRAY_SIZE(systemevent_handlers) ||
+       systemevent_handlers[handler].mask==0)
+        return -1;
+
+    systemevent_handlers[handler].mask=0;
+    return 0;
 }
 
 void systemevent__send_event(const systemevent_t *event)
 {
-    int i;
+    unsigned int i;
     for (i=0; i<ARRAY_SIZE(systemevent_handlers);i++) {
         if ((event->type & systemevent_handlers[i].mask)!=0) {
             if (systemevent_handlers[i].handler!=NULL)
