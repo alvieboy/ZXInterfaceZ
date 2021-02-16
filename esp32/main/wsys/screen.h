@@ -18,6 +18,6 @@ void screen__check_redraw();
 void screen__grabKeyboardFocus(Widget *d);
 void screen__releaseKeyboardFocus(Widget *d);
 void screen__windowLoop(Window *w);
-
+void screen__windowVisibilityChanged(Window *s, bool visible);
 #endif
 

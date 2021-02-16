@@ -41,7 +41,6 @@ void screen__destroyAll()
         delete(w);
     }
 
-
     WSYSObject::report_alloc();
 }
 
@@ -49,7 +48,8 @@ void screen__destroyAll()
 
 void screen__addWindow(Window*win, uint8_t x, uint8_t y)
 {
-    WSYS_LOGI( "Adding screen window");
+    WSYS_LOGI("Adding screen window");
+    WSYS_LOGI("Windows %d", windows.size());
 
     Window *current =screen__getActiveWindow();
     if (current)
@@ -57,10 +57,22 @@ void screen__addWindow(Window*win, uint8_t x, uint8_t y)
 
     windows.push_back(win);
     win->move(x, y);
-    win->setVisible(true);
-    win->setdamage(DAMAGE_WINDOW);
-    win->focusIn();
+    if (win->isVisible()) {
+        win->setdamage(DAMAGE_WINDOW);
+        win->show();
+    }
 }
+
+void screen__windowVisibilityChanged(Window *win, bool visible)
+{
+    WSYS_LOGI("Window visibility changed %p %d\n", win, visible);
+    if (visible) {
+        win->resizeEvent();
+        win->setdamage(DAMAGE_WINDOW);
+    }
+}
+
+
 
 void screen__addWindowCentered(Window*win)
 {
@@ -194,11 +206,25 @@ void screen__damage(Widget *source)
 
 void screen__removeWindow(Window*w)
 {
-    if (std::find(windows.begin(), windows.end(), w)!=windows.end()) {
-        windows.pop_back();
+    std::vector<Window*>::iterator i = std::find(windows.begin(), windows.end(), w);
+    if (i!=windows.end()) {
+        WSYS_LOGI("Removing window %p %s", w, CLASSNAME(*w));
+        WSYS_LOGI("Windows %d", windows.size());
+        windows.erase(i);
+        WSYS_LOGI("Windows now %d", windows.size());
+        //windows.pop_back();
+
+
         w->focusOut(); // Do we need this ?
         screen__damage(w);
         screen__add_to_cleanup(w);
+        Window *current = screen__getActiveWindow();
+        if (current) {
+            current->focusIn();
+        }
+    } else {
+        WSYS_LOGI("Removing already destroyed window!!!");
+        abort();
     }
 }
 
@@ -224,7 +250,7 @@ void screen__check_redraw()
     while (window_cleanup.size()) {
         Window *w = window_cleanup.back();
         window_cleanup.pop_back();
-        WSYS_LOGI("Deleting %p\n", w);
+        WSYS_LOGI("Deleting %p (%s)\n", w, CLASSNAME(*w));
         delete(w);
     }
 }
