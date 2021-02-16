@@ -1,24 +1,42 @@
+
 #include "stackedwidget.h"
 
 bool StackedWidget::handleEvent(uint8_t type, u16_8_t code)
 {
-    if (m_currentindex >= m_numchilds)
+    if (m_currentindex >= getNumberOfChildren())
         return false;
-    return m_childs[m_currentindex]->handleEvent(type, code);
+    return childAt(m_currentindex)->handleEvent(type, code);
+}
+
+void StackedWidget::addChild(Widget *w)
+{
+    if (m_currentindex<0) {
+        w->show();
+        m_currentindex = 0;
+    } else {
+        w->hide();
+    }
+    MultiWidget::addChild(w);
 }
 
 void StackedWidget::draw(bool force)
 {
-    if (m_currentindex >= m_numchilds)
+    if (m_currentindex >= getNumberOfChildren())
         return;
-    m_childs[m_currentindex]->draw(force);
+    childAt(m_currentindex)->draw(force);
 }
 
 void StackedWidget::setCurrentIndex(uint8_t index)
 {
+    if (m_currentindex<getNumberOfChildren()) {
+        //childAt(m_currentindex)->setFocus(false);
+        childAt(m_currentindex)->hide();
+    }
     m_currentindex = index;
     // force redraw
-    m_childs[index]->redraw();
+    //childAt(m_currentindex)->setFocus(hasFocus());
+    childAt(index)->show();
+    childAt(index)->redraw();
 
     //draw(true);
 }
@@ -30,7 +48,8 @@ void StackedWidget::drawImpl()
 
 void StackedWidget::resizeEvent()
 {
-    for (int i=0; i<m_numchilds;i++) {
-        m_childs[i]->resize(m_x, m_y, m_w, m_h);
+    for (int i=0; i<getNumberOfChildren();i++) {
+        childAt(i)->resize(m_x, m_y, m_w, m_h);
     }
 }
+

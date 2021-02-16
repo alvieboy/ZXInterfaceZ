@@ -8,7 +8,7 @@ class StackedWidget: public MultiWidget
 public:
     StackedWidget(Widget *parent=NULL): MultiWidget(parent)
     {
-        m_currentindex = 0;
+        m_currentindex = -1;
     }
 
     virtual bool handleEvent(uint8_t type, u16_8_t code) override;
@@ -16,9 +16,11 @@ public:
     virtual void setCurrentIndex(uint8_t index);
     virtual void drawImpl();
     virtual void resizeEvent();
+    virtual void addChild(Widget *w);
+
 
 protected:
-    uint8_t m_currentindex;
+    int8_t m_currentindex;
 };
 
 #endif
