@@ -6,7 +6,7 @@ ORG $04D7
 	LD	B, A ; As in original ROM
 
 	PUSH	HL
-        LD	HL, SAVEFINISHED    ; Return address.
+        LD	HL, SAVEFINISHED    ; Return address for JP NMINENU.
         EX	(SP), HL
 
 	PUSH	AF
@@ -50,10 +50,13 @@ EXITNOSAVE:
         ;INC	SP
         ;POP	HL
         POP	AF
-	;
+	INC	SP
+        INC	SP
+        ;
 SAVEFINISHED:
 	; Check if we need to send data.
         PUSH	AF
+        
         PUSH	BC
         CALL	READRESFIFO
         CP	$FF
@@ -77,7 +80,9 @@ SAVEFINISHED:
         EX	AF, AF'
         LD	A, C
         POP	BC
+        ; Send block type first
         OUT	(PORT_RAM_DATA), A
+	; And skip first byte at (IX)
 	INC	IX
 
 _wloop:	LD	A, (IX)
@@ -85,11 +90,12 @@ _wloop:	LD	A, (IX)
         OUT	(PORT_RAM_DATA), A
         DEC	DE
         LD	A, E
-        OR	D
+        OR	D                              
         JR	NZ, _wloop
         POP	DE
         POP	IX
-
+        ; At this point we wrote all required data.
+        
 	LD	A, CMD_SAVEDATA
         CALL	WRITECMDFIFO
 	LD	A, D
@@ -99,6 +105,9 @@ _wloop:	LD	A, (IX)
 
 
         POP	AF
+        
+        ; Just RET from our routine.
+        
 	PUSH	HL
         LD	HL, $053E    ; Return address. Holds a RET.
         EX	(SP), HL
