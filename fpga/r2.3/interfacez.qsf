@@ -341,6 +341,7 @@ set_global_assignment -name VHDL_FILE ../rtl/common/border_capture.vhd
 set_global_assignment -name VHDL_FILE ../rtl/common/insn_detector.vhd
 set_global_assignment -name VHDL_FILE ../rtl/common/interfacez_io.vhd
 set_global_assignment -name VHDL_FILE ../rtl/common/async_pulse.vhd
+set_global_assignment -name VHDL_FILE ../rtl/common/activity_detector.vhd
 set_global_assignment -name VHDL_FILE ../rtl/common/zxinterfacepkg.vhd
 set_global_assignment -name VHDL_FILE ../rtl/common/logiccapture.vhd
 set_global_assignment -name VHDL_FILE ../rtl/common/screencap.vhd
