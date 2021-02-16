@@ -13,9 +13,9 @@
 static const MenuEntryList wifimenu_entries = {
     .sz = 4,
     .entries = {
-        { .flags = 1, .string = "Status" },
-        { .flags = 1, .string = "Mode" },
-        { .flags = 1, .string = "Wireless" },
+        { .flags = 0, .string = "Status" },
+        { .flags = 0, .string = "Mode" },
+        { .flags = 0, .string = "Wireless" },
 //        { .flags = 1, .string = "Network" },
 //        { .flags = 1, .string = "Advanced" },
         { .flags = 0, .string = "Back" },
@@ -55,8 +55,13 @@ public:
         addChild(m_password, 0, 7, 21, 1);
         addChild(m_chan, 0, 11, 21, 1);
 
-        m_ssid->enter().connect( this, &WifiWirelessSettingsAP::ssidEnter);
-        m_password->enter().connect( this, &WifiWirelessSettingsAP::passwordEnter);
+        //m_ssid->enter().connect( this, &WifiWirelessSettingsAP::ssidEnter);
+        //m_password->enter().connect( this, &WifiWirelessSettingsAP::passwordEnter);
+        m_ssid->setEditable(true);
+        m_password->setEditable(true);
+        //m_chan->setEditable(true);
+
+
         m_channellist = NULL;
     }
 
@@ -75,15 +80,15 @@ public:
         screenptr.nextcharline(2);
         screenptr.drawstring("SSID:");
         screenptr.nextcharline(2);
-        drawthumbstring(screenptr, "Press [S] to change SSID");
+       // drawthumbstring(screenptr, "Press [S] to change SSID");
         screenptr.nextcharline(2);
         screenptr.drawstring("Password:");
         screenptr.nextcharline(2);
-        drawthumbstring(screenptr, "Press [P] to change password");
+      //  drawthumbstring(screenptr, "Press [P] to change password");
         screenptr.nextcharline(2);
         screenptr.drawstring("Channel:");
         screenptr.nextcharline(2);
-        drawthumbstring(screenptr, "Press [C] to change channel");
+      //  drawthumbstring(screenptr, "Press [C] to change channel");
     }
 
     virtual bool handleLocalEvent(uint8_t type, u16_8_t code) override
@@ -91,7 +96,7 @@ public:
         bool handled = false;
         if (type!=0)
             return handled;
-
+#if 0
         char c = spectrum_kbd__to_ascii(code.v);
         switch (c) {
         case 'S': /* fall-through */
@@ -112,6 +117,7 @@ public:
         default:
             break;
         }
+#endif
         return handled;
     }
 
@@ -259,7 +265,7 @@ public:
         if (r==0) {
             m_scanmessage = create<MessageBox>("Scanning WiFi", 22, 6);
             m_scanmessage->setText("Scanning WiFi...");
-            m_scanmessage->setButtonText("Cancel [ENTER]");
+            m_scanmessage->addButton("Cancel", 0);
             m_scanmessage->exec();
         } else {
             wsys__unsubscribesystemevent(notifyslot);
