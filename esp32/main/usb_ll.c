@@ -337,7 +337,7 @@ int usb_ll__init()
     uint8_t regval[4] = {
         0x00,//(USB_STATUS_PWRON),
         0x00, // Unused,
-        (USB_INTCONF_GINTEN | USB_INTCONF_DISC | USB_INTCONF_CONN | USB_INTCONF_OVERCURRENT),
+        (USB_INTCONF_GINTEN | USB_INTCONF_DISC | USB_INTCONF_CONN),// | USB_INTCONF_OVERCURRENT),
         0xff // Clear pending
     };
 
