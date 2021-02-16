@@ -6,7 +6,6 @@
 #include "wsys/chooserdialog.h"
 #include "settingsmenu.h"
 #include "fileaccess.h"
-#include "fpga.h"
 #include "sna.h"
 #include "wsys/messagebox.h"
 #include "tapeplayer.h"
@@ -15,6 +14,8 @@
 #include "inputdialog.h"
 #include "poke.h"
 #include "nmi_poke.h"
+#include "standardfilefilter.h"
+#include "spectctrl.h"
 
 static MenuWindow *nmimenu;
 
@@ -210,9 +211,8 @@ static void do_select_poke(FileChooserDialog *d, int status)
 
 static void cb_load_snapshot()
 {
-    FileChooserDialog *dialog = WSYSObject::create<FileChooserDialog>("Load snapshot", 24, 18);
+    FileChooserDialog *dialog = WSYSObject::create<FileChooserDialog>("Load snapshot", 24, 18, StandardFileFilter::AllSnapshotsFileFilter());
     dialog->setWindowHelpText("Use Q/A to move, ENTER selects");
-    dialog->setFilter(FILE_FILTER_SNAPSHOTS);
     if (dialog->exec()>=0) {
         do_load_snapshot(dialog, dialog->result());
     }
@@ -223,9 +223,8 @@ static void cb_load_snapshot()
 
 static void cb_poke()
 {
-    FileChooserDialog *dialog = WSYSObject::create<FileChooserDialog>("Load POKE", 24, 18);
+    FileChooserDialog *dialog = WSYSObject::create<FileChooserDialog>("Load POKE", 24, 18, StandardFileFilter::AllPokesFileFilter());
     dialog->setWindowHelpText("Use Q/A to move, ENTER selects");
-    dialog->setFilter(FILE_FILTER_POKES);
     if (dialog->exec()>=0) {
         do_select_poke(dialog, dialog->result());
     }
@@ -265,9 +264,8 @@ static int do_load_tape_fast(FileChooserDialog *d, int status)
 
 static void cb_load_tape()
 {
-    FileChooserDialog *dialog = WSYSObject::create<FileChooserDialog>("Load tape", 24, 18);
+    FileChooserDialog *dialog = WSYSObject::create<FileChooserDialog>("Load tape", 24, 18, StandardFileFilter::AllTapesFileFilter());
     dialog->setWindowHelpText("Use Q/A to move, ENTER selects");
-    dialog->setFilter(FILE_FILTER_TAPES);
     if (dialog->exec()>=0) {
         do_load_tape(dialog, dialog->result());
     }
@@ -276,9 +274,8 @@ static void cb_load_tape()
 
 static void cb_load_tape_fast()
 {
-    FileChooserDialog *dialog = WSYSObject::create<FileChooserDialog>("Load tape (fast)", 24, 18);
+    FileChooserDialog *dialog = WSYSObject::create<FileChooserDialog>("Load tape (fast)", 24, 18, StandardFileFilter::AllTapesFileFilter());
     dialog->setWindowHelpText("Use Q/A to move, ENTER selects");
-    dialog->setFilter(FILE_FILTER_TAPES);
     do {
         if (dialog->exec()>=0) {
             if (do_load_tape_fast(dialog, dialog->result())==0)
@@ -304,7 +301,7 @@ static void cb_exit_nmi()
 static void cb_reset()
 {
     screen__destroyAll();
-    fpga__reset_spectrum();
+    spectctrl__reset();
 }
 
 static void cb_about(void)
