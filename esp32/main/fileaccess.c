@@ -144,6 +144,7 @@ int __lstat(const char *path, struct stat *st)
     do {
         char fpath[512];
         sprintf(fpath,"%s/%s", startupdir, path);
+        ESP_LOGI(TAG, "Statting %s\n", fpath);
         r = stat(fpath, st);
     } while (0);
 #else
@@ -168,7 +169,13 @@ char *__getcwd(char *dest, int maxlen)
 char *fullpath(const char *name, char *dest, int maxlen)
 {
     char *d = dest;
+
+    if (name[0]=='/') {
+        strncpy(dest, name, maxlen);
+        return dest;
+    }
     __getcwd(d, maxlen);
+
     ESP_LOGI(TAG, "Computing full path cwd='%s', file '%s'",d, name);
 
     while (d[1]) {
@@ -268,8 +275,6 @@ struct dirent *__readdir(DIR*dir)
     } while ( (d->d_type==DT_DIR) && (d->d_name[0]=='.'));
     return d;
 }
-
-
 
 void *readfile(const char *filename, int *size)
 {
