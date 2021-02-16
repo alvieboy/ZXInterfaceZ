@@ -3,7 +3,7 @@
 
 #include "widget.h"
 #include <string>
-
+#include "color.h"
 
 class SliderBase: public Widget
 {
@@ -18,6 +18,15 @@ protected:
     virtual bool handleEvent(uint8_t type, u16_8_t code);
     void drawSliderLine(screenptr_t &ptr, unsigned w, unsigned vlen);
 
+    void focusIn() override
+    {
+        redraw();
+    }
+    void focusOut() override
+    {
+        redraw();
+    }
+
     char m_accel_decrease;
     char m_accel_decrease_h;
     char m_accel_increase;
@@ -28,7 +37,8 @@ template<typename T>
 class Slider: public SliderBase
 {
 public:
-    Slider() {}
+    Slider() {};
+
 
     virtual void drawImpl() {
         /*
@@ -57,6 +67,25 @@ public:
 
         WSYS_LOGI("Percent %f from %f min %f max %f delta %f\n", percent, m_value, m_min, m_max, delta);
         parentDrawImpl();
+        // Draw BG
+
+        attrptr_t attrptr = m_attrptr;
+        for (unsigned i=0;i<width();i++) {
+            uint8_t attrval;
+            if (!hasFocus()) {
+                attrval = MAKECOLORA(BLACK, WHITE, BRIGHT);
+            } else {
+                attrval = 0x68;
+                /*if (i<m_spacing)
+                    attrval = 0x78;
+                if (i >= width()-m_spacing)
+                attrval = 0x78;
+                */
+            }
+            *attrptr++ = attrval;
+        }
+
+
 
         if (m_drawfunc) {
             char text[16];

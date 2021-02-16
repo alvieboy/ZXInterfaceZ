@@ -1,6 +1,7 @@
 #include "slider.h"
 #include "spectrum_kbd.h"
 
+
 static const uint8_t lookup6[7] = {
     0x80,
     0xA0,
@@ -127,6 +128,7 @@ bool SliderBase::handleEvent(uint8_t type, u16_8_t code)
 
 SliderBase::SliderBase()
 {
+    setFocusPolicy(true);
     m_accel_decrease = KEY_UNKNOWN;
     m_accel_decrease_h = KEY_UNKNOWN;
     m_accel_increase = KEY_UNKNOWN;
