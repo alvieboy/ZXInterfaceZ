@@ -30,7 +30,7 @@ architecture beh of rom_hook is
 
   signal hook_matchaddress_s  : std_logic_vector(ROM_MAX_HOOKS-1 downto 0);
   signal opcode_read_s        : boolean;
-  signal refresh_finished_s   : boolean;
+  signal refresh_finished_s   : std_logic;
 
   signal rfsh_r               : std_logic;
   signal hook_post_r          : std_logic_vector(ROM_MAX_HOOKS-1 downto 0);
@@ -70,7 +70,7 @@ begin
 
 
   -- Rising edge of refresh
-  refresh_finished_s <= true when rfsh_i='1' and rfsh_r='0' else false;
+  refresh_finished_s <= '1' when rfsh_i='1' and rfsh_r='0' else '0';
 
   process(clk_i, arst_i)
   begin
@@ -101,15 +101,20 @@ begin
             end if;
           end if;
 
-          -- Check post-triggers
-          if hook_post_r(i)='1' and refresh_finished_s then
-            force_romcs_on_r    <= hook_i(i).flags.setreset;
-            force_romcs_off_r   <= not hook_i(i).flags.setreset;
-          end if;
-
         end loop;
 
       end if;
+
+      -- Post clear
+      hookcheck2: for i in 0 to ROM_MAX_HOOKS-1 loop
+              -- Check post-triggers
+        if hook_post_r(i)='1' and refresh_finished_s='1' then
+          force_romcs_on_r    <= hook_i(i).flags.setreset;
+          force_romcs_off_r   <= not hook_i(i).flags.setreset;
+          hook_post_r(i) <= '0';
+        end if;
+      end loop;
+
     end if;
   end process;
 
