@@ -47,6 +47,7 @@
 #include "divcompat.h"
 #include "rom_hook.h"
 #include "storage.h"
+#include "spectctrl.h"
 
 static int8_t videomode = 0;
 
@@ -256,7 +257,7 @@ static void detect_spectrum()
         vTaskDelay(100 / portTICK_RATE_MS);
     } while (--timeout);
 
-    fpga__reset_spectrum();
+    spectctrl__reset();
 
 
     ESP_LOGI(TAG," AY-3-8912: %s", spectrum_flags& SPECTRUM_FLAGS_AY ? "PRESENT": "absent");
@@ -411,7 +412,7 @@ void app_main()
 
     resource__register( 0x00, &versionresource);
     resource__register( 0x02, &statusresource.r);
-    resource__register( 0x03, &directoryresource.r);
+//    resource__register( 0x03, &directoryresource.r);
     resource__register( 0x04, &wificonfigresource.r);
     resource__register( 0x05, &aplistresource.r);
 
