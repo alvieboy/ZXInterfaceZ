@@ -4,6 +4,7 @@
 #include "button.h"
 #include "version.h"
 #include "fpga.h"
+#include "spectrum_kbd.h"
 
 class AboutWidget: public Widget
 {
@@ -52,16 +53,17 @@ AboutWindow::AboutWindow(): Window("About", 32, 18)
 {
     m_layout = WSYSObject::create<VLayout>();
     m_buttonlayout = WSYSObject::create<HLayout>();
-    m_closebutton =    WSYSObject::create<Button>("Close [ENTER]");
-    m_firmwarebutton = WSYSObject::create<Button>("Update [F]");
+    m_closebutton =    WSYSObject::create<Button>("Close");
+    m_firmwarebutton = WSYSObject::create<Button>("Update...");
     m_about =  WSYSObject::create<AboutWidget>();
     m_layout->addChild(m_about, LAYOUT_FLAG_VEXPAND);
-    m_buttonlayout->addChild(m_firmwarebutton);
-    m_buttonlayout->addChild(m_closebutton);
+    m_buttonlayout->addChild(m_firmwarebutton, LAYOUT_FLAG_HEXPAND);
+    m_buttonlayout->addChild(m_closebutton, LAYOUT_FLAG_HEXPAND);
     m_layout->addChild(m_buttonlayout);
     m_firmwarebutton->setSpacing(1);
-    m_firmwarebutton->setAccelKey('f');
+    m_firmwarebutton->setAccelKey(KEY_ENTER);
     m_closebutton->setSpacing(1);
+    m_closebutton->setAccelKey(KEY_ENTER);
 
     m_closebutton->clicked().connect(this, &AboutWindow::closeButtonClicked );
     m_firmwarebutton->clicked().connect(this, &AboutWindow::firmwareButtonClicked );
