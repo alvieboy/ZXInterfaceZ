@@ -2,17 +2,17 @@
 #include <string>
 #include <vector>
 #include "fileentry.h"
+#include "standardfilefilter.h"
 
 class FileListMenu;
 class MenuEntryList;
 
-
 class FileChooserDialog: public Dialog
 {
 public:
-    FileChooserDialog(const char*title, uint8_t w, uint8_t h);
+    FileChooserDialog(const char*title, uint8_t w, uint8_t h, const FileFilter *filter=StandardFileFilter::AllFilesFileFilter());
     virtual ~FileChooserDialog();
-    void setFilter(uint8_t filter);
+    void setFilter(const FileFilter *);
     virtual int exec() override;// void (*callback)(void*, int), void*) override;
     const char *getSelection() const;
 protected:

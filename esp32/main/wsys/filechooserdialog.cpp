@@ -5,9 +5,9 @@
 #include "filelistmenu.h"
 #include "screen.h"
 
-FileChooserDialog::FileChooserDialog(const char*title, uint8_t w, uint8_t h): Dialog(title, w,h)
+FileChooserDialog::FileChooserDialog(const char*title, uint8_t w, uint8_t h, const FileFilter *filter): Dialog(title, w,h)
 {
-    m_menu = create<FileListMenu>();
+    m_menu = create<FileListMenu>(filter);
     setChild(m_menu);
     m_menu->selected().connect( this, &FileChooserDialog::activate );
 }
@@ -47,7 +47,7 @@ const char *FileChooserDialog::getSelection() const
     return m_menu->getSelection();
 }
 
-void FileChooserDialog::setFilter(uint8_t filter)
+void FileChooserDialog::setFilter(const FileFilter *filter)
 {
     m_menu->setFilter(filter);
     //m_filter = filter;
