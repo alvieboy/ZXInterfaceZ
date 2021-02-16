@@ -100,9 +100,8 @@ static void do_load_tape(FileChooserDialog *d, int status)
 
 static void cb_load_tape_slow()
 {
-    FileChooserDialog *dialog = WSYSObject::create<FileChooserDialog>("Load tape", 24, 18);
+    FileChooserDialog *dialog = WSYSObject::create<FileChooserDialog>("Load tape", 24, 18, StandardFileFilter::AllTapesFileFilter());
     dialog->setWindowHelpText("Use Q/A to move, ENTER selects");
-    dialog->setFilter(FILE_FILTER_TAPES);
     if (dialog->exec()>=0) {
         do_load_tape(dialog, dialog->result());
     }
@@ -111,9 +110,8 @@ static void cb_load_tape_slow()
 
 static void cb_load_tape_fast()
 {
-    FileChooserDialog *dialog = WSYSObject::create<FileChooserDialog>("Load tape (fast)", 24, 18);
+    FileChooserDialog *dialog = WSYSObject::create<FileChooserDialog>("Load tape (fast)", 24, 18, StandardFileFilter::AllTapesFileFilter());
     dialog->setWindowHelpText("Use Q/A to move, ENTER selects");
-    dialog->setFilter(FILE_FILTER_TAPES);
     do {
         if (dialog->exec()>=0) {
             if (do_load_tape_fast(dialog, dialog->result())==0)
@@ -122,7 +120,7 @@ static void cb_load_tape_fast()
             break;
         }
     } while (1);
-    dialog->destroy();
+    //dialog->destroy();
 }
 
 
