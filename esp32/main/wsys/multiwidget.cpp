@@ -10,12 +10,14 @@ void MultiWidget::draw(bool force)
         drawImpl();
     }
 
-    for (int i=0;i<m_numchilds;i++) {
+    for (int i=0;i<getNumberOfChildren();i++) {
         WSYS_LOGI( "MultiWidget::draw child force=%d child_damage=0x%02x", force?1:0, m_childs[i]->damage());
 
         if ((force || (damage() & DAMAGE_CHILD)))  {
-            if (force || m_childs[i]->damage())
+            if (force || m_childs[i]->damage()) {
+                WSYS_LOGI("Forcing child redraw %s", CLASSNAME(*m_childs[i]));
                 m_childs[i]->draw(force);
+            }
 
             m_childs[i]->clear_damage();
         }
@@ -25,31 +27,42 @@ void MultiWidget::draw(bool force)
 
 
 }
-
+#if 1
 bool MultiWidget::handleLocalEvent(uint8_t type, u16_8_t code)
 {
     WSYS_LOGI("MultiWidget handleLocalEvent");
     if (type==0) {
         unsigned char c = spectrum_kbd__to_ascii(code.v);
         WSYS_LOGI("MultiWidget handleLocalEvent key %02x", c);
-
-        if (c==KEY_RIGHT) {
-            focusNext();
+        switch (c) {
+        case KEY_RIGHT:
+            WSYS_LOGI("MultiWidget request focus next");
+            focusNextPrev(true);
+            break;
+        case KEY_LEFT:
+            WSYS_LOGI("MultiWidget request focus prev");
+            focusNextPrev(false);
+            break;
+        default:
+            break;
         }
     }
     return false;
 }
+#endif
 
 bool MultiWidget::handleEvent(uint8_t type, u16_8_t code)
 {
     bool handled = false;
     WSYS_LOGI("MultiWidget handleEvent");
 #if 0
-    for (int i=0;i<m_numchilds;i++) {
+    for (int i=0;i<getNumberOfChildren();i++) {
         if (m_childs[i]->handleEvent(type,code))
             handled = true;
     }
-#else
+
+
+
     if (m_focusWidget) {
         WSYS_LOGI("MultiWidget focus child handleEvent");
         if (m_focusWidget->handleEvent(type,code))
@@ -65,7 +78,7 @@ void MultiWidget::setdamage(uint8_t mask)
 {
     Widget::setdamage(mask);
     if (mask!=DAMAGE_CHILD) {
-        for (int i=0;i<m_numchilds;i++) {
+        for (int i=0;i<getNumberOfChildren();i++) {
             m_childs[i]->setdamage(mask);
         }
     }
@@ -73,30 +86,44 @@ void MultiWidget::setdamage(uint8_t mask)
 
 void MultiWidget::addChild(Widget *w)
 {
-    m_childs[m_numchilds++]=w;
+    Widget *last = lastChild();
+
+    w->focusInsertAfter(last!=NULL ? last : this);
+
+    m_childs.push_back(w);
     w->setParent(this);
+    WSYS_LOGI("DUMP FOCUS TREE after add child %s to %s", CLASSNAME(*w), CLASSNAME(*this));
+    dumpFocusTree(this);
+    WSYS_LOGI("END DUMP FOCUS TREE");
+
+#if 0
     if (!m_focusWidget) {
         if (w->canFocus()) {
             m_focusWidget = w;
-            WSYS_LOGI("Setting focus to child");
+            WSYS_LOGI("Setting focus to child %s", CLASSNAME(*w));
             if (hasFocus())
                 w->setFocus(true);          // First child grabs focus
         }
     }
+#endif
+//    w->setVisible(isVisible());
     resizeEvent();
     setdamage(DAMAGE_CHILD);
 }
 
 MultiWidget::~MultiWidget()
 {
-    while (m_numchilds--) {
-        delete(m_childs[m_numchilds]);
+    for (auto w: m_childs) {
+        delete(w);
     }
+    m_childs.clear();
 }
 
 void MultiWidget::focusIn()
 {
     WSYS_LOGI("MultiWidget Focus IN");
+#if 0
+
     if (!m_focusWidget)
         m_focusWidget = findNextFocusable(0);
 
@@ -109,38 +136,63 @@ void MultiWidget::focusIn()
     } else {
         WSYS_LOGI("No child to focus");
     }
+#endif
 }
 void MultiWidget::focusOut()
 {
     WSYS_LOGI("MultiWidget Focus OUT");
+#if 0
     if (m_focusWidget) {
         m_focusWidget->setFocus(false);
     }
+#endif
 }
 
 int MultiWidget::getChild(Widget *c)
 {
-    unsigned i;
-    for (i=0;i<m_numchilds;i++) {
+    int i;
+    for (i=0;i<getNumberOfChildren();i++) {
         if (m_childs[i]==c)
             return i;
     }
     return -1;
 }
-
+    /*
 Widget *MultiWidget::findNextFocusable(int start)
 {
-    if (m_numchilds==0 || start>=m_numchilds)
+    if (getNumberOfChildren()==0 || start>=getNumberOfChildren())
         return NULL;
 
     int i = start;
     do {
         i++;
-        if (i==m_numchilds)
+        if (i==getNumberOfChildren())
             i=0;
 
         Widget *candidate = m_childs[i];
         if (candidate->canFocus()) {
+            WSYS_LOGI("Returning focus candidate %s\n", CLASSNAME(*this));
+            return candidate;
+        }
+    } while (i!=start);
+    return NULL;
+}
+
+Widget *MultiWidget::findPreviousFocusable(int start)
+{
+    WSYS_LOGI("Find prev focusable this=%p", this);
+    WSYS_LOGI("Find prev focusable start %d count %d this=%p", start, getNumberOfChildren(), this);
+    if (getNumberOfChildren()==0 || start>=getNumberOfChildren())
+        return NULL;
+    int i = start;
+    do {
+        i--;
+        if (i<0)
+            i=getNumberOfChildren()-1;
+
+        Widget *candidate = m_childs[i];
+        if (candidate->canFocus()) {
+            WSYS_LOGI("Returning focus candidate %s\n", CLASSNAME(*this));
             return candidate;
         }
     } while (i!=start);
@@ -148,6 +200,20 @@ Widget *MultiWidget::findNextFocusable(int start)
 }
 
 void MultiWidget::focusNext()
+{
+    if (getNumberOfChildren()==0)
+        return;
+    focus( &MultiWidget::findNextFocusable );
+}
+
+void MultiWidget::focusPrev()
+{
+    if (getNumberOfChildren()==0)
+        return;
+    focus( &MultiWidget::findPreviousFocusable );
+}
+
+void MultiWidget::focus( Widget *(MultiWidget::*find_fun)(int start) )
 {
     WSYS_LOGI("MultiWidget:: Focus next");
     int start = 0;
@@ -158,12 +224,50 @@ void MultiWidget::focusNext()
             return;
         }
     }
-    Widget *next = findNextFocusable(start);
+    Widget *next = (this->*find_fun)(start);
     if (next) {
         if (m_focusWidget)
             m_focusWidget->setFocus(false);
         next->setFocus(true);
         m_focusWidget = next;
     }
+}
+     */
+bool MultiWidget::canFocus() const
+{
+    /*
+    for (auto i: m_childs) {
+        if (i->canFocus())
+            return true;
+    } */
+    return false;
+}
+
+void MultiWidget::setFocus(bool focus)
+{
+#if 0
+    Widget::setFocus(focus);
+    if (m_focusWidget)
+        m_focusWidget->setFocus(focus);
+#endif
+}
+
+
+void MultiWidget::setVisible(bool visible)
+{
+    Widget::setVisible(visible);
+    /*
+    for (auto i: m_childs)
+    i->setVisible(visible);
+    */
+}
+
+int MultiWidget::getNumberOfVisibleChildren() const
+{
+    int count = 0;
+    for (auto i: m_childs)
+        if (i->isVisible())
+            count++;
+    return count;
 }
 

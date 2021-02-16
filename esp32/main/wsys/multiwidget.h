@@ -2,15 +2,15 @@
 #define __WSYS_MULTIWIDGET_H__
 
 #include "widgetgroup.h"
+#include <vector>
 
 #define MULTIWIDGET_MAX_CHILDS 12
 
 class MultiWidget: public WidgetGroup
 {
 public:
-    MultiWidget(Widget *parent): WidgetGroup(parent), m_numchilds(0)
+    MultiWidget(Widget *parent): WidgetGroup(parent)
     {
-        m_focusWidget = NULL;
     }
 
     virtual void resizeEvent() = 0;
@@ -24,15 +24,25 @@ public:
     virtual void setdamage(uint8_t mask);
     virtual void focusIn() override;
     virtual void focusOut() override;
-    virtual void focusNext();
+    virtual bool canFocus() const;
+    virtual void setFocus(bool focus) override;
+    virtual int getNumberOfChildren() const { return m_childs.size(); }
+    virtual int getNumberOfVisibleChildren() const;
+    virtual void setVisible(bool) override;
 protected:
     int getChild(Widget *c);
-    Widget *findNextFocusable(int start);
+    Widget *childAt(int index) { return m_childs[index]; }
+    Widget *lastChild() {
+        if (!m_childs.size()) return NULL;
+        return m_childs[ m_childs.size()-1 ];
+    }
 
+    const Widget *childAt(int index) const { return m_childs[index]; }
 
-    Widget *m_focusWidget;
-    uint8_t m_numchilds;
-    Widget *m_childs[MULTIWIDGET_MAX_CHILDS];
+    std::vector<Widget*> &childs() { return m_childs; }
+
+private:
+    std::vector<Widget*> m_childs;
 };
 
 #endif
