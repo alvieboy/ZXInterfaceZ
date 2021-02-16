@@ -13,9 +13,11 @@ public:
     virtual bool handleEvent(uint8_t type, u16_8_t code) override;
     virtual void focusIn();
     virtual void focusOut();
-protected:
+    virtual void setVisible(bool) override;
 
     virtual void setChild(Widget *);
+protected:
+
     Widget *m_child;
 };
 
