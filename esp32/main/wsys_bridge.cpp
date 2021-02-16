@@ -13,8 +13,10 @@
 #include "systemevent.h"
 #include "memlayout.h"
 #include "loadmenu.h"
+#include "savemenu.h"
 #include "esp_timer.h"
-
+#include "filesavedialog.h"
+#include "standardfilefilter.h"
 struct wsys_event {
     uint8_t type;
     union {
@@ -66,9 +68,13 @@ void wsys__nmileave()
 static void wsys__start(wsys_mode_t mode)
 {
     wsys__get_screen_from_fpga();
+    WSYS_LOGI("Starting WSYS mode %d\n", mode);
     switch (mode) {
     case WSYS_MODE_LOAD:
         loadmenu__show();
+        break;
+    case WSYS_MODE_SAVE:
+        savemenu__show();
         break;
     default:
         nmimenu__show();
