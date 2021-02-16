@@ -113,8 +113,6 @@ void Menu::setActiveEntry(uint8_t entry)
 
 void Menu::fillSline(attrptr_t attr, uint8_t value)
 {
-    WSYS_LOGI("fillsline attr %d", attr.getoff());
-
     for (int i=0;i<width();i++) {
         *attr++ = value;
     }
