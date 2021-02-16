@@ -1,19 +1,21 @@
 #include "frame.h"
 #include <stdlib.h>
 #include "charmap.h"
+#include <string.h>
 
 Frame::Frame(const char *title, uint8_t w, uint8_t h, bool drawbackground): Bin(NULL)
 {
     m_w = w;
     m_h = h;
-    m_title = title;
     m_border = 1;
     m_drawbackground = drawbackground;
+    setTitle(title);
 }
 
 void Frame::setTitle(const char *title)
 {
-    m_title = title;
+    strncpy(m_title,title,sizeof(m_title));
+    redraw();
 }
 
 void Frame::setBorder(uint8_t border)
@@ -70,6 +72,7 @@ void Frame::resizeEvent()
 
 void Frame::drawImpl()
 {
+    parentDrawImpl();
     if (damage() & ~DAMAGE_CHILD) {
         drawFrame();
     }
@@ -132,12 +135,6 @@ bool Frame::needRedraw() {
     }
     return false;
 }
-
-void Frame::draw(bool force)
-{
-    Bin::draw(force);
-}
-
 
 void Frame::clearChildArea(uint8_t x, uint8_t y, uint8_t w, uint8_t h)
 {
