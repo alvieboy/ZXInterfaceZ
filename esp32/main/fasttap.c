@@ -21,6 +21,7 @@ static int fasttap_fd = -1;
 static int fasttap_size= -1;
 static struct tzx *fasttap_tzx;
 static int8_t hooks[3] = {-1};
+
 static int fasttap__install_hooks(model_t model)
 {
     uint8_t rom = 0;
@@ -41,10 +42,12 @@ static int fasttap__install_hooks(model_t model)
         return -1;
         break;
     }
-
-    hooks[0] = rom_hook__add_pre_set_ranged( rom, 0x056C, 2); // LD-START
-    hooks[1] = rom_hook__add_pre_set_ranged( rom, 0x059E, 1);   // "RET NC" on LD-SYNC, set NOP
-    hooks[2] = rom_hook__add_pre_set_ranged( rom, 0x05C8, 17);  // LD-MARKER
+    if (hooks[0]<0)
+        hooks[0] = rom_hook__add_pre_set_ranged( rom, 0x056C, 2); // LD-START
+    if (hooks[1]<0)
+        hooks[1] = rom_hook__add_pre_set_ranged( rom, 0x059E, 1);   // "RET NC" on LD-SYNC, set NOP
+    if (hooks[2]<0)
+        hooks[2] = rom_hook__add_pre_set_ranged( rom, 0x05C8, 17);  // LD-MARKER
 
     return 0;
 }
@@ -203,8 +206,11 @@ int fasttap__next()
 
 void fasttap__stop()
 {
+    fasttap__remove_hooks();
+
     if (fasttap_fd<0)
         return;
+
     ESP_LOGI(FASTTAP, "Fast TAP play finished");
     close(fasttap_fd);
     fasttap_fd=-1;
@@ -212,7 +218,6 @@ void fasttap__stop()
         free(fasttap_tzx);
         fasttap_tzx = NULL;
     }
-    fasttap__remove_hooks();
 }
 
 /* TZX version */
