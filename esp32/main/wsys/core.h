@@ -136,7 +136,7 @@ static inline u16_8_t getxyscreenstart(uint8_t x, uint8_t y)
     off.l = (y<<5) & 0xE0;
     off.l += x;
     off.h = y & 0x18;
-    WSYS_LOGI( "Comp %d %d 0x%04x", x,y, off.v);
+    //WSYS_LOGI( "Comp %d %d 0x%04x", x,y, off.v);
     return off;
     /*GETXYSCREENSTART:
         LD	A, D
@@ -186,6 +186,7 @@ struct screenptr_t {
     screenptr_t drawchar(const uint8_t *data);
     screenptr_t drawascii(char);
     screenptr_t drawstring(const char *);
+    screenptr_t drawstringn(const char *, int len);
     screenptr_t printf(const char *fmt,...) __attribute__ ((format (printf, 2, 3)));
     screenptr_t drawstringpad(const char *, int len);
     screenptr_t drawhline(int len);
@@ -211,6 +212,10 @@ private:
 };
 
 #ifdef __linux__
+
+#define CLASSNAME(x) typeid(x).name()
+
+
 #include <map>
 class WSYSObject
 {
@@ -234,7 +239,6 @@ public:
 
         return object;
     }
-
 private:
     //    void *operator new(size_t);
     void *operator new(size_t size) { void *a = malloc(size); return a; }
@@ -256,6 +260,10 @@ private:
 #define ALLOC(x) (WSYSObject::allocate_memory((x)))
 #define FREE(x) (WSYSObject::release_memory((x)))
 
+#define CLASSNAME(x) ""
+
+// ESP32 version.
+
 class WSYSObject
 {
 public:
@@ -268,6 +276,10 @@ public:
     static void *allocate_memory(size_t size) { return malloc(size); }
     static void release_memory(void *data) { free(data); }
     static void report_alloc() {}
+
+    void operator delete(void*) noexcept;
+    void operator delete(void*,size_t) noexcept;
+    void operator delete[](void*) noexcept;
 private:
     void *operator new(size_t size) { void *a = malloc(size); return a; }
 };

@@ -109,6 +109,17 @@ screenptr_t screenptr_t::drawstring(const char *s)
     return temp;
 }
 
+screenptr_t screenptr_t::drawstringn(const char *s, int len)
+{
+    screenptr_t temp = *this;
+    while (len-- && *s) {
+        int c = (*s) - FIRST_PRINTABLE_CHAR;
+        temp = temp.drawchar(&getcurrentcharset()[c*8])++;
+        s++;
+    }
+    return temp;
+}
+
 screenptr_t drawthumbchar(screenptr_t screenptr, unsigned &bit_offset, char c)
 {
     c-=32;
@@ -304,6 +315,14 @@ void WSYSObject::report_alloc()
     }
     printf("*****************************************\n");
 
+}
+#else
+// ESP32
+
+void WSYSObject::operator delete(void* ptr) noexcept
+{
+    WSYS_LOGI("Freed %p", ptr);
+    ::free(ptr);
 }
 
 #endif
