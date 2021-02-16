@@ -4,6 +4,7 @@
 #include "audio.h"
 #include "fixedlayout.h"
 #include "button.h"
+#include "spectrum_kbd.h"
 
 class AudioWidget: public FixedLayout
 {
@@ -26,6 +27,7 @@ AudioWindow::AudioWindow(): Window("Audio settings", 22, 22)
     setWindowHelpText("Use CAPS key for fine-tuning");
 
     m_audiowidget->clicked().connect(this , &AudioWindow::saveAndClose);
+    setFocusKeys(KEY_DOWN, KEY_UP);
 }
 
 void AudioWindow::saveAndClose()
@@ -38,6 +40,7 @@ AudioWidget::AudioWidget()
 {
     float v, b;
     unsigned i;
+#if 0
     const char accels[4][4] = {
         { 'a','q','s','w' },
         { 'd','e','f','r' },
@@ -50,19 +53,21 @@ AudioWidget::AudioWidget()
         { 'G','T','H','Y' },
         { 'J','U','K','I' },
     };
-
+#endif
     for (i=0;i<4; i++) {
 
         m_volume[i] = WSYSObject::create<FloatSlider>();
         m_balance[i] = WSYSObject::create<FloatSlider>();
 
         m_volume[i]->setMinMax(0.0F, 1.0F);
-        m_volume[i]->setAccelMinor(uaccels[i][0],uaccels[i][1],0.01F);
-        m_volume[i]->setAccelMajor(accels[i][0],accels[i][1],0.1F);
+        //m_volume[i]->setAccelMinor(uaccels[i][0],uaccels[i][1],0.01F);
+        //m_volume[i]->setAccelMajor(accels[i][0],accels[i][1],0.1F);
+        m_volume[i]->setAccelMinor('o','p',0.01F);
+        m_volume[i]->setAccelMajor('O','P',0.1F);
 
         m_balance[i]->setMinMax(-1.0F, 1.0F);
-        m_balance[i]->setAccelMinor(uaccels[i][2],uaccels[i][3],0.01F);
-        m_balance[i]->setAccelMajor(accels[i][2],accels[i][3],0.1F);
+        m_balance[i]->setAccelMinor('o','p',0.01F);
+        m_balance[i]->setAccelMajor('O','P',0.1F);
 
         audio__get_volume_f(i, &v, &b);
         m_volume[i]->setValue(v);
@@ -73,6 +78,7 @@ AudioWidget::AudioWidget()
     m_button = WSYSObject::create<Button>("Close");
 
     addChild(m_button, 0, 17, 20, 1);
+    m_button->setAccelKey(KEY_ENTER);
 }
 
 
