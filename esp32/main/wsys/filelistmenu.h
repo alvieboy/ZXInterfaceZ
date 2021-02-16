@@ -2,28 +2,33 @@
 #define __WSYS_FILELISTMENU_H__
 
 #include "indexedmenu.h"
+#include "standardfilefilter.h"
+#include "systemevent.h"
 
 class FileListMenu: public IndexedMenu
 {
 public:
-    FileListMenu();
+    FileListMenu(const FileFilter *filter=StandardFileFilter::AllFilesFileFilter());
     virtual ~FileListMenu();
     bool buildDirectoryList();
-    void setFilter(uint8_t filter);
+    void setFilter(const FileFilter*);
     const char *getSelection() const;
+    Signal<const char *> &directoryChanged() { return m_directoryChanged; }
 
 protected:
     void activate(uint8_t index);
     bool buildMountpointList();
     void releaseResources();
     virtual void activateEntry(uint8_t entry);
-
+    static void systemEventHandler(const systemevent_t *event, void *user);
+    void systemEventHandler(const systemevent_t *event);
 private:
     void *m_menudata;
+    systemevent_handlerid_t m_handler;
     MenuEntryList *m_menulistdata;
-
+    Signal<const char *> m_directoryChanged;
     std::string m_cwd;
-    uint8_t m_filter;
+    const FileFilter *m_filter;
 
 };
 

@@ -3,48 +3,50 @@
 #include "fileentry.h"
 #include <algorithm>
 
-FileListMenu::FileListMenu()
+FileListMenu::FileListMenu(const FileFilter *filter)
 {
     m_menudata = NULL;
     m_menulistdata = NULL;
-    m_filter = FILE_FILTER_NONE;
+    m_filter = filter;
+
+    m_handler =
+        systemevent__register_handler(SYSTEMEVENT_TYPE_STORAGE,
+                                      &FileListMenu::systemEventHandler,
+                                      this);
 }
+
+void FileListMenu::systemEventHandler(const systemevent_t *event, void *user)
+{
+    static_cast<FileListMenu*>(user)->systemEventHandler(event);
+}
+
+void FileListMenu::systemEventHandler(const systemevent_t *event)
+{
+    if (__in_rootdir()) {
+        buildDirectoryList();
+        redraw();
+    }
+}
+
 
 FileListMenu::~FileListMenu()
 {
+    systemevent__unregister_handler(m_handler);
     releaseResources();
 }
 
 
-static bool filter_match(uint8_t filter, struct dirent *e)
+static bool filter_match(const FileFilter *filter, struct dirent *e)
 {
     const char *ext;
     if (e->d_type == DT_DIR) {
         return true;
     } else {
-        if (filter==FILE_FILTER_NONE)
-            return true;
-
         ext = get_file_extension(e->d_name);
-        /* THIS IS DUPLICATED. Move into separate module */
-        switch(filter) {
-        case FILE_FILTER_SNAPSHOTS:
-            return ext_match(ext, "sna") | ext_match(ext,"z80");
-            break;
-        case FILE_FILTER_ROMS:
-            return ext_match(ext, "rom");
-            break;
-        case FILE_FILTER_TAPES:
-            return ext_match(ext, "tap") || ext_match(ext,"tzx");
-            break;
-        case FILE_FILTER_POKES:
-            return ext_match(ext, "pok");
-            break;
-        }
+        return filter->match_extension(ext);
     }
     return false;
 }
-
 
 static bool filecompare(const FileEntry &a, const FileEntry &b)
 {
@@ -67,7 +69,7 @@ bool FileListMenu::buildMountpointList()
 
     const struct mountpoints *mp = __get_mountpoints();
     int i;
-
+    WSYS_LOGI("Mountpoints in system: %d\n", mp->count);
     if (mp->count==0) {
         WSYS_LOGI("No mountpoints to show!");
         return false;
@@ -101,7 +103,10 @@ bool FileListMenu::buildDirectoryList()
     DIR *dir;
 
     if (__in_rootdir()) {
-        return buildMountpointList();
+        bool r = buildMountpointList();
+        if (r)
+            m_directoryChanged.emit("/");
+        return r;
     }
 
     if (__getcwd(cwd,sizeof(cwd))==NULL) {
@@ -167,6 +172,9 @@ bool FileListMenu::buildDirectoryList()
 
     m_menulistdata = Menu::allocEntryList(l_entries.begin(), l_entries.end(), m_menudata);
     setEntries( m_menulistdata );
+
+    m_directoryChanged.emit(cwd);
+
     return true;
 }
 
@@ -195,7 +203,8 @@ void FileListMenu::activateEntry(uint8_t index)
     uint8_t fileflags = e->flags >> 1; //: tbd this should be in menu
     if (fileflags == 1) {
         // Directory
-        __chdir(e->string);
+        if (__chdir(e->string)==0) {
+        }
         releaseResources();
         buildDirectoryList();
     } else {
@@ -208,7 +217,7 @@ const char *FileListMenu::getSelection() const
     return getEntry()->string;
 }
 
-void FileListMenu::setFilter(uint8_t filter)
+void FileListMenu::setFilter(const FileFilter *filter)
 {
     m_filter = filter;
 }
