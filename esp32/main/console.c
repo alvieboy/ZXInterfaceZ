@@ -16,6 +16,7 @@
 #include "esp32/rom/uart.h"
 #include "byteops.h"
 #include "scope.h"
+#include "spectctrl.h"
 
 char cmd[256];
 uint8_t cmdptr = 0;
@@ -283,7 +284,7 @@ static int console__reset(int argc, char **argv)
             return 0;
         }
     }
-    fpga__reset_spectrum();
+    spectctrl__reset();
     return 0;
 }
 static int console__debug(int argc, char **argv)
