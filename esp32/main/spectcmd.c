@@ -24,6 +24,7 @@
 #include "tapeplayer.h"
 #include "save.h"
 #include "memlayout.h"
+#include "spectctrl.h"
 
 #define COMMAND_BUFFER_MAX 256+2
 
@@ -286,9 +287,9 @@ static int spectcmd__setwifi(const uint8_t *cmdbuf, unsigned len)
 
 static int spectcmd__reset(const uint8_t *cmdbuf, unsigned len)
 {
-    int r = fpga__reset_spectrum();
+    spectctrl__reset();
     spectcmd__removedata();
-    return r;
+    return 0;
 }
 
 static int spectcmd__kbddata(const uint8_t *cmdbuf, unsigned len)
