@@ -8,6 +8,9 @@ bool FileFilter::match_extension(const char *ext) const
 {
     unsigned i;
 
+    if (!ext)
+        return false;
+
     if (m_count==0) {
         ESP_LOGI(TAG, "Always match entries (%s)", getDescription());
         return true;
