@@ -10,7 +10,7 @@ extern "C" {
 
 #define ROM_HOOK_FLAG_ACTIVE (1<<7)
 #define ROM_HOOK_FLAG_SETRESET (1<<6)
-#define ROM_HOOK_FLAG_PREPOST (1<<5)
+#define ROM_HOOK_FLAG_POST (1<<5)
 #define ROM_HOOK_FLAG_RANGED  (1<<4)
 #define ROM_HOOK_FLAG_ROM(x)  ((x)<<0)
 
@@ -33,31 +33,31 @@ static inline int rom_hook__add_pre_reset(uint8_t rom, uint16_t start, uint8_t l
 
 
 static inline int rom_hook__add_post_set_ranged(uint8_t rom, uint16_t start, uint8_t len) {
-    return rom_hook__add(start, len, ROM_HOOK_FLAG_ACTIVE | ROM_HOOK_FLAG_SETRESET | ROM_HOOK_FLAG_RANGED | ROM_HOOK_FLAG_ROM(rom));
+    return rom_hook__add(start, len, ROM_HOOK_FLAG_ACTIVE | ROM_HOOK_FLAG_POST | ROM_HOOK_FLAG_SETRESET | ROM_HOOK_FLAG_RANGED | ROM_HOOK_FLAG_ROM(rom));
 }
 
 static inline int rom_hook__add_pre_set_ranged(uint8_t rom, uint16_t start, uint8_t len) {
-    return rom_hook__add(start, len, ROM_HOOK_FLAG_ACTIVE | ROM_HOOK_FLAG_PREPOST | ROM_HOOK_FLAG_SETRESET | ROM_HOOK_FLAG_RANGED | ROM_HOOK_FLAG_ROM(rom));
+    return rom_hook__add(start, len, ROM_HOOK_FLAG_ACTIVE  | ROM_HOOK_FLAG_SETRESET | ROM_HOOK_FLAG_RANGED | ROM_HOOK_FLAG_ROM(rom));
 }
 
 static inline int rom_hook__add_post_set(uint8_t rom, uint16_t start, uint8_t len)
 {
-    return rom_hook__add(start, len, ROM_HOOK_FLAG_ACTIVE | ROM_HOOK_FLAG_SETRESET | ROM_HOOK_FLAG_ROM(rom));
+    return rom_hook__add(start, len, ROM_HOOK_FLAG_ACTIVE | ROM_HOOK_FLAG_POST | ROM_HOOK_FLAG_SETRESET | ROM_HOOK_FLAG_ROM(rom));
 }
 
 static inline int rom_hook__add_pre_set(uint8_t rom, uint16_t start, uint8_t len)
 {
-    return rom_hook__add(start, len, ROM_HOOK_FLAG_ACTIVE | ROM_HOOK_FLAG_PREPOST | ROM_HOOK_FLAG_SETRESET | ROM_HOOK_FLAG_ROM(rom));
+    return rom_hook__add(start, len, ROM_HOOK_FLAG_ACTIVE | ROM_HOOK_FLAG_SETRESET | ROM_HOOK_FLAG_ROM(rom));
 }
 
 static inline int rom_hook__add_post_reset(uint8_t rom, uint16_t start, uint8_t len)
 {
-    return rom_hook__add(start, len, ROM_HOOK_FLAG_ACTIVE | ROM_HOOK_FLAG_ROM(rom));
+    return rom_hook__add(start, len, ROM_HOOK_FLAG_ACTIVE | ROM_HOOK_FLAG_POST  | ROM_HOOK_FLAG_ROM(rom));
 }
 
 static inline int rom_hook__add_pre_reset(uint8_t rom, uint16_t start, uint8_t len)
 {
-    return rom_hook__add(start, len, ROM_HOOK_FLAG_ACTIVE | ROM_HOOK_FLAG_PREPOST | ROM_HOOK_FLAG_ROM(rom));
+    return rom_hook__add(start, len, ROM_HOOK_FLAG_ACTIVE | ROM_HOOK_FLAG_ROM(rom));
 }
 
 

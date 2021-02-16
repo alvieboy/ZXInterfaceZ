@@ -32,6 +32,8 @@ int rom_hook__add(uint16_t start, uint8_t len, uint8_t flags)
 
 void rom_hook__remove(int hook)
 {
+    if (hook<0)
+        return;
     uint8_t mask = (1<<hook);
     fpga__disable_hook(hook);
     hook_usage_bitmap &= ~mask;
