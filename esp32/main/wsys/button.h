@@ -15,11 +15,15 @@ public:
     Signal<> &clicked() { return m_clicked; }
     void setAccelKey(char c) { m_accel=c; }
     void setSpacing(uint8_t s) { m_spacing=s; redraw(); }
+    virtual void focusIn() override;
+    virtual void focusOut() override;
+    void setThumbFont(bool yes);
 private:
     const char *m_text;
     uint8_t m_textlen;
     uint8_t m_spacing;
-    char m_accel;
+    bool m_thumb;
+    int m_accel;
     Signal<> m_clicked;
 };
 
