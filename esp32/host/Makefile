@@ -13,7 +13,7 @@ SRCPATH=$(shell pwd)
 # -Werror=missing-prototypes
 
 CFLAGS= -fpic -DPIC -Wall -Wextra -Wno-format -Wno-unused-variable -Wno-unused-parameter \
-	-D_FORTIFY_SOURCE=1 -fstack-protector-strong \
+	-D_FORTIFY_SOURCE=1 -fstack-protector-strong -ffunction-sections -fdata-sections \
 	-DGITVER=\"$(GITVER)\" \
 	-DBUILDDATE='"$(BUILDDATE)"' \
 	-DCONFIG_LOG_TIMESTAMP_SOURCE_RTOS \
@@ -81,7 +81,6 @@ CSRC=aplist_resource.c \
 config.c              \
 devmap.c              \
 bitrev.c              \
-directory_resource.c  \
 dump.c                \
 fileaccess.c          \
 flash_pgm.c           \
@@ -164,6 +163,7 @@ usbhubdev.c           \
 object.c              \
 bitmap_allocator.c    \
 save.c                \
+spectctrl.c           \
 wsys/charmap.c        \
 wsys/tomthumb.c        
 
@@ -199,6 +199,8 @@ wsys/inputdialog.cpp \
 wsys/slider.cpp \
 wsys/filesavedialog.cpp \
 wsys/frame.cpp \
+wsys/filefilter.cpp \
+wsys/standardfilefilter.cpp \
 menus/nmimenu.cpp \
 menus/settingsmenu.cpp \
 menus/videomodemenu.cpp \
@@ -255,7 +257,7 @@ interfacez: libinterfacez.so main_standalone.o
 	$(CXX) -o interfacez main_standalone.o libinterfacez.so -lutil
 
 libinterfacez.so: $(OBJS) 
-	$(CXX) $(CFLAGS) -shared -o libinterfacez.so $(OBJS) -lpthread -lutil  -lm $(shell pkg-config --libs glib-2.0 libusb-1.0)
+	$(CXX) $(CFLAGS) -Wl,--gc-sections -shared -o libinterfacez.so $(OBJS) -lpthread -lutil  -lm $(shell pkg-config --libs glib-2.0 libusb-1.0)
 
 clean:
 	rm -f $(OBJS)
