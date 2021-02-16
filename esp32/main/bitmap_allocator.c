@@ -29,6 +29,7 @@ int bitmap_allocator__alloc(bitmap32_t *bitmap)
     do {
         if (mask & bitmap->bitmap) {
             index++;
+            mask<<=1;
             continue;
         }
         bitmap->bitmap |= mask;
