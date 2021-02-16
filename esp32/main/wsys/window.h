@@ -23,9 +23,21 @@ public:
     void destroy() {
         screen__removeWindow(this);
     }
+    virtual int availableWidth() const override { return width()-(2*m_border); }
+    virtual int availableHeight() const override { return height()-(2*m_border); }
+
+    virtual void focusNextPrev(bool next);
+    virtual void setChild(Widget *c);
+    virtual void setVisible(bool);
+    virtual bool handleEvent(uint8_t type, u16_8_t code);
+
+    void setFocusKeys(uint8_t next, uint8_t prev);
+
+    virtual void visibilityOrFocusChanged(Widget *w);
 
 protected:
     virtual ~Window();
+    void dumpFocusTree();
     friend void screen__check_redraw();
     friend void screen__destroyAll();
     void fillHeaderLine(attrptr_t attr);
@@ -39,8 +51,11 @@ protected:
     const char *m_title;
     uint8_t m_border;
     uint8_t m_statuslines;
+    uint8_t m_focusnextkey;
+    uint8_t m_focusprevkey;
     const char *m_helptext;
     const char *m_statustext;
+    Widget *m_focusWidget;
 };
 
 #endif

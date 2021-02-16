@@ -5,6 +5,7 @@
 extern "C" {
 #include "esp_log.h"
 };
+#include "spectrum_kbd.h"
 
 #define DAMAGE_HELPTEXT DAMAGE_USER1
 
@@ -17,6 +18,15 @@ Window::Window(const char *title, uint8_t w, uint8_t h): Bin(NULL)
     m_helptext = NULL;
     m_statuslines = 0;
     m_statustext = NULL;
+    m_focusWidget = NULL;
+    m_focusnextkey = KEY_RIGHT;
+    m_focusprevkey = KEY_LEFT;
+}
+
+void Window::setFocusKeys(uint8_t next, uint8_t prev)
+{
+    m_focusnextkey = next;
+    m_focusprevkey = prev;
 }
 
 void Window::setTitle(const char *title)
@@ -229,7 +239,6 @@ void Window::setBackground()
 
 Window::~Window()
 {
-    screen__removeWindow(this);
 }
 
 
@@ -265,4 +274,118 @@ void Window::clearChildArea(uint8_t x, uint8_t y, uint8_t w, uint8_t h)
         a.nextline();
     }
 
+}
+
+void Window::dumpFocusTree()
+{
+    Widget *start = m_focusWidget;
+    WSYS_LOGI("Focus tree: ");
+    if (!start) {
+        start = this;
+        WSYS_LOGI("No focus widget! child=%p, start at %p\n", m_child, this);
+    }
+    Widget::dumpFocusTree(start);
+}
+
+void Window::focusNextPrev(bool next)
+{
+    Widget *start = m_focusWidget;
+    Widget *candidate;
+
+    dumpFocusTree();
+
+    if (!start)
+        start = this;
+
+    candidate = start;
+
+    do {
+
+        if (next) {
+            candidate = candidate->m_focusnext;
+        } else {
+            candidate = candidate->m_focusprev;
+        }
+
+        WSYS_LOGI("next=%d focus=%p this=%p candidate=%p start=%p", next, m_focusWidget, this, candidate, start);
+
+        if (candidate==start) {
+            WSYS_LOGI("Same as start");
+            break;
+        }
+
+        if (candidate!=m_focusWidget) {
+            if (candidate->canFocus() && candidate->isVisible()) {
+                WSYS_LOGI("is focusable %s", CLASSNAME(*candidate));
+                if (m_focusWidget) {
+                    m_focusWidget->setFocus(false);
+                }
+                m_focusWidget = candidate;
+                m_focusWidget->setFocus(true);
+                break;
+            }
+        }
+
+    } while (candidate!=start);
+    WSYS_LOGI("Focus finished");
+}
+
+
+void Window::setChild(Widget *c)
+{
+    Bin::setChild(c);
+    if (isVisible()) {
+        focusNextPrev(true);
+    }
+}
+
+void Window::setVisible(bool visible)
+{
+    bool changed = false;
+    WSYS_LOGI("Visibility changed %d\n", visible);
+    if (visible!=m_visible)
+        changed = true;
+
+    Bin::setVisible(visible);
+
+    if (isVisible() && !m_focusWidget) {
+        WSYS_LOGI("Focusing changed");
+        focusNextPrev(true);
+    }
+    screen__windowVisibilityChanged(this, visible);
+}
+
+
+
+bool Window::handleEvent(uint8_t type, u16_8_t code)
+{
+    bool handled = false;
+    if (m_focusWidget && m_focusWidget!=this) {
+        WSYS_LOGI("Dispatch event %s\n", CLASSNAME(*m_focusWidget));
+        handled = m_focusWidget->handleEvent(type, code);
+    }
+    if (handled)
+        return handled;
+
+    if (type==0) {
+        unsigned char c = spectrum_kbd__to_ascii(code.v);
+
+        if (c==m_focusnextkey) {
+            WSYS_LOGI("request focus next");
+            handled = true;
+            focusNextPrev(true);
+        } else if (c==m_focusprevkey) {
+            WSYS_LOGI("request focus prev");
+            handled = true;
+            focusNextPrev(false);
+        }
+    }
+    return handled;
+}
+
+void Window::visibilityOrFocusChanged(Widget *w)
+{
+    if (w==m_focusWidget) {
+        focusNextPrev(true);
+    }
 }
