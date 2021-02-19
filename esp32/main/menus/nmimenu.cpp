@@ -199,7 +199,7 @@ static void do_select_poke(FileChooserDialog *d, int status)
                 }
             }
 
-            ch->destroy();
+            //ch->destroy();
         }
     } else {
         MessageBox::show("Cannot load POK");
@@ -216,7 +216,7 @@ static void cb_load_snapshot()
     if (dialog->exec()>=0) {
         do_load_snapshot(dialog, dialog->result());
     }
-    dialog->destroy();
+    //dialog->destroy();
     //&do_load_snapshot, dialog);
     
 }
@@ -228,7 +228,7 @@ static void cb_poke()
     if (dialog->exec()>=0) {
         do_select_poke(dialog, dialog->result());
     }
-    dialog->destroy();
+    //dialog->destroy();
 }
 
 
@@ -269,7 +269,7 @@ static void cb_load_tape()
     if (dialog->exec()>=0) {
         do_load_tape(dialog, dialog->result());
     }
-    dialog->destroy();
+    //dialog->destroy();
 }
 
 static void cb_load_tape_fast()
@@ -284,7 +284,7 @@ static void cb_load_tape_fast()
             break;
         }
     } while (1);
-    dialog->destroy();
+    //dialog->destroy();
 }
 
 
