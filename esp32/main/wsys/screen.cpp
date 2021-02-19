@@ -223,8 +223,8 @@ void screen__removeWindow(Window*w)
             current->focusIn();
         }
     } else {
-        WSYS_LOGI("Removing already destroyed window!!!");
-        abort();
+        WSYS_LOGW("Removing already destroyed window!!!");
+//        abort();
     }
 }
 
