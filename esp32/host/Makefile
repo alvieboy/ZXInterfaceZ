@@ -164,6 +164,8 @@ object.c              \
 bitmap_allocator.c    \
 save.c                \
 spectctrl.c           \
+tape.c                \
+activity_monitor.c    \
 wsys/charmap.c        \
 wsys/tomthumb.c        
 
