@@ -848,6 +848,16 @@ int fpga__write_hook(uint8_t index, uint16_t start, uint8_t len, uint8_t flag)
                                     4);
 }
 
+int fpga__read_mic_idle()
+{
+    uint8_t idle;
+
+    int r = fpga__issue_read(FPGA_SPI_CMD_READ_MICIDLE, &idle, 1);
+    if (r<0)
+        return -1;
+    return idle;
+}
+
 int fpga__readinterrupt(void)
 {
     uint8_t intstat;

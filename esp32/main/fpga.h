@@ -28,6 +28,7 @@ typedef uint8_t fpga_status_t;
 #define FPGA_SPI_CMD_SETEOF (0xEF)
 #define FPGA_SPI_CMD_READ_CMDFIFO (0xFB)
 #define FPGA_SPI_CMD_WRITE_MISCCTRL (0xFC)
+#define FPGA_SPI_CMD_READ_MICIDLE (0xFD)
 #define FPGA_SPI_CMD_READ_ID (0x9E)
 #define FPGA_SPI_CMD_READ_PC (0x40)
 #define FPGA_SPI_CMD_READ_EXTRAM (0x50)
@@ -203,6 +204,7 @@ int fpga__write_hook(uint8_t index, uint16_t start, uint8_t len, uint8_t flag);
 int fpga__disable_hook(uint8_t index);
 
 int fpga__write_miscctrl(uint8_t value);
+int fpga__read_mic_idle(void);
 
 //int fpga__disable_hooks(void);
 
