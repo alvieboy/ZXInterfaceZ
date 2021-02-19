@@ -64,6 +64,10 @@ struct attr_t {
 
 #endif
 
+#define WSYS_LOGW(x...) do \
+     ESP_LOGW(__PRETTY_FUNCTION__, x); \
+    while (0);
+
 #define WSYS_LOGE(x...) do \
      ESP_LOGE(__PRETTY_FUNCTION__, x); \
     while (0);
