@@ -7,12 +7,13 @@
 #include "resource.h"
 #include "fileaccess.h"
 #include "errno.h"
+#include "tape.h"
 
 static char savefilename[11];
+
+// NOTE NOTE NOTE: we need a semaphore here!!!
+
 static int tape_fd = -1;
-
-
-static tapemode_t tapemode = TAPE_NO_TAPE;
 
 typedef struct {
     uint8_t flag;
@@ -53,12 +54,20 @@ const char *save__get_requested_name()
     return savefilename;
 }
 
+void save__stop_tape()
+{
+    if (tape_fd>0) {
+        close(tape_fd);
+        tape_fd=-1;
+    }
+}
+
 int save__start_save_tap(const char *filename,
                          bool append)
 {
     char name[128];
 
-    if (tapemode !=TAPE_NO_TAPE) {
+    if (tape__is_tape_loaded()) {
         ESP_LOGE(TAG, "Tape already inserted");
         return -1;
     }
@@ -83,7 +92,12 @@ int save__start_save_tap(const char *filename,
         return tape_fd;
     }
 
-    tapemode = TAPE_TAP;
+    if (tape__enter_tape_mode(TAPE_TAP_SAVE)<0) {
+        ESP_LOGE(TAG, "Cannot start tape");
+        if (tape_fd>=0)
+            close(tape_fd);
+        return -1;
+    }
 
     return 0;
 }
@@ -126,19 +140,8 @@ int save__append_from_extram(uint32_t address, uint16_t datalen)
 
 }
 
-
-bool save__is_saving()
-{
-    return tapemode != TAPE_NO_TAPE;
-}
-
-tapemode_t save__get_tape_mode()
-{
-    return tapemode;
-}
-
 void save__start_save_physical()
 {
-    tapemode = TAPE_PHYSICAL;
+    tape__enter_tape_mode(TAPE_PHYSICAL_SAVE);
     save__notify_no_save();
 }

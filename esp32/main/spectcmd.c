@@ -25,6 +25,7 @@
 #include "save.h"
 #include "memlayout.h"
 #include "spectctrl.h"
+#include "tape.h"
 
 #define COMMAND_BUFFER_MAX 256+2
 
@@ -514,7 +515,7 @@ static int spectcmd__savetrap(const uint8_t *cmdbuf, unsigned len)
         save__set_data_from_header(&cmdbuf[3], size);
     }
 
-    switch (save__get_tape_mode()) {
+    switch (tape__get_tape_mode()) {
 
     case TAPE_NO_TAPE:
         wsys__reset(WSYS_MODE_SAVE);
@@ -522,19 +523,22 @@ static int spectcmd__savetrap(const uint8_t *cmdbuf, unsigned len)
         status = SPECTCMD_CMD_SAVETRAP;
         fpga__load_resource_fifo(&status, 1, RESOURCE_DEFAULT_TIMEOUT);
         break;
-    case TAPE_PHYSICAL:
+    case TAPE_PHYSICAL_SAVE:
         // Saving to physical tape.
         status = 0xFF; // Don't enter menu
         fpga__load_resource_fifo(&status, 1, RESOURCE_DEFAULT_TIMEOUT);
         status = 0xFF; // Don't copy data
         fpga__load_resource_fifo(&status, 1, RESOURCE_DEFAULT_TIMEOUT);
         break;
-    case TAPE_TAP: /* Fall-through */
-    case TAPE_TZX:
+    case TAPE_TAP_SAVE: /* Fall-through */
+    case TAPE_TZX_SAVE:
         status = 0xFF; // Don't enter menu
         fpga__load_resource_fifo(&status, 1, RESOURCE_DEFAULT_TIMEOUT);
         status = 0x00; // copy data
         fpga__load_resource_fifo(&status, 1, RESOURCE_DEFAULT_TIMEOUT);
+        break;
+    default:
+        // Playing ?
         break;
     }
     return 0;

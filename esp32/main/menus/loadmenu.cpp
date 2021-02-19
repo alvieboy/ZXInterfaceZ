@@ -105,7 +105,7 @@ static void cb_load_tape_slow()
     if (dialog->exec()>=0) {
         do_load_tape(dialog, dialog->result());
     }
-    dialog->destroy();
+    //dialog->destroy();
 }
 
 static void cb_load_tape_fast()

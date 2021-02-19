@@ -165,7 +165,7 @@ static void cb_save_tap()
     d->setFileName( save__get_requested_name() );
     int r = d->exec();
     if (r<0) {
-        d->destroy();
+        //d->destroy();
         return;
     }
     if (save__start_save_tap(d->getPath(), r==1?true:false)==0) {
