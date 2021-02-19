@@ -34,7 +34,6 @@ static DSTATUS ff_scsidev_initialize(unsigned char pdrv)
 static DSTATUS ff_scsidev_status(unsigned char pdrv)
 {
     scsidev_t *self = scsi_devices[pdrv];
-    ESP_LOGI(TAG,"status");
     if (self==NULL)
         return -1;
     return 0;
