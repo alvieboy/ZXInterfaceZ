@@ -35,8 +35,8 @@ int scsidev__deinit(scsidev_t *dev);
 
 int scsidev__inquiry(scsidev_t *dev, uint8_t *status, struct scsi_sbc_inquiry_data *data);
 
-int scsidev__read(scsidev_t *dev, uint8_t *target, sector_t sector, unsigned size, uint8_t *status);
-int scsidev__write(scsidev_t *dev, const uint8_t *source, sector_t sector, unsigned size, uint8_t *status);
+int scsidev__read(scsidev_t *dev, uint8_t *target, sector_t sector, unsigned sector_count, uint8_t *status);
+int scsidev__write(scsidev_t *dev, const uint8_t *source, sector_t sector, unsigned sector_count, uint8_t *status);
 void scsidev__getname(scsidev_t *dev, char *out);
 
 #endif

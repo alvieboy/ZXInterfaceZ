@@ -276,8 +276,25 @@ int scsidev__read(scsidev_t *dev, uint8_t *target, sector_t sector, unsigned sec
 
 }
 
-int scsidev__write(scsidev_t *dev, const uint8_t *source, sector_t sector, unsigned size, uint8_t *status)
+int scsidev__write(scsidev_t *dev, const uint8_t *source, sector_t sector, unsigned sector_count, uint8_t *status)
 {
+    struct scsi_cdb_write_10 *cdb_write_10 = (struct scsi_cdb_write_10*)dev->cdb;
+
+    memset(dev->cdb, 0, sizeof(dev->cdb));
+
+    cdb_write_10->opcode = SBC_CMD_WRITE_10;
+    cdb_write_10->length = __be16(sector_count);
+    cdb_write_10->lba = __be32(sector);
+
+    return dev->fn->write(dev->pvt,
+                          dev->cdb,
+                          sizeof(struct scsi_cdb_read_10),
+                          source,
+                          sector_count * dev->sector_size,
+                          status
+                         );
+
+
     return -1;
 }
 

@@ -69,6 +69,19 @@ struct scsi_cdb_read_10 {
     uint8_t control;
 } __attribute__((packed));
 
+struct scsi_cdb_write_10 {
+    uint8_t opcode;
+    uint8_t obsolete:3;
+    uint8_t fua:1;
+    uint8_t dpo:1;
+    uint8_t wrprotect:3;
+    be_uint32_t lba;
+    uint8_t group:5;
+    uint8_t rsvd1:3;
+    be_uint16_t length;
+    uint8_t control;
+} __attribute__((packed));
+
 
 struct scsi_sbc_inquiry_data
 {
