@@ -122,17 +122,16 @@ void tick__handler(void)
 {
 }
 
-static void tx(uint8_t reportid, uint8_t report, bool changed)
+static void tx(int id, uint8_t report_data, bool changed)
 {
-    uint8_t data[2];
+    uint8_t data[1];
 
     if (usbd__hid_get_idle()==0 && !changed)
         return;
 
-    data[0] = reportid;
-    data[1] = report;
+    data[0] = report_data;
 
-    usbd__sendreport(0, data, 2);
+    usbd__sendreport(id, data, 1);
 }
 
 
@@ -181,7 +180,7 @@ static void update_joystick_report(void *rptptr,
     *(uint8_t*)rptptr = rpt;
 }
 
-static bool check_joysticks()
+static bool check_joysticks(bool active[2])
 {
     uint8_t new_report[2] = {0};
     bool changed[2] = {false,false};
@@ -196,13 +195,18 @@ static bool check_joysticks()
     }
 
     ARRAY_FOR_EACH(index, joysticks) {
-        if (report[index]!=new_report[index]) {
+        if (report[index]!= new_report[index]) {
             report[index] = new_report[index];
             changed[index] = true;
         }
     }
-    tx(1, report[0], changed[0]);
-    tx(2, report[1], changed[1]);
+    tx(0, report[0], changed[0]);
+    tx(1, report[1], changed[1]);
+
+    // Update active
+    active[0] = (report[0]!=0);
+    active[1] = (report[1]!=0);
+
     return true;
 }
 
@@ -220,10 +224,11 @@ static void ledtimer_callback(void *user)
 
 static void joysticktimer_callback(void*user)
 {
-    check_joysticks();
+    bool active[2];
+    check_joysticks(active);
 
-    pin__write(LED1, !pin__read(J2_4));
-    pin__write(LED2, !pin__read(J2_3));
+    pin__write(LED1, !active[0]);
+    pin__write(LED2, !active[1]);
 }
 
 int main()
