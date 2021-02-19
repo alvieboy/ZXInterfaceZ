@@ -526,7 +526,7 @@ static int usb_block__check_csw(const usb_block_csw_t *csw, uint32_t tag, uint8_
 static int usb_block__scsi_write(void *pvt,
                                 uint8_t *cdb,
                                 unsigned size,
-                                const uint8_t *tx_target,
+                                const uint8_t *tx_source,
                                 unsigned tx_len,
                                 uint8_t *status_out)
 {
@@ -551,7 +551,7 @@ static int usb_block__scsi_write(void *pvt,
         // Data phase
         r = usb_block__send_data(self,
                                   0x00, // LUNuint8_t lun,
-                                  (uint8_t*)tx_target,
+                                  (uint8_t*)tx_source,
                                   tx_len);
     }
 
