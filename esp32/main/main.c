@@ -48,6 +48,8 @@
 #include "rom_hook.h"
 #include "storage.h"
 #include "spectctrl.h"
+#include "activity_monitor.h"
+#include "tape.h"
 
 static int8_t videomode = 0;
 
@@ -431,6 +433,7 @@ void app_main()
     spectcmd__init();
     videostreamer__init();
     netcmd__init();
+    tape__init();
     tapeplayer__init();
     devmap__init();
     storage__init();
@@ -472,16 +475,17 @@ void app_main()
         if (do_restart==1) {
             esp_restart();
         } else if (do_restart>0) {
-            printf("Restart tick %d\n", do_restart);
+            ESP_LOGI(TAG, "Restart tick %d", do_restart);
             do_restart--;
         }
 
 
         fpga__get_status();
         iter++;
-        if (iter==50) {
-            // 5-second mark.
-            //ESP_LOGI(TAG,"Interrupts: %d", videostreamer__getinterrupts());
+        if (iter==10) {
+            int a = activity_monitor__read_mic_idle();
+            tape__notify_mic_idle(a);
+            //ESP_LOGI(TAG, "Mic IDLE: %d", a);
             iter=0;
         }
         STATUS s;
