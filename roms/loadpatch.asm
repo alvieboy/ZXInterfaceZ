@@ -1,3 +1,4 @@
+include "macros.asm"
 ; patches for LD-BYTES 
 
 ; SA-LEADER
@@ -46,9 +47,6 @@ _nodata:
         JP	NMIHANDLER
 EXITNOSAVE:
 	; Remove from stack (to dummy), since we did not call NMIHANDLER
-        ;INC	SP
-        ;INC	SP
-        ;POP	HL
         POP	AF
 	INC	SP
         INC	SP
@@ -106,21 +104,11 @@ _wloop:	LD	A, (IX)
 
         POP	AF
         
-        ; Just RET from our routine.
-        
-	PUSH	HL
-        LD	HL, $053E    ; Return address. Holds a RET.
-        EX	(SP), HL
-        JP 	RETTOMAINROM
+        RET_TO_ROM_AT $053E
 _goback:
 	POP	AF
-	PUSH	HL
-        LD	HL, $04D8    ; Return address.
-        EX	(SP), HL
-        
-        JP 	RETTOMAINROM
-;	RET
-	;ENDLESS
+        RET_TO_ROM_AT $04D8
+
 ORG $056C
 	JR $059F
 

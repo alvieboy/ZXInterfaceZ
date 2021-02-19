@@ -38,6 +38,13 @@ SWAP_IX_DE MACRO
         POP	DE
 ENDM
 
+RET_TO_ROM_AT MACRO address
+	PUSH	HL
+        LD	HL, address
+        EX	(SP), HL
+        JP 	RETTOMAINROM
+ENDM
+
 UNIMPLEMENTED MACRO
 	ENDLESS
 ENDM
