@@ -398,13 +398,12 @@ architecture beh of zxinterface is
 
   signal micidle_s              : std_logic_vector(7 downto 0);
 
-
   signal usb_dbg_s              : std_logic_vector(7 downto 0);
   signal intr_dbg_s             : std_logic_vector(7 downto 0);
   signal io_dbg_s               : std_logic_vector(7 downto 0);
 
   signal spi_composite_cs_s     : std_logic;
-
+  signal nmi_was_romcs_r        : std_logic;
 
 begin
 
@@ -942,6 +941,8 @@ begin
 
         if (forceromonretn_r='1' and retn_det_s='1') then
           forceromonretn_r<='0';
+        else
+          spect_forceromcs_s <= nmi_was_romcs_r; -- Restore ROMCS state when we entered NMI
         end if;
 
         if (forceromonret_r='1' and ret_det_s='1') then
@@ -1087,7 +1088,8 @@ begin
   begin
     if arst_i='1' then
       spect_forceromcs_bussync_s  <= '0';
-      nmi_m1fall_q_r <= '0';
+      nmi_m1fall_q_r              <= '0';
+      nmi_was_romcs_r             <= '0';
     elsif rising_edge(clk_i) then
 
       -- Force ON/OFF follows a different path.
@@ -1096,15 +1098,9 @@ begin
       else
         if spect_m1_fall_s='1' and spect_forceromcs_s='1' then
           spect_forceromcs_bussync_s <= '1';
-        --elsif spect_m1_fall_s='1' and nmi_r='1' then
-        --  nmi_m1fall_q_r         <= '1';
-        --  if nmi_m1fall_q_r='1' then
-        --    spect_forceromcs_bussync_s <= '1';--spect_forceromcs_s or (in_nmi_rom_r or nmi_r);  -- Also force ROM on NMI.
-        --    nmi_m1fall_q_r <= '0'; -- Clear
-        --  end if;
-        --end if;
         elsif nmi_entry_rd_p_s='1' and nmi_r='1' then
-          spect_forceromcs_bussync_s<= '1';
+          spect_forceromcs_bussync_s  <= '1';
+          nmi_was_romcs_r             <= spect_forceromcs_s;
         end if;
       end if;
     end if;

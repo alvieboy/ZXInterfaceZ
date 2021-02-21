@@ -103,16 +103,22 @@ static void load_esxdos()
     if (fpga__reset_to_custom_rom(ROM_1, false)<0) {
         ESP_LOGE(TAG, "Cannot reset");
     }
+}
 
+static void enter_nmi()
+{
+    wsys__reset(WSYS_MODE_NMI);
+    // Forcibly stop tape.
+    tapeplayer__stop();
+    fpga__write_miscctrl(0x00); // Regular NMI handling (i.e., ends with RETN). This notifies the ROM firmware
+    fpga__set_trigger(FPGA_FLAG_TRIG_FORCENMI_ON);
 }
 
 static void event_button_switch(button_event_type_e type)
 {
     if (type==BUTTON_RELEASED) { // || type==BUTTON_LONG_RELEASED) {
         ESP_LOGI(TAG, "Requesting NMI!");
-        wsys__reset(WSYS_MODE_NMI);
-        fpga__write_miscctrl(0x00); // Regular NMI handling (i.e., ends with RETN). This notifies the ROM firmware
-        fpga__set_trigger(FPGA_FLAG_TRIG_FORCENMI_ON);
+        enter_nmi();
     } else if (type==BUTTON_LONG_PRESSED) {
         ESP_LOGI(TAG, "Loading ESXDOS");
         load_esxdos();

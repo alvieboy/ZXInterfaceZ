@@ -1,9 +1,19 @@
 include "port_defs.asm"
 include "command_defs.asm"
 
-NMIHANDLER:
+; ENTRY point when we are already runnning ROM.
+NMIHANDLER_FROM_ROM:
+	LD	A, $01
+        JR	NMIHANDLER1
+        
+; ENTRY point when we are called from physical NMI
+NMIHANDLER_FROM_NMIREQUEST:
+	; From NMI, we already saved AF.
+        XOR	A
+NMIHANDLER1:
+        OUT     (PORT_SCRATCH0), A
 	; Upon entry we already have AF on the stack.
-        LD	A, 0
+        XOR	A
         OUT	(PORT_RAM_ADDR_0), A         ; Set external RAM LSB
         OUT	(PORT_RAM_ADDR_2), A         
         LD	A, $20
@@ -208,8 +218,7 @@ _l2:
         IN	H,(C)           ; Ram: 0x2005
 	
         ; Before we leave, check if we ought to return with RETN or regular RET
-        ; This is indicated by MISCCTRL register
-        IN	A, (PORT_MISCCTRL)
+        IN	A, (PORT_SCRATCH0)
         OR	A
         JR	NZ, _return_with_ret
         ; Last one is C.
@@ -224,7 +233,7 @@ _return_with_ret:
         OUT	(PORT_RAM_ADDR_0), A        ; Ram: 0x2000
         IN	C, (C)
         ; SP is "good" here.
-	POP 	AF
+	; For RET, we do not save AF
         RET
         
 

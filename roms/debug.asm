@@ -2,7 +2,7 @@ DEBUGENABLED 	EQU 1
 
 DEBUGCHR:
 	PUSH	BC
-	LD	C, PORT_SCRATCH0
+	LD	C, PORT_DEBUG
         OUT	(C), A
         POP	BC
         RET

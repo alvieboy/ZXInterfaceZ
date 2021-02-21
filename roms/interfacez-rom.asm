@@ -25,7 +25,7 @@ RST8:	JP 	RST8
 	ORG	$0066
 
 NMIH:	PUSH 	AF
-	JP	NMIHANDLER
+	JP	NMIHANDLER_FROM_NMIREQUEST
 
 
 	ORG 	$0080
@@ -201,6 +201,7 @@ _endl1: HALT
         include "utils.asm"
         ; WARNING WARNING -  this does need correct placement in ROM
         ; Make sure it does not overlap with other routines.
+        include "savepatch.asm"
         include "loadpatch.asm"
         include	"resource.asm"
         include "romcrc.asm"

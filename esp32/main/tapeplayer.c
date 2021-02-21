@@ -471,7 +471,7 @@ static void tapeplayer__do_stop()
         close(tapfh);
         tapfh = -1;
     }
-    fpga__clear_flags(FPGA_FLAG_TAP_ENABLED);// | FPGA_FLAG_ULAHACK);
+    fpga__clear_flags(FPGA_FLAG_TAP_ENABLED | FPGA_FLAG_ULAHACK);
     fpga__set_flags(FPGA_FLAG_TAPFIFO_RESET);
     state = TAP_IDLE;
 }

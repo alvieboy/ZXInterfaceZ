@@ -1,113 +1,4 @@
 include "macros.asm"
-; patches for LD-BYTES 
-
-; SA-LEADER
-;
-ORG $04D7
-	LD	B, A ; As in original ROM
-
-	PUSH	HL
-        LD	HL, SAVEFINISHED    ; Return address for JP NMINENU.
-        EX	(SP), HL
-
-	PUSH	AF
-        PUSH	BC
-        
-	LD	A, CMD_SAVETRAP
-        CALL	WRITECMDFIFO
-	LD	A, D
-        CALL    WRITECMDFIFO
-	LD	A, E
-        CALL    WRITECMDFIFO
-        
-        ; We have type in A'
-        EX	AF, AF'
-        LD	C, A
-        EX	AF, AF'
-        LD	A, C
-
-        CALL    WRITECMDFIFO
-        ; For headers, we immediatly send header data
-        CP	$00
-        JR	NZ, _nodata
-        CALL	SENDTAPEDATAFIFO
-_nodata:	
-        ; Wait for acknowledle
-	CALL	READRESFIFO
-        CP	$FF
-
-        POP	BC
-
-        JR	Z, EXITNOSAVE
-
-        ; Enter NMI menu
-	
-        ; AF is still in stack. 
-        ; This will return to SAVEFINSIHED
-        JP	NMIHANDLER
-EXITNOSAVE:
-	; Remove from stack (to dummy), since we did not call NMIHANDLER
-        POP	AF
-	INC	SP
-        INC	SP
-        ;
-SAVEFINISHED:
-	; Check if we need to send data.
-        PUSH	AF
-        
-        PUSH	BC
-        CALL	READRESFIFO
-        CP	$FF
-        POP	BC
-        JR	Z, _goback
-
-        ; TBD: Write data to RAM.
-	PUSH	IX
-        PUSH	DE
-        ; Set up pointer
-        LD	A, $02
-        OUT	(PORT_RAM_ADDR_2), A
-        LD	A, $80
-        OUT	(PORT_RAM_ADDR_1), A
-        XOR	A
-        OUT	(PORT_RAM_ADDR_0), A
-        
-        PUSH	BC
-        EX	AF, AF'
-        LD	C, A
-        EX	AF, AF'
-        LD	A, C
-        POP	BC
-        ; Send block type first
-        OUT	(PORT_RAM_DATA), A
-	; And skip first byte at (IX)
-	INC	IX
-
-_wloop:	LD	A, (IX)
-	INC	IX
-        OUT	(PORT_RAM_DATA), A
-        DEC	DE
-        LD	A, E
-        OR	D                              
-        JR	NZ, _wloop
-        POP	DE
-        POP	IX
-        ; At this point we wrote all required data.
-        
-	LD	A, CMD_SAVEDATA
-        CALL	WRITECMDFIFO
-	LD	A, D
-        CALL    WRITECMDFIFO
-	LD	A, E
-        CALL    WRITECMDFIFO
-
-
-        POP	AF
-        
-        RET_TO_ROM_AT $053E
-_goback:
-	POP	AF
-        RET_TO_ROM_AT $04D8
 
 ORG $056C
 	JR $059F
@@ -199,98 +90,31 @@ LOAD_ERROR:
         RET
 
 
+;
+; Hook to capture 'LOAD ""'
+;
 ORG	$0767
         PUSH	IX ; Same as 48K ROM
 RET0767:
 	PUSH	AF
-
-
 	PUSH	BC
-	LD	A, CMD_LOADTRAP
+	
+        LD	A, CMD_LOADTRAP
         CALL	WRITECMDFIFO
         ; Wait for acknowledle
-_retry1:
+
 	CALL	READRESFIFO
         CP	$FF
 	POP	BC
 
-        JR	Z, RETIMMED ; If FF, we need to return immeditaly
+        CALL	NZ, NMIHANDLER_FROM_ROM
+
+	PUSH 	BC
+        CALL	READRESFIFO
+        CP	$FF
+        POP	BC
 
 
-	; AF is still in stack. NMI handler expects
-        ; return address then AF, cause it will pop AF before returning.
-        ; So we need to swap them
-        EX	DE, HL
-        LD	HL, RET2
-        EX 	(SP), HL
-        ; HL now contains AF.
-        PUSH	HL
-        EX	DE, HL
-        
-        JP	NMIHANDLER
 	; Go back to Spectrum.
-RETIMMED:
 	POP	AF 
-RET2:        
-        LD	DE, RET0767
-        ;PUSH	AF
-        ;POP	IX
-        ;LD	DE, $0552 ; test for break!
-        PUSH	DE
-
-        JP 	RETTOMAINROM
-	HALT
-
-
-
-
-ORG	$0970	; SA_CONTRL
-	PUSH	HL	; Same as ROM
-RET0970:
-	PUSH	BC
-        
-	LD	A, CMD_SAVETRAP
-        CALL	WRITECMDFIFO
-
-        ; Push header (17 bytes)
-        PUSH	IX
-        LD	B, 17
-_sendheader:
-        LD      A, (IX)
-        CALL	WRITECMDFIFO
-        INC	IX
-        DJNZ    _sendheader
-        
-        ; start to HL, length to DE.
-        POP	IX
-
-	POP	BC
-        LD	DE, RET0970
-        PUSH	DE
-        JP 	RETTOMAINROM
-
-        
-        
-        DI
-        HALT
-
-
-SENDTAPEDATAFIFO:
-	; Need to send data to FIFO
-        PUSH	IX
-	PUSH	DE
-_write:
-        LD	A, (IX)
-        CALL	WRITECMDFIFO
-        INC	IX
-        DEC 	DE
-        LD	A, E
-        OR	D
-        JR 	NZ, _write
-
-        POP	DE
-        POP     IX
-        RET
-
-SENDTAPEDATARAM:
-	RET
+	RET_TO_ROM_AT RET0767 ; After PUSH IX

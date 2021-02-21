@@ -15,10 +15,11 @@
 #include "poke.h"
 #include "nmi_poke.h"
 #include "model.h"
+#include "../resource.h"
 
 static void cb_load_tape_fast();
 static void cb_load_tape_slow();
-static void cb_return();
+static void cb_return_to_standard_tape();
 static void cb_cancel();
 
 static MenuEntryList load_entries = {
@@ -40,7 +41,7 @@ static const char *loadmenu_help[] = {
 
 static const CallbackMenu::Function load_functions[] =
 {
-    &cb_return,
+    &cb_return_to_standard_tape,
     &cb_load_tape_fast,
     &cb_load_tape_slow,
     &cb_cancel
@@ -78,6 +79,11 @@ static int do_load_tape_fast(FileChooserDialog *d, int status)
         fullpath(d->getSelection(), fp, 127);
         if (fasttap__prepare(fp)==0) {
             screen__destroyAll();
+
+            // Preload status
+            uint8_t status = 0x00;
+            fpga__load_resource_fifo(&status, 1, RESOURCE_DEFAULT_TIMEOUT);
+
             wsys__send_command(0xFF);
             return 0;
         } else {
@@ -124,15 +130,24 @@ static void cb_load_tape_fast()
 }
 
 
-static void cb_return()
+static void cb_return_to_standard_tape()
 {
     screen__destroyAll();
+
+    // Preload status
+    uint8_t status = 0x00;
+    fpga__load_resource_fifo(&status, 1, RESOURCE_DEFAULT_TIMEOUT);
+
     wsys__send_command(0xFF);
 }
 
 static void cb_cancel()
 {
     screen__destroyAll();
+    // Preload status
+    uint8_t status = 0xFF;
+    fpga__load_resource_fifo(&status, 1, RESOURCE_DEFAULT_TIMEOUT);
+
     wsys__send_command(0xFF);
 }
 
