@@ -113,8 +113,13 @@ RET0767:
         CALL	READRESFIFO
         CP	$FF
         POP	BC
+        ;JR	Z, _cancel_load
 
 
 	; Go back to Spectrum.
 	POP	AF 
 	RET_TO_ROM_AT RET0767 ; After PUSH IX
+_cancel_load:
+	POP	AF
+        CCF
+	RET_TO_ROM_AT $0552 ; REPORT_DA
