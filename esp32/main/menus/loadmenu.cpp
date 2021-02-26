@@ -23,12 +23,12 @@ static void cb_return_to_standard_tape();
 static void cb_cancel();
 
 static MenuEntryList load_entries = {
-    .sz = 4,
+    .sz = 3,
     .entries = {
         { .flags = 0, .string = "Load from standard tape" },
         { .flags = 0, .string = "Fast load from TAP/TZX" },
         { .flags = 0, .string = "Load from internal audio" },
-        { .flags = 0, .string = "Cancel load" },
+//        { .flags = 0, .string = "Cancel load" },
     }
 };
 
