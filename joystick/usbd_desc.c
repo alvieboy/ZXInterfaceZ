@@ -2,10 +2,10 @@
 #include "usbd_desc.h"
 #include "usbd_conf.h"
 
-#define USBD_VID                      0x8282
-#define USBD_PID                      0x3201
-//#define USBD_VID                      0x0483
-//#define USBD_PID                      0x5740
+//#define USBD_VID                      0x8282
+//#define USBD_PID                      0x3201
+#define USBD_VID                      0x0483
+#define USBD_PID                      0x5740
 #define USBD_LANGID_STRING            0x409
 #define USBD_MANUFACTURER_STRING      "Alvie Systems"
 #define USBD_PRODUCT_FS_STRING        "Dual Joystick for ZX Interface Z"
