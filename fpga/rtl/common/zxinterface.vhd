@@ -234,7 +234,7 @@ architecture beh of zxinterface is
   signal cmdfifo_used_s         : std_logic_vector(2 downto 0);
 
 
-  signal int_s                  : std_logic;
+  signal intstat_s              : std_logic_vector(7 downto 0);
   signal intack_s               : std_logic;
   signal cmdfifo_intack_s       : std_logic;
   signal usb_intack_s           : std_logic;
@@ -760,9 +760,7 @@ begin
 
     -- Interrupt in (for reporting)
 
-    cmdfifo_int_i         => cmdfifo_notempty_s,
-    usb_int_i             => usb_int_s,
-    spect_int_i           => spec_int_r,
+    intstat_i             => intstat_s,
 
     forceromonretn_trig_o => forceromonretn_trig_s,
     forceromcs_trig_on_o  => forceromcs_on_s,
@@ -839,19 +837,25 @@ begin
 
   cmdfifo_notempty_s <= not cmdfifo_empty_s;
 
-  int_s <= usb_int_s or cmdfifo_notempty_s or spec_int_r;
+  --int_s <= usb_int_s or cmdfifo_notempty_s or spec_int_r;
 
   interruptctrl_inst: entity work.interruptctrl
+  generic map (
+    C_INTLINES => 3
+  )
   port map (
-    clk_i     => clk_i,
-    arst_i    => arst_i,
+    clk_i           => clk_i,
+    arst_i          => arst_i,
 
-    int_i     => int_s,
-    inten_i   => intack_s,   -- Interrupt enable, after processing the interrupt on host side
+    int_i(0)        => cmdfifo_notempty_s,
+    int_i(1)        => usb_int_s,
+    int_i(2)        => spec_int_r,
 
-    intackn_i => REQACKN_i,
-    intackn_sync_o => reqackn_sync_s,
-    intn_o    => spec_nreq_s
+    inten_i         => intack_s,   -- Interrupt enable, after processing the interrupt on host side
+    intstat_o       => intstat_s,
+    intackn_i       => REQACKN_i,
+    intackn_sync_o  => reqackn_sync_s,
+    intn_o          => spec_nreq_s
   );
 
   -- Audio
@@ -1231,9 +1235,6 @@ begin
       nontrig_s(13) <= page128_pmc_s(4); -- ROM for 128K
       nontrig_s(14) <= nmi_request_r;
       nontrig_s(15) <= in_nmi_rom_r;
-
-    --  int_s <= usb_int_s or cmdfifo_notempty_s or spec_int_r;
-
 
       scope_inst: entity work.scope
         generic map (

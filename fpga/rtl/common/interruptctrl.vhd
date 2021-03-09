@@ -1,19 +1,25 @@
 LIBRARY IEEE;
 USE IEEE.STD_LOGIC_1164.ALL;
 USE IEEE.NUMERIC_STD.ALL;
+USE IEEE.STD_LOGIC_misc.ALL;
 
 
 entity interruptctrl is
+  generic (
+    C_INTLINES: natural := 1
+  );
   port (
-    clk_i     : in std_logic;
-    arst_i    : in std_logic;
+    clk_i           : in std_logic;
+    arst_i          : in std_logic;
 
-    int_i     : in std_logic;   -- Interrupt in, LEVEL
-    inten_i   : in std_logic;   -- Interrupt enable, after processing the interrupt on host side
+    int_i           : in std_logic_vector(C_INTLINES-1 downto 0);   -- Interrupt in, LEVEL
 
-    intackn_i : in std_logic; --
-    intackn_sync_o: out std_logic;
-    intn_o    : out std_logic
+    inten_i         : in std_logic; -- Interrupt enable, after processing the interrupt on host side
+
+    intackn_i       : in std_logic; -- Interrupt acknowledge from CPU
+    intackn_sync_o  : out std_logic;
+    intstat_o       : out std_logic_vector(7 downto 0);
+    intn_o          : out std_logic -- Actual interrupt line to CPU
   );
 
 end entity interruptctrl;
@@ -30,6 +36,12 @@ begin
       port map ( clk_i => clk_i, arst_i => arst_i, din_i => intackn_i, dout_o => intackn_s );
 
 
+  process(int_i)
+  begin
+    intstat_o <= (others => '0');
+    intstat_o(C_INTLINES-1 downto 0) <= int_i;
+  end process;
+
 
   process(clk_i,arst_i)
   begin
@@ -45,7 +57,7 @@ begin
           intn_r <= '1';
         end if;
       else -- No current interrupt
-        if inten_r='1' and int_i='1' then
+        if inten_r='1' and or_reduce(int_i)='1' then
           intn_r  <= '0'; -- Assert interrupt.
           inten_r <= '0'; -- Disable further interrupts
         end if;

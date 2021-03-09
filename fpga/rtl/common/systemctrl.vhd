@@ -74,9 +74,10 @@ entity systemctrl is
     spect_intack_o        : out std_logic;
 
     -- Interrupt in
-    cmdfifo_int_i         : in std_logic;
-    usb_int_i             : in std_logic;
-    spect_int_i           : in std_logic;
+    --cmdfifo_int_i         : in std_logic;
+    --usb_int_i             : in std_logic;
+    --spect_int_i           : in std_logic;
+    intstat_i             : in std_logic_vector(7 downto 0);
     -- Mic
     micidle_i             : in std_logic_vector(7 downto 0);
 
@@ -217,9 +218,7 @@ begin
             dat_out_s <= C_FPGAID2;
           when "0000011" =>
             -- Interrupt
-            dat_out_s(0) <= cmdfifo_int_i;
-            dat_out_s(1) <= usb_int_i;
-            dat_out_s(2) <= spect_int_i;
+            dat_out_s   <= intstat_i;
 
           when "0000100" =>
             dat_out_s <= bit_to_cpu_i.bit_request & cmdfifo_used_i & resfifo_full_i;
