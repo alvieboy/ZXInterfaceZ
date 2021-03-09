@@ -13,15 +13,21 @@ static volatile uint32_t interrupt_count = 0;
 
 static void IRAM_ATTR spectint__isr_handler(void* arg)
 {
+    // This is done like this so it stays in IRAM
     gpio_hal_context_t _gpio_hal = {
         .dev = GPIO_HAL_GET_HW(GPIO_PORT_0)
     };
 
+    gpio_hal_set_level(&_gpio_hal, PIN_NUM_INTACK, 0);
+    // Small delay
+    for (register int z=4; z!=0;--z) {
+        __asm__ __volatile__ ("nop");
+    }
+    gpio_hal_set_level(&_gpio_hal, PIN_NUM_INTACK, 1);
+
     uint32_t gpio_num = ((uint32_t)(size_t) arg );
     while ( xQueueSendFromISR(gpio_evt_queue, &gpio_num, NULL) != pdTRUE);
 
-    gpio_hal_set_level(&_gpio_hal, PIN_NUM_INTACK, 0);
-    gpio_hal_set_level(&_gpio_hal, PIN_NUM_INTACK, 1);
 }
 
 void spectint__init()
