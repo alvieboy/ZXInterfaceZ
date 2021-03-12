@@ -102,6 +102,7 @@ int usb_block__reset(struct usb_block *self)
     req.size_transferred = 0;
     req.direction = REQ_HOST_TO_DEVICE;
     req.control = 1;
+    req.retries = 3;
 
     req.setup.bmRequestType = USB_REQ_RECIPIENT_INTERFACE | USB_REQ_TYPE_CLASS | USB_HOST_TO_DEVICE;
     req.setup.bRequest = USB_BLOCK_REQ_RESET;
@@ -282,8 +283,6 @@ static int usb_block__probe(struct usb_device *dev, struct usb_interface *i)
 
     usb_ll__channel_set_interval(self->in_epchan, ep_in->bInterval);
 
-    ESP_LOGI(USBBLOCKTAG,"out channel %d", self->out_epchan);
-
     if (usb_block__get_max_lun(self)<0) {
         ESP_LOGE(USBBLOCKTAG,"Cannot get max LUN from device");
 
@@ -294,16 +293,10 @@ static int usb_block__probe(struct usb_device *dev, struct usb_interface *i)
         return -1;
     }
 
-    ESP_LOGI(USBBLOCKTAG,"out channel %d", self->out_epchan);
-
     ESP_LOGI(USBBLOCKTAG,"Initialising SCSI layer, usb block %p", self);
 
-    ESP_LOGI(USBBLOCKTAG,"out channel %d", self->out_epchan);
 
     strcpy(self->scsidev.backend, "usb");
-
-    ESP_LOGI(USBBLOCKTAG,"out channel %d", self->out_epchan);
-
 
     scsidev__init(&self->scsidev, &usb_block_scsidev_fn, self);
 
@@ -364,10 +357,10 @@ static int usb_block__send_command(struct usb_block *blk,
 
     memcpy(&blk->cbw.CBWCB[0], command_data, command_len);
     if (command_len<16) {
-        memset(&blk->cbw.CBWCB[command_len], 0xFF, 16-command_len);
+        memset(&blk->cbw.CBWCB[command_len], 0x00, 16-command_len);
     }
 
-    ESP_LOGI(USBBLOCKTAG,"Sending request channel %d command_len %d", blk->out_epchan, command_len);
+    //ESP_LOGI(USBBLOCKTAG,"Sending request channel %d command_len %d", blk->out_epchan, command_len);
 
     struct usb_request req = {0};
 
@@ -380,6 +373,8 @@ static int usb_block__send_command(struct usb_block *blk,
     req.direction = REQ_HOST_TO_DEVICE;
     req.control = 0;
     req.channel = blk->out_epchan;
+    req.retries = 3;
+
     //req.epsize  = usb_ll__get_channel_maxsize(blk->out_epchan);
 
     BUFFER_LOGI(USBBLOCKTAG,"CBW", blk->cbw.b, sizeof(blk->cbw));
@@ -394,7 +389,7 @@ static int usb_block__send_command(struct usb_block *blk,
         blk->tag++;
     }
 
-    ESP_LOGI(USBBLOCKTAG,"Request completed on channel %d", blk->out_epchan);
+    //ESP_LOGI(USBBLOCKTAG,"Request completed on channel %d", blk->out_epchan);
 
     return r;
 }
@@ -406,7 +401,7 @@ static int usb_block__send_data(struct usb_block *blk,
                                 uint8_t *data,
                                 unsigned datalen)
 {
-    ESP_LOGI(USBBLOCKTAG,"Sending OUT request channel %d len %d", blk->out_epchan, datalen);
+    //ESP_LOGI(USBBLOCKTAG,"Sending OUT request channel %d len %d", blk->out_epchan, datalen);
 
     struct usb_request req = {0};
 
@@ -419,6 +414,7 @@ static int usb_block__send_data(struct usb_block *blk,
     req.direction = REQ_HOST_TO_DEVICE;
     req.control = 0;
     req.channel = blk->out_epchan;
+    req.retries = 3;
     //req.epsize  = usb_ll__get_channel_maxsize(blk->out_epchan);
 
 
@@ -433,7 +429,7 @@ static int usb_block__wait_reply(struct usb_block *blk,
                                 uint8_t *resp,
                                 unsigned datalen)
 {
-    ESP_LOGI(USBBLOCKTAG,"Sending IN request channel %d len %d", blk->out_epchan, datalen);
+    //ESP_LOGI(USBBLOCKTAG,"Sending IN request channel %d len %d", blk->out_epchan, datalen);
 
     struct usb_request req = {0};
 
@@ -467,7 +463,7 @@ static int usb_block__scsi_read(void *pvt,
                                 uint8_t *status_out)
 {
     struct usb_block *self = (struct usb_block *)pvt;
-    ESP_LOGI(USBBLOCKTAG,"Request READ self=%p", self);
+    //ESP_LOGI(USBBLOCKTAG,"Request READ self=%p", self);
     usb_block_csw_t csw;
 
     uint32_t tag = self->tag;
@@ -491,7 +487,7 @@ static int usb_block__scsi_read(void *pvt,
                                   rx_targetlen);
     }
 
-    ESP_LOGI(USBBLOCKTAG, "Request CSW into %p", &csw);
+    //ESP_LOGI(USBBLOCKTAG, "Request CSW into %p", &csw);
 
     r = usb_block__wait_reply(self,
                               0x00, // LUNuint8_t lun,
