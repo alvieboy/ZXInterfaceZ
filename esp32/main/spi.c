@@ -7,6 +7,8 @@
 
 static SemaphoreHandle_t spi_sem;
 
+#define xSPI_HOST VSPI_HOST
+
 void spi__init_bus()
 {
     esp_err_t ret;
@@ -16,10 +18,16 @@ void spi__init_bus()
         .sclk_io_num = PIN_NUM_CLK,
         .quadwp_io_num = -1, //PIN_NUM_QWP,
         .quadhd_io_num = -1,//PIN_NUM_QHD,
+        .flags = SPICOMMON_BUSFLAG_MASTER
+        | SPICOMMON_BUSFLAG_IOMUX_PINS
+        | SPICOMMON_BUSFLAG_SCLK
+        | SPICOMMON_BUSFLAG_MISO
+        | SPICOMMON_BUSFLAG_MOSI
+        ,
         .max_transfer_sz = 16384
     };
 
-    ret=spi_bus_initialize(HSPI_HOST, &buscfg, 1);
+    ret=spi_bus_initialize(xSPI_HOST, &buscfg, 1);
 
     ESP_ERROR_CHECK(ret);
 
@@ -40,7 +48,7 @@ void spi__init_device(spi_device_handle_t *dev, uint32_t speed_hz, gpio_num_t cs
     devcfg.spics_io_num = cs_pin;
     devcfg.queue_size = 1;
 
-    ret=spi_bus_add_device(HSPI_HOST, &devcfg, dev);
+    ret=spi_bus_add_device(xSPI_HOST, &devcfg, dev);
 
     ESP_ERROR_CHECK(ret);
 
