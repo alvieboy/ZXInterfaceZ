@@ -189,6 +189,7 @@ begin
 
   -- Read multiplexing
   process(clk_i, arst_i)
+    variable hook_index_v: natural range 0 to 7;
   begin
     if arst_i='1' then
       dat_out_s               <= (others => 'X');
@@ -200,6 +201,8 @@ begin
 
 
     elsif rising_edge(clk_i) then
+
+      hook_index_v := to_integer(unsigned(addr_s(4 downto 2)));
 
       cmdfifo_rd_o <= '0';
       bit_from_cpu_o.rx_read <= '0';
@@ -274,6 +277,28 @@ begin
           when "0011111" => -- SMC
             dat_out_s   <= page128_smc_i;
 
+          when "1000000" | "1000100" | "1001000" | "1001100" |
+               "1010000" | "1010100" | "1011000" | "1011100" => -- Hook low
+            dat_out_s   <= std_logic_vector(hook_r(hook_index_v).base(7 downto 0));
+
+          when "1000001" | "1000101" | "1001001" | "1001101" |
+               "1010001" | "1010101" | "1011001" | "1011101" => -- Hook high
+            dat_out_s   <= std_logic_vector("00" & hook_r(hook_index_v).base(13 downto 8));
+
+          when "1000010" | "1000110" | "1001010" | "1001110" !
+               "1010010" | "1010110" | "1011010" | "1011110" => -- Hook len
+            dat_out_s   <= std_logic_vector(hook_r(hook_index_v).len);
+
+          when "1000011" | "1000111" | "1001011" | "1001111" |
+               "1010011" | "1010111" | "1011011" | "1011111" => -- Hook flags
+
+            dat_out_s(0) <= hook_r(hook_index_v).flags.romno;
+            dat_out_s(3 downto 1) <= "000";
+            dat_out_s(4) <= hook_r(hook_index_v).flags.ranged;
+            dat_out_s(5) <= hook_r(hook_index_v).flags.prepost;
+            dat_out_s(6) <= hook_r(hook_index_v).flags.setreset;
+            dat_out_s(7) <= hook_r(hook_index_v).flags.valid;
+
           when others =>
         end case;
       end if;
@@ -281,7 +306,7 @@ begin
   end process;
 
   process(clk_i, arst_i)
-    variable hook_index_v: natural range 0 to 3;
+    variable hook_index_v: natural range 0 to 7;
   begin
     if arst_i='1' then
 
