@@ -155,7 +155,7 @@ set_location_assignment PIN_137 -to FORCE_NMI_o
 set_location_assignment PIN_138 -to ESP_IO26_o
 set_location_assignment PIN_141 -to ESP_IO27_o
 set_location_assignment PIN_142 -to EXT_io[12]
-#set_location_assignment PIN_143 -to ESP_QWP_io
+set_location_assignment PIN_143 -to ESP_NCSO2_i
 set_location_assignment PIN_144 -to EXT_io[13]
 set_global_assignment -name CYCLONEII_RESERVE_NCEO_AFTER_CONFIGURATION "USE AS REGULAR IO"
 set_global_assignment -name RESERVE_DATA0_AFTER_CONFIGURATION "USE AS REGULAR IO"
@@ -228,6 +228,7 @@ set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to ESP_MISO_io
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to ESP_MOSI_io
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to ESP_SCK_i
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to ESP_NCSO_i
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to ESP_NCSO2_i
 
 set_global_assignment -name EDA_TEST_BENCH_ENABLE_STATUS TEST_BENCH_MODE -section_id eda_simulation
 set_global_assignment -name EDA_NATIVELINK_SIMULATION_TEST_BENCH t006 -section_id eda_simulation
