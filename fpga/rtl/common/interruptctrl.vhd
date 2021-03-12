@@ -19,7 +19,8 @@ entity interruptctrl is
     intackn_i       : in std_logic; -- Interrupt acknowledge from CPU
     intackn_sync_o  : out std_logic;
     intstat_o       : out std_logic_vector(7 downto 0);
-    intn_o          : out std_logic -- Actual interrupt line to CPU
+    intn_o          : out std_logic; -- Actual interrupt line to CPU
+    dbg_o           : out std_logic_vector(7 downto 0)
   );
 
 end entity interruptctrl;
@@ -73,5 +74,9 @@ begin
 
   intn_o <= intn_r;
   intackn_sync_o <= intackn_s;
+
+  dbg_o(0) <= intn_r;
+  dbg_o(1) <= inten_r;
+  dbg_o(2) <= intackn_s;
 
 end beh;
