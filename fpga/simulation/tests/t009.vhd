@@ -145,7 +145,7 @@ begin
     Check("012: Device on USB bus", spiPayload_out_s(4)(0), '1');
     Check("013: USB NOT in reset", spiPayload_out_s(4)(4), '0');
 
-    wait on Usbdevice_Data.SOFStamp for 10 us;
+    wait on Usbdevice_Data.SOFStamp for 1000 us;
 
     checkInterrupt('1');
     --Check("014: USB not interrupt", CtrlPins_Data.USB_INTn, '1');
