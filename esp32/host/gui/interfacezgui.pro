@@ -1,7 +1,7 @@
 TARGET = interfacez_gui
 QT += widgets network
    
-CONFIG += link_pkgconfig
+CONFIG += link_pkgconfig debug
 
 DEFINES+=FPGA_USE_SOCKET_PROTOCOL
 
