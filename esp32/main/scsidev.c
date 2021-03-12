@@ -218,42 +218,69 @@ static int scsidev__test_unit_ready(scsidev_t *dev, uint8_t *status)
     return 0;
 }
 
+static int scsidev__read_sense_data(scsidev_t *dev)
+{
+    int r;
+    uint8_t status;
+    // Check condition.
+    struct scsi_sbc_sense_data sensedata;
+
+    ESP_LOGI(SCSIDEVTAG, "Request sense into %p", &sensedata);
+
+    r = scsidev__request_sense(dev, &status, &sensedata);
+
+    if (r<0)
+        return -1;
+
+    ESP_LOGI(SCSIDEVTAG, "Sense data: status %02x, key %02x code %02x code_qual %02x",
+             status,
+             sensedata.sense_key,
+             sensedata.additional_sense_code,
+             sensedata.additional_sense_code_qual);
+
+    return r;
+}
+
+static int scsidev__phase_error(scsidev_t *dev)
+{
+    ESP_LOGE(SCSIDEVTAG, "Phase error!!!!");
+    return -1;
+}
+
 static int scsidev__ensure_ready(scsidev_t *dev)
 {
     uint8_t status;
     int r;
+
+    r = scsidev__test_unit_ready(dev, &status);
+    if (r<0) {
+        return -1;
+    }
+
+    switch (status) {
+    case 0:
+        return 0;
+    case 1: // Command failed
+        r = scsidev__read_sense_data(dev);
+        break;
+    case 2:
+        r = scsidev__phase_error(dev);
+        break;
+    }
+
+    if (r<0)
+        return -1;
 
     if (scsidev__test_unit_ready(dev, &status)) {
         return -1;
     }
 
     if (status!=0) {
-        // Check condition.
-        struct scsi_sbc_sense_data sensedata;
-
-        ESP_LOGI(SCSIDEVTAG, "Request sense into %p", &sensedata);
-
-        r = scsidev__request_sense(dev, &status, &sensedata);
-
-        if (r<0)
-            return -1;
-
-        ESP_LOGI(SCSIDEVTAG, "Sense data: status %02x, key %02x code %02x code_qual %02x",
-                 status,
-                 sensedata.sense_key,
-                 sensedata.additional_sense_code,
-                 sensedata.additional_sense_code_qual);
-
-        if (scsidev__test_unit_ready(dev, &status)) {
-            return -1;
-        }
-        if (status!=0) {
-            ESP_LOGE(SCSIDEVTAG, "Cannot clear device status!");
-            return -1;
-        }
+        ESP_LOGE(SCSIDEVTAG, "Cannot clear device status!");
+        return -1;
     }
-    return 0;
 
+    return 0;
 }
 
 int scsidev__read(scsidev_t *dev, uint8_t *target, sector_t sector, unsigned sector_count, uint8_t *status)
