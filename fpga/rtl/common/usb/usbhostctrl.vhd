@@ -118,13 +118,14 @@ ARCHITECTURE rtl OF usbhostctrl is
   signal cnt_errorpid_s  : std_logic_vector(7 downto 0);
   signal cnt_cplt_s      : std_logic_vector(7 downto 0);
 
-
   constant C_SOF_TIMEOUT: natural   := altsim(48000, 4800*2); -- 1ms, 100us
   constant C_ATTACH_DELAY: natural  := altsim(480000, 4);-- 48000; -- 10 ms
   constant C_NUM_CHANNELS: natural  := 8;
   constant C_RESET_DELAY: natural   := altsim(48000*50,500); -- 50 ms
   constant C_RESET_DELAY_AFTER: natural   := altsim(480, 48); -- 10 us
   constant C_INTERRUPT_HOLDOFF : natural := altsim(4800*5, 480); -- 500us / 10us
+
+  signal dbg_chan_interrupt_s : std_logic_vector(C_NUM_CHANNELS-1 downto 0);
 
   type host_state_type is (
     DETACHED,
@@ -261,6 +262,7 @@ ARCHITECTURE rtl OF usbhostctrl is
 
 
   signal int_s                : std_logic;
+  signal int_sync_s           : std_logic;
   signal read_data_s          : std_logic_vector(7 downto 0);
 
   signal trans_addr_s       : std_logic_vector(6 downto 0);
@@ -378,6 +380,7 @@ BEGIN
     --if r.int_holdoff=0 then
       int_s <= (or_reduce(interrupt_v) or r.intpendr.connectdetect or r.intpendr.overcurrent
         or r.intpendr.disconnectdetect ) and r.intconfr.ginten;
+    dbg_chan_interrupt_s <= interrupt_v;
     --else
     --  int_s <= '0';
     --  w.int_holdoff := r.int_holdoff - 1;
@@ -658,7 +661,7 @@ BEGIN
               report "Got setup request";
               w.host_state := SETUP1;
               channel_handled := true;
-            elsif ch.trans.dpid="00" then
+            elsif ch.trans.dpid="00" and ch.trans.issued='0' then    -- Do not retry IN ad infinitum
               w.host_state := IN1;
               channel_handled := true;
             elsif ch.trans.dpid="01" then
@@ -941,10 +944,10 @@ BEGIN
       w.intpendr.overcurrent:='1';
     end if;
 
-
+                             
     if ausbrst_i='1' then
       r.host_state        <= DETACHED;
-      r.frame             <= (others => '0');
+      r.frame             <= "10100010101";
       r.sof_count         <= C_SOF_TIMEOUT - 1;
       r.attach_count      <= C_ATTACH_DELAY - 1;
       r.channel           <= 0;
@@ -988,8 +991,10 @@ BEGIN
       arst_i  => arst_i,
       clk_i   => clk_i,
       din_i   => int_s,
-      dout_o  => int_o
+      dout_o  => int_sync_s
     );
+
+  int_o <= int_sync_s;
 
   ahb2rdwr_inst: entity work.ahb2rdwr
     generic map (
@@ -1108,7 +1113,7 @@ BEGIN
 
   mode_o      <= '1';
 
-  deb: block
+  debubg: block
     signal fs: std_logic;
   begin
   debug: process(usbclk_i,ausbrst_i)
@@ -1117,27 +1122,32 @@ BEGIN
       dbg_o <= (others => '0');
       fs <= '0';
     elsif rising_edge(usbclk_i) then
-        dbg_o(0) <= Phy_RxActive;
-        dbg_o(1) <= Phy_TxActive_s;
-        dbg_o(2) <= fs;--Phy_RxError;
-        dbg_o(3) <= dbg_rx_data_done_s;--Phy_Linestate(0);
-        dbg_o(4) <= Phy_Linestate(1);
+        --dbg_o(0) <= Phy_RxActive;
+        --dbg_o(1) <= Phy_TxActive_s;
+        --dbg_o(2) <= fs;--Phy_RxError;
+        --dbg_o(3) <= dbg_rx_data_done_s;--Phy_Linestate(0);
+        --dbg_o(4) <= Phy_Linestate(1);
 
-        case r.host_state is
-            when DETACHED | ATTACHED  => dbg_o(7 downto 5) <= "000";
-            when IDLE                 => dbg_o(7 downto 5) <= "001";
-            when RESET1 | RESET2      => dbg_o(7 downto 5) <= "010";
-            when WAIT_SOF             => dbg_o(7 downto 5) <= "011";
-            when IN1                  => dbg_o(7 downto 5) <= "100";
-            when OUT1                 => dbg_o(7 downto 5) <= "101";
-            when SOF1                 => dbg_o(7 downto 5) <= "110";
-            when SETUP1               => dbg_o(7 downto 5) <= "111";
-            when others               => dbg_o(7 downto 5) <= "111";
-        end case; 
-
-        if fs_ce_s='1' then
-          fs <= not fs;
-        end if;
+        --case r.host_state is
+        --    when DETACHED | ATTACHED  => dbg_o(7 downto 5) <= "000";
+        --    when IDLE                 => dbg_o(7 downto 5) <= "001";
+        --    when RESET1 | RESET2      => dbg_o(7 downto 5) <= "010";
+        --    when WAIT_SOF             => dbg_o(7 downto 5) <= "011";
+        --    when IN1                  => dbg_o(7 downto 5) <= "100";
+        --    when OUT1                 => dbg_o(7 downto 5) <= "101";
+        --    when SOF1                 => dbg_o(7 downto 5) <= "110";
+        --    when SETUP1               => dbg_o(7 downto 5) <= "111";
+        --    when others               => dbg_o(7 downto 5) <= "111";
+        --end case; 
+        --
+        --if fs_ce_s='1' then
+        --  fs <= not fs;
+        --end if;
+        dbg_o(0) <= int_sync_s;
+        dbg_o(1) <= r.intconfr.ginten;
+        dbg_o(2) <= dbg_chan_interrupt_s(0);
+        dbg_o(3) <= dbg_chan_interrupt_s(1);
+        dbg_o(4) <= dbg_chan_interrupt_s(2);
     end if;
   end process;
   end block;
