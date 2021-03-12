@@ -33,6 +33,11 @@ static uint8_t command_buffer[COMMAND_BUFFER_MAX]; // Max 256+2 bytes.
 static uint16_t __cmdptr = 0;
 typedef int (*spectcmd_handler_t)(const uint8_t *cmdbuf, unsigned len);
 
+static xQueueHandle data_queue = NULL;
+
+static void spectcmd__task(void *pvParam);
+
+
 static void spectcmd__removedata()
 {
     __cmdptr = 0;
@@ -40,7 +45,12 @@ static void spectcmd__removedata()
 
 void spectcmd__init()
 {
+    // Create handler task
+
     spectcmd__removedata();
+
+    data_queue  = xQueueCreate(64, sizeof(uint8_t));
+    xTaskCreate(spectcmd__task, "spectcmd_task", 4096, NULL, 11, NULL);
 }
 
 static int spectcmd__do_load_resource(struct resource *r)
@@ -546,7 +556,6 @@ static int spectcmd__savetrap(const uint8_t *cmdbuf, unsigned len)
 
 static int spectcmd__savedata(const uint8_t *cmdbuf, unsigned len)
 {
-    uint8_t status;
     NEED(2);
     uint16_t size = (((uint16_t)cmdbuf[0])<<8) + cmdbuf[1];
 
@@ -629,16 +638,31 @@ static int spectcmd__check()
 void spectcmd__request()
 {
     int r;
-    uint8_t cmdbuf[4];
+    uint8_t data[4];
+    uint8_t *dptr;
 
     while (1) {
-        uint8_t *cmdptr = &cmdbuf[0];
-        r = fpga__read_command_fifo(cmdbuf);
+        dptr = &data[0];
+        r = fpga__read_command_fifo(data);
 
         if (r<0) {
             break; // No more data
         }
         while (r--) {
+            xQueueSend(data_queue, dptr, 10);
+            dptr++;
+        }
+    }
+
+}
+
+static void spectcmd__task(void *pvParam)
+{
+    uint8_t cmd;
+
+    while (1) {
+        if (xQueueReceive(data_queue, &cmd, 1000)==pdTRUE) {
+
             if (__cmdptr<sizeof(command_buffer)) {
 #if 0
                 ESP_LOGI(TAG, "Buf %02x %02x %02x %02x",
@@ -646,14 +670,14 @@ void spectcmd__request()
                          cmdbuf[1],
                          cmdbuf[2],
                          cmdbuf[3]);
-                ESP_LOGI(TAG, "Queueing %02x (%d)", *cmdptr, __cmdptr);
+                ESP_LOGI(TAG, "Queueing %02x (%d)", cmd, __cmdptr);
 #endif
-                command_buffer[__cmdptr++] = *cmdptr;
-                cmdptr++;
+                command_buffer[__cmdptr++] = cmd;
                 spectcmd__check();
             } else {
                 ESP_LOGW(TAG, "Command buffer overflow!");
             }
         }
     }
+
 }
