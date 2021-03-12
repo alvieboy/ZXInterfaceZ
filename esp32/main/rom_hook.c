@@ -26,7 +26,8 @@ int rom_hook__add(uint16_t start, uint8_t len, uint8_t flags)
         return -r;
 
     hook_usage_bitmap |= newmask;
-    return 0;
+
+    return index;
 }
 
 
@@ -78,7 +79,7 @@ void rom_hook__disable_defaults()
         rom_hook_defaults[1] = -1;
     }
     if (rom_hook_defaults[2]>=0) {
-        rom_hook__remove(rom_hook_defaults[1]);
+        rom_hook__remove(rom_hook_defaults[2]);
         rom_hook_defaults[2] = -1;
     }
 }
