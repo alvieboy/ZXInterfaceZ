@@ -13,6 +13,7 @@ static volatile uint32_t interrupt_count = 0;
 
 static void IRAM_ATTR spectint__isr_handler(void* arg)
 {
+    BaseType_t need_yield = 0;
     // This is done like this so it stays in IRAM
     gpio_hal_context_t _gpio_hal = {
         .dev = GPIO_HAL_GET_HW(GPIO_PORT_0)
@@ -26,8 +27,10 @@ static void IRAM_ATTR spectint__isr_handler(void* arg)
     gpio_hal_set_level(&_gpio_hal, PIN_NUM_INTACK, 1);
 
     uint32_t gpio_num = ((uint32_t)(size_t) arg );
-    while ( xQueueSendFromISR(gpio_evt_queue, &gpio_num, NULL) != pdTRUE);
+    while ( xQueueSendFromISR(gpio_evt_queue, &gpio_num, &need_yield) != pdTRUE);
 
+    if (need_yield)
+        portYIELD_FROM_ISR ();
 }
 
 void spectint__init()

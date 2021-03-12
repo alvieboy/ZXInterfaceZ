@@ -191,9 +191,18 @@ static void videostreamer__server_task(void *pvParameters)
             uint8_t intstatus;
             // Get interrupt status
             intstatus = fpga__readinterrupt();
+
+            if (intstatus & FPGA_INTERRUPT_USB) {
+                // Command request
+                usb__trigger_interrupt();
+            }
+
+            if (intstatus & FPGA_INTERRUPT_CMD) {
+                // Command request
+                spectcmd__request();
+            }
             
             if (intstatus & FPGA_INTERRUPT_SPECT) {
-                framecounter++;
                 interrupt_count++;
 
                 if (framecounter == 1) {
@@ -224,15 +233,7 @@ static void videostreamer__server_task(void *pvParameters)
                     framecounter++;
                 }
             }
-            if (intstatus & FPGA_INTERRUPT_CMD) {
-                // Command request
-                spectcmd__request();
-            }
 
-            if (intstatus & FPGA_INTERRUPT_USB) {
-                // Command request
-                usb__trigger_interrupt();
-            }
 
 
             // Re-enable

@@ -20,6 +20,7 @@
 #define FPGA_BINARYFILE "/spiffs/fpga0.rbf"
 
 static spi_device_handle_t spi0_fpga;
+static spi_device_handle_t spi0_fpga_slow;
 
 static fpga_flags_t latched_flags = 0;
 static uint32_t config1_latch = 0;
@@ -33,7 +34,8 @@ uint32_t fpga__id(void)
 
 static void fpga__init_spi()
 {
-    spi__init_device(&spi0_fpga, 10000000, PIN_NUM_CS);
+    spi__init_device(&spi0_fpga,      20000000, PIN_NUM_CS);  // 40MHz
+    spi__init_device(&spi0_fpga_slow, 10000000, PIN_NUM_CS2); // 10Mhz, mostly for RAM access
 }
 
 static int fpga__issue_read(uint8_t cmd, uint8_t *buf, unsigned size)
@@ -57,10 +59,16 @@ static int fpga__issue_read_addr16(uint8_t cmd, uint16_t addr, uint8_t *buf, uns
 {
     return spi__transceive_cmd8_addr24(spi0_fpga, cmd, (uint32_t)addr<<8, buf, size);
 }
-
+#if 0
 static int fpga__issue_read_addr24(uint8_t cmd, uint32_t addr, uint8_t *buf, unsigned size)
 {
     return spi__transceive_cmd8_addr32(spi0_fpga, cmd, (uint32_t)addr<<8, buf, size);
+}
+#endif
+
+static int fpga__issue_read_addr24_slow(uint8_t cmd, uint32_t addr, uint8_t *buf, unsigned size)
+{
+    return spi__transceive_cmd8_addr32(spi0_fpga_slow, cmd, (uint32_t)addr<<8, buf, size);
 }
 
 static int fpga__issue_write(uint8_t cmd, const uint8_t *buf, unsigned size)
@@ -68,9 +76,16 @@ static int fpga__issue_write(uint8_t cmd, const uint8_t *buf, unsigned size)
     return spi__transmit_cmd8(spi0_fpga, cmd, buf, size);
 }
 
+#if 0
 static int fpga__issue_write_addr24(uint8_t cmd, uint32_t address, const uint8_t *buf, unsigned size)
 {
     return spi__transmit_cmd8_addr24(spi0_fpga, cmd, address, buf, size);
+}
+#endif
+
+static int fpga__issue_write_addr24_slow(uint8_t cmd, uint32_t address, const uint8_t *buf, unsigned size)
+{
+    return spi__transmit_cmd8_addr24(spi0_fpga_slow, cmd, address, buf, size);
 }
 
 static int fpga__issue_write_addr16(uint8_t cmd, uint16_t address, const uint8_t *buf, unsigned size)
@@ -560,54 +575,25 @@ int fpga__load_tap_fifo_command(const uint8_t *data, unsigned len, int timeout)
 
 int fpga__read_extram(uint32_t address)
 {
-#if 0
-    uint8_t buf[6];
-    buf[0] = 0x50;
-    buf[1] = (address>>16) & 0xff;
-    buf[2] = (address>>8) & 0xff;
-    buf[3] = (address) & 0xff;
-    buf[4] = 0x00; // Dummy
-    buf[5] = 0x00;
-
-    if (spi__transceive(spi0_fpga_10m, buf, 6)<0)
-        return -1;
-
-    return buf[5];
-#else
     uint8_t buf[1];
 
-    if (fpga__issue_read_addr24(FPGA_SPI_CMD_READ_EXTRAM, address, buf, 1)<0)
+    if (fpga__issue_read_addr24_slow(FPGA_SPI_CMD_READ_EXTRAM, address, buf, 1)<0)
         return -1;
 
     return buf[0];
-
-#endif
 }
 
 int fpga__write_extram(uint32_t address, uint8_t val)
 {
-#if 0
-    uint8_t buf[6];
-    buf[0] = 0x51;
-    buf[1] = (address>>16) & 0xff;
-    buf[2] = (address>>8) & 0xff;
-    buf[3] = (address) & 0xff;
-    buf[4] = val;
-
-    if (spi__transceive(spi0_fpga, buf, 5)<0)
-        return -1;
-    return 0;
-#else
-    return  spi__transceive_cmd8_addr24(spi0_fpga,
+    return  spi__transceive_cmd8_addr24(spi0_fpga_slow,
                                         0x51,
                                         address,
                                         &val, 1);
-#endif
 }
 
 int fpga__read_extram_block(uint32_t address, uint8_t *dest, int size)
 {
-    return spi__transceive_cmd8_addr32(spi0_fpga,
+    return spi__transceive_cmd8_addr32(spi0_fpga_slow,
                                        0x50,
                                        address<<8,
                                        dest, size);
@@ -615,12 +601,10 @@ int fpga__read_extram_block(uint32_t address, uint8_t *dest, int size)
 
 int fpga__write_extram_block(uint32_t address, const uint8_t *buffer, int size)
 {
-    //ESP_LOGI(TAG, "Write RAM address 0x%06x len %d", address, size);
-
-    return fpga__issue_write_addr24(FPGA_SPI_CMD_WRITE_EXTRAM,
-                                    address,
-                                    buffer,
-                                    size);
+    return fpga__issue_write_addr24_slow(FPGA_SPI_CMD_WRITE_EXTRAM,
+                                         address,
+                                         buffer,
+                                         size);
 }
 
 
