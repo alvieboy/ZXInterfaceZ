@@ -155,9 +155,8 @@ static int populateUSB(QMenu *menu, InterfaceZ *intf)
 
                 QObject::connect(usbAct, &QAction::triggered, [name,intf]{ intf->sendConnectUSB(name); } );
                 menu->addAction(usbAct);
+                libusb_close(handle);
             }
-            libusb_close(handle);
-
         }
 
     }
