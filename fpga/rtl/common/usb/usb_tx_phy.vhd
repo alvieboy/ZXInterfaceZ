@@ -38,6 +38,7 @@ architecture beh of usb_tx_phy is
   signal bit_count_r    : unsigned(2 downto 0);
   signal state_r        : state_type;
   signal data_r         : std_logic_vector(7 downto 0);
+  signal dbg_data_r     : std_logic_vector(7 downto 0);
   signal load_sop_s     : std_logic;
   signal load_data_s    : std_logic;
   signal clock_speed_r  : std_logic;
@@ -147,10 +148,13 @@ begin
         end if;
       end if;
     end if;
+    if bit_tick_s='1' then
+      dbg_data_r <= data_r;
+    end if;
   end process;
 
 
-  shift_data_s <= '1' when (state_r=SOP or state_r=DATA)
+  shift_data_s <= '1' when (state_r=SOP or state_r=DATA or (state_r=EOP1 and need_stuff_s='1') )
         and bit_tick_s='1' else '0';
 
   load_data_s <= '1' when shift_data_s='1' and std_logic_vector(bit_count_r)="111" and stuff_r='0' else '0';
@@ -187,7 +191,9 @@ begin
           sd_data <= '0';
         end if;
       end if;
-
+      --if load_sop_s='1' then
+      --  ones_count_r <= "000";
+      --end if;
     end if;
   end process;
 
@@ -221,12 +227,14 @@ begin
       eop_se0 <= '0';
     elsif rising_edge(clk_i) then
       if bit_tick_s='1' then
-        if state_r=EOP1 or state_r=EOP2 then
+        if (state_r=EOP1 and need_stuff_s='0') or state_r=EOP2 then
           eop_se0 <= '1';
         else
           eop_se0 <= '0';
         end if;
-        eop_se0_q   <= eop_se0;
+        if need_stuff_s='0' then
+          eop_se0_q   <= eop_se0;
+        end if;
         eop_se0_q_q <= eop_se0_q;
       end if;
     end if;
@@ -310,7 +318,7 @@ begin
             end if;
           end if;
         when EOP1 =>
-          if bit_tick_s='1' then
+          if bit_tick_s='1' and stuff_r='0' then
             state_r <= EOP2;
           end if;
         when EOP2 =>

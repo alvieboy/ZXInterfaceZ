@@ -112,6 +112,7 @@ architecture RTL of usb_rx_phy is
   signal se0q1_s                            : std_logic;
   signal se0q2_s                            : std_logic;
   signal eop                                : std_logic;
+  signal drop_last                          : std_logic;
 
   constant FS_IDLE  : std_logic_vector(2 downto 0) := "000";
   constant K1       : std_logic_vector(2 downto 0) := "001";
@@ -334,11 +335,20 @@ begin
   begin
     if rst ='0' then
       rx_active   <= '0';
+      drop_last   <= '0';
     elsif rising_edge(clk) then
       if synced_d ='1' and rx_en ='1' then
         rx_active <= '1';
-      elsif se0_s ='1' and rx_valid_r ='1' then
+        -- Except when we have an extra stuff bit.
+      elsif se0_s ='1' and (rx_valid_r ='1' or drop_last='1') then
         rx_active <= '0';
+      end if;
+      if fs_ce='1' then
+        if se0='1' and drop_bit='1' then
+          drop_last <= '1';
+        else
+          drop_last <= '0';
+        end if;
       end if;
     end if;
   end process;
