@@ -47,6 +47,7 @@ entity interfacez_top is
     REQACKN_i     : in std_logic; -- reuse QHD
     ESP_MISO_io   : inout std_logic;
     ESP_NCSO_i    : in std_logic;
+    ESP_NCSO2_i   : in std_logic; -- IO22
     ESP_SCK_i     : in std_logic;
     --ESP_QWP_io    : inout std_logic;
     ESP_MOSI_io   : inout std_logic;
@@ -191,6 +192,7 @@ begin
       XRFSH_i       => XRFSH_i,
       SPI_SCK_i     => ESP_SCK_i,
       SPI_NCS_i     => ESP_NCSO_i,
+      SPI_NCS2_i    => ESP_NCSO2_i,
       SPI_MOSI_i    => ESP_MOSI_io,
       SPI_MISO_o    => ESP_MISO_io,
       --SPI_D_io(2)   => ESP_QWP_io, -- Write-Protect

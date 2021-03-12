@@ -49,6 +49,7 @@ entity zxinterface is
     -- SPI
     SPI_SCK_i     : in std_logic;
     SPI_NCS_i     : in std_logic;
+    SPI_NCS2_i    : in std_logic;
     --SPI_D_io      : inout std_logic_vector(3 downto 0);
     SPI_MISO_o    : out std_logic;
     SPI_MOSI_i    : in std_logic;
@@ -396,6 +397,15 @@ architecture beh of zxinterface is
   signal divmmc_compat_s        : std_logic;
 
   signal micidle_s              : std_logic_vector(7 downto 0);
+
+
+  signal usb_dbg_s              : std_logic_vector(7 downto 0);
+  signal intr_dbg_s             : std_logic_vector(7 downto 0);
+  signal io_dbg_s               : std_logic_vector(7 downto 0);
+
+  signal spi_composite_cs_s     : std_logic;
+
+
 begin
 
   rst48_inst: entity work.rstgen
@@ -590,7 +600,7 @@ begin
 
       trig_force_clearromcsonret_o => trig_force_clearromcsonret_s,
       disable_romcs_o => disable_romcs_s,
-      dbg_o           => dbg_o(15 downto 8)
+      dbg_o           => io_dbg_s
   );
 
 
@@ -686,10 +696,12 @@ begin
   bit_to_cpu_s.bit_request <= bit_i;
 
 
+  spi_composite_cs_s <= SPI_NCS_i and SPI_NCS2_i;
+
   qspi_inst: entity work.spi_interface
   port map (
     SCKx_i        => SPI_SCK_i,
-    CSNx_i        => SPI_NCS_i,
+    CSNx_i        => spi_composite_cs_s,
     arst_i        => arst_i,
     clk_i         => clk_i,
     MOSI_i        => mosi_s,
@@ -855,7 +867,8 @@ begin
     intstat_o       => intstat_s,
     intackn_i       => REQACKN_i,
     intackn_sync_o  => reqackn_sync_s,
-    intn_o          => spec_nreq_s
+    intn_o          => spec_nreq_s,
+    dbg_o           => intr_dbg_s
   );
 
   -- Audio
@@ -1199,7 +1212,7 @@ begin
     vm_i          => USB_VM_i,
     pwren_o       => USB_PWREN_o,
     pwrflt_i      => USB_FLT_i,
-    dbg_o         => dbg_o(7 downto 0)
+    dbg_o         => usb_dbg_s
   );
 
   capinst: if C_CAPTURE_ENABLED generate
@@ -1375,6 +1388,17 @@ begin
   audio_r_o <= audio_right_s;
 
   D_BUS_DIR_o <= D_BUS_DIR_s;
-  
+
+
+  dbg_o(0) <= usb_dbg_s(0);  -- Int (sync)
+  dbg_o(1) <= usb_dbg_s(1);  -- ginten
+  dbg_o(2) <= usb_dbg_s(2);  -- ch0int
+  dbg_o(3) <= usb_dbg_s(3);  -- ch1int
+  dbg_o(4) <= usb_dbg_s(4);  -- ch2int
+  dbg_o(5) <= intr_dbg_s(0); -- intn_r;
+  dbg_o(6) <= intr_dbg_s(1); -- inten_r;
+  dbg_o(7) <= intr_dbg_s(2); -- intackn_s;
+
+
 end beh;
 

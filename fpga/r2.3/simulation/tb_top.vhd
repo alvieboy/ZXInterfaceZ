@@ -397,4 +397,12 @@ begin
 
   spect_reset_s <= not FORCE_RESET_s;
 
+  usbdec_inst: entity work.usbdec_sim
+    port map (
+      fs => USB_SPEED_s,
+      dp => USB_dp_s,
+      dm => USB_dm_s
+    );
+
+
 end sim;
