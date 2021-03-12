@@ -222,7 +222,7 @@ static int usbh__send_ack(struct usb_request *req);
 static void usbh__request_failed(struct usb_request *req)
 {
     // TODO: resubmit request
-
+    ESP_LOGE(USBHTAG, "Request failed");
     switch (req->control_state) {
     case CONTROL_STATE_SETUP:
         if (req->retries--) {
@@ -788,7 +788,8 @@ int usbh__wait_completion(struct usb_request *req, unsigned timeout_ticks)
             }
        }
     } else {
-        ESP_LOGE(USBHTAG, "Completion error %p", req);
+        ESP_LOGE(USBHTAG, "Completion error %p (timeout %d)", req, timeout_ticks);
+        usb_ll__dump_info();
         usbh__unlock_transaction();
     }
     return -1;
