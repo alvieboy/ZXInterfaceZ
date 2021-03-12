@@ -40,10 +40,10 @@ begin
     else
       if SPEED_i='1' then
         idle_p <= 'H';
-        idle_m <= 'Z';
+        idle_m <= 'L';--'Z';
         report "Using FS pullups";
       elsif SPEED_i='0' then
-        idle_p <= 'Z';
+        idle_p <= 'L';--'Z';
         idle_m <= 'H';
         report "Using LS pullups";
       end if;
