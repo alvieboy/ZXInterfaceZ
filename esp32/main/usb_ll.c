@@ -396,5 +396,4 @@ void usb_ll__dump_info()
             USBLLDEBUG("      T Cnt   : %d", ((regs[10] >> 7)));
         }
     }
-    USBLLDEBUG("  IntLine  : %d",  gpio_get_level(PIN_NUM_USB_INTERRUPT));
 }
