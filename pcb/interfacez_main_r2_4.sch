@@ -8232,7 +8232,7 @@ www.irf.com&lt;p&gt;
 <part name="GND41" library="supply1" deviceset="GND" device=""/>
 <part name="Q1" library="transistor-small-signal" deviceset="BSS123" device=""/>
 <part name="R26" library="GadgetFactory" deviceset="R" device="0603" value="13K 1%"/>
-<part name="R44" library="GadgetFactory" deviceset="R" device="0603" value="30K1 1%"/>
+<part name="R44" library="GadgetFactory" deviceset="R" device="0603" value="39K1 1%"/>
 <part name="GND42" library="supply1" deviceset="GND" device=""/>
 <part name="R46" library="GadgetFactory" deviceset="R" device="0603" value="10K"/>
 <part name="GND52" library="supply1" deviceset="GND" device=""/>
