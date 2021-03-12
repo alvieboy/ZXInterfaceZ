@@ -345,6 +345,7 @@ begin
     ESP_MISO_io => ESP_MISO_s,
     ESP_MOSI_io => ESP_MOSI_s,
     ESP_NCSO_i => ESP_NCSO_s,
+    ESP_NCSO2_i => ESP_NCSO_s,
     --ESP_QHD_io => ESP_QHD_io,
     REQACKN_i  => REQACKN_s,
     --ESP_QWP_io => QWP_s,
