@@ -7,6 +7,7 @@
 #define EVENT_NMIENTER 1
 #define EVENT_RESET 2
 #define EVENT_NMILEAVE 3
+#define EVENT_MEMORYREADCOMPLETE 4
 
 #define EVENT_SYSTEM 16
 
@@ -29,6 +30,9 @@ void wsys__init(void);
 void wsys__send_to_fpga(void);
 void wsys__get_screen_from_fpga(void);
 void wsys__send_command(uint8_t command);
+void wsys__memoryreadcomplete(uint8_t size);
+void wsys__requestmemread(uint16_t address, uint8_t size, void(*callback)(void*,uint8_t),void*user);
+void wsys__requestromread(uint16_t address, uint8_t size, void(*callback)(void *,uint8_t),void*user);
 
 #ifdef __cplusplus
 }
