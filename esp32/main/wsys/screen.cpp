@@ -119,12 +119,6 @@ static Window * screen__getActiveWindow()
     return windows[l-1];
 }
 
-static Window * screen__getWindow(int index)
-{
-    if (index<0)
-        return NULL;
-    return windows[index];
-}
 
 static inline bool screen__checkEnclosed(Widget *source, Widget *w)
 {
