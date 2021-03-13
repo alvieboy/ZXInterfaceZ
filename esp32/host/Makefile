@@ -166,6 +166,10 @@ save.c                \
 spectctrl.c           \
 tape.c                \
 activity_monitor.c    \
+debugger.c            \
+memdata.c             \
+disassemble.c         \
+disassemble_tables.c  \
 wsys/charmap.c        \
 wsys/tomthumb.c        
 
@@ -203,6 +207,8 @@ wsys/filesavedialog.cpp \
 wsys/frame.cpp \
 wsys/filefilter.cpp \
 wsys/standardfilefilter.cpp \
+wsys/reg16.cpp \
+wsys/disasm.cpp \
 menus/nmimenu.cpp \
 menus/settingsmenu.cpp \
 menus/videomodemenu.cpp \
@@ -210,7 +216,8 @@ menus/wifimenu.cpp \
 menus/about.cpp \
 menus/audiowindow.cpp \
 menus/loadmenu.cpp \
-menus/savemenu.cpp 
+menus/savemenu.cpp  \
+menus/debugwindow.cpp
 
 
 
@@ -234,6 +241,7 @@ OBJS:=$(FREERTOS_OBJS) $(COBJ) $(CXXOBJ) \
 	buttons.o \
 	usb_ll.o \
 	usbh.o   \
+	tests.o \
 	cjson/cJSON.o \
 	cjson/cJSON_Utils.o \
 	esplayer/nvs_flash.o \
