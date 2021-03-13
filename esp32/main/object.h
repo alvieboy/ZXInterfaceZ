@@ -23,13 +23,13 @@ static inline void object__release(struct object *obj)
 
 static inline void object__put(struct object *obj)
 {
-    if (__sync_sub_and_fetch(&obj->refcnt,1)==0)
+    if (__sync_sub_and_fetch(&obj->refcnt,1)==1)
         object__release(obj);
 }
 
 static inline struct object *object__get(struct object *obj)
 {
-    __sync_fetch_and_add(&obj->refcnt,1);
+    obj->refcnt++;
     return obj;
 }
 
