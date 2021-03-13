@@ -188,12 +188,22 @@ void reopen_pty()
 
 }
 
+extern int run_tests();
+
 int interfacez_main(int argc, char **argv)
 {
     TaskHandle_t h;
     getcwd(startupdir, sizeof(startupdir));
 
     fcntl(0, F_SETFL, fcntl(0,F_GETFL)|O_NONBLOCK);
+
+    if (run_tests()<0) {
+        printf(stderr, "TESTS FAILED!\n");
+        abort();
+        return -1;
+    } else {
+        printf("Tests OK\n");
+    }
 
     wifi_task_init();
     event_task_init();
