@@ -11,7 +11,8 @@ t012 \
 t013 \
 t014 \
 t017 \
-t018
+t018 \
+t021
 
 LOCALDESIGNFILES= \
 	zxinterfacepkg.vhd \
