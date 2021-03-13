@@ -832,6 +832,14 @@ int fpga__write_hook(uint8_t index, uint16_t start, uint8_t len, uint8_t flag)
                                     4);
 }
 
+int fpga__read_hooks(uint8_t *dest)
+{
+    return fpga__issue_read_addr16(FPGA_SPI_CMD_READ_CTRL,
+                                   0x40,
+                                   dest,
+                                   4*8);
+}
+
 int fpga__read_mic_idle()
 {
     uint8_t idle;
