@@ -26,7 +26,6 @@ void Frame::setBorder(uint8_t border)
 void Frame::drawFrame()
 {
     screenptr_t screenptr = m_screenptr;
-    attrptr_t attrptr = m_attrptr;
     screenptr_t saveptr;
 
     //setBackground();
