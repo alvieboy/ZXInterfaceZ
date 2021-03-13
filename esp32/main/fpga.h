@@ -202,6 +202,7 @@ int fpga__write_capture_block(uint16_t address, const uint8_t *buffer, int size)
 
 int fpga__write_hook(uint8_t index, uint16_t start, uint8_t len, uint8_t flag);
 int fpga__disable_hook(uint8_t index);
+int fpga__read_hooks(uint8_t *dest);
 
 int fpga__write_miscctrl(uint8_t value);
 int fpga__read_mic_idle(void);
