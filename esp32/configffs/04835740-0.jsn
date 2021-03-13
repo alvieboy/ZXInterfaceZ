@@ -1,0 +1,9 @@
+{
+	"entries" : [
+                { "map": "keyboard", "index": 0, "threshold": -1, "value": "o" },
+                { "map": "keyboard", "index": 0, "threshold": 1, "value": "p" },
+                { "map": "keyboard", "index": 1, "threshold": 1, "value": "q" },
+                { "map": "keyboard", "index": 1, "threshold": -1, "value": "a" },
+                { "map": "keyboard", "index": 2, "value": "m" }
+        ]
+}

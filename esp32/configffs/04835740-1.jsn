@@ -1,0 +1,10 @@
+{
+	"entries" : [
+        	{ "map": "joystick", "index": 0, "threshold": -1, "value": "left" },
+                { "map": "joystick", "index": 0, "threshold": 1, "value": "right" },
+                { "map": "joystick", "index": 1, "threshold": -1, "value": "up" },
+                { "map": "joystick", "index": 1, "threshold": 1, "value": "down" },
+                { "map": "joystick", "index": 2, "value": "fire1" },
+                { "map": "joystick", "index": 3, "value": "fire2" }
+        ]
+}

@@ -1,0 +1,21 @@
+{
+  "devices": [
+        { 
+        	"id": "0e8f:0003",
+                "manufacturer": "My gamepad",
+                "product": "My gamepad",
+                "serial": "01298321732",
+                "config": "/config/0e8f0003.jsn"
+        },
+        { 
+        	"id": "0483:5740",
+                "manufacturer": "Alvie Systems",
+                "product": "Dual Joystick for ZX Interface Z",
+                "serial": "01298321732",
+                "configs": {
+                	"0": "/config/04835740-0.jsn",
+                        "1": "/config/04835740-1.jsn"
+                }
+        }
+  ]
+}
