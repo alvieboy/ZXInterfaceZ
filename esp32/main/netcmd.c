@@ -191,7 +191,6 @@ static int do_reset_spectrum(command_t *cmdt, int argc, char **argv, bool forcer
 {
     bool do_cap = false;
     bool has_mask = false;
-    bool has_value = false;
 
     uint32_t mask;
     uint32_t value;
@@ -222,7 +221,6 @@ static int do_reset_spectrum(command_t *cmdt, int argc, char **argv, bool forcer
         // Mask
         ESP_LOGI(TAG, "Has value");
         if (strtoint(argv[argindex], (int*)&value)==0) {
-            has_value=true;
             argindex++;
             argc--;
         } else {
