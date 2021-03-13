@@ -17,7 +17,7 @@
 #include "byteops.h"
 #include "scope.h"
 #include "spectctrl.h"
-
+#include "rom_hook.h"
 char cmd[256];
 uint8_t cmdptr = 0;
 static hdlc_encoder_t enc;
@@ -294,17 +294,26 @@ static int console__debug(int argc, char **argv)
     return 0;
 }
 
+static int console__info(int argc, char **argv)
+{
+    ESP_LOGI(CTAG, "Memory hook configuration: ");
+    rom_hook__dump();
+    return 0;
+}
+
 static struct {
     const char *cmd;
     int (*handler)(int, char**);
+    const char *help;
 } hand[] = {
-    { "vol", &console__volume },
-    { "usb", &console__usb },
-    { "ulahack", &console__ulahack },
-    { "wifi", &console__wifi },
-    { "loadrom", &console__loadrom },
-    { "reset", &console__reset },
-    { "debug", &console__debug },
+    { "vol", &console__volume , "Set audion volume"},
+    { "usb", &console__usb, "USB commands"},
+    { "ulahack", &console__ulahack, "ULA hack settings"},
+    { "wifi", &console__wifi, "WiFi configutation"},
+    { "loadrom", &console__loadrom, "ROM loading" },
+    { "reset", &console__reset, "Spectrum reset" },
+    { "debug", &console__debug, "Debug settings" },
+    { "info", &console__info, "Show miscelaneous info" }
 };
 
 static int console__parse_string(char *cmd);
