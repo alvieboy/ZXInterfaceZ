@@ -349,7 +349,7 @@ static int console__parse_string(char *cmd)
         }
     }
 
-    int i;
+    unsigned i;
 
     for (i=0; i<sizeof(hand)/sizeof(hand[0]); i++) {
         if (strcmp(hand[i].cmd, toks[0])==0) {

@@ -135,7 +135,7 @@ static int fasttap__file_finished()
 
     ESP_LOGI(FASTTAP, "Compare pos, current %d max %d", pos, fasttap_size);
 
-    if (pos < fasttap_size)
+    if (pos < (unsigned)fasttap_size)
         return 1;
 
     return 0;

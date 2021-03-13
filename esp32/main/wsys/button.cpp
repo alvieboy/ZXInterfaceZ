@@ -49,7 +49,7 @@ void Button::drawImpl()
             attrval = 0x68;
             if (i<m_spacing)
                 attrval = 0x78;
-            if (i >= width()-m_spacing)
+            if (i >= (unsigned)width()-m_spacing)
                 attrval = 0x78;
         }
         *attrptr++ = attrval;

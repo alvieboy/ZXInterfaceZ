@@ -6,7 +6,7 @@
 
 bool FileFilter::match_extension(const char *ext) const
 {
-    unsigned i;
+    int i;
 
     if (!ext)
         return false;

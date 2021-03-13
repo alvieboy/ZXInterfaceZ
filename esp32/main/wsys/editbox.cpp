@@ -71,7 +71,7 @@ bool EditBox::handleEvent(uint8_t type, u16_8_t code)
         break;
     default:
         if (IS_PRINTABLE(c)) {
-            if (m_text.size() < width()-1) {
+            if (m_text.size() < (unsigned)width()-1) {
                 m_text+=c;
                 redraw();
             }

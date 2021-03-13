@@ -5,7 +5,7 @@ usb_descriptor_header_t *usb__find_descriptor(const void*data, int datalen, uint
 {
     const uint8_t *dptr = (const uint8_t *)data;
 
-    if (datalen<sizeof(usb_descriptor_header_t)) {
+    if (datalen<(int)sizeof(usb_descriptor_header_t)) {
         return NULL;
     }
     //DEBUG("Searching for %02x\n", type);

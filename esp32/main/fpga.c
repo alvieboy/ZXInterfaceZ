@@ -675,7 +675,7 @@ int fpga__write_extram_block_from_file(uint32_t address, int fd, int size, bool 
     uint8_t chunk[128];
 
     while (size) {
-        int chunksize = MIN(size, sizeof(chunk));
+        int chunksize = MIN(size, (int)sizeof(chunk));
 
         int r = read(fd, chunk, chunksize);
         if (r!=chunksize) {
@@ -701,7 +701,7 @@ int fpga__write_extram_block_from_file_nonblock(uint32_t address, int fd, int si
     *writtensize = 0;
 
     while (size) {
-        int chunksize = MIN(size, sizeof(chunk));
+        int chunksize = MIN(size, (int)sizeof(chunk));
 
         int r = read(fd, chunk, chunksize);
         if (r<0) {
@@ -729,7 +729,7 @@ int fpga__read_extram_block_into_file(uint32_t address, int fd, int size, uint8_
     uint8_t chunk[128];
 
     while (size) {
-        int chunksize = MIN(size, sizeof(chunk));
+        int chunksize = MIN(size, (int)sizeof(chunk));
         int r = fpga__read_extram_block(address, chunk, chunksize);
         if (r<0)
             return -1;

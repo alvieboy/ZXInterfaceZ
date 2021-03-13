@@ -51,7 +51,7 @@ int divcompat__enable(uint8_t rom)
 
 void divcompat__disable()
 {
-    int i;
+    unsigned int i;
     for (i=0;i<sizeof(divhooks);i++) {
         if(divhooks[i]>=0) {
             rom_hook__remove(divhooks[i]);

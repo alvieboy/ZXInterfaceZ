@@ -195,7 +195,7 @@ void hdlc_data(void *user, const uint8_t *data, unsigned datalen)
         printf("USB connection\n");
         uint8_t len = data[1];
         char *newid = malloc(len);
-        strncpy(newid, &data[2], len);
+        strncpy(newid, (char*)&data[2], len);
         interface__connectusb(newid);
         break;
     }

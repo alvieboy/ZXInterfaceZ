@@ -32,7 +32,7 @@ static int rle_copy_block(int size, int (*reader)(void*user, uint8_t*buf,size_t)
     int r;
 
     while (size>0) {
-        chunk = MIN(size,sizeof(buffer));
+        chunk = MIN(size,(int)sizeof(buffer));
         ESP_LOGI(TAG,"Read chunk %d", chunk);
         r = reader(read_user, buffer, chunk);
         if (r!=chunk) {

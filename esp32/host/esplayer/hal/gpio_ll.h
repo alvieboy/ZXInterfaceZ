@@ -5,13 +5,13 @@
 
 extern uint64_t pinstate;
 
-static inline int gpio_ll_get_level(void *data, uint32_t pin)
+static inline int gpio_ll_get_level(volatile void *data, uint32_t pin)
 {
     //printf("%016x\n", pinstate);
     return !!(pinstate & (1ULL<<pin));
 }
 
-static inline int gpio_ll_set_level(void *data, uint32_t pin, uint32_t value)
+static inline int gpio_ll_set_level(volatile void *data, uint32_t pin, uint32_t value)
 {
 #if 0
     if (value) {
@@ -20,6 +20,7 @@ static inline int gpio_ll_set_level(void *data, uint32_t pin, uint32_t value)
         pinstate &= ~(1<<pin);
     }
 #endif
+    return 0;
 }
 
 

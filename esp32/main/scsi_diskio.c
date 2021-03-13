@@ -11,7 +11,6 @@
 
 static scsidev_t* scsi_devices[FF_VOLUMES] = { NULL };
 
-
 static void ff_diskio_register_scsidev(BYTE pdrv, scsidev_t* dev);
 
 static BYTE ff_diskio_get_pdrv_card(const scsidev_t *d)
@@ -173,11 +172,6 @@ fail:
     ff_diskio_unregister(pdrv);
     return err;
 }
-
-
-
-
-
 
 static void ff_diskio_register_scsidev(BYTE pdrv, scsidev_t* dev)
 {
