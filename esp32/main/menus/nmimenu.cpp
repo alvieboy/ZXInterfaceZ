@@ -16,11 +16,13 @@
 #include "nmi_poke.h"
 #include "standardfilefilter.h"
 #include "spectctrl.h"
+#include "debugger.h"
+#include "debugwindow.h"
 
 static MenuWindow *nmimenu;
 
 static MenuEntryList nmimenu_entries = {
-    .sz = 9,
+    .sz = 10,
     .entries = {
         { .flags = 0, .string = "Load snapshot..." },
         { .flags = 1, .string = "Save snapshot..." },
@@ -29,6 +31,7 @@ static MenuEntryList nmimenu_entries = {
         { .flags = 0, .string = "Poke..." },
         { .flags = 0, .string = "Settings..." },
         { .flags = 0, .string = "Reset" },
+        { .flags = 0, .string = "Debug" },
         { .flags = 0, .string = "About..." },
         { .flags = 0, .string = "Exit" },
     }
@@ -42,6 +45,7 @@ static const char *nmimenu_help[] = {
     "Pokes stuff around",
     "Change wireless, bluetooth, USB settings",
     "Reset the ZX spectrum",
+    "Debug",
     "About the ZX spectrum",
     "Exit to ZX spectrum"
 };
@@ -54,6 +58,7 @@ static void cb_about();
 static void cb_reset();
 static void cb_settings();
 static void cb_poke();
+static void cb_debug();
 
 static const CallbackMenu::Function nmimenu_functions[] =
 {
@@ -64,6 +69,7 @@ static const CallbackMenu::Function nmimenu_functions[] =
     &cb_poke,
     &cb_settings,
     &cb_reset,
+    &cb_debug,
     &cb_about,
     &cb_exit_nmi,
 };
@@ -78,7 +84,7 @@ static void about__show()
 
 void nmimenu__show()
 {
-    nmimenu = WSYSObject::create<MenuWindow>("ZX Interface Z", 24, 15);
+    nmimenu = WSYSObject::create<MenuWindow>("ZX Interface Z", 24, 16);
 
     nmimenu->setEntries( &nmimenu_entries );
     nmimenu->setCallbackTable( nmimenu_functions );
@@ -307,4 +313,21 @@ static void cb_reset()
 static void cb_about(void)
 {
     about__show();
+}
+
+static void cb_debug(void)
+{
+    struct nmi_cpu_context_extram data;
+    if (debugger__load_context_from_extram(&data)<0) {
+        WSYS_LOGE("Cannot load context");
+        return;
+    }
+
+    DebugWindow *w = WSYSObject::create<DebugWindow>(data);
+
+    screen__addWindowCentered(w);
+    w->setVisible(true);
+
+
+    //debugger__dump();
 }
