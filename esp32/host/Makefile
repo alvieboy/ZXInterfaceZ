@@ -170,6 +170,8 @@ debugger.c            \
 memdata.c             \
 disassemble.c         \
 disassemble_tables.c  \
+joystick.c            \
+kempston.c            \
 wsys/charmap.c        \
 wsys/tomthumb.c        
 
