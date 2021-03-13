@@ -86,6 +86,16 @@ begin
 
     Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 7, spiPayload_in_s, spiPayload_out_s);
 
+    -- Read out full configuration
+    spiPayload_in_s(0) <= x"64";
+    spiPayload_in_s(1) <= x"00";
+    spiPayload_in_s(2) <= x"40";
+
+    Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 3+(8*4)+1, spiPayload_in_s, spiPayload_out_s);
+
+    l: for index in 0 to 8*4 loop
+      report "Read out index "&str(index)&": "&hstr(spiPayload_out_s(index+4));
+    end loop;
 
     wait for 1 us;
     
