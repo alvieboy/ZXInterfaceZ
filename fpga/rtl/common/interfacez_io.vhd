@@ -64,7 +64,7 @@ entity interfacez_io is
     kbd_force_press_i     : in std_logic_vector(39 downto 0); -- 40 keys.
     -- Joystick data
     joy_en_i              : in std_logic;
-    joy_data_i            : in std_logic_vector(4 downto 0);
+    joy_data_i            : in std_logic_vector(5 downto 0);
     -- Mouse
     mouse_en_i            : in std_logic;
     mouse_x_i             : in std_logic_vector(7 downto 0);
@@ -166,7 +166,8 @@ begin
   ay_adr_o <= ayreg_r;       
 
   -- Address match for reads
-  process (adr_i, joy_en_i, mouse_en_i, ay_register_sel_s, ay_data_sel_s)
+  process (adr_i, joy_en_i, mouse_en_i, ay_register_sel_s,
+    ay_en_reads_i, ay_en_i, ay_data_sel_s, kempston_mouse_sel_s, kempston_joy_sel_s)
   begin
     addr_match_s<='0';
     if adr_i(0)='1' and adr_i(1)='1' and adr_i(5)='1' and adr_i(7)='0' then
@@ -324,7 +325,7 @@ begin
 
         if kempston_joy_sel_s='1' then
           if joy_en_i='1' then
-            dataread_r <= "000" & joy_data_i;
+            dataread_r <= "00" & joy_data_i;
           else
             dataread_r <= x"FF";
           end if;

@@ -93,7 +93,7 @@ entity systemctrl is
     kbd_force_press_o     : out std_logic_vector(39 downto 0); -- 40 keys.
     -- Joystick data
     joy_en_o              : out std_logic;
-    joy_data_o            : out std_logic_vector(4 downto 0);
+    joy_data_o            : out std_logic_vector(5 downto 0);
     -- Mouse
     mouse_en_o            : out std_logic;
     mouse_x_o             : out std_logic_vector(7 downto 0);
@@ -202,8 +202,6 @@ begin
 
     elsif rising_edge(clk_i) then
 
-      hook_index_v := to_integer(unsigned(addr_s(4 downto 2)));
-
       cmdfifo_rd_o <= '0';
       bit_from_cpu_o.rx_read <= '0';
 
@@ -211,6 +209,8 @@ begin
         dat_out_s <= (others => 'X');
       else
         dat_out_s <= (others => 'X');
+
+        hook_index_v := to_integer(unsigned(addr_s(4 downto 2)));
 
         case addr_s is
           when "0000000" =>
@@ -508,7 +508,7 @@ begin
   mouse_x_o             <= regs32_r(5)(7 downto 0);
   mouse_y_o             <= regs32_r(5)(15 downto 8);
   mouse_buttons_o       <= regs32_r(5)(17 downto 16);
-  joy_data_o            <= regs32_r(5)(22 downto 18);
+  joy_data_o            <= regs32_r(5)(23 downto 18);
 
   -- Volumes
   volume_o              <= regs32_r(7) & regs32_r(6);

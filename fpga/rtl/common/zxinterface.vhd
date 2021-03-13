@@ -310,7 +310,7 @@ architecture beh of zxinterface is
   signal kbd_en_s               : std_logic;
   signal kbd_force_press_s      : std_logic_vector(39 downto 0); -- 40 keys.
   signal joy_en_s               : std_logic;
-  signal joy_data_s             : std_logic_vector(4 downto 0);
+  signal joy_data_s             : std_logic_vector(5 downto 0);
   signal mouse_en_s             : std_logic;
   signal mouse_x_s              : std_logic_vector(7 downto 0);
   signal mouse_y_s              : std_logic_vector(7 downto 0);
