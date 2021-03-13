@@ -2,6 +2,8 @@
 
 #if defined(__XTENSA__)
 
+#define __LITTLE_ENDIAN
+
 #ifndef bswap_16
 #define bswap_16(a) ((((uint16_t) (a) << 8) & 0xff00) | (((uint16_t) (a) >> 8) & 0xff))
 #endif
