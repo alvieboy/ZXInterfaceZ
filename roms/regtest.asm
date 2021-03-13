@@ -1,8 +1,7 @@
-	DEVICE ZXSPECTRUM48
-	ORG 23552
+ORG 0
 
 ; Place well-known values in registers so we can check the snapshot features
-	DB "Here"
+
 REGTEST:
 	DI
 	LD	A, $01
@@ -22,6 +21,4 @@ REGTEST:
         LD	I, A
         LD	A, $15
     	JR	$
-	DB "There"
 
-	SAVESNA "regtest.sna", REGTEST
