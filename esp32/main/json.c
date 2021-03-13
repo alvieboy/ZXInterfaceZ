@@ -75,3 +75,7 @@ int json__get_integer(cJSON*node, const char*name)
     return json__get_integer_default(node, name, INT_MIN);
 }
 
+const char *json__get_key(cJSON*node)
+{
+    return node->string;
+}
