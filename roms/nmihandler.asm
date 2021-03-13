@@ -34,6 +34,19 @@ NMIHANDLER:
         OUT	(C), A    	; Clear Mixer status
         LD	C, D		; Back to RAM_DATA port 
         
+        ; Fetch PC from stack, used for debugging
+        
+        POP	DE ; AF
+        ;INC	SP
+        ;INC	SP
+        POP	HL ; PC
+        PUSH	HL
+        ;DEC	SP
+        ;DEC	SP
+        PUSH	DE
+        OUT	(C), L          ; Ram: 0x2007
+        OUT	(C), H          ; Ram: 0x2008
+        
         ; Reserve some space for future expansion.
         
         LD	A, $10
@@ -100,6 +113,28 @@ lone:
         ; Save border.
         IN	A, (PORT_ULA)
         OUT	(C), A	   	; Ram: 0x401B
+        
+        ; For debugging purposes, save alternate registers
+        EX	AF, AF'
+        PUSH	AF
+        POP	DE
+        OUT	(C), E   ; F'   ; Ram: 0x401C
+        OUT	(C), D   ; A'   ; Ram: 0x401D
+        EX	AF, AF'
+        
+        EXX
+        LD	A, C
+        LD	C, PORT_RAM_DATA
+        OUT	(C), A	; C'   ; Ram: 0x401E
+        OUT	(C), B  ; B'   ; Ram: 0x401F
+        OUT	(C), E	; E'   ; Ram: 0x4020
+        OUT	(C), D  ; D'   ; Ram: 0x4021
+        OUT	(C), L	; L'   ; Ram: 0x4022
+        OUT	(C), H  ; H'   ; Ram: 0x4023
+        LD	C, A ; Restore C, so we don't mess with it.
+        EXX
+        
+        
 ;        DEBUGSTR "Serving NMI\n"
         CALL	NMIPROCESS_VIDEOONLY
 
@@ -306,8 +341,17 @@ screenloop:
         
 _l1:    JR	screenloop
 _command:
-	DEBUGSTR "ROM: command "
-        DEBUGHEXA
+	; Clear command immediatly.
+        LD	B, A
+        XOR	A
+        LD	C, PORT_RAM_ADDR_0
+        OUT	(C), A
+        LD	C, PORT_RAM_DATA
+	OUT	(C), A
+        LD	A, B
+        
+	;DEBUGSTR "ROM: command "
+        ;DEBUGHEXA
 	CP	$FF
         JR	Z, _leavenmi
         CP	$FE
@@ -316,6 +360,10 @@ _command:
         JR	Z, _z80sna
         CP	$FC
         JR	Z, _execandexit
+        CP 	$FB
+        JP	Z, _readmem
+        CP 	$FA
+        JP	Z, _readrom
         JR	screenloop
 _leavenmi:
 	LD	A, CMD_LEAVENMI
@@ -338,6 +386,7 @@ _snapshot:
 	LD	A, CMD_LEAVENMI
         CALL	WRITECMDFIFO
         JP 	SNARAM
+        
 _processvideo:
 	;DEBUGSTR "Sequence "
         ;DEBUGHEXA
@@ -361,4 +410,72 @@ _loop1:
         DEC	A     			; T4
         JP	NZ, _loop1              ; T10   (sum 111348)
        	JP 	screenloop
+        
+_readmem:
+	; Read len, pointer. 
+	IN	B, (C)
+	IN	L, (C)
+        IN	H, (C)
+	LD	A, CMD_MEMDATA
+        CALL	WRITECMDFIFO
+        LD	A, B
+        CALL	WRITECMDFIFO
+_memread:
+        LD	A, (HL)
+        INC	HL
+        CALL	WRITECMDFIFO
+        DJNZ	_memread
+        JP	screenloop
+
+_readrom:
+	; We need to copy the readrom routine to RAM
+        ; For this, we use a free area which we already saved past the
+        ; screen area. Also used for ROM calculation (ROMCRC_RAM)
+        LD	A, C
+        LD	DE, ROMCRC_RAM
+        LD	HL, READROM_ROM
+        LD	BC, READROM_ROM_SIZE
+        LDIR
+
+        LD	C, A
+	; Read len, pointer. 
+	IN	B, (C)
+	IN	L, (C)
+        IN	H, (C)
+
+	LD	A, CMD_MEMDATA
+        CALL	WRITECMDFIFO
+        LD	A, B
+        CALL	WRITECMDFIFO
+
+        ; Call it
+        CALL	ROMCRC_RAM
+
+        JP	screenloop
+        
+READROM_ROM:
+        LD	A, $02
+        OUT	(PORT_NMIREASON), A 	; Temporarly disable ROMCS
+
+_memread_rom_ram:
+        LD	A, (HL)
+        INC	HL
+        
+	LD	C, A
+_WAITFIFO1:
+        IN 	A, (PORT_CMD_FIFO_STATUS)
+        OR	A
+        JR	NZ, _WAITFIFO1
+        ; Send resource ID
+        LD	A, C
+        OUT	(PORT_CMD_FIFO_DATA), A
+
+        DJNZ	_memread_rom_ram
+        
+	LD	A, $00
+        OUT	(PORT_NMIREASON), A
+        RET ; Return to ROM
+        
+READROM_ROM_SIZE EQU $ - READROM_ROM
+
         
