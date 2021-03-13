@@ -118,13 +118,13 @@ static void writefun_mem(void *data, unsigned offset, uint8_t val)
     uint8_t *p = (uint8_t*)data;
     p[ offset ] = val;
 }
-
+#if 0
 static void writefun_extram(void *data, unsigned offset, uint8_t val)
 {
     unsigned p = *((unsigned*)data) + offset;
     fpga__write_extram(p, val);
 }
-
+#endif
 static void writefun_fpgarom(void *data, unsigned offset, uint8_t val)
 {
     fpga__write_rom(offset, val);
@@ -134,12 +134,12 @@ void sna_apply_relocs_mem(const uint8_t *sna, uint8_t *rom, uint16_t offset)
 {
     sna_apply_relocs(sna, offset, &writefun_mem, rom);
 }
-
+#if 0
 static void sna_apply_relocs_extram(const uint8_t *sna, unsigned extram_address, uint16_t offset)
 {
     sna_apply_relocs(sna, offset, &writefun_extram, (void*)&extram_address);
 }
-
+#endif
 void sna_apply_relocs_fpgarom(const uint8_t *sna, uint16_t offset)
 {
     sna_apply_relocs(sna, offset, &writefun_fpgarom, (void*)NULL);
