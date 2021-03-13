@@ -7,6 +7,13 @@
 #include "json.h"
 #include <string.h>
 #include "devmap.h"
+#include "strtoint.h"
+#include "joystick.h"
+#include "log.h"
+
+#define DEVMAPTAG "DEVMAP"
+#define DEVMAPDEBUG(x...) LOG_DEBUG(DEBUG_ZONE_DEVMAP, DEVMAPTAG ,x)
+
 
 enum map_type {
     MAP_NONE,
@@ -24,13 +31,16 @@ typedef struct devmap_e {
     unsigned action_value:16;
 } devmap_e_t;
 
+#define MAX_INTERFACES 2
+
 typedef struct devmap_d {
     struct devmap_d *next;
     uint32_t id;
     char *manufacturer;
     char *product;
     char *serial;
-    devmap_e_t *entries;
+    uint8_t interfaces[MAX_INTERFACES];
+    devmap_e_t *entries[MAX_INTERFACES];
 } devmap_d_t;
 
 static devmap_d_t *root_devmap;
@@ -99,7 +109,7 @@ static struct {
             
 static const char *devmap__map_name_from_type(enum map_type type)
 {
-    int i;
+    unsigned i;
     for (i=0;i<sizeof(map_entries)/sizeof(map_entries[0]);i++) {
         if (map_entries[i].map == type) {
             return map_entries[i].name;
@@ -110,7 +120,7 @@ static const char *devmap__map_name_from_type(enum map_type type)
 
 static enum map_type devmap__parse_map(const char *str)
 {
-    int i;
+    unsigned int i;
     for (i=0;i<sizeof(map_entries)/sizeof(map_entries[0]);i++) {
         if (strcmp(map_entries[i].name, str)==0) {
             return map_entries[i].map;
@@ -135,6 +145,7 @@ static int devmap__parse_usb_id(const char *str, uint32_t *target_device)
     }
 
     strncpy(hex, str, 4);
+    hex[4] = '\0';
 
     unsigned long vendor = strtoul(hex, &end,16);
     if (end==NULL || *end!='\0') {
@@ -171,8 +182,10 @@ static void devmap__free_d(devmap_d_t *d)
         free(d->manufacturer);
     if (d->product)
         free(d->product);
-    if (d->entries)
-        devmap__free_entries(d->entries);
+    if (d->entries[0])
+        devmap__free_entries(d->entries[0]);
+    if (d->entries[1])
+        devmap__free_entries(d->entries[1]);
     free(d);
 }
 
@@ -201,10 +214,13 @@ static devmap_e_t *devmap__parse_entries(const char *filename)
             if (c->map == MAP_KEYBOARD) {
                 const char *keybname = json__get_string(entry,"value");
                 c->action_value = keyboard__get_key_by_name(keybname);
+            } else if (c->map == MAP_JOYSTICK) {
+                const char *joyname = json__get_string(entry,"value");
+                c->action_value = joystick__get_action_by_name(joyname);
             } else {
                 c->action_value = json__get_integer_default(entry, "value", 0);
             }
-            ESP_LOGI(TAG, "New map entry %s idx=%d thresh=%d action=%d",
+            DEVMAPDEBUG("New map entry %s idx=%d thresh=%d action=%d",
                      devmap__map_name_from_type(c->map),
                      c->index,
                      c->analog_threshold,
@@ -231,6 +247,7 @@ void devmap__init()
 
     cJSON_ArrayForEach(device, devices) {
         devmap_d_t *dm = calloc(1,sizeof(devmap_d_t));
+        uint8_t interface_index = 0;
 
         const char *id = json__get_string(device,"id");
         if (id==NULL) {
@@ -248,17 +265,56 @@ void devmap__init()
         dm->manufacturer = json__get_string_alloc(device,"manufacturer");
         dm->product = json__get_string_alloc(device,"product");
 
+        DEVMAPDEBUG("Handling %s %s", dm->manufacturer, dm->product);
+
         // Load config file
         const char *configfile = json__get_string(device,"config");
         if (configfile) {
             // Parse it
-            dm->entries = devmap__parse_entries(configfile);
+            dm->entries[interface_index] = devmap__parse_entries(configfile);
+            dm->interfaces[interface_index] = -1;
             if (!dm->entries) {
                 ESP_LOGE(TAG,"Could not load entries for '%s' (%s)", id, configfile?configfile:"null");
             }
+        } else {
+            DEVMAPDEBUG("No config file specified");
+        }
+        // if we have multiple configs (for example, multi interface entities), load them
+
+        cJSON *configs = cJSON_GetObjectItemCaseSensitive(device, "configs");
+        cJSON *config;
+
+        cJSON_ArrayForEach(config, configs) {
+
+            const char *key = json__get_key(config);
+            int key_int;
+
+            if (strtoint(key, &key_int)<0) {
+                ESP_LOGW(TAG,"Invalid JSON key '%s', skipping", key);
+                continue;
+            }
+
+            dm->interfaces[interface_index] = key_int;
+            configfile = NULL;
+
+            if (cJSON_IsString(config)) {
+                configfile = config->valuestring;
+            }
+            DEVMAPDEBUG("Loading interface %d", key_int);
+
+            if (configfile) {
+                // Parse it
+                dm->entries[interface_index] = devmap__parse_entries(configfile);
+                if (!dm->entries[interface_index]) {
+                    ESP_LOGE(TAG,"Could not load entries for '%s' (%s)", id, configfile?configfile:"null");
+                }
+                interface_index++;
+            } else {
+                DEVMAPDEBUG("No config file (array) specified");
+            }
         }
 
-        ESP_LOGI(TAG,"Loaded %s", id);
+        DEVMAPDEBUG("Loaded %s", id);
         dm->next = root_devmap;
         root_devmap = dm;
     }
@@ -268,8 +324,8 @@ void devmap__init()
 }
 
 
-
-static int devmap__save_to_file(const char *filename, const devmap_d_t *devmap)
+#if 0
+static int devmap__save_to_file(const char *filename, const devmap_e_t *devmap)
 {
     char did[10];
 
@@ -321,17 +377,16 @@ static int devmap__save_to_file(const char *filename, const devmap_d_t *devmap)
 
     return 0;
 }
+#endif
 
 static const devmap_d_t *devmap__find(const hid_device_t *dev)
 {
     devmap_d_t *devmap = root_devmap;
-    
+
     while (devmap!=NULL) {
         switch (dev->bus) {
         case HID_BUS_USB:
-
             if (devmap->id == hid__get_id(dev)) {
-
                 return devmap;
             }
         default:
@@ -343,24 +398,42 @@ static const devmap_d_t *devmap__find(const hid_device_t *dev)
 }
 
 
-static bool devmap__get_digital(const struct hid_field *field, uint8_t value, int16_t analog_threshold)
+static bool devmap__get_digital(const struct hid_field *field, uint8_t uvalue, int16_t analog_threshold)
 {
-    ESP_LOGI("devmap", "Field phys_min %d phys_max %d logical_min %d logical_max %d value %d",
-             field->physical_minimum,
-             field->physical_maximum,
-             field->logical_minimum,
-             field->logical_maximum,
-             value);
+    int32_t value;
+
+    // Check if value is signed
+    if (field->logical_minimum < 0) {
+        // Signed value. Perform sign extent.
+        uint32_t raw = uvalue;
+        if (uvalue & (1<<(field->report_size-1))) {
+            // Signed. extend
+            raw |= ~((1<<(field->report_size-1))-1);
+        }
+        value = (int32_t)raw;
+    } else {
+        value = uvalue;
+    }
+
+    DEVMAPDEBUG("Field phys_min %d phys_max %d logical_min %d logical_max %d value %d (raw %02x)",
+                field->physical_minimum,
+                field->physical_maximum,
+                field->logical_minimum,
+                field->logical_maximum,
+                value, uvalue);
+
     if ((field->logical_minimum == 0) && (field->logical_maximum==1))
         return value!=0;
     // For analog, find center.
-    int center = (field->logical_maximum - field->logical_minimum)>>1;
-    ESP_LOGI("devmap", "Center %d, analog threshold %d", center, analog_threshold);
+
+    int center = ((field->logical_maximum - field->logical_minimum)>>1)+field->logical_minimum;
+
+    DEVMAPDEBUG("Center %d, analog threshold %d", center, analog_threshold);
 
     if (analog_threshold>0) {
-        return (value > (center+analog_threshold));
+        return (value >= (center+analog_threshold));
     } else {
-        return (value < (center+analog_threshold));
+        return (value <= (center+analog_threshold));
     }
 }
 
@@ -374,11 +447,19 @@ static void devmap__trigger_entry(const devmap_e_t *entry, const struct hid_fiel
 
     switch (entry->map) {
     case MAP_KEYBOARD:
-        ESP_LOGI("devmap", "Performing action %s on key %d", on?"ON":"OFF", entry->action_value);
+        DEVMAPDEBUG("Performing action %s on key %d", on?"ON":"OFF", entry->action_value);
         if (on) {
             keyboard__press(entry->action_value);
         } else {
             keyboard__release(entry->action_value);
+        }
+        break;
+    case MAP_JOYSTICK:
+        DEVMAPDEBUG("Performing action %s on joystick %d", on?"ON":"OFF", entry->action_value);
+        if (on) {
+            joystick__press(entry->action_value);
+        } else {
+            joystick__release(entry->action_value);
         }
         break;
     case MAP_NMI:
@@ -397,20 +478,26 @@ void hid__field_entry_changed_callback(const hid_device_t *dev, const struct hid
 
     const devmap_e_t *map;
 
-    if (d==NULL)
+    if (d==NULL) {
+        ESP_LOGI(TAG, "Cannot find device to handle event");
         return;
+    }
 
-   // (void)devmap__get_digital(field, new_value, entry->analog_threshold);
+    int ifn = hid__get_interface(dev);
 
-//    unsigned i;
+    for (int interface_index=0; interface_index<2; interface_index++) {
 
-    for (map = d->entries; map!=NULL; map=map->next) {
+        if (ifn!=d->interfaces[interface_index]) {
+            continue;
+        }
 
-        if (map->index  == entry_index) {
-            devmap__trigger_entry(map, field, new_value);
+        for (map = d->entries[interface_index]; map!=NULL; map=map->next) {
+
+            if (map->index  == entry_index) {
+                devmap__trigger_entry(map, field, new_value);
+            }
         }
     }
-//    ESP_LOGW("DEVMAP", "Cannot find handle for index %d", entry_index);
 }
 
 static bool devmap__is_connected(const devmap_d_t *d)
