@@ -26,6 +26,8 @@
 #include "memlayout.h"
 #include "spectctrl.h"
 #include "tape.h"
+#include "debugger.h"
+#include "memdata.h"
 
 #define COMMAND_BUFFER_MAX 256+2
 
@@ -567,6 +569,25 @@ static int spectcmd__savedata(const uint8_t *cmdbuf, unsigned len)
     return 0;
 }
 
+static int spectcmd__memdata(const uint8_t *cmdbuf, unsigned len)
+{
+    NEED(1);
+    uint8_t size = cmdbuf[0];
+
+    NEED(size);
+
+    ESP_LOGI(TAG,"Memory data %d bytes ready", size);
+
+    spectcmd__removedata();
+
+    memdata__store(&cmdbuf[1], size);
+
+
+    wsys__memoryreadcomplete(size);
+
+    return 0;
+}
+
 static const spectcmd_handler_t spectcmd_handlers[] = {
     &spectcmd__load_resource, // 00 SPECTCMD_CMD_GETRESOURCE
     &spectcmd__setwifi,       // 01 SPECTCMD_CMD_SETWIFI
@@ -593,7 +614,7 @@ static const spectcmd_handler_t spectcmd_handlers[] = {
     &spectcmd__loadtrap,      // 16 SPECTCMD_CMD_LOADTRAP
     &spectcmd__savetrap,      // 17 SPECTCMD_CMD_SAVETRAP
     &spectcmd__savedata,      // 18 SPECTCMD_CMD_SAVEDATA,
-    NULL,                     // 19
+    &spectcmd__memdata,       // 19 SPECTCMD_CMD_MEMDATA,
     NULL,                     // 1A
     NULL,                     // 1B
     NULL,                     // 1C
