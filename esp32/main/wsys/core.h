@@ -45,6 +45,8 @@ struct attr_t {
         m_bright(bright?1:0),
         m_flash(flash?1:0)
     {}
+    attr_t() {}
+    explicit attr_t(uint8_t raw);
     operator uint8_t () const {return raw; };
 } __attribute__((packed));
 
