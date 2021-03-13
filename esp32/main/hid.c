@@ -18,6 +18,15 @@ const char *hid__get_serial(const hid_device_t *hiddev)
     return NULL;
 }
 
+int hid__get_interface(const hid_device_t *hiddev)
+{
+    if (hiddev->bus==HID_BUS_USB) {
+        return usb_hid__get_interface((struct usb_hid*)hiddev);
+    }
+    return 0;
+}
+
+
 void hid__get_devices(hid_device_t *devices, unsigned *num, unsigned max)
 {
     (*num) = 0;

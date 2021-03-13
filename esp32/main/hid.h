@@ -107,6 +107,7 @@ void hid__field_entry_changed_callback(const hid_device_t *hiddev, const struct 
 
 uint32_t hid__get_id(const hid_device_t *hiddev);
 const char *hid__get_serial(const hid_device_t *hiddev);
+int hid__get_interface(const hid_device_t *hiddev);
 
 void hid__get_devices(hid_device_t *devices, unsigned *num, unsigned max);
 const char* hid__get_driver_name(const hid_device_t*hiddev);
