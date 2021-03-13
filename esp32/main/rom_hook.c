@@ -1,5 +1,8 @@
 #include "rom_hook.h"
 #include "fpga.h"
+#include "log.h"
+
+#define TAG "ROM_HOOK"
 
 static uint8_t hook_usage_bitmap = 0;
 static int8_t rom_hook_defaults[3] = { -1 };
@@ -20,6 +23,7 @@ int rom_hook__add(uint16_t start, uint8_t len, uint8_t flags)
 
     len--; // 0 will become 255.
 
+    ESP_LOGI(TAG,"Adding hook 0x%04x len %d flags=0x%02x (index %d)",start,len,flags,index);
     int r = fpga__write_hook(index, start, len, flags);
 
     if (r<0)
@@ -36,6 +40,7 @@ void rom_hook__remove(int hook)
     if (hook<0)
         return;
     uint8_t mask = (1<<hook);
+    ESP_LOGI(TAG,"Removing hook %d mask 0x%02x", hook, mask);
     fpga__disable_hook(hook);
     hook_usage_bitmap &= ~mask;
 }
@@ -82,4 +87,17 @@ void rom_hook__disable_defaults()
         rom_hook__remove(rom_hook_defaults[2]);
         rom_hook_defaults[2] = -1;
     }
+}
+
+void rom_hook__dump()
+{
+    ESP_LOGI(TAG, "Current bitmap: %02x", hook_usage_bitmap);
+    ESP_LOGI(TAG, "Default hooks: %d %d %d",
+             rom_hook_defaults[0],
+             rom_hook_defaults[1],
+             rom_hook_defaults[2]);
+    uint8_t dest[4*8];
+
+    fpga__read_hooks(dest);
+    BUFFER_LOGI(TAG,"Hook conf:", dest, 4*8);
 }

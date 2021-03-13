@@ -59,7 +59,7 @@ static inline int rom_hook__add_pre_reset(uint8_t rom, uint16_t start, uint8_t l
 {
     return rom_hook__add(start, len, ROM_HOOK_FLAG_ACTIVE | ROM_HOOK_FLAG_ROM(rom));
 }
-
+void rom_hook__dump();
 
 #ifdef __cplusplus
 }
