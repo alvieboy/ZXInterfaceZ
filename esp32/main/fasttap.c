@@ -22,6 +22,14 @@ static int fasttap_size= -1;
 static struct tzx *fasttap_tzx;
 static int8_t hooks[3] = {-1};
 
+/* TZX version */
+
+static int tzx_error;
+static int tzx_block_done;
+static uint16_t expected_size;
+static uint16_t tzx_offset;
+static uint16_t tzx_block_size;
+
 static int fasttap__install_hooks(model_t model)
 {
     uint8_t rom = 0;
@@ -109,6 +117,7 @@ int fasttap__prepare(const char *filename)
         }
     }
     if (r<0) {
+        ESP_LOGE(FASTTAP, "Invalid file extension, cannot load");
         close(fasttap_fd);
         fasttap_fd = -1;
     }
@@ -149,11 +158,6 @@ static int fasttap__prepare_tap()
     return 0;
 }
 
-/*
- 13 00
-       00
-       00 73 6b 6f 6f 6c 64 61 7a 65 20 1b 00 0a 00 1b 00 44
-       1d 00             */
 static int fasttap__load_next_block_tap()
 {
     uint16_t len;
@@ -219,14 +223,6 @@ void fasttap__stop()
         fasttap_tzx = NULL;
     }
 }
-
-/* TZX version */
-
-static int tzx_error;
-static int tzx_block_done;
-static uint16_t expected_size;
-static uint16_t tzx_offset;
-static uint16_t tzx_block_size;
 
 static void fasttap__tzx_standard_block_callback(uint16_t length, uint16_t pause_after)
 {
