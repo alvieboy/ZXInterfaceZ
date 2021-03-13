@@ -18,3 +18,4 @@ struct usb_hid;
 
 uint32_t usb_hid__get_id(const struct usb_hid *usbhid);
 const char *usb_hid__get_serial(const struct usb_hid *usbhid);
+int usb_hid__get_interface(const struct usb_hid *usbhid);
