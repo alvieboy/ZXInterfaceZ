@@ -85,6 +85,12 @@ const char *usb_hid__get_serial(const struct usb_hid *usbhid)
     return usbhid->dev->serial;
 }
 
+int usb_hid__get_interface(const struct usb_hid *usbhid)
+{
+    // TODO: fix this to report actual interface based on alternate setting
+
+    return usbhid->intf->descriptors[0]->bInterfaceNumber;
+}
 
 static int usb_hid__submit_in(struct usb_hid *h);
 
@@ -155,13 +161,13 @@ static void usb_hid__parse_report(struct usb_hid *hid, const uint8_t *payload, i
             }
             if (propagate) {
 
-                HIDLOG("Field changed start %d len %d (entry index %d) prev %d now %d",
-                       field->report_offset + (i*field->report_size),
-                       field->report_size,
-                       entry_index,
-                       old_value,
-                       new_value
-                      );
+                HIDDEBUG("Field changed start %d len %d (entry index %d) prev %d now %d",
+                         field->report_offset + (i*field->report_size),
+                         field->report_size,
+                         entry_index,
+                         old_value,
+                         new_value
+                        );
 
                 hid__field_entry_changed_callback((hid_device_t*)hid, field, entry_index, new_value);
             }
@@ -264,10 +270,12 @@ static int usb_hid__probe(struct usb_device *dev, struct usb_interface *i)
     bool valid = false;
     uint16_t size_transferred;
 
-    HIDDEBUG("     ***** PROBING INTERFACE %d altSetting %d **** class=%02x\n",
-          intf->bInterfaceNumber,
-          intf->bAlternateSetting,
-          intf->bInterfaceClass);
+    HIDLOG("     ***** PROBING INTERFACE %d altSetting %d **** class=%02x %p %p\n",
+           intf->bInterfaceNumber,
+           intf->bAlternateSetting,
+           intf->bInterfaceClass,
+           intf,
+           i);
 
     if (intf->bInterfaceClass == 0x03) {
         /*
@@ -336,7 +344,7 @@ static int usb_hid__probe(struct usb_device *dev, struct usb_interface *i)
         return -1;
     }
 
-    ESP_LOGI(HIDTAG, "HID report descriptor len %d", report_desc_len);
+    HIDDEBUG("HID report descriptor len %d", report_desc_len);
     if (DEBUG_ENABLED(DEBUG_ZONE_USBLL)) {
         dump__buffer(report_desc, report_desc_len);
     }
@@ -375,7 +383,6 @@ static int usb_hid__probe(struct usb_device *dev, struct usb_interface *i)
     h->hid = hid;
 
     usb_hid__allocate_payloads(h);
-
 
     if (ep->bEndpointAddress & 0x80) {
         // In endpoint
@@ -428,7 +435,7 @@ static int usb_hid__set_idle(struct usb_device *dev, usb_interface_descriptor_t 
     req.setup.wLength = __le16(0);
 
     req.channel =  dev->ep0_chan;
-    ESP_LOGI(HIDTAG,"Submitting IDLE request");
+    HIDDEBUG("Submitting IDLE request interface %d", intf->bInterfaceNumber );
     usbh__submit_request(&req);
 
     // Wait.
@@ -436,9 +443,6 @@ static int usb_hid__set_idle(struct usb_device *dev, usb_interface_descriptor_t 
         ESP_LOGE(HIDTAG,"Device not accepting idle!");
         return -1;
     }
-    ESP_LOGI(HIDTAG, "Submitted idle request");
-
-
 
     return 0;
 
@@ -466,3 +470,5 @@ const struct usb_driver usb_hid_driver = {
     .probe = &usb_hid__probe,
     .disconnect = &usb_hid__disconnect
 };
+
+
