@@ -31,13 +31,26 @@ static xQueueHandle wsys_evt_queue = NULL;
 volatile bool can_update = false;
 
 static void wsys_systemevent_handleevent(const systemevent_t *event, void*user);
-
+static void (*memoryreadcompletecallback)(void*,uint8_t);
+static void *memoryreadcompletecallbackdata;
 
 void wsys__keyboard_event(uint16_t raw, char ascii)
 {
     struct wsys_event evt;
     evt.data.v = raw;
-    evt.type = 0;
+    evt.type = EVENT_KBD;
+    xQueueSend(wsys_evt_queue, &evt, portMAX_DELAY);
+    portYIELD();
+}
+
+void wsys__memoryreadcomplete(uint8_t len)
+{
+    struct wsys_event evt;
+
+    WSYS_LOGI("Memory read complete %d\n", len);
+
+    evt.data.v = len;
+    evt.type = EVENT_MEMORYREADCOMPLETE;
     xQueueSend(wsys_evt_queue, &evt, portMAX_DELAY);
     portYIELD();
 }
@@ -140,6 +153,11 @@ static void wsys__dispatchevent(struct wsys_event evt)
         wsys__propagatesystemevent(evt.sysevent);
 
         break;
+    case EVENT_MEMORYREADCOMPLETE:
+        if (memoryreadcompletecallback) {
+            memoryreadcompletecallback(memoryreadcompletecallbackdata, evt.data.v);
+        }
+        break;
     }
 }
 
@@ -224,3 +242,26 @@ static void wsys_systemevent_handleevent(const systemevent_t *event, void*user)
     xQueueSend(wsys_evt_queue, &evt, portMAX_DELAY);
 }
 
+
+static void wsys__requestmemromread(uint16_t address, uint8_t size, void(*callback)(void *,uint8_t),void*user, uint8_t cmd)
+{
+    uint8_t info[3];
+    info[0] = size;
+    info[1] = address & 0xff;
+    info[2] = address >>8;
+    ESP_LOGI("DEBUG", "Requesting mem read address %04x len %d cmd %02x\n", address, size, cmd);
+    fpga__write_extram_block(0x021B01, &info[0], sizeof(info));
+    memoryreadcompletecallback = callback;
+    memoryreadcompletecallbackdata = user;
+    wsys__send_command(cmd);
+}
+
+void wsys__requestromread(uint16_t address, uint8_t size, void(*callback)(void *,uint8_t),void*user)
+{
+    wsys__requestmemromread(address, size, callback, user, 0xFA);
+}
+
+void wsys__requestmemread(uint16_t address, uint8_t size, void(*callback)(void *,uint8_t),void*user)
+{
+    wsys__requestmemromread(address, size, callback, user, 0xFB);
+}
