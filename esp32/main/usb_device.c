@@ -7,6 +7,8 @@
 #include "bitmap_allocator.h"
 #include "esp_assert.h"
 
+#define TAG "USBDEVICE"
+
 static bitmap32_t usb_id_bitmap;
 
 static struct usb_device_entry *usb_devices = NULL;
@@ -14,6 +16,8 @@ static struct usb_device_entry *usb_devices = NULL;
 static void usbdevice__release(struct object *obj)
 {
     struct usb_device *dev = obj_to_usb_device(obj);
+
+    ESP_LOGI(TAG, "Releasing USB device");
 
     usb_ll__release_channel(dev->ep0_chan);
 
@@ -86,7 +90,7 @@ struct usb_device *usbdevice__find_by_hub_port(const struct usb_hub *h, int port
 
 void usbdevice__disconnect(struct usb_device *dev)
 {
-    ESP_LOGE("USBDEVICE", "Disconnected callback");
+    ESP_LOGE(TAG, "Disconnected callback");
 
     struct usb_device_entry *e = usb_devices;
     struct usb_device_entry *prev = NULL;
