@@ -54,7 +54,19 @@ static int usb_ll_do_open(uint16_t vid, uint16_t pid)
     device = usb_ll__open_vid_pid(vid, pid, &device_handle);
     if (device) {
         libusb_set_auto_detach_kernel_driver(device_handle, 1);
-        status = libusb_claim_interface(device_handle, 0);
+        // Claim all interfaces
+
+        struct libusb_config_descriptor *config;
+        status = libusb_get_config_descriptor(device, 0, &config);
+        if (status==0) {
+            for (int i = 0; i < config->bNumInterfaces; i++) {
+                status = libusb_claim_interface(device_handle,
+                                                config->interface[i].altsetting[0].bInterfaceNumber );
+                if (status!=0)
+                    break;
+            }
+        }
+
     }
 
     return status;
