@@ -40,7 +40,7 @@ package zxinterfacepkg is
   -- UNUSED: "01111011"; -- x"7b"
   -- UNUSED: "01111111"; -- x"7f"
 
-  constant SPECT_PORT_KEMPSTON_JOYSTICK       : std_logic_vector(15 downto 0) := "00000000" & "00011111";
+  constant SPECT_PORT_KEMPSTON_JOYSTICK       : std_logic_vector(15 downto 0) := "00000000" & "00000001";
   constant SPECT_PORT_KEMPSTON_JOYSTICK_MASK  : std_logic_vector(15 downto 0) := "00000000" & "11100001";
   constant SPECT_PORT_KEMPSTON_MOUSEX         : std_logic_vector(15 downto 0) := "00000011" & "00011111";
   constant SPECT_PORT_KEMPSTON_MOUSEX_MASK    : std_logic_vector(15 downto 0) := "00000111" & "00100001";
