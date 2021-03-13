@@ -289,10 +289,12 @@ int usbhub__port_reset(struct usb_hub *hub, int port, usb_speed_t speed)
 
     if (dev->claimed==0) {
         // No driver.
+        USBHUBDEBUG("No driver available");
         usbdevice__put(dev);
         //usbhub__device_free(newdev);
     } else {
         // Add to list.
+        USBHUBDEBUG("Driver(s) registered");
         usbdevice__add_device(dev);
     }
 
