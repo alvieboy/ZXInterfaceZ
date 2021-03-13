@@ -4,7 +4,7 @@
 #include "widgetgroup.h"
 #include <vector>
 
-#define MULTIWIDGET_MAX_CHILDS 12
+#define MULTIWIDGET_MAX_CHILDS 24
 
 class MultiWidget: public WidgetGroup
 {
