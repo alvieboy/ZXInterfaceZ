@@ -40,6 +40,10 @@ loadscr.rom: loadscr-rom.asm pad
 	#xxd -i $@ > snaloader_rom.c
 	#./pad $@ 16384
 	
+regtest.rom: regtest.asm
+	pasmo -d regtest.asm $@ > $@.out
+
+	
 pad: pad.c
 	$(CC) -O2 pad.c -o pad
 
