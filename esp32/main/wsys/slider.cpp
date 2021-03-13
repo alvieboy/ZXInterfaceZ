@@ -75,7 +75,6 @@ void SliderBase::drawSlider(float percentage, const char *text)
     // Compute slider width.
     float slider_width = (w*8)-2;
     slider_width *= percentage;
-    unsigned slider_width_u = (unsigned)slider_width;
 
     drawSliderLine(ptr, w, 0);
     for (unsigned j = 0; j<h; j++) {
