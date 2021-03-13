@@ -112,6 +112,7 @@ static int spi_transceive_fun(const uint8_t *tx, uint8_t *rx, unsigned size)
 
 const struct option longopts[] = {
     { "traceaddress", 1, NULL, 0 },
+    { "rom", 1, NULL, 0 },
     { NULL, 0, NULL, 0 },
 };
 
@@ -176,6 +177,9 @@ static int setupgui(int argc, char **argv, int sock=-1)
     bool trace_set = false;
     char *endp;
     uint16_t trace_address;
+    QString filename;
+
+    filename = ":/rom/spectrum.rom";
 
     do {
         int c = getopt_long(argc, argv, "",
@@ -190,6 +194,9 @@ static int setupgui(int argc, char **argv, int sock=-1)
                 printf("TRACE SET\n");
                 if (endp && *endp=='\0')
                     trace_set = true;
+                break;
+            case 1:
+                filename = optarg;
                 break;
             }
             break;
@@ -266,10 +273,6 @@ static int setupgui(int argc, char **argv, int sock=-1)
     set_logger(&logger);
 
     mainw->show();
-
-    QString filename;
-
-    filename = ":/rom/spectrum.rom";
 
     printf("Using rom %s\n", filename.toLatin1().constData());
     QFile file(filename);
