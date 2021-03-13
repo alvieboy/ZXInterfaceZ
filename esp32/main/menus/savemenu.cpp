@@ -113,7 +113,6 @@ private:
 void FileSaveAppendOverwriteDialog::accept(uint8_t val)
 {
     char filename[128];
-    bool retry;
     struct stat st;
     bool do_append = false;
 
@@ -189,13 +188,6 @@ static void cb_return()
 {
     screen__destroyAll();
     save__start_save_physical();
-    wsys__send_command(0xFF);
-}
-
-static void cb_cancel()
-{
-    screen__destroyAll();
-    save__notify_no_save();
     wsys__send_command(0xFF);
 }
 
