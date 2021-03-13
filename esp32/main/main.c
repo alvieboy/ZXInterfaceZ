@@ -50,6 +50,7 @@
 #include "spectctrl.h"
 #include "activity_monitor.h"
 #include "tape.h"
+#include "kempston.h"
 
 static int8_t videomode = 0;
 
@@ -443,6 +444,7 @@ void app_main()
     webserver__init();
     vga__init();
     buttons__init();
+    kempston__init();
 
     ESP_LOGI(TAG, "InterfaceZ version: %s %s", version, gitversion);
     ESP_LOGI(TAG, "  built %s", builddate);
