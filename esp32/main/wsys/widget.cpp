@@ -31,10 +31,11 @@ void Widget::move(uint8_t x, uint8_t y)
 
 void Widget::draw(bool force)
 {
-    if (isVisible())
+    if (isVisible()) {
         drawImpl();
-    else
+    } else {
         WSYS_LOGI("Not redrawing %s, not visible", CLASSNAME(*this));
+    }
 }
 
 void Widget::recalculateScreenPointers()
