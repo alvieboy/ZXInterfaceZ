@@ -274,3 +274,33 @@ GET /req/scan
 }
 ```
 For *auth* values see ESP32 *wifi_auth_mode_t*.
+
+POST /req/wifi
+
+WiFi Disabled:
+	"mode": "disabled"
+        
+        
+WiFi as access point (dhcp server implicit):
+	"mode": "ap",
+        "ip": "x.x.x.x",
+        "netmask": "x.x.x.x",
+        "ssid": "theapssid",
+        "password": "theappassword".
+        "channel": "8"
+        
+
+WiFi station (dhcp):
+	"mode": "sta",
+        "inet": "dhcp",
+        "ssid": "theapssid",
+        "password": "theappassword_or_empty"
+
+WiFi station (static IP):
+	"mode": "sta",
+        "inet": "static",
+        "ip": "x.x.x.x",
+        "netmask": "x.x.x.x",
+        "gw": "x.x.x.x",
+        "ssid": "theapssid",
+        "password": "theappassword_or_empty"
