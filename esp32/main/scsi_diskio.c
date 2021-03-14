@@ -138,29 +138,11 @@ static esp_err_t mount_to_vfs_fat(const esp_vfs_fat_mount_config_t *mount_config
 
     // Try to mount partition
     FRESULT res = f_mount(fs, drv, 1);
+
     if (res != FR_OK) {
         err = ESP_FAIL;
         ESP_LOGW(TAG, "failed to mount card (%d)", res);
-        if (!((res == FR_NO_FILESYSTEM || res == FR_INT_ERR)
-              && mount_config->format_if_mount_failed)) {
-            goto fail;
-        }
-#if 0
-        err = partition_card(mount_config, drv, card, pdrv);
-        if (err != ESP_OK) {
-            goto fail;
-        }
-
-        ESP_LOGW(TAG, "mounting again");
-        res = f_mount(fs, drv, 0);
-        if (res != FR_OK) {
-            err = ESP_FAIL;
-            ESP_LOGD(TAG, "f_mount failed after formatting (%d)", res);
-            goto fail;
-        }
-#else
         goto fail;
-#endif
     }
     return ESP_OK;
 
@@ -195,9 +177,11 @@ esp_err_t vfs_fat_scsi_mount(const char* base_path,
 
     BYTE pdrv = FF_DRV_NOT_USED;
     if (ff_diskio_get_drive(&pdrv) != ESP_OK || pdrv == FF_DRV_NOT_USED) {
-        ESP_LOGD(TAG, "the maximum count of volumes is already mounted");
+        ESP_LOGI(TAG, "the maximum count of volumes is already mounted");
         return ESP_ERR_NO_MEM;
     }
+
+    ESP_LOGI(TAG, "Using drive %02x", pdrv);
 
     err = mount_to_vfs_fat(mount_config, dev, pdrv, base_path);
 
