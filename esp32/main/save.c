@@ -113,6 +113,8 @@ int save__append_from_buffer(const uint8_t *data, uint16_t datalen)
         return -1;
     }
 
+    tape__notify_save();
+
     return write(tape_fd, data, datalen)==datalen?0:-1;
 }
 
@@ -135,6 +137,8 @@ int save__append_from_extram(uint32_t address, uint16_t datalen)
                                              &checksum);
     if (r<0)
         return -1;
+
+    tape__notify_save();
 
     return write(tape_fd, &checksum, 1)==1 ? 0:-1;
 
