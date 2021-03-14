@@ -99,8 +99,7 @@ static void do_load_tape(FileChooserDialog *d, int status)
     if (status==0) {
         WSYS_LOGI("Tape is: %s", d->getSelection());
         tapeplayer__play(d->getSelection());
-        screen__destroyAll();
-        wsys__send_command(0xFF);
+        cb_return_to_standard_tape();
     }
 }
 
@@ -116,7 +115,7 @@ static void cb_load_tape_slow()
 
 static void cb_load_tape_fast()
 {
-    FileChooserDialog *dialog = WSYSObject::create<FileChooserDialog>("Load tape (fast)", 24, 18, StandardFileFilter::AllTapesFileFilter());
+    FileChooserDialog *dialog = WSYSObject::create<FileChooserDialog>("Load tape (fast)", 24, 18, StandardFileFilter::AllTapesAndScreensFileFilter());
     dialog->setWindowHelpText("Use Q/A to move, ENTER selects");
     do {
         if (dialog->exec()>=0) {
