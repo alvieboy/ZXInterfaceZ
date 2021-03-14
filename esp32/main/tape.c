@@ -104,7 +104,7 @@ int tape__enter_tape_mode(tapemode_t newmode)
         break;
     }
     tape__unlock();
-    return -1;
+    return 0;
 }
 
 
