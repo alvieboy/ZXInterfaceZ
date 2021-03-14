@@ -233,6 +233,7 @@ int fasttap__next()
         r = fasttap__load_next_block_scr();
         break;
     default:
+        ESP_LOGE(FASTTAP, "Unknown tape mode!!!");
         r=-1;
         break;
     }
@@ -383,15 +384,18 @@ static int fasttap__load_next_block_tzx()
     do {
         r = read(fasttap_fd, buf, sizeof(buf));
         if (r<0) {
+            ESP_LOGI(FASTTAP,"TZX error read!");
             return -1;
         }
-      //  ESP_LOGI(FASTTAP,"TZX fast load parse chunk");
+        //ESP_LOGI(FASTTAP,"TZX fast load parse chunk");
         tzx__chunk(fasttap_tzx, buf, r);
     } while (!tzx_block_done);
 
     ESP_LOGI(FASTTAP,"TZX fast load block done");
     return 0;
 }
+
+uint8_t scr_chunk;
 
 static int fasttap__prepare_scr()
 {
@@ -401,12 +405,45 @@ static int fasttap__prepare_scr()
         return -1;
 
     ESP_LOGI(FASTTAP,"Tape ready to fast load (SCR)");
+    scr_chunk = 0;
+
     return 0;
 }
 
+// Keep this in RAM to use DMA for SPI transfer
+DMA_ATTR uint8_t scr_tap_header[16] = { // No checksum, hence 17-1
+    0x03,0x70,0x20,0x20,
+    0x20,0x20,0x20,0x20,
+    0x20,0x20,0x20,0x00,
+    0x1b,0x00,0x40
+};
+
 static int fasttap__load_next_block_scr()
 {
+    uint16_t len;
+    int r = 0;
 
+    ESP_LOGI(FASTTAP,"SCR request next block, chunk %d", scr_chunk);
+    switch (scr_chunk) {
+    case 0:
+        /* Header */
+        len = 16;
+        r = fpga__write_extram_block(FASTTAP_ADDRESS_DATA, scr_tap_header, len);
+        fpga__write_extram_block(FASTTAP_ADDRESS_LENLSB, (uint8_t*)&len, 2);
+        scr_chunk++;
+        break;
+    case 1:
+        /* Data */
+        len = 6912;
+        r = fpga__write_extram_block_from_file(FASTTAP_ADDRESS_DATA, fasttap_fd, len, false);
+        fpga__write_extram_block(FASTTAP_ADDRESS_LENLSB, (uint8_t*)&len, 2);
+        scr_chunk++;
+        fasttap__stop();
+        break;
+    default:
+        r = -1;
+        break;
 
-    return 0;
+    }
+    return r;
 }
