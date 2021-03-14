@@ -17,12 +17,10 @@ Button *MessageBox::addButton(const char *text, int retval)
 {
     Button *b  = create<Button>(text);
     m_buttonlayout->addChild(b, LAYOUT_FLAG_HEXPAND);
-    int index = m_retvals.size();
-    m_retvals.push_back(retval);
     m_buttons.push_back(b);
 
     b->clicked().connect(
-                         [this,index]{ this->buttonClicked(index); }
+                         [this,b,retval]{ this->buttonClicked(b,retval); }
                         );
 
     return b;
@@ -38,21 +36,16 @@ void MessageBox::show(const char *text, const char *button_text)
         b->setText(button_text);
 
     m->exec();
-    m->destroy();
+    //m->destroy();
 }
 
-void MessageBox::buttonClicked(int index)
+void MessageBox::buttonClicked(Button *b, int retval)
 {
+    WSYS_LOGI("Button clicked, retval %d", retval);
     if (m_clicked.connected()) {
-        m_clicked.emit(m_buttons[index], m_retvals[index]);
+        m_clicked.emit(b, retval);
     } else {
-        screen__removeWindow(this);
+        setResult(retval);
+        //screen__removeWindow(this);
     }
 }
-#if 0
-void MessageBox::setResult(int val)
-{
-    Dialog::setResult(val);
-    setVisible(false);
-}
-#endif

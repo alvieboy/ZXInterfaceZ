@@ -13,15 +13,13 @@ public:
     void setText(const char *c) { m_text->setText(c); }
     Button* addButton(const char *text, int retval);
 
-//    virtual void setResult(int val) override;
-
 protected:
-    void buttonClicked(int index);
+    void buttonClicked(Button *, int retval);
 private:
     VLayout *m_layout;
     Label *m_text;
     HLayout *m_buttonlayout;
     std::vector<Button*> m_buttons;
-    std::vector<int> m_retvals;
+    //std::vector<int> m_retvals;
     Signal<Button*, int> m_clicked;
 };
