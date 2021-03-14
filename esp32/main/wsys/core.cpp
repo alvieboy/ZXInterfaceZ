@@ -10,9 +10,9 @@
 #include <execinfo.h>
 #endif
 
-extern "C" {
-    struct framebuffer spectrum_framebuffer;
-};
+//extern "C" {
+DMA_ATTR struct framebuffer spectrum_framebuffer;
+//};
 
 uint8_t current_charset = MAIN_CHARSET;
 uint8_t charset_stack[4];

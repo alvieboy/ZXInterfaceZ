@@ -108,7 +108,7 @@ static inline const uint8_t*getcurrentcharset(void) {
 }
 
 
-extern "C" struct framebuffer spectrum_framebuffer;
+extern struct framebuffer spectrum_framebuffer;
 
 void push_charset(int index);
 int pop_charset();
