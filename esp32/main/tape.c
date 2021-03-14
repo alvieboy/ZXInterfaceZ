@@ -8,7 +8,8 @@
 
 #define TAG "TAPE"
 #define MIC_TIMEOUT 15 /* 15 seconds */
-#define TAP_TIMEOUT 15 /* 15 seconds */
+#define TAP_TIMEOUT 4 /* 4 seconds */
+#define TAP_PHYSICAL_TIMEOUT 10 /* 10 seconds */
 
 static SemaphoreHandle_t tape_sem;
 static esp_timer_handle_t tape_timer;
@@ -95,14 +96,20 @@ int tape__enter_tape_mode(tapemode_t newmode)
 {
     // Not all combinations are valid.
     tape__lock();
+
     switch (newmode) {
     case TAPE_PHYSICAL_LOAD: /* Fall-through */
-    case TAPE_PHYSICAL_SAVE:
+    case TAPE_PHYSICAL_SAVE: /* Fall-through */
         ignore_mic = true; // Ignore MIC for one sample.
+    case TAPE_TAP_LOAD: /* Fall-through */
+    case TAPE_TAP_SAVE: /* Fall-through */
         break;
     default:
         break;
     }
+
+    tapemode = newmode;
+
     tape__unlock();
     return 0;
 }
@@ -147,6 +154,7 @@ static void tape__timer_elapsed()
 {
     bool issave = false;
     tape__lock();
+ //   ESP_LOGI(TAG, "Tape tick mode %d timer %d", tapemode, tap_timer);
     switch (tapemode) {
     case TAPE_TAP_SAVE:
         issave = true; /* Fall-through */
@@ -160,6 +168,14 @@ static void tape__timer_elapsed()
             } else {
                 tapeplayer__stop();
             }
+        }
+        break;
+    case TAPE_PHYSICAL_LOAD: /* Fall-through */
+    case TAPE_PHYSICAL_SAVE:
+        tap_timer++;
+        if (tap_timer>TAP_PHYSICAL_TIMEOUT) {
+            // Disconnect
+            tapemode = TAPE_NO_TAPE;
         }
         break;
     default:
