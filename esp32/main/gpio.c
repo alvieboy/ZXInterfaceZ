@@ -28,12 +28,14 @@ void gpio__init()
     io_conf.pin_bit_mask =
         (1ULL<<PIN_NUM_LED1) |
         (1ULL<<PIN_NUM_CS) |
+        (1ULL<<PIN_NUM_CS2) |
         (1ULL<<PIN_NUM_PULLUP_EN) |
         (1ULL<<PIN_NUM_INTACK) ;
 
     gpio_config(&io_conf);
 
     gpio_set_level(PIN_NUM_CS, 1);
+    gpio_set_level(PIN_NUM_CS2, 1);
     gpio_set_level(PIN_NUM_INTACK, 1);
     gpio_set_level(PIN_NUM_PULLUP_EN, 0);
 
