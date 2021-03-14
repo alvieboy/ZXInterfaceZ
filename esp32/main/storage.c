@@ -67,7 +67,7 @@ void storage__attach_scsidev(scsidev_t *dev)
 #ifndef __linux__
     ESP_LOGI(STORAGETAG, "Attempting to register '%s'", name);
 
-    esp_vfs_fat_sdmmc_mount_config_t mount_config = {
+    esp_vfs_fat_mount_config_t mount_config = {
         .format_if_mount_failed = false,
         .max_files = 5,
         .allocation_unit_size = 16 * 1024
