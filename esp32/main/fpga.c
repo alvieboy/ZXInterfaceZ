@@ -19,8 +19,16 @@
 
 #define FPGA_BINARYFILE "/spiffs/fpga0.rbf"
 
+#define USE_DUAL_SPI_CS
+
+#ifdef USE_DUAL_SPI_CS
+
 static spi_device_handle_t spi0_fpga;
 static spi_device_handle_t spi0_fpga_slow;
+#else
+static spi_device_handle_t spi0_fpga;
+#define spi0_fpga_slow spi0_fpga
+#endif
 
 static fpga_flags_t latched_flags = 0;
 static uint32_t config1_latch = 0;
@@ -34,7 +42,9 @@ uint32_t fpga__id(void)
 
 static void fpga__init_spi()
 {
+#ifdef USE_DUAL_SPI_CS
     spi__init_device(&spi0_fpga,      20000000, PIN_NUM_CS);  // 40MHz
+#endif
     spi__init_device(&spi0_fpga_slow, 10000000, PIN_NUM_CS2); // 10Mhz, mostly for RAM access
 }
 
