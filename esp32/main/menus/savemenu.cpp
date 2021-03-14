@@ -104,17 +104,18 @@ class FileSaveAppendOverwriteDialog: public FileSaveDialog
 {
 public:
     FileSaveAppendOverwriteDialog(const char*title, uint8_t w, uint8_t h, const FileFilter *filter, uint8_t flags=0): FileSaveDialog(title, w, h, filter, flags) {}
-    virtual void accept(uint8_t val) override;
+    virtual void accept(int val) override;
     const char *getPath() const { return path; }
 private:
     char path[128];
 };
 
-void FileSaveAppendOverwriteDialog::accept(uint8_t val)
+void FileSaveAppendOverwriteDialog::accept(int val)
 {
     char filename[128];
     struct stat st;
     bool do_append = false;
+    int askresult;
 
     if (val!=0)
         return;
@@ -133,7 +134,9 @@ void FileSaveAppendOverwriteDialog::accept(uint8_t val)
         // Check if file exists.
         if (__lstat(path, &st)==0) {
             // Ask whether to append/overwrite or cancel.
-            switch (ask_append_overwrite(filename)) {
+            askresult = ask_append_overwrite(filename);
+            WSYS_LOGI("Ask result: %d", askresult);
+            switch (askresult) {
             case 0: // Append
                 do_append = true;
             case 1: // Overwrite
