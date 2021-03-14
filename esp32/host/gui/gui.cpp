@@ -51,6 +51,7 @@ static InterfaceZ *iz;
 static QPlainTextEdit *edit;
 static LogEmitter *logemitter;
 static HTMLLogger *htmllogger;
+static FILE *logfile = NULL;
 
 static void logger(int level, const char *tag, char *fmt, va_list ap)
 {
@@ -64,6 +65,11 @@ void LogEmitter::log(int level, const char *tag, char *fmt, va_list ap)
     // Remove newlines
     chomp(line);
     printf("%s\n", line);
+    if (logfile) {
+        fprintf(logfile, "%s\n", line);
+        fflush(logfile);
+    }
+
     emit logstring(level, QString(line));
 }
 
@@ -113,6 +119,7 @@ static int spi_transceive_fun(const uint8_t *tx, uint8_t *rx, unsigned size)
 const struct option longopts[] = {
     { "traceaddress", 1, NULL, 0 },
     { "rom", 1, NULL, 0 },
+    { "log", 1, NULL, 0 },
     { NULL, 0, NULL, 0 },
 };
 
@@ -197,6 +204,9 @@ static int setupgui(int argc, char **argv, int sock=-1)
                 break;
             case 1:
                 filename = optarg;
+                break;
+            case 2:
+                logfile = fopen(optarg, "w");
                 break;
             }
             break;
