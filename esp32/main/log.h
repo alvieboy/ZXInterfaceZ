@@ -5,6 +5,7 @@
 #define DEBUG_ZONE_USBLL (1<<1)
 #define DEBUG_ZONE_USBH (1<<2)
 #define DEBUG_ZONE_DEVMAP (1<<3)
+#define DEBUG_ZONE_WSYS (1<<4)
 
 extern uint32_t loglevel;
 
