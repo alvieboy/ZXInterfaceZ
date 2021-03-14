@@ -8,13 +8,11 @@
 #include "charmap.h"
 
 #include "../wsys.h"
-extern "C" {
-#include "esp_log.h"
-}
+#include "log.h"
 
 #ifdef __linux__
 #define WSYS_BOUND_CHECKS
-//#define WSYS_ENABLE_DEBUG
+#define WSYS_ENABLE_DEBUG
 #endif
 
 typedef enum {
@@ -56,9 +54,7 @@ struct attr_t {
 #ifdef WSYS_ENABLE_DEBUG
 
 
-#define WSYS_LOGI(x...) do \
-     ESP_LOGI(__PRETTY_FUNCTION__, x); \
-    while (0);
+#define WSYS_LOGI(x...) LOG_DEBUG(DEBUG_ZONE_WSYS, __PRETTY_FUNCTION__, x);
 
 #else
 
