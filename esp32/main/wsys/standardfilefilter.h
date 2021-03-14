@@ -9,6 +9,7 @@ namespace StandardFileFilter
     const FileFilter *AllSnapshotsFileFilter();
     const FileFilter *AllPokesFileFilter();
     const FileFilter *AllTapesFileFilter();
+    const FileFilter *AllTapesAndScreensFileFilter();
     const FileFilter *TAPFileFilter();
     const FileFilter *TZXFileFilter();
 };
