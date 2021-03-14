@@ -13,10 +13,11 @@ typedef std::vector<Window*>::const_iterator window_iter_t;
 static Widget *kbdfocuswidget = NULL;
 
 static Window * screen__getActiveWindow();
+static int8_t loopdepth = -1;
 
 void screen__init()
 {
-    //windows.clear();
+    loopdepth = -1;
 }
 
 void screen__add_to_cleanup(Window *s)
@@ -240,12 +241,15 @@ void screen__check_redraw()
         WSYS_LOGI( "Updating spectrum image");
         wsys__send_to_fpga();
     }
-    // Cleanup if needed
-    while (window_cleanup.size()) {
-        Window *w = window_cleanup.back();
-        window_cleanup.pop_back();
-        WSYS_LOGI("Deleting %p (%s)\n", w, CLASSNAME(*w));
-        delete(w);
+    // Cleanup if needed, if we are running on main loop
+    if (loopdepth==0) {
+
+        while (window_cleanup.size()) {
+            Window *w = window_cleanup.back();
+            window_cleanup.pop_back();
+            WSYS_LOGI("Deleting %p (%s)\n", w, CLASSNAME(*w));
+            delete(w);
+        }
     }
 }
 
@@ -264,18 +268,19 @@ void screen__releaseKeyboardFocus(Widget *d)
         kbdfocuswidget=NULL;
 }
 
-
 void screen__windowLoop(Window *w)
 {
+    loopdepth++;
     do {
         if (std::find(windows.begin(), windows.end(), w)!=windows.end()) {
             if (w->visible()) {
                 wsys__eventloop_iter();
             } else {
-                return;
+                break;
             }
         } else {
-            return;
+            break;
         }
     } while (1);
+    loopdepth--;
 }
