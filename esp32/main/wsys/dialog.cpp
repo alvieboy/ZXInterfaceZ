@@ -3,6 +3,7 @@
 
 Dialog::Dialog(const char *title, uint8_t w, uint8_t h): Window(title,w,h)
 {
+    m_result = -1;
     setVisible(false);
     screen__addWindowCentered(this);
 }
@@ -25,8 +26,9 @@ int Dialog::exec()
 }
 
 
-void Dialog::accept(uint8_t retval)
+void Dialog::accept(int retval)
 {
+    WSYS_LOGI("Accepting dialog %d", retval);
     setResult(retval);
 }
 

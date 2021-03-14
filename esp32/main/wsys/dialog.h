@@ -11,7 +11,7 @@ public:
     virtual void setResult(int val);
     int result() const { return m_result; }
     virtual int exec();//void (*callback)(void*, int), void*);
-    virtual void accept(uint8_t retval=0);
+    virtual void accept(int retval=0);
     virtual void reject();
 private:
     int m_result;
