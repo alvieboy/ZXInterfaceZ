@@ -325,7 +325,7 @@ begin
 
         if kempston_joy_sel_s='1' then
           if joy_en_i='1' then
-            dataread_r <= "00" & joy_data_i;
+            dataread_r <= joy_data_i(5) & "00" & joy_data_i(4 downto 0);
           else
             dataread_r <= x"FF";
           end if;
