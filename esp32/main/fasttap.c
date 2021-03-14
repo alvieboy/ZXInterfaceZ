@@ -22,6 +22,15 @@ static int fasttap_size= -1;
 static struct tzx *fasttap_tzx;
 static int8_t hooks[3] = {-1};
 
+typedef enum {
+    FASTTAP_NONE,
+    FASTTAP_TAP,
+    FASTTAP_TZX,
+    FASTTAP_SCR
+} fasttap_mode_t;
+
+static fasttap_mode_t fasttap_mode = FASTTAP_NONE;
+
 /* TZX version */
 
 static int tzx_error;
@@ -71,7 +80,9 @@ static void fasttap__remove_hooks()
 
 static int fasttap__prepare_tap();
 static int fasttap__prepare_tzx();
+static int fasttap__prepare_scr();
 static int fasttap__load_next_block_tzx();
+static int fasttap__load_next_block_scr();
 
 int fasttap__prepare(const char *filename)
 {
@@ -106,12 +117,23 @@ int fasttap__prepare(const char *filename)
 
     fasttap_size  = st.st_size;
 
+    fasttap_mode = FASTTAP_NONE;
+
     if (ext) {
         if (ext_match(ext,"tzx")) {
             r = fasttap__prepare_tzx();
+            if (r==0)
+                fasttap_mode = FASTTAP_TZX;
         }
         else if (ext_match(ext,"tap")) {
             r = fasttap__prepare_tap();
+            if (r==0)
+                fasttap_mode = FASTTAP_TAP;
+        } 
+        else if (ext_match(ext,"scr")) {
+            r = fasttap__prepare_scr();
+            if (r==0)
+                fasttap_mode = FASTTAP_SCR;
         } else {
             r = -1;
         }
@@ -199,11 +221,22 @@ static int fasttap__load_next_block_tap()
 int fasttap__next()
 {
     int r;
-    if (fasttap_tzx) {
+
+    switch (fasttap_mode) {
+    case FASTTAP_TZX:
         r = fasttap__load_next_block_tzx();
-    } else {
+        break;
+    case FASTTAP_TAP:
         r = fasttap__load_next_block_tap();
+        break;
+    case FASTTAP_SCR:
+        r = fasttap__load_next_block_scr();
+        break;
+    default:
+        r=-1;
+        break;
     }
+
     fpga__write_extram(FASTTAP_ADDRESS_STATUS, r==0 ? 0x01 : 0xff);
     return r;
 }
@@ -218,6 +251,7 @@ void fasttap__stop()
     ESP_LOGI(FASTTAP, "Fast TAP play finished");
     close(fasttap_fd);
     fasttap_fd=-1;
+
     if (fasttap_tzx) {
         free(fasttap_tzx);
         fasttap_tzx = NULL;
@@ -354,6 +388,25 @@ static int fasttap__load_next_block_tzx()
       //  ESP_LOGI(FASTTAP,"TZX fast load parse chunk");
         tzx__chunk(fasttap_tzx, buf, r);
     } while (!tzx_block_done);
+
     ESP_LOGI(FASTTAP,"TZX fast load block done");
+    return 0;
+}
+
+static int fasttap__prepare_scr()
+{
+    lseek(fasttap_fd,0,SEEK_SET);
+
+    if (fasttap__install_hooks( model__get() )<0)
+        return -1;
+
+    ESP_LOGI(FASTTAP,"Tape ready to fast load (SCR)");
+    return 0;
+}
+
+static int fasttap__load_next_block_scr()
+{
+
+
     return 0;
 }
