@@ -106,16 +106,16 @@ RET0767:
 	CALL	READRESFIFO
         CP	$FF
 	POP	BC
+        JR	Z, _goback
+        CALL	NMIHANDLER_FROM_ROM
 
-        CALL	NZ, NMIHANDLER_FROM_ROM
+	PUSH	BC
+	CALL	READRESFIFO
+        ;CP	$FF
+        ; STATUS is ignored for now, will be used in the future
+	POP	BC
 
-	PUSH 	BC
-        CALL	READRESFIFO
-        CP	$FF
-        POP	BC
-        ;JR	Z, _cancel_load
-
-
+_goback
 	; Go back to Spectrum.
 	POP	AF 
 	RET_TO_ROM_AT RET0767 ; After PUSH IX
