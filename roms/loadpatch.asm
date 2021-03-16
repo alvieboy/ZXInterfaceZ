@@ -13,24 +13,16 @@ ORG $05C8
         ; IY	: Target memory address
 
 L_WAITFIFO1:
-        IN 	A, (PORT_CMD_FIFO_STATUS)
-        OR	A
-        JR	NZ, L_WAITFIFO1
+        ; At this point, we already have full ROM active
+        PUSH	BC
         
         LD	A, CMD_FASTLOAD
-        OUT	(PORT_CMD_FIFO_DATA), A
+        CALL	WRITECMDFIFO
 
-        ; At this point, we need to wait until the full ROM is activated.
-        ; This is because we do not have enough room in LD_BYTES to have a full load routine.
-        LD	HL, MARKER
-_wait:
-        LD	A, (HL)
-        CP	$08 ; EX AF, AF' instruction
-        JR	NZ, _wait
-
-MARKER:
         EX	AF, AF'
 	LD	B, A
+        EX	AF, AF'
+        
         LD	(IX), $FE ; Invalidate block
         ; Clear status flag at 0x028000
         LD	A, $02
@@ -63,8 +55,8 @@ _retry:
         
         ; Read in length
         LD	C, PORT_RAM_DATA
-        IN	L, (C)
-        IN	H, (C)
+        IN	E, (C)
+        IN	D, (C)
 	; This should match DE. TBD.
         
         ; Copy to IX
@@ -72,22 +64,21 @@ _loopcopy:
         IN	A, (C)
         LD	(IX), A
         INC	IX
-        DEC 	HL
-        LD	A, L
-        OR	H
+        DEC 	DE
+        LD	A, E
+        OR	D
         JR 	NZ, _loopcopy
         ; All done.
         ; Signal we are returning to regular ROM
         SCF
 FASTLOADEXIT:
-        LD	A, 1
-        OUT	(PORT_NMIREASON), A 	; Reused address.
-        RET
+	; Go back to Spectrum, LD_MARKER caller
+        POP	BC
+	JP	RETTOMAINROM
 LOAD_ERROR:
-        LD	A, 1
-        OUT	(PORT_NMIREASON), A 	; Reused address.
+	POP	BC
 	CCF
-        RET
+	JP	RETTOMAINROM
 
 
 ;
