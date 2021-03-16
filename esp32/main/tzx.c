@@ -57,7 +57,7 @@ void tzx__chunk(struct tzx *t, const uint8_t *data, int len)
 #define NEED(x) if (tzx__check(t, &data, &len, x)<0) return;
 
     if (len==0) {
-        t->callbacks->finished_callback();
+        t->callbacks->finished_callback(t->userdata);
         return;
     }
     //ESP_LOGI(TAG, "Parse chunk len %d", len);
@@ -140,7 +140,7 @@ void tzx__chunk(struct tzx *t, const uint8_t *data, int len)
             break;
         case PURETONE:
             NEED(4);
-            t->callbacks->tone_callback( extractle16(&t->tzxbuf[0]), extractle16(&t->tzxbuf[2]) );
+            t->callbacks->tone_callback(t->userdata, extractle16(&t->tzxbuf[0]), extractle16(&t->tzxbuf[2]) );
             t->state = BLOCK;
             break;
 
@@ -161,7 +161,7 @@ void tzx__chunk(struct tzx *t, const uint8_t *data, int len)
             ESP_LOGI(TAG, "Pulse width (%d): %d", t->pulsecount-1, val);
 
             if (t->pulsecount == t->pulses) {
-                t->callbacks->pulse_callback(t->pulses, &t->pulse_data[0]);
+                t->callbacks->pulse_callback(t->userdata,t->pulses, &t->pulse_data[0]);
                 t->state = BLOCK;
             } 
 
@@ -170,7 +170,8 @@ void tzx__chunk(struct tzx *t, const uint8_t *data, int len)
             NEED(10);
 
             t->datachunk = extractle24(&t->tzxbuf[7]) ;
-            t->callbacks->pure_data_callback( extractle16(&t->tzxbuf[0]),
+            t->callbacks->pure_data_callback(t->userdata,
+                                             extractle16(&t->tzxbuf[0]),
                                              extractle16(&t->tzxbuf[2]),
                                              t->datachunk,
                                              extractle16(&t->tzxbuf[5]),
@@ -183,14 +184,14 @@ void tzx__chunk(struct tzx *t, const uint8_t *data, int len)
 
             alen = MIN((int)len, (int)t->datachunk);
 
-            t->callbacks->data_callback(data, alen);
+            t->callbacks->data_callback(t->userdata, data, alen);
 
             t->datachunk-=alen;
             len-=alen;
             data+=alen;
 
             if (t->datachunk==0) {
-                t->callbacks->data_finished_callback();
+                t->callbacks->data_finished_callback(t->userdata);
                 t->state = BLOCK;
             }
 
@@ -220,7 +221,7 @@ void tzx__chunk(struct tzx *t, const uint8_t *data, int len)
             t->state = RAWDATA;
             ESP_LOGI(TAG,"Standard block ahead, %d bytes", val);
 
-            t->callbacks->standard_block_callback(val, pause);
+            t->callbacks->standard_block_callback(t->userdata, val, pause);
 
             break;
 
@@ -245,7 +246,7 @@ void tzx__chunk(struct tzx *t, const uint8_t *data, int len)
             ESP_LOGI(TAG,"Turbo-speed block ahead, %d bytes", data_len);
             t->datachunk = data_len;
             t->state = RAWDATA;
-            t->callbacks->turbo_block_callback(pilot, sync0, sync1, pulse0, pulse1, pilot_len, gap_len, data_len, t->lastbytesize);
+            t->callbacks->turbo_block_callback(t->userdata, pilot, sync0, sync1, pulse0, pulse1, pilot_len, gap_len, data_len, t->lastbytesize);
 
             break;
 
@@ -260,20 +261,22 @@ void tzx__chunk(struct tzx *t, const uint8_t *data, int len)
     } while (len>0);
 }
 
-void tzx__init(struct tzx *t, const struct tzx_callbacks *callbacks)
+void tzx__init(struct tzx *t, const struct tzx_callbacks *callbacks, void *userdata)
 {
     t->tzxbufptr = 0;
     t->state = HEADER;
     t->callbacks = callbacks;
+    t->userdata = userdata;
 }
 
-static int analyser_is_not_trivial;
+//static int analyser_is_not_trivial;
 
-static void analyser_tzx_standard_block_callback(uint16_t length, uint16_t pause_after)
+static void analyser_tzx_standard_block_callback(void *userdata, uint16_t length, uint16_t pause_after)
 {
 }
 
-static void analyser_tzx_turbo_block_callback(uint16_t pilot,
+static void analyser_tzx_turbo_block_callback(void *userdata, 
+                                              uint16_t pilot,
                                               uint16_t sync0,
                                               uint16_t sync1,
                                               uint16_t pulse0,
@@ -283,34 +286,38 @@ static void analyser_tzx_turbo_block_callback(uint16_t pilot,
                                               uint32_t data_len,
                                               uint8_t last_byte_len)
 {
-    analyser_is_not_trivial = 1;
+    int *analyser_is_not_trivial = (int*)userdata;
+    *analyser_is_not_trivial = 1;
 }
 
-static void analyser_tzx_pure_data_callback(uint16_t pulse0, uint16_t pulse1, uint32_t data_len, uint16_t gap,
+static void analyser_tzx_pure_data_callback(void *userdata, uint16_t pulse0, uint16_t pulse1, uint32_t data_len, uint16_t gap,
                                     uint8_t last_byte_len)
 {
-    analyser_is_not_trivial = 1;
+    int *analyser_is_not_trivial = (int*)userdata;
+    *analyser_is_not_trivial = 1;
 }
 
-static void analyser_tzx_data_callback(const uint8_t *data, int len)
+static void analyser_tzx_data_callback(void *userdata,const uint8_t *data, int len)
 {
 }
 
-void analyser_tzx_tone_callback(uint16_t t_states, uint16_t count)
+void analyser_tzx_tone_callback(void *userdata, uint16_t t_states, uint16_t count)
 {
-    analyser_is_not_trivial = 1;
+    int *analyser_is_not_trivial = (int*)userdata;
+    *analyser_is_not_trivial = 1;
 }
 
-void analyser_tzx_pulse_callback(uint8_t count, const uint16_t *t_states /* these are words */)
+void analyser_tzx_pulse_callback(void *userdata,uint8_t count, const uint16_t *t_states /* these are words */)
 {
-    analyser_is_not_trivial = 1;
+    int *analyser_is_not_trivial = (int*)userdata;
+    *analyser_is_not_trivial = 1;
 }
 
-void analyser_tzx_data_finished_callback(void)
+void analyser_tzx_data_finished_callback(void *userdata)
 {
 }
 
-void analyser_tzx_finished_callback(void)
+void analyser_tzx_finished_callback(void *userdata)
 {
 }
 
@@ -332,9 +339,9 @@ int tzx__can_fastplay_fd(int fd)
     struct tzx t;
     unsigned char buf[64];
 
-    analyser_is_not_trivial = 0;
+    int analyser_is_not_trivial = 0;
 
-    tzx__init(&t, &analyser_tzx_callbacks);
+    tzx__init(&t, &analyser_tzx_callbacks, &analyser_is_not_trivial);
     int r;
 
     do {

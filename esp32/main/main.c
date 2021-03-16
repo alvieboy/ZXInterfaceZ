@@ -51,6 +51,7 @@
 #include "activity_monitor.h"
 #include "tape.h"
 #include "kempston.h"
+#include "fasttap.h"
 
 static int8_t videomode = 0;
 
@@ -442,6 +443,7 @@ void app_main()
     netcmd__init();
     tape__init();
     tapeplayer__init();
+    fasttap__init();
     devmap__init();
     storage__init();
     usbh__init();

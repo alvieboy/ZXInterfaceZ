@@ -23,18 +23,18 @@ enum tzx_state
 };
 
 struct tzx_callbacks {
-    void (*standard_block_callback)(uint16_t length, uint16_t pause_after);
-    void (*turbo_block_callback)(uint16_t pilot, uint16_t sync0, uint16_t sync1, uint16_t pulse0, uint16_t pulse1,
-                                   uint16_t pilot_len, uint16_t gap_len, uint32_t data_len,
-                                   uint8_t last_byte_len);
-    void (*data_callback)(const uint8_t *data, int len);
-    void (*tone_callback)(uint16_t t_states, uint16_t count);
-    void (*pulse_callback)(uint8_t count, const uint16_t *states);
-    void (*pure_data_callback)(uint16_t pulse0, uint16_t pulse1, uint32_t data_len, uint16_t gap,
+    void (*standard_block_callback)(void*,uint16_t length, uint16_t pause_after);
+    void (*turbo_block_callback)(void*,uint16_t pilot, uint16_t sync0, uint16_t sync1, uint16_t pulse0, uint16_t pulse1,
+                                 uint16_t pilot_len, uint16_t gap_len, uint32_t data_len,
+                                 uint8_t last_byte_len);
+    void (*data_callback)(void*,const uint8_t *data, int len);
+    void (*tone_callback)(void*,uint16_t t_states, uint16_t count);
+    void (*pulse_callback)(void*,uint8_t count, const uint16_t *states);
+    void (*pure_data_callback)(void*,uint16_t pulse0, uint16_t pulse1, uint32_t data_len, uint16_t gap,
                                  uint8_t last_byte_len);
 
-    void (*data_finished_callback)(void);
-    void (*finished_callback)(void);
+    void (*data_finished_callback)(void*);
+    void (*finished_callback)(void*);
 };
 
 struct tzx {
@@ -47,10 +47,11 @@ struct tzx {
     uint8_t pulses;
     uint32_t datachunk;
     const struct tzx_callbacks *callbacks;
+    void *userdata;
 };
 
 
-void tzx__init(struct tzx *t, const struct tzx_callbacks *callbacks);
+void tzx__init(struct tzx *t, const struct tzx_callbacks *callbacks,void *userdata);
 void tzx__chunk(struct tzx *t, const uint8_t *data, int len);
 
 int tzx__can_fastplay(const char *filename);

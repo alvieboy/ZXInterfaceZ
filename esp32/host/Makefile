@@ -142,6 +142,9 @@ poke.c                \
 nmi_poke.c            \
 text.c                \
 fasttap.c             \
+fasttap_tap.c         \
+fasttap_tzx.c         \
+fasttap_scr.c         \
 model.c               \
 json.c                \
 audio.c               \

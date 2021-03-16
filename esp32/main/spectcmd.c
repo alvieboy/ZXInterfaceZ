@@ -371,11 +371,11 @@ static int spectcmd__fast_load(const uint8_t *cmdbuf, unsigned len)
 static int spectcmd__fast_load_data(const uint8_t *cmdbuf, unsigned len)
 {
     NEED(3);
-    unsigned blocklen = cmdbuf[1];
+    uint16_t blocklen = cmdbuf[1];
     blocklen +=( (unsigned)cmdbuf[2])<<8;
     ESP_LOGI(TAG, "TAP: requested fast load %02x size %d", cmdbuf[0], blocklen);
     spectcmd__removedata();
-    fasttap__next();
+    fasttap__next(cmdbuf[0], blocklen);
     return 0;
 }
 
