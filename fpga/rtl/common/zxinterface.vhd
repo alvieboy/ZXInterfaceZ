@@ -1102,6 +1102,10 @@ begin
           spect_forceromcs_bussync_s  <= '1';
           nmi_was_romcs_r             <= spect_forceromcs_s;
         end if;
+        -- For hooks. trigger immediatly if requested
+        if hook_trig_force_romcs_on_s='1' and spect_forceromcs_s='1' then
+          spect_forceromcs_bussync_s <= '1';
+        end if;
       end if;
     end if;
   end process;
