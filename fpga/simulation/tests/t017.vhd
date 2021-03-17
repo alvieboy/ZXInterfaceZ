@@ -259,7 +259,8 @@ begin
 
     Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 11, spiPayload_in_s, spiPayload_out_s);
 
-    -- Set up RET at $1FFF, where we can clear ROMCS
+    -- Set up RET at $1FFE/1FFF, where we can clear ROMCS
+    qspiramWrite(QSPIRam0_Cmd, 8190, x"C9");
     qspiramWrite(QSPIRam0_Cmd, 8191, x"C9");
 
 
@@ -274,6 +275,60 @@ begin
     Check("If ULA write (hook after return) is correct", Ula_Data.Data, x"CA");
 
     wait for 1 us;
+    Spectrum_Cmd.Cmd <= STOPZ80;
+    wait for 0 ps;
+    Spectrum_Cmd.Cmd <= NONE;
+
+
+
+    romWrite(Rom_Cmd, 0 ,x"31");
+    romWrite(Rom_Cmd, 1 ,x"FE");
+    romWrite(Rom_Cmd, 2 ,x"5F"); -- LD SP, 5FFE
+
+    romWrite(Rom_Cmd, 3, x"3E"); -- LD A, 02
+    romWrite(Rom_Cmd, 4, x"02"); --
+    romWrite(Rom_Cmd, 5, x"3E"); -- LD A, $01
+    romWrite(Rom_Cmd, 6, x"01"); --
+    romWrite(Rom_Cmd, 7, x"d3");
+    romWrite(Rom_Cmd, 8, x"FE"); -- OUT (FE,A)
+    romWrite(Rom_Cmd, 9, x"18");
+    romWrite(Rom_Cmd, 10, x"FE"); -- JR -1
+
+    qspiramWrite(QSPIRam0_Cmd, 5  ,x"E5"); -- PUSH HL
+    qspiramWrite(QSPIRam0_Cmd, 6  ,x"21"); -- LD HL, 0007
+    qspiramWrite(QSPIRam0_Cmd, 7  ,x"07"); --
+    qspiramWrite(QSPIRam0_Cmd, 8  ,x"00"); --
+    qspiramWrite(QSPIRam0_Cmd, 9  ,x"E3"); -- EX (SP). HL
+    qspiramWrite(QSPIRam0_Cmd, 10 ,x"C3"); -- JP 1FFF
+    qspiramWrite(QSPIRam0_Cmd, 11 ,x"FF"); --
+    qspiramWrite(QSPIRam0_Cmd, 12 ,x"1F"); --
+
+
+    spiPayload_in_s(0) <= x"65";
+    spiPayload_in_s(1) <= x"00";
+    spiPayload_in_s(2) <= x"40";
+
+    spiPayload_in_s(3) <= x"05"; -- Base low
+    spiPayload_in_s(4) <= x"00"; -- Base high
+    spiPayload_in_s(5) <= x"00"; -- Len
+    spiPayload_in_s(6) <= "1100XXX0"; -- Active, Set, prefetch, NOT ranged
+
+
+    spiPayload_in_s(7) <= x"FF"; -- Base low
+    spiPayload_in_s(8) <= x"1F"; -- Base high
+    spiPayload_in_s(9) <= x"00"; -- Len
+    spiPayload_in_s(10) <= "1010XXX0"; -- Active, Clear, postfetch, NOT ranged
+
+    Spi_Transceive( Spimaster_Cmd, Spimaster_Data, 11, spiPayload_in_s, spiPayload_out_s);
+
+    Spectrum_Cmd.Cmd <= RUNZ80;
+    wait for 0 ps;
+    Spectrum_Cmd.Cmd <= NONE;
+
+    wait on Ula_Data.Data for 100 us;
+
+    Check("If ULA write (hook) is correct", Ula_Data.Data, x"02");
+
     Spectrum_Cmd.Cmd <= STOPZ80;
     wait for 0 ps;
     Spectrum_Cmd.Cmd <= NONE;
