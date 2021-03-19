@@ -88,7 +88,7 @@ struct usb_hub_dev
     struct usb_device *dev;
     struct usb_interface *intf;
     usb_hub_descriptor_t hubdesc;
-    usb_port_status_t port_status;
+    usb_port_status_t port_status __attribute__((aligned(4))); // To avoid SPI DMA allocations
 #ifndef USBHUB_USE_INTERRUPT
     esp_timer_handle_t portchangetimer;
 #endif
@@ -370,6 +370,7 @@ static int usbhubdev__check_ports(struct usb_hub_dev *self)
     unsigned port;
     uint32_t enumerate = 0;
     uint32_t disconnect = 0;
+
     for (port=1; port<=self->hubdesc.bNumberOfPorts; port++)
     {
         uint16_t portstatus = 0, portchange = 0;
