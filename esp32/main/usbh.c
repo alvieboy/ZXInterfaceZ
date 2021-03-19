@@ -14,6 +14,7 @@
 #include "esp_system.h"
 #include "systemevent.h"
 #include "usbhub.h"
+#include "interfacez_tasks.h"
 
 #define USBHTAG "USBH"
 #define USBHDEBUG(x...) LOG_DEBUG(DEBUG_ZONE_USBH, USBHTAG ,x)
@@ -745,8 +746,8 @@ int usbh__init()
         ESP_ERROR_CHECK(-1);
     }
 
-    xTaskCreate(usbh__ll_task, "usbh_ll_task", 4096, NULL, 10, NULL);
-    xTaskCreate(usbh__main_task, "usbh_main_task", 4096, NULL, 10, NULL);
+    xTaskCreate(usbh__ll_task, "usbh_ll_task", USBH_LL_TASK_STACK_SIZE, NULL, USBH_LL_TASK_PRIORITY, NULL);
+    xTaskCreate(usbh__main_task, "usbh_main_task", USBH_MAIN_TASK_STACK_SIZE, NULL, USBH_MAIN_TASK_PRIORITY, NULL);
 
     root_hub.init = NULL;
     root_hub.reset = &usbh__hub_reset;
