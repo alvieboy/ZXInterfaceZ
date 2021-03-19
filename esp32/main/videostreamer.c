@@ -21,6 +21,7 @@
 // Target needs extra 4 bytes at start
 #include <arpa/inet.h>
 #include "videostreamer.h"
+#include "interfacez_tasks.h"
 
 volatile int client_socket = -1;
 static volatile unsigned interrupt_count = 0;
@@ -245,7 +246,7 @@ static void videostreamer__server_task(void *pvParameters)
 
 void videostreamer__init()
 {
-    xTaskCreate(videostreamer__server_task, "streamer_task", 4096, NULL, 10, NULL);
+    xTaskCreate(videostreamer__server_task, "streamer_task", VIDEOSTREAMER_TASK_STACK_SIZE, NULL, VIDEOSTREAMER_TASK_PRIORITY, NULL);
 }
 
 int videostreamer__start_stream(struct in_addr addr, uint16_t port)//command_t *cmdt, int argc, char **argv)
