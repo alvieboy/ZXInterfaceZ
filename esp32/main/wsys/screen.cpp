@@ -34,15 +34,18 @@ void screen__destroyAll()
     }
     windows.clear();
     screen__damage(NULL);
+#if 0
+    if (loopdepth<0) {
 
-    WSYS_LOGI( "Cleanup windows (%d)", window_cleanup.size());
-    while (window_cleanup.size()) {
-        Window *w = window_cleanup.back();
-        window_cleanup.pop_back();
-        delete(w);
+        WSYS_LOGI( "Cleanup windows (%d)", window_cleanup.size());
+        while (window_cleanup.size()) {
+            Window *w = window_cleanup.back();
+            window_cleanup.pop_back();
+            delete(w);
+        }
+        WSYSObject::report_alloc();
     }
-
-    WSYSObject::report_alloc();
+#endif
 }
 
 
