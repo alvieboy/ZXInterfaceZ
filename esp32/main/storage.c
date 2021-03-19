@@ -4,6 +4,7 @@
 #include "scsi_diskio.h"
 #include <string.h>
 #include "fileaccess.h"
+#include "defs.h"
 
 #define STORAGETAG "STORAGE"
 
@@ -69,7 +70,7 @@ void storage__attach_scsidev(scsidev_t *dev)
 
     esp_vfs_fat_mount_config_t mount_config = {
         .format_if_mount_failed = false,
-        .max_files = 5,
+        .max_files = INTERFACEZ_MAX_FILES_PER_MOUNT,
         .allocation_unit_size = 16 * 1024
     };
 
