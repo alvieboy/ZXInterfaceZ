@@ -1,4 +1,4 @@
-unsigned char __tomthumb_bitmap__[] = {
+const unsigned char __tomthumb_bitmap__[] = {
 
  0x00,
  0x00,

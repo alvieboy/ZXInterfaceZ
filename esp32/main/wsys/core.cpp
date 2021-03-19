@@ -126,7 +126,7 @@ screenptr_t drawthumbchar(screenptr_t screenptr, unsigned &bit_offset, char c)
     int i;
     screenptr_t tmp = screenptr;
 
-    uint8_t *charptr = &__tomthumb_bitmap__[c*6];
+    const uint8_t *charptr = &__tomthumb_bitmap__[c*6];
 
     for (i=0;i<6;i++) {
         pixel__draw8(tmp, bit_offset, 4, *charptr++);
@@ -146,7 +146,7 @@ screenptr_t drawthumbcharxor(screenptr_t screenptr, unsigned &bit_offset, char c
     int i;
     screenptr_t tmp = screenptr;
 
-    uint8_t *charptr = &__tomthumb_bitmap__[c*6];
+    const uint8_t *charptr = &__tomthumb_bitmap__[c*6];
 
     for (i=0;i<6;i++) {
         pixel__draw8xor(tmp, bit_offset, 4, *charptr++);
