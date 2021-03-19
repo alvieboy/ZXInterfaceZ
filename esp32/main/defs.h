@@ -50,6 +50,7 @@
 #define CMD_PORT 8002
 #define BUFFER_PORT 8003
 
+#define INTERFACEZ_MAX_FILES_PER_MOUNT 2
 
 void request_restart(void);
 
