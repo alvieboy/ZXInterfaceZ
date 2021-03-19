@@ -34,7 +34,7 @@ void sdcard__init()
 
     esp_vfs_fat_sdmmc_mount_config_t mount_config = {
         .format_if_mount_failed = false,
-        .max_files = 5,
+        .max_files = INTERFACEZ_MAX_FILES_PER_MOUNT,
         .allocation_unit_size = 16 * 1024
     };
 
