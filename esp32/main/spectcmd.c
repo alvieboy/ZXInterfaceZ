@@ -28,6 +28,7 @@
 #include "tape.h"
 #include "debugger.h"
 #include "memdata.h"
+#include "interfacez_tasks.h"
 
 #define COMMAND_BUFFER_MAX 256+2
 
@@ -52,7 +53,7 @@ void spectcmd__init()
     spectcmd__removedata();
 
     data_queue  = xQueueCreate(64, sizeof(uint8_t));
-    xTaskCreate(spectcmd__task, "spectcmd_task", 4096, NULL, 11, NULL);
+    xTaskCreate(spectcmd__task, "spectcmd_task", SPECTCMD_TASK_STACK_SIZE, NULL, SPECTCMD_TASK_PRIORITY, NULL);
 }
 
 static int spectcmd__do_load_resource(struct resource *r)
@@ -561,7 +562,7 @@ static int spectcmd__savedata(const uint8_t *cmdbuf, unsigned len)
     NEED(2);
     uint16_t size = (((uint16_t)cmdbuf[0])<<8) + cmdbuf[1];
 
-    ESP_LOGI(TAG,"Request save data %d bytes", size);
+    //ESP_LOGI(TAG,"Request save data %d bytes", size);
     spectcmd__removedata();
 
     save__append_from_extram(MEMLAYOUT_TAPE_WORKAREA, size);
@@ -691,6 +692,8 @@ static void spectcmd__task(void *pvParam)
                          cmdbuf[1],
                          cmdbuf[2],
                          cmdbuf[3]);
+#endif
+#if 0
                 ESP_LOGI(TAG, "Queueing %02x (%d)", cmd, __cmdptr);
 #endif
                 command_buffer[__cmdptr++] = cmd;
