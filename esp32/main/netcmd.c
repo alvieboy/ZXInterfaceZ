@@ -21,7 +21,7 @@
 #include "sna.h"
 #include "fpga_ota.h"
 #include "memlayout.h"
-
+#include "interfacez_tasks.h"
 
 #ifdef __linux__
 
@@ -525,7 +525,7 @@ static void netcmd__server_task(void *pvParameters)
 
 void netcmd__init()
 {
-    xTaskCreate(netcmd__server_task, "buffer_server", 4096, NULL, 5, NULL);
+    xTaskCreate(netcmd__server_task, "buffer_server", NETCMD_TASK_STACK_SIZE, NULL, NETCMD_TASK_PRIORITY, NULL);
 }
 
 
