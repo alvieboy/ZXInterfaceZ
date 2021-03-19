@@ -128,7 +128,8 @@ void fasttap__tzx_data_finished_callback(void *userdata)
     if(self->expected_size>0)
         ESP_LOGE(TAG,"Expected size greater than actual size!");
 
-    self->tzx_block_size -= 2;
+    self->tzx_block_size -= 2; // Remove leading type and checksum
+
     fpga__write_extram_block(FASTTAP_ADDRESS_LENLSB, (uint8_t*)&self->tzx_block_size, 2);
 
     self->tzx_block_done = 1;
