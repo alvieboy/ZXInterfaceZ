@@ -16,6 +16,7 @@
 #include "tap.h"
 #include "tzx.h"
 #include "byteops.h"
+#include "interfacez_tasks.h"
 
 #define TAP_CMD_STOP 0
 #define TAP_CMD_PLAY 1
@@ -598,5 +599,5 @@ void tapeplayer__init()
 {
     tap_evt_queue = xQueueCreate(2, sizeof(struct tapcmd));
 
-    xTaskCreate(tapeplayer__task, "tapeplayer_task", 4096, NULL, 10, NULL);
+    xTaskCreate(tapeplayer__task, "tapeplayer_task", TAPEPLAYER_TASK_STACK_SIZE, NULL, TAPEPLAYER_TASK_PRIORITY, NULL);
 }
