@@ -39,6 +39,7 @@ struct usb_request
     uint8_t direction:1;
     uint8_t control_state:2;
     uint8_t channel:4;
+    uint8_t out_size; // Last OUT request size
 #ifdef __linux__
     void *pvt;
 #endif
