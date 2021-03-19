@@ -10,8 +10,8 @@ extern "C" {
 
 
 extern const uint16_t disassemble_tables[3][256];
-extern const char *disassemble_ops[];
-extern const char *disassemble_args[];
+extern const char *const disassemble_ops[];
+extern const char *const disassemble_args[];
 
 struct insndecode_context
 {

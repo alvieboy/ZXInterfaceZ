@@ -1,5 +1,5 @@
 #include <inttypes.h>
-const char *disassemble_ops[] = {
+const char * const disassemble_ops[] = {
 "NOP"
 ,"LD"
 ,"INC"
@@ -69,7 +69,7 @@ const char *disassemble_ops[] = {
 ,"INDR"
 ,"OTDR"
 };
-const char *disassemble_args[] = {
+const char *const disassemble_args[] = {
 ""
 ,"BC,w"
 ,"(BC),A"
