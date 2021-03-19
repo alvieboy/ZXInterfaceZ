@@ -21,7 +21,7 @@ bool FileFilter::match_extension(const char *ext) const
     }
 
     for (i=0; i<m_count;i++) {
-        ESP_LOGI(TAG, "Matching %s %s", ext, m_ext[i]);
+     //   ESP_LOGI(TAG, "Matching %s %s", ext, m_ext[i]);
         if (ext_match(ext, m_ext[i]))
             return true;
     }
