@@ -7,6 +7,7 @@
 #include "memlayout.h"
 #include "fpga.h"
 #include "disasm.h"
+#include "align.h"
 /*
  visual
 
@@ -105,6 +106,8 @@ void DebugWindow::checkNextRequest()
 
 void DebugWindow::doRequest(const struct memdata_request*r)
 {
+    uint32_t *aligned_buffer;
+
     switch (r->type) {
     case memdata_request::ROM:
         ESP_LOGI("DEBUG", "Request ROM len %d\n", r->len);
@@ -116,10 +119,17 @@ void DebugWindow::doRequest(const struct memdata_request*r)
         break;
     case memdata_request::SAVED_RAM:
         ESP_LOGI("DEBUG", "Request SAVED_RAM len %d\n", r->len);
+        // Ensure we have an aligned buffer.
+        aligned_buffer = (uint32_t*)malloc(ALIGN(r->len,4));
+
         fpga__read_extram_block(
                                 MEMLAYOUT_NMI_SCREENAREA + r->address - 0x4000,
-                                &m_memblock[m_memblockidx], r->len
+                                aligned_buffer,
+                                r->len
                                );
+        memcpy(&m_memblock[m_memblockidx], aligned_buffer, r->len);
+        free(aligned_buffer);
+
         m_memblockidx += r->len;
         m_num_requests--;
         checkNextRequest();
