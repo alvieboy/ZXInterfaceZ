@@ -2,22 +2,25 @@
 #include "fpga.h"
 #include "memlayout.h"
 #include "log.h"
+#include "struct_assert.h"
+
 
 #define TAG "DEBUGGER"
 
 int debugger__load_context_from_extram(struct nmi_cpu_context_extram *target)
 {
     int r;
-    r = fpga__read_extram_block(MEMLAYOUT_NMI_BLOCK1, &target->block1[0], sizeof(target->block1));
+    r = fpga__read_extram_block(MEMLAYOUT_NMI_BLOCK1, &target->w32_1[0], sizeof(target->block1));
     if (r<0)
         return r;
-    r = fpga__read_extram_block(MEMLAYOUT_NMI_BLOCK2, &target->block2[0], sizeof(target->block2));
+    r = fpga__read_extram_block(MEMLAYOUT_NMI_BLOCK2, &target->w32_2[0], sizeof(target->block2));
 
     target->SP += 4;
 
     return r;
 }
 
+ASSERT_STRUCT_SIZE(struct nmi_cpu_context_extram, 32);
 
 void debugger__dump()
 {

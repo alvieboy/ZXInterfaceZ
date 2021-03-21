@@ -35,8 +35,13 @@ struct nmi_cpu_context_extram
             REG16(HL,H,L);
             REG8(YM_mix);
             REG16(PC,PCh,PCl);
+            uint8_t unused1[3];
         } __attribute__((packed));
-        uint8_t block1[9];
+        struct {
+            uint8_t block1[9];
+            uint8_t unused2[3];
+        };
+        uint32_t w32_1[3];
     };
 
     union {
@@ -55,8 +60,9 @@ struct nmi_cpu_context_extram
             REG16(HL_alt, H_alt, L_alt);
         } __attribute__((packed));
         uint8_t block2[20];
+        uint32_t w32_2[5];
     };
-} __attribute__((packed));
+};
 
 int debugger__load_context_from_extram(struct nmi_cpu_context_extram *target);
 
