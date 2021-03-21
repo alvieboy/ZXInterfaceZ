@@ -208,9 +208,10 @@ static void videostreamer__server_task(void *pvParameters)
 
                 if (framecounter == 1) {
                     framecounter = 0;
-                    memcpy(fb_prev, fb, sizeof(fb_prev));
-                    fpga__get_framebuffer(fb);
+
                     if (client_socket>0) {
+                        memcpy(fb_prev, fb, sizeof(fb_prev));
+                        fpga__get_framebuffer(fb);
                         if ((seqno & 0x3F)==0x00) {
                             ESP_LOGI(TAG, "Sending frames seq %d", seqno);
                         }
