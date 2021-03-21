@@ -947,17 +947,17 @@ BEGIN
                              
     if ausbrst_i='1' then
       r.host_state        <= DETACHED;
-      r.frame             <= "10100010101";
+      r.frame             <= (others => '0');--"10100010101";
       r.sof_count         <= C_SOF_TIMEOUT - 1;
       r.attach_count      <= C_ATTACH_DELAY - 1;
       r.channel           <= 0;
       r.sr.poweron        <= '0';
       r.sr.overcurrent    <= '0';
       r.sr.fulllowspeed   <= '0';
-      --r.sr.connectdetect  <= '0';
       r.sr.connected      <= '0';
       r.sr.reset          <= '0';
-
+      r.sr.suspend        <= '0';
+      r.speed             <= 'X';
       r.intpendr.connectdetect <= '0';
       r.intpendr.disconnectdetect <= '0';
       r.intpendr.overcurrent   <= '0';
@@ -966,15 +966,45 @@ BEGIN
       r.intconfr.disconnectdetect <= '0';
       r.intconfr.overcurrent   <= '0';
       r.int_holdoff            <= C_INTERRUPT_HOLDOFF-1;
-
+      r.reset_delay       <= C_RESET_DELAY-1;
 
       chc: for i in 0 to C_NUM_CHANNELS-1 loop
         r.ch(i).conf.enabled      <= '0';
+        r.ch(i).conf.direction    <= 'X';
+        r.ch(i).conf.lowspeed     <= 'X';
+        r.ch(i).conf.oddframe     <= 'X';
+        r.ch(i).conf.interval     <= (others => '0');
+        r.ch(i).conf.maxsize      <= (others => 'X');
+        r.ch(i).conf.eptype       <= (others => 'X');
+        r.ch(i).conf.address      <= (others => 'X');
+        r.ch(i).conf.epnum        <= (others => 'X');
+
         r.ch(i).trans.epaddr      <= (others => '0');
         r.ch(i).trans.intervalcnt <= (others => '0');
-        r.ch(i).conf.interval     <= (others => '0');
         r.ch(i).trans.issued      <= '1';
         r.ch(i).trans.cnt         <= '0';
+        r.ch(i).trans.seq         <= '0';
+        r.ch(i).trans.size        <= (others => 'X');
+        r.ch(i).trans.epaddr      <= (others => 'X');
+        r.ch(i).trans.retries     <= (others => 'X');
+
+        r.ch(i).intconf.datatogglerror           <= 'X';
+        r.ch(i).intconf.crcerror                 <= 'X';
+        r.ch(i).intconf.babble                   <= 'X';
+        r.ch(i).intconf.transerror               <= 'X';
+        r.ch(i).intconf.ack                      <= 'X';
+        r.ch(i).intconf.nack                     <= 'X';
+        r.ch(i).intconf.stall                    <= 'X';
+        r.ch(i).intconf.cplt                     <= 'X';
+
+        r.ch(i).intpend.datatogglerror           <= '0';
+        r.ch(i).intpend.crcerror                 <= '0';
+        r.ch(i).intpend.babble                   <= '0';
+        r.ch(i).intpend.transerror               <= '0';
+        r.ch(i).intpend.ack                      <= '0';
+        r.ch(i).intpend.nack                     <= '0';
+        r.ch(i).intpend.stall                    <= '0';
+        r.ch(i).intpend.cplt                     <= '0';
 
       end loop;
 

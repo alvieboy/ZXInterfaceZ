@@ -650,6 +650,7 @@ begin
       r.seq_valid   <= '0';
 
       r.pid         <= (others => 'X');
+      r.pid_q       <= (others => 'X');
       r.txsize      <= (others => 'X');
       r.addr        <= (others => 'X');
       r.txcrc16     <= (others => 'X');
@@ -662,9 +663,11 @@ begin
         r.cnt_ack         <= (others => '0');
         r.cnt_nack        <= (others => '0');
         r.cnt_stall       <= (others => '0');
+        r.cnt_babble      <= (others => '0');
         r.cnt_crcerror    <= (others => '0');
         r.cnt_timeout     <= (others => '0');
         r.cnt_errorpid    <= (others => '0');
+        r.cnt_cplt        <= (others => '0');
       end if;
   
 

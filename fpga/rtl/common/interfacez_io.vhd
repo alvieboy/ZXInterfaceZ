@@ -212,6 +212,7 @@ begin
       scratch0_r    <= (others => '0');
       scratch1_r    <= (others => '0');
       disable_romcs_o <= '0';
+      ram_addr_r    <= (others => 'X');
 
     elsif rising_edge(clk_i) then
 

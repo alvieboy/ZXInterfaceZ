@@ -342,6 +342,9 @@ begin
         -- Except when we have an extra stuff bit.
       elsif se0_s ='1' and (rx_valid_r ='1' or drop_last='1') then
         rx_active <= '0';
+      -- If we disable transmitter, disable tx active
+      elsif rx_en='0' then
+        rx_active <= '0';
       end if;
       if fs_ce='1' then
         if se0='1' and drop_bit='1' then
