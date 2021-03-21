@@ -162,7 +162,7 @@ const char *__getcwd_const()
 char *__getcwd(char *dest, int maxlen)
 {
     init_cwd();
-    strncpy(dest, cwd, maxlen);
+    strlcpy(dest, cwd, maxlen);
     return dest;
 }
 
@@ -171,7 +171,7 @@ char *fullpath(const char *name, char *dest, int maxlen)
     char *d = dest;
 
     if (name[0]=='/') {
-        strncpy(dest, name, maxlen);
+        strlcpy(dest, name, maxlen);
         return dest;
     }
     __getcwd(d, maxlen);
@@ -196,8 +196,9 @@ char *fullpath(const char *name, char *dest, int maxlen)
     } else {
         ESP_LOGI(TAG, "Has trailer");
         d++;
+        maxlen--;
     }
-    strncpy(d, name, maxlen);
+    strlcpy(d, name, maxlen);
     return d;
 }
 
