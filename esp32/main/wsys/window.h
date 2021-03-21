@@ -18,7 +18,7 @@ public:
 
     void displayHelpText(const char *c) override;
     virtual void draw(bool force=false) override;
-    void clearChildArea(uint8_t x, uint8_t y, uint8_t w, uint8_t h);
+    virtual void clearChildArea(uint8_t x, uint8_t y, uint8_t w, uint8_t h) override;
 
     void destroy() {
         screen__removeWindow(this);
@@ -26,17 +26,18 @@ public:
     virtual int availableWidth() const override { return width()-(2*m_border); }
     virtual int availableHeight() const override { return height()-(2*m_border); }
 
-    virtual void focusNextPrev(bool next);
-    virtual void setChild(Widget *c);
-    virtual void setVisible(bool);
-    virtual bool handleEvent(uint8_t type, u16_8_t code);
+    virtual void focusNextPrev(bool next) override;
+    virtual void setChild(Widget *c) override;
+    virtual void setVisible(bool) override;
+    virtual bool handleEvent(wsys_input_event_t) override;
 
     void setFocusKeys(uint8_t next, uint8_t prev);
 
     virtual void visibilityOrFocusChanged(Widget *w);
 
-protected:
     virtual ~Window();
+
+protected:
     void dumpFocusTree();
     friend void screen__check_redraw();
     friend void screen__destroyAll();
@@ -53,6 +54,8 @@ protected:
     uint8_t m_statuslines;
     uint8_t m_focusnextkey;
     uint8_t m_focusprevkey;
+    joy_action_t m_focusnextjoy;
+    joy_action_t m_focusprevjoy;
     const char *m_helptext;
     const char *m_statustext;
     Widget *m_focusWidget;
