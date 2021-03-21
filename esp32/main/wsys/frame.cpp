@@ -1,7 +1,8 @@
 #include "frame.h"
 #include <stdlib.h>
 #include "charmap.h"
-#include <string.h>
+#include <cstring>
+#include "strlcpy.h"
 
 Frame::Frame(const char *title, uint8_t w, uint8_t h, bool drawbackground): Bin(NULL)
 {

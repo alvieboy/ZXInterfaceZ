@@ -10,6 +10,7 @@
 #include "label.h"
 #include "button.h"
 #include "hlayout.h"
+#include "strlcpy.h"
 
 FileSaveDialog::FileSaveDialog(const char*title, uint8_t w, uint8_t h,
                                const FileFilter *filter,
