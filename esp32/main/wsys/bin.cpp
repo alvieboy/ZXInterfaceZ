@@ -34,10 +34,10 @@ void Bin::setChild(Widget *c)
     setdamage(DAMAGE_CHILD);
 }
 
-bool Bin::handleEvent(uint8_t type, u16_8_t code)
+bool Bin::handleEvent(wsys_input_event_t evt)
 {
     if (m_child)
-        return m_child->handleEvent(type, code);
+        return m_child->handleEvent(evt);
     return false;
 }
 

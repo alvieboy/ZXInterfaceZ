@@ -11,12 +11,12 @@ public:
         m_currentindex = -1;
     }
 
-    virtual bool handleEvent(uint8_t type, u16_8_t code) override;
+    virtual bool handleEvent(wsys_input_event_t) override;
     virtual void draw(bool force=false) override;
     virtual void setCurrentIndex(uint8_t index);
-    virtual void drawImpl();
-    virtual void resizeEvent();
-    virtual void addChild(Widget *w);
+    virtual void drawImpl() override;
+    virtual void resizeEvent() override;
+    virtual void addChild(Widget *w) override;
 
 
 protected:

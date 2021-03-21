@@ -13,7 +13,7 @@ class Disasm: public Widget
 {
 public:
     Disasm(Widget *parent=NULL);
-    virtual void drawImpl();
+    virtual void drawImpl() override;
     virtual uint8_t getMinimumHeight() const override;
     virtual uint8_t getMinimumWidth() const override;
     void clear();

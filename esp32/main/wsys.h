@@ -8,7 +8,7 @@
 #define EVENT_RESET 2
 #define EVENT_NMILEAVE 3
 #define EVENT_MEMORYREADCOMPLETE 4
-
+#define EVENT_JOYSTICK 5
 #define EVENT_SYSTEM 16
 
 #ifdef __cplusplus

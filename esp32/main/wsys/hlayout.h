@@ -7,7 +7,7 @@ class HLayout: public Layout
 {
 public:
     HLayout(Widget *parent=NULL);
-    virtual void resizeEvent();
+    virtual void resizeEvent() override;
 };
 
 #endif

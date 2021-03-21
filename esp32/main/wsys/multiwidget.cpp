@@ -27,12 +27,12 @@ void MultiWidget::draw(bool force)
 
 
 }
-#if 1
-bool MultiWidget::handleLocalEvent(uint8_t type, u16_8_t code)
+
+bool MultiWidget::handleLocalEvent(wsys_input_event_t evt)
 {
     WSYS_LOGI("MultiWidget handleLocalEvent");
-    if (type==0) {
-        unsigned char c = spectrum_kbd__to_ascii(code.v);
+    if (evt.type==WSYS_INPUT_EVENT_KBD) {
+        unsigned char c = spectrum_kbd__to_ascii(evt.code.v);
         WSYS_LOGI("MultiWidget handleLocalEvent key %02x", c);
         switch (c) {
         case KEY_RIGHT:
@@ -47,31 +47,26 @@ bool MultiWidget::handleLocalEvent(uint8_t type, u16_8_t code)
             break;
         }
     }
+    if (evt.type==WSYS_INPUT_EVENT_JOYSTICK && evt.joy_on) {
+        switch (evt.joy_action) {
+        case JOY_RIGHT:
+            WSYS_LOGI("MultiWidget request focus next");
+            focusNextPrev(true);
+            break;
+        case JOY_LEFT:
+            WSYS_LOGI("MultiWidget request focus prev");
+            focusNextPrev(false);
+            break;
+        default:
+            break;
+        }
+    }
     return false;
 }
-#endif
 
-bool MultiWidget::handleEvent(uint8_t type, u16_8_t code)
+bool MultiWidget::handleEvent(wsys_input_event_t evt)
 {
-    bool handled = false;
-    WSYS_LOGI("MultiWidget handleEvent");
-#if 0
-    for (int i=0;i<getNumberOfChildren();i++) {
-        if (m_childs[i]->handleEvent(type,code))
-            handled = true;
-    }
-
-
-
-    if (m_focusWidget) {
-        WSYS_LOGI("MultiWidget focus child handleEvent");
-        if (m_focusWidget->handleEvent(type,code))
-            handled = true;
-    }
-#endif
-    if (!handled)
-        handled = handleLocalEvent(type, code);
-    return handled;
+    return handleLocalEvent(evt);
 }
 
 void MultiWidget::setdamage(uint8_t mask)

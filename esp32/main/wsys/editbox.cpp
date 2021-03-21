@@ -49,13 +49,13 @@ void EditBox::focusOut()
     redraw();
 }
 
-bool EditBox::handleEvent(uint8_t type, u16_8_t code)
+bool EditBox::handleEvent(wsys_input_event_t evt)
 {
     int ret = false;
-    if (type!=0)
+    if (evt.type!=WSYS_INPUT_EVENT_KBD)
         return ret;
 
-    unsigned char c = spectrum_kbd__to_ascii(code.v);
+    unsigned char c = spectrum_kbd__to_ascii(evt.code.v);
 
     switch (c) {
     case KEY_BACKSPACE:

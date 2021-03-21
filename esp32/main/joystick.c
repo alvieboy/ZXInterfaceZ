@@ -6,12 +6,13 @@ static const struct {
     const char *name;
     joy_action_t action;
 } joystick_actions[] = {
-    { "up", UP },
-    { "down", DOWN },
-    { "left", LEFT },
-    { "right", RIGHT },
-    { "fire1", FIRE1 },
-    { "fire2", FIRE2 }
+    { "up", JOY_UP },
+    { "down", JOY_DOWN },
+    { "left", JOY_LEFT },
+    { "right", JOY_RIGHT },
+    { "fire1", JOY_FIRE1 },
+    { "fire2", JOY_FIRE2 },
+    { "fire3", JOY_FIRE3 }
 };
 
 int joystick__get_action_by_name(const char *name)

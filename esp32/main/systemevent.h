@@ -32,6 +32,7 @@ typedef int systemevent_handlerid_t;
 typedef struct {
     uint8_t type;
     uint8_t event;
+    uint16_t rsvd;
     void *ctxdata;
 } systemevent_t;
 

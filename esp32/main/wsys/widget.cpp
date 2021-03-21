@@ -48,7 +48,7 @@ void Widget::recalculateScreenPointers()
 #endif
 }
 
-bool Widget::handleEvent(uint8_t type, u16_8_t code)
+bool Widget::handleEvent(wsys_input_event_t evt)
 {
     return false;
 }

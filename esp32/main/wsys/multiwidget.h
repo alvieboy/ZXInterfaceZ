@@ -13,18 +13,18 @@ public:
     {
     }
 
-    virtual void resizeEvent() = 0;
+    virtual void resizeEvent() override = 0;
     virtual void addChild(Widget *w);
     virtual ~MultiWidget();
 
-    virtual bool handleEvent(uint8_t type, u16_8_t code) override;
-    virtual bool handleLocalEvent(uint8_t type, u16_8_t code);
+    virtual bool handleEvent(wsys_input_event_t) override;
+    virtual bool handleLocalEvent(wsys_input_event_t);
 
     virtual void draw(bool force=false) override;
-    virtual void setdamage(uint8_t mask);
+    virtual void setdamage(uint8_t mask) override;
     virtual void focusIn() override;
     virtual void focusOut() override;
-    virtual bool canFocus() const;
+    virtual bool canFocus() const override;
     virtual void setFocus(bool focus) override;
     virtual int getNumberOfChildren() const { return m_childs.size(); }
     virtual int getNumberOfVisibleChildren() const;

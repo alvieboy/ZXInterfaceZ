@@ -9,14 +9,14 @@ class EditBox: public Widget
 {
 public:
     EditBox(const char *text=NULL,Widget *parent=NULL);
-    virtual void drawImpl();
+    virtual void drawImpl() override;
     void setText(const char *text) { m_text=text; redraw(); }
     const char *getText() const { return m_text.c_str(); }
-    virtual bool handleEvent(uint8_t type, u16_8_t code);
+    virtual bool handleEvent(wsys_input_event_t) override;
     void setEditable(bool e);
     Signal<> &enter() { return m_enter; }
-    virtual void focusIn();
-    virtual void focusOut();
+    virtual void focusIn() override;
+    virtual void focusOut() override;
 private:
     std::string m_text;
     bool m_editable;

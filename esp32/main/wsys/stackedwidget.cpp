@@ -1,11 +1,11 @@
 
 #include "stackedwidget.h"
 
-bool StackedWidget::handleEvent(uint8_t type, u16_8_t code)
+bool StackedWidget::handleEvent(wsys_input_event_t evt)
 {
     if (m_currentindex >= getNumberOfChildren())
         return false;
-    return childAt(m_currentindex)->handleEvent(type, code);
+    return childAt(m_currentindex)->handleEvent(evt);
 }
 
 void StackedWidget::addChild(Widget *w)

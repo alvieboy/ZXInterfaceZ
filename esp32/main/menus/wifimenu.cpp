@@ -73,7 +73,7 @@ public:
         }
     }
 
-    virtual void drawImpl()  {
+    virtual void drawImpl() override {
         parentDrawImpl();
         screenptr_t screenptr = m_screenptr;
         screenptr.drawstring("Access point settings");
@@ -89,36 +89,6 @@ public:
         screenptr.drawstring("Channel:");
         screenptr.nextcharline(2);
       //  drawthumbstring(screenptr, "Press [C] to change channel");
-    }
-
-    virtual bool handleLocalEvent(uint8_t type, u16_8_t code) override
-    {
-        bool handled = false;
-        if (type!=0)
-            return handled;
-#if 0
-        char c = spectrum_kbd__to_ascii(code.v);
-        switch (c) {
-        case 'S': /* fall-through */
-        case 's':
-            handled = true;
-            m_ssid->setEditable(true);
-            break;
-        case 'P': /* fall-through */
-        case 'p':
-            handled = true;
-            m_password->setEditable(true);
-            break;
-        case 'C': /* fall-through */
-        case 'c':
-            handled = true;
-            showChannelPopup();
-            break;
-        default:
-            break;
-        }
-#endif
-        return handled;
     }
 
     void ssidEnter()
@@ -287,7 +257,7 @@ public:
     }
 
 
-    virtual void drawImpl()  {
+    virtual void drawImpl() override {
         parentDrawImpl();
         screenptr_t screenptr = m_screenptr;
         screenptr.drawstring("WiFi settings");

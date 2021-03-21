@@ -8,7 +8,7 @@ class Label: public Widget
 {
 public:
     Label(const char *text=NULL,Widget *parent=NULL);
-    virtual void drawImpl();
+    virtual void drawImpl() override;
     void setText(const char *text);
     void setBackground(uint8_t background) { m_background=background; redraw(); }
     void setSpacing(uint8_t spacing) { m_spacing = spacing; redraw(); }

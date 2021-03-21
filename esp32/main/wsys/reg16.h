@@ -8,7 +8,7 @@ class Reg16: public Widget
 {
 public:
     Reg16(const char *regname,Widget *parent=NULL);
-    virtual void drawImpl();
+    virtual void drawImpl() override;
     void setValue(uint16_t );
     void setColor(color_t color);
     virtual uint8_t getMinimumHeight() const override;

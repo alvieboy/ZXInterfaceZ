@@ -56,18 +56,25 @@ void Button::drawImpl()
     }
 }
 
-bool Button::handleEvent(uint8_t type, u16_8_t code)
+bool Button::handleEvent(wsys_input_event_t evt)
 {
-    if (type!=0)
-        return false;
+    bool ret = false;
 
-    unsigned char c = spectrum_kbd__to_ascii(code.v);
-    // HACK: makes no sense not to use ENTER here.
-    if ((m_accel >=0) && (c==m_accel)) {
-        m_clicked.emit();
-        return true;
+    if (evt.type ==WSYS_INPUT_EVENT_KBD) {
+
+        unsigned char c = spectrum_kbd__to_ascii(evt.code.v);
+        // HACK: makes no sense not to use ENTER here.
+        if ((m_accel >=0) && (c==m_accel)) {
+            m_clicked.emit();
+            ret = true;
+        }
+    } else if (evt.type == WSYS_INPUT_EVENT_JOYSTICK && evt.joy_on) {
+        if (evt.joy_action==JOY_FIRE1) {
+            m_clicked.emit();
+            ret = true;
+        }
     }
-    return false;
+    return ret;
 }
 
 

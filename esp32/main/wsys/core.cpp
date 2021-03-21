@@ -282,13 +282,14 @@ std::map<void*, WSYSObject::alloc_info> WSYSObject::m_allocations;
 
 void WSYSObject::operator delete(void* ptr) noexcept
 {
+    //ESP_LOGI("WSYSObject","Free %p",ptr);
     FREE(ptr);
 }
 
 void WSYSObject::operator delete(void* ptr, std::size_t) noexcept
 {
     throw std::bad_alloc{};
-        //WSYSObject::deallocate_memory(ptr);
+    //WSYSObject::deallocate_memory(ptr);
 }
 
 void WSYSObject::report_alloc()
@@ -321,7 +322,7 @@ void WSYSObject::report_alloc()
 
 void WSYSObject::operator delete(void* ptr) noexcept
 {
-    WSYS_LOGI("Freed %p", ptr);
+    //ESP_LOGI("WSYSObject","Freeing %p",ptr);
     ::free(ptr);
 }
 

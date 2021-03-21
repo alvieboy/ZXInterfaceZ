@@ -32,7 +32,7 @@ public:
         m_parent=w;
     }
     virtual void removeChild(Widget*);
-    virtual bool handleEvent(uint8_t type, u16_8_t code);
+    virtual bool handleEvent(wsys_input_event_t);
 
     uint8_t width() const { return m_w; }
     uint8_t height() const { return m_h; }

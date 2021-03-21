@@ -9,9 +9,9 @@ class Button: public Widget
 {
 public:
     Button(const char *text, Widget *parent=NULL);
-    virtual void drawImpl();
+    virtual void drawImpl() override;
     void setText(const char *text) { m_text=text; m_textlen=strlen(text); redraw(); }
-    virtual bool handleEvent(uint8_t type, u16_8_t code);
+    virtual bool handleEvent(wsys_input_event_t) override;
     Signal<> &clicked() { return m_clicked; }
     void setAccelKey(char c) { m_accel=c; }
     void setSpacing(uint8_t s) { m_spacing=s; redraw(); }

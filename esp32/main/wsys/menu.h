@@ -37,7 +37,7 @@ class Menu: public Widget
 {
 public:
     Menu(Widget *parent);
-    virtual bool handleEvent(uint8_t type, u16_8_t code) override;
+    virtual bool handleEvent(wsys_input_event_t) override;
     void setEntries( const MenuEntryList *);
     void draw(bool force=false) override;
     void setHelp(const char *helpstrings[], HelpDisplayer *displayer);
@@ -100,7 +100,7 @@ public:
         return &m_entries->entries[m_selectedEntry];
     }
 
-    virtual uint8_t getMinimumWidth() const;
+    virtual uint8_t getMinimumWidth() const override;
     Signal<uint8_t> &selectionChanged() { return m_selectionChanged; }
     void setActiveEntry(uint8_t entry);
     //static const char *strtablehelp(uint8_t index) { return

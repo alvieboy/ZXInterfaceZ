@@ -9,10 +9,10 @@ public:
     Bin(Widget *parent=NULL);
     virtual ~Bin();
     virtual void draw(bool force=false) override;
-    void removeChild(Widget *c);
-    virtual bool handleEvent(uint8_t type, u16_8_t code) override;
-    virtual void focusIn();
-    virtual void focusOut();
+    virtual void removeChild(Widget *c) override;
+    virtual bool handleEvent(wsys_input_event_t) override;
+    virtual void focusIn() override;
+    virtual void focusOut() override;
     virtual void setVisible(bool) override;
 
     virtual void setChild(Widget *);

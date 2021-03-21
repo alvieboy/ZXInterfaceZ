@@ -8,7 +8,7 @@ class FixedLayout: public MultiWidget
 public:
     FixedLayout(Widget *parent=NULL);
 
-    virtual void drawImpl() {};
+    virtual void drawImpl() override {};
 
     virtual void resizeEvent() override;
     virtual void addChild(Widget *widget, uint8_t x, uint8_t y, uint8_t w, uint8_t h);

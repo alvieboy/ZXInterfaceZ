@@ -91,13 +91,13 @@ void SliderBase::drawSlider(float percentage, const char *text)
     //drawthumbstringxor( ptr, "10%");
 }
 
-bool SliderBase::handleEvent(uint8_t type, u16_8_t code)
+bool SliderBase::handleEvent(wsys_input_event_t evt)
 {
     bool handled = false;
-    if (type!=0)
+    if (evt.type!=WSYS_INPUT_EVENT_KBD)
         return handled;
 
-    unsigned char c = spectrum_kbd__to_ascii(code.v);
+    unsigned char c = spectrum_kbd__to_ascii(evt.code.v);
     do {
         if (c==KEY_UNKNOWN)
             break;

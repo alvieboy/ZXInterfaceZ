@@ -14,7 +14,7 @@ Frame::Frame(const char *title, uint8_t w, uint8_t h, bool drawbackground): Bin(
 
 void Frame::setTitle(const char *title)
 {
-    strncpy(m_title,title,sizeof(m_title));
+    strlcpy(m_title,title,sizeof(m_title));
     redraw();
 }
 

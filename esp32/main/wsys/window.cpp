@@ -21,6 +21,8 @@ Window::Window(const char *title, uint8_t w, uint8_t h): Bin(NULL)
     m_focusWidget = NULL;
     m_focusnextkey = KEY_RIGHT;
     m_focusprevkey = KEY_LEFT;
+    m_focusnextjoy = JOY_RIGHT;
+    m_focusprevjoy = JOY_LEFT;
 }
 
 void Window::setFocusKeys(uint8_t next, uint8_t prev)
@@ -357,24 +359,34 @@ void Window::setVisible(bool visible)
 
 
 
-bool Window::handleEvent(uint8_t type, u16_8_t code)
+bool Window::handleEvent(wsys_input_event_t evt)
 {
     bool handled = false;
     if (m_focusWidget && m_focusWidget!=this) {
         WSYS_LOGI("Dispatch event %s\n", CLASSNAME(*m_focusWidget));
-        handled = m_focusWidget->handleEvent(type, code);
+        handled = m_focusWidget->handleEvent(evt);
     }
     if (handled)
         return handled;
 
-    if (type==0) {
-        unsigned char c = spectrum_kbd__to_ascii(code.v);
+    if (evt.type==WSYS_INPUT_EVENT_KBD) {
+        unsigned char c = spectrum_kbd__to_ascii(evt.code.v);
 
         if (c==m_focusnextkey) {
             WSYS_LOGI("request focus next");
             handled = true;
             focusNextPrev(true);
         } else if (c==m_focusprevkey) {
+            WSYS_LOGI("request focus prev");
+            handled = true;
+            focusNextPrev(false);
+        }
+    } else if (evt.type==WSYS_INPUT_EVENT_JOYSTICK && evt.joy_on) {
+        if (evt.joy_action==m_focusnextjoy) {
+            WSYS_LOGI("request focus next");
+            handled = true;
+            focusNextPrev(true);
+        } else if (evt.joy_action==m_focusprevjoy) {
             WSYS_LOGI("request focus prev");
             handled = true;
             focusNextPrev(false);

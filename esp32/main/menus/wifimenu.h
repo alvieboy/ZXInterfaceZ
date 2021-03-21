@@ -14,8 +14,8 @@ class WifiStatus: public Widget
 public:
     WifiStatus(Widget *parent=NULL): Widget(parent) { }
 
-    virtual bool handleEvent(uint8_t type, u16_8_t code) { return false; }
-    virtual void drawImpl();
+    //virtual bool handleEvent(wsys_input_event_t evt) override { return false; }
+    virtual void drawImpl() override;
 };
 
 class WifiModeText: public Widget
@@ -23,8 +23,8 @@ class WifiModeText: public Widget
 public:
     WifiModeText(Widget *parent=NULL): Widget(parent) { }
 
-    virtual bool handleEvent(uint8_t type, u16_8_t code) { return false; }
-    virtual void drawImpl();
+    //virtual bool handleEvent(uint8_t type, u16_8_t code) override { return false; }
+    virtual void drawImpl() override;
 };
 
 

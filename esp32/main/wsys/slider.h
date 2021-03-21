@@ -9,13 +9,13 @@ class SliderBase: public Widget
 {
 public:
     SliderBase();
-    virtual void drawImpl() = 0;
+    virtual void drawImpl() override = 0;
 protected:
     void drawSlider(float percentage, const char *text);
     virtual void inc(bool ismajor) = 0;
     virtual void dec(bool ismajor) = 0;
 protected:
-    virtual bool handleEvent(uint8_t type, u16_8_t code);
+    virtual bool handleEvent(wsys_input_event_t) override;
     void drawSliderLine(screenptr_t &ptr, unsigned w, unsigned vlen);
 
     void focusIn() override
@@ -40,7 +40,7 @@ public:
     Slider() {};
 
 
-    virtual void drawImpl() {
+    virtual void drawImpl() override {
         /*
          value = 0;
          min = -1
@@ -103,7 +103,7 @@ public:
     void setValue(T value) { m_value=value; redraw(); }
     T getValue() const { return m_value; }
     void setDrawFunc( std::function<void(T value,char *dest, size_t max)> &);
-    void inc(bool ismajor) {
+    void inc(bool ismajor) override {
         WSYS_LOGI("INC");
         if (ismajor)
             m_value+=m_maxincdec;
@@ -113,7 +113,7 @@ public:
             m_value=m_max;
         redraw();
     }
-    void dec(bool ismajor) {
+    void dec(bool ismajor) override {
         WSYS_LOGI("DEC");
         if (ismajor)
             m_value-=m_maxincdec;

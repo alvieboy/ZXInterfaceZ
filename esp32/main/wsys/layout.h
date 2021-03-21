@@ -12,9 +12,9 @@ class Layout: public MultiWidget
 public:
     Layout(Widget *parent=NULL);
 
-    virtual void drawImpl();
+    virtual void drawImpl() override;
 
-    virtual void resizeEvent() = 0;
+    virtual void resizeEvent() override = 0;
     virtual void addChild(Widget *w, uint8_t flags=0);
     uint8_t spacing() const { return m_spacing; }
     void setSpacing(uint8_t);
@@ -26,7 +26,7 @@ public:
                        uint8_t flag,
                        int size);
 
-    virtual void visibilityOrFocusPolicyChanged(Widget *w);
+    virtual void visibilityOrFocusPolicyChanged(Widget *w) override;
 
 protected:
     std::vector<uint8_t> m_flags;

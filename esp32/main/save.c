@@ -98,6 +98,7 @@ int save__start_save_tap(const char *filename,
             close(tape_fd);
         return -1;
     }
+    ESP_LOGI(TAG,"Started TAP save");
 
     return 0;
 }

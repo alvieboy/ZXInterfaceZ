@@ -98,7 +98,7 @@ void FileSaveDialog::activate(uint8_t index)
     }
     unsigned namesize = (ext-name)-1;
 
-    strncpy(file, name, namesize);
+    strlcpy(file, name, namesize);
     file[namesize] = '\0';
 
     WSYS_LOGI("File name is: '%s'", file);

@@ -19,7 +19,7 @@ protected:
     void activate(uint8_t index);
     bool buildMountpointList();
     void releaseResources();
-    virtual void activateEntry(uint8_t entry);
+    virtual void activateEntry(uint8_t entry) override;
     static void systemEventHandler(const systemevent_t *event, void *user);
     void systemEventHandler(const systemevent_t *event);
 private:

@@ -13,17 +13,25 @@ typedef std::vector<Window*>::const_iterator window_iter_t;
 static Widget *kbdfocuswidget = NULL;
 
 static Window * screen__getActiveWindow();
-static int8_t loopdepth = -1;
 
 void screen__init()
 {
-    loopdepth = -1;
 }
 
 void screen__add_to_cleanup(Window *s)
 {
     if (std::find(window_cleanup.begin(), window_cleanup.end(), s)==window_cleanup.end())
         window_cleanup.push_back(s);
+}
+
+void screen__do_cleanup()
+{
+    while (window_cleanup.size()) {
+        Window *w = window_cleanup.back();
+        window_cleanup.pop_back();
+        WSYS_LOGI("Deleting %p (%s)\n", w, CLASSNAME(*w));
+        delete(w);
+    }
 }
 
 void screen__destroyAll()
@@ -34,18 +42,6 @@ void screen__destroyAll()
     }
     windows.clear();
     screen__damage(NULL);
-#if 0
-    if (loopdepth<0) {
-
-        WSYS_LOGI( "Cleanup windows (%d)", window_cleanup.size());
-        while (window_cleanup.size()) {
-            Window *w = window_cleanup.back();
-            window_cleanup.pop_back();
-            delete(w);
-        }
-        WSYSObject::report_alloc();
-    }
-#endif
 }
 
 
@@ -97,23 +93,45 @@ void screen__redraw()
     wsys__send_to_fpga();
 }
 
-void screen__keyboard_event(u16_8_t k)
+static void screen__event(wsys_input_event_t evt)
 {
-    if (k.l==0xff)
-        return;
     unsigned l = windows.size();
+
     if (l==0)
         return;
+
     if (kbdfocuswidget) {
         WSYS_LOGI( "KBD event (grabbed)");
-        kbdfocuswidget->handleEvent(0,k);
+        kbdfocuswidget->handleEvent(evt);
     } else {
         WSYS_LOGI( "KBD event (window %d)", l-1);
-        windows[l-1]->handleEvent(0,k);
+        windows[l-1]->handleEvent(evt);
     }
 
-    //wsys__send_to_fpga();
 }
+
+void screen__keyboard_event(u16_8_t k)
+{
+    wsys_input_event_t evt;
+
+    if (k.l==0xff)
+        return;
+
+    evt.type = WSYS_INPUT_EVENT_KBD;
+    evt.code = k;
+    screen__event(evt);
+}
+
+void screen__joystick_event(joy_action_t action, bool on)
+{
+    wsys_input_event_t evt;
+    evt.type = WSYS_INPUT_EVENT_JOYSTICK;
+    evt.joy_on = on;
+    evt.joy_action = action;
+    screen__event(evt);
+}
+
+
 
 static Window * screen__getActiveWindow()
 {
@@ -244,16 +262,6 @@ void screen__check_redraw()
         WSYS_LOGI( "Updating spectrum image");
         wsys__send_to_fpga();
     }
-    // Cleanup if needed, if we are running on main loop
-    if (loopdepth==0) {
-
-        while (window_cleanup.size()) {
-            Window *w = window_cleanup.back();
-            window_cleanup.pop_back();
-            WSYS_LOGI("Deleting %p (%s)\n", w, CLASSNAME(*w));
-            delete(w);
-        }
-    }
 }
 
 void screen__grabKeyboardFocus(Widget *d)
@@ -273,7 +281,6 @@ void screen__releaseKeyboardFocus(Widget *d)
 
 void screen__windowLoop(Window *w)
 {
-    loopdepth++;
     do {
         if (std::find(windows.begin(), windows.end(), w)!=windows.end()) {
             if (w->visible()) {
@@ -285,5 +292,4 @@ void screen__windowLoop(Window *w)
             break;
         }
     } while (1);
-    loopdepth--;
 }

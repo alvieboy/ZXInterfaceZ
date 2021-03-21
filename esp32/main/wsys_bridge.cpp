@@ -17,13 +17,21 @@
 #include "esp_timer.h"
 #include "filesavedialog.h"
 #include "standardfilefilter.h"
+#include "joystick.h"
+#include "struct_assert.h"
+
 struct wsys_event {
     uint8_t type;
     union {
         u16_8_t data;
+        struct {
+            joy_action_t joy_action;
+            bool joy_on;
+        };
         systemevent_t sysevent;
     };
 };
+
 
 static wsys_mode_t wsys_mode = WSYS_MODE_NMI;
 
@@ -39,6 +47,16 @@ void wsys__keyboard_event(uint16_t raw, char ascii)
     struct wsys_event evt;
     evt.data.v = raw;
     evt.type = EVENT_KBD;
+    xQueueSend(wsys_evt_queue, &evt, portMAX_DELAY);
+    portYIELD();
+}
+
+void wsys__joystick_event(joy_action_t action, bool on)
+{
+    struct wsys_event evt;
+    evt.joy_action = action;
+    evt.joy_on = on;
+    evt.type = EVENT_JOYSTICK;
     xQueueSend(wsys_evt_queue, &evt, portMAX_DELAY);
     portYIELD();
 }
@@ -134,6 +152,9 @@ static void wsys__dispatchevent(struct wsys_event evt)
             screen__keyboard_event(evt.data);
         }
         break;
+    case EVENT_JOYSTICK:
+        screen__joystick_event(evt.joy_action, evt.joy_on);
+        break;
     case EVENT_RESET:
         wsys_mode = (wsys_mode_t)evt.data.v;
         break;
@@ -179,6 +200,7 @@ void wsys__task(void *data __attribute__((unused)))
     //xQueueSend(wsys_evt_queue, &gpio_num, NULL);
     while (1) {
         wsys__eventloop_iter();
+        screen__do_cleanup();
     }
 }
 

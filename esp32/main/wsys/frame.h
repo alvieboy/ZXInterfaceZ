@@ -12,7 +12,7 @@ public:
     void setTitle(const char *title);
     void setBorder(uint8_t border);
     bool needRedraw();
-    void clearChildArea(uint8_t x, uint8_t y, uint8_t w, uint8_t h);
+    virtual void clearChildArea(uint8_t x, uint8_t y, uint8_t w, uint8_t h) override;
 
 protected:
     void drawFrame();

@@ -10,7 +10,7 @@ public:
     void setCallbackTable(const Function f[]);
 
 protected:
-    virtual void activateEntry(uint8_t entry);
+    virtual void activateEntry(uint8_t entry) override;
 
     const Function *m_functions;
     void *m_userdata;

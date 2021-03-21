@@ -6,13 +6,52 @@
 #include <functional>
 #include "systemevent.h"
 #include "charmap.h"
+#include "struct_assert.h"
+#include "joystick.h"
 
 #include "../wsys.h"
 #include "log.h"
+#include "defs.h"
 
 #ifdef __linux__
 #define WSYS_BOUND_CHECKS
 #define WSYS_ENABLE_DEBUG
+#endif
+
+
+union u16_8_t
+{
+    struct {
+        uint8_t l;
+        uint8_t h;
+    };
+    uint16_t v;
+    operator uint16_t () const { return v; }
+    u16_8_t operator++(int) {  u16_8_t s = *this; v++; return s; }
+    u16_8_t &operator+=(int delta) { v +=delta; return *this; }
+};
+
+typedef enum {
+    WSYS_INPUT_EVENT_KBD,
+    WSYS_INPUT_EVENT_JOYSTICK
+} __attribute__((packed)) wsys_event_type_t;
+
+typedef union {
+    uint32_t raw;
+    struct {
+        wsys_event_type_t type;
+        union {
+            u16_8_t code;
+            struct {
+                joy_action_t joy_action;
+                bool joy_on;
+            };
+        };
+    };
+} wsys_input_event_t;
+
+#ifndef __linux__
+ASSERT_STRUCT_SIZE(wsys_input_event_t, 4);
 #endif
 
 typedef enum {
@@ -118,19 +157,6 @@ static inline uint16_t getxyattrstart(uint8_t x, uint8_t y)
     uint16_t off = (x+(y*32));
     return off;
 }
-
-union u16_8_t
-{
-    struct {
-        uint8_t l;
-        uint8_t h;
-    };
-    uint16_t v;
-    operator uint16_t () const { return v; }
-    u16_8_t operator++(int) {  u16_8_t s = *this; v++; return s; }
-    u16_8_t &operator+=(int delta) { v +=delta; return *this; }
-};
-
 
 static inline u16_8_t getxyscreenstart(uint8_t x, uint8_t y)
 {
@@ -273,6 +299,8 @@ public:
         static T *create(Args... a)
     {
         T* object = new T(a...);
+        //ESP_LOGI("WSYSObject","%s Alloc %p -> %p len %d", __PRETTY_FUNCTION__, object, object+sizeof(T), sizeof(T));
+        //HEAPCHECK();
         return object;
     }
     static void *allocate_memory(size_t size) { return malloc(size); }

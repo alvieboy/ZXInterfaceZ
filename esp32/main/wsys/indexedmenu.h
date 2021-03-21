@@ -12,7 +12,7 @@ public:
     Signal<uint8_t> &selected() { return m_selected; }
 
 protected:
-    virtual void activateEntry(uint8_t entry);
+    virtual void activateEntry(uint8_t entry) override;
     Signal<uint8_t> m_selected;
 };
 

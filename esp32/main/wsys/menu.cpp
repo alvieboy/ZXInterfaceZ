@@ -39,39 +39,60 @@ void Menu::setHelp(std::function<const char *(uint8_t)> fun, HelpDisplayer *disp
         m_helpdisplayer->displayHelpText( m_helpfun(m_selectedEntry) );
 }
 
-bool Menu::handleEvent(uint8_t type, u16_8_t code)
+bool Menu::handleEvent(wsys_input_event_t evt)
 {
-    if (type!=0)
-        return false;
+    bool handled = false;
 
-    unsigned char c = spectrum_kbd__to_ascii(code.v);
-    
-    WSYS_LOGI( "Menu event kbd 0x%02x", c);
-    bool handled = true;
+    if (evt.type == WSYS_INPUT_EVENT_KBD) {
 
-    switch (c) {
-    case 'a': /* fall-through */
-    case KEY_DOWN:
-        chooseNext();
-        break;
-    case 'q': /* fall-through */
-    case KEY_UP:
-        choosePrev();
-        break;
-    case KEY_ENTER:
-        if (!(m_entries->entries[m_selectedEntry].flags & MENU_FLAGS_DISABLED))
-            activateEntry( m_selectedEntry );
-        break;
-    case KEY_BREAK:  /* fall-through */
-    case ' ':
-        activateEntry( 0xff );
-        break;
-    default:
-        handled = false;
+        unsigned char c = spectrum_kbd__to_ascii(evt.code.v);
+
+        WSYS_LOGI( "Menu event kbd 0x%02x", c);
+        handled = true;
+
+        switch (c) {
+        case 'a': /* fall-through */
+        case KEY_DOWN:
+            chooseNext();
+            break;
+        case 'q': /* fall-through */
+        case KEY_UP:
+            choosePrev();
+            break;
+        case KEY_ENTER:
+            if (!(m_entries->entries[m_selectedEntry].flags & MENU_FLAGS_DISABLED))
+                activateEntry( m_selectedEntry );
+            break;
+        case KEY_BREAK:  /* fall-through */
+        case ' ':
+            activateEntry( 0xff );
+            break;
+        default:
+            handled = false;
+        }
+    } else if (evt.type == WSYS_INPUT_EVENT_JOYSTICK && evt.joy_on) {
+
+        handled = true;
+
+        switch (evt.joy_action) {
+        case JOY_DOWN:
+            chooseNext();
+            break;
+        case JOY_UP:
+            choosePrev();
+            break;
+        case JOY_FIRE1:
+            if (!(m_entries->entries[m_selectedEntry].flags & MENU_FLAGS_DISABLED))
+                activateEntry( m_selectedEntry );
+            break;
+        case JOY_FIRE2:
+            break;
+        default:
+            handled = false;
+        }
     }
     return handled;
 }
-
 
 void Menu::setEntries(const MenuEntryList *entries)
 {
