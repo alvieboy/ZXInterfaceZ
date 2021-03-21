@@ -7,6 +7,8 @@
 #include <string.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "defs.h"
+#include "align.h"
 
 #define USBHUBTAG "USBHUB"
 #define USBHUBDEBUG(x...) LOG_DEBUG(DEBUG_ZONE_USBH, USBHUBTAG ,x)
@@ -248,7 +250,7 @@ int usbhub__port_reset(struct usb_hub *hub, int port, usb_speed_t speed)
 
     uint16_t configlen = __le16(cd.wTotalLength);
 
-    dev->config_descriptor = malloc(configlen);
+    dev->config_descriptor = malloc(ALIGN(configlen,4));
 
     if (dev->config_descriptor==NULL) {
         ESP_LOGE(USBHUBTAG,"Cannot allocate memory");
