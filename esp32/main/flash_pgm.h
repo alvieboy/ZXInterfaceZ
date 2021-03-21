@@ -2,10 +2,9 @@
 #define __FLASHPGM_H__
 
 #include "esp_partition.h"
+#include "align.h"
 
 #define FLASH_BLOCK_SIZE 4096
-
-#define ALIGN(x, blocksize) ((((uint32_t)(x)+(blocksize-1)) & ~(blocksize-1)))
 
 typedef struct
 {
