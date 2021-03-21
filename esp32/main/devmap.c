@@ -480,6 +480,14 @@ void hid__field_entry_changed_callback(const hid_device_t *dev, const struct hid
 
     if (d==NULL) {
         ESP_LOGI(TAG, "Cannot find device to handle event");
+
+        ESP_LOGI(TAG, " > Field changed start %d len %d index %d value=%d",
+                 field->report_offset,
+                 field->report_size,
+                 entry_index,
+                 new_value
+                );
+
         return;
     }
 
