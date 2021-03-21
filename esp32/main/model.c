@@ -19,6 +19,10 @@ bool model__supports_ula_override()
     case MODEL_48K:
         support = true;
         break;
+    case MODEL_128K:
+        // TODO: Check for toastrack/investronica.
+        support = true;
+        break;
     default:
         break;
     }
