@@ -1,6 +1,7 @@
 #include "scope.h"
 #include <inttypes.h>
 #include "fpga.h"
+#include "byteorder.h"
 #include "byteops.h"
 
 static const char *scope_names_nontrig[] = {
@@ -114,14 +115,23 @@ void scope__set_triggers(uint32_t mask,
 
 void scope__get_capture_info(uint32_t *status, uint32_t *counter, uint32_t *trig_address)
 {
-    uint8_t buf[12];
-    fpga__read_capture_block(0x0000, buf, 12);
+    union {
+        uint8_t w8[12];
+        uint32_t w32[3];
+    } buf;
+    fpga__read_capture_block(0x0000, &buf.w32[0], 12);
+#ifdef __LITTLE_ENDIAN
+    *status = buf.w32[0];
+    *counter = buf.w32[1];
+    *trig_address = buf.w32[2];
+#else
     *status = extractle32(&buf[0]);
     *counter = extractle32(&buf[4]);
     *trig_address = extractle32(&buf[8]);
+#endif
 }
 
-void scope__get_capture_data_block64(uint8_t channel, uint8_t offset, uint8_t*dest)
+void scope__get_capture_data_block64(uint8_t channel, uint8_t offset, uint32_t*dest)
 {
     unsigned address = (1<<13);
     if (channel)

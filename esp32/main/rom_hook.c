@@ -94,8 +94,9 @@ void rom_hook__dump()
              rom_hook_defaults[0],
              rom_hook_defaults[1],
              rom_hook_defaults[2]);
-    uint8_t dest[4*8];
 
-    fpga__read_hooks(dest);
-    BUFFER_LOGI(TAG,"Hook conf:", dest, 4*8);
+    union u32 dest[8];
+
+    fpga__read_hooks(&dest[0].w32);
+    BUFFER_LOGI(TAG,"Hook conf:", &dest[0].w8[0], 4*8);
 }

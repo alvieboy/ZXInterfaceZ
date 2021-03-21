@@ -48,76 +48,76 @@ static void fpga__init_spi()
     spi__init_device(&spi0_fpga_slow, 10000000, PIN_NUM_CS2); // 10Mhz, mostly for RAM access
 }
 
-static int fpga__issue_read(uint8_t cmd, uint8_t *buf, unsigned size)
+static int fpga__issue_read(uint8_t cmd, spi_transceive_buffer_t buf, unsigned size)
 {
     return spi__transceive_cmd8_addr8(spi0_fpga, cmd, 0xFF, buf, size);
 }
 
-static int fpga__issue_read_addr8(uint8_t cmd, uint8_t addr, uint8_t *buf, unsigned size)
+static int fpga__issue_read_addr8(uint8_t cmd, uint8_t addr, spi_transceive_buffer_t buf, unsigned size)
 {
     return spi__transceive_cmd8_addr16(spi0_fpga, cmd, (uint16_t)addr<<8, buf, size);
 }
 
-static int fpga__issue_read_block(uint8_t cmd, uint8_t *buf, uint8_t size)
+static int fpga__issue_read_block(uint8_t cmd, spi_transceive_buffer_t buf, uint8_t size)
 {
     // reuse addr16 as length indicator.
     uint8_t addr = size;
     return fpga__issue_read_addr8(cmd, addr, buf, size);
 }
 
-static int fpga__issue_read_addr16(uint8_t cmd, uint16_t addr, uint8_t *buf, unsigned size)
+static int fpga__issue_read_addr16(uint8_t cmd, uint16_t addr, spi_transceive_buffer_t buf, unsigned size)
 {
     return spi__transceive_cmd8_addr24(spi0_fpga, cmd, (uint32_t)addr<<8, buf, size);
 }
 #if 0
-static int fpga__issue_read_addr24(uint8_t cmd, uint32_t addr, uint8_t *buf, unsigned size)
+static int fpga__issue_read_addr24(uint8_t cmd, uint32_t addr, spi_transceive_buffer_t buf, unsigned size)
 {
     return spi__transceive_cmd8_addr32(spi0_fpga, cmd, (uint32_t)addr<<8, buf, size);
 }
 #endif
 
-static int fpga__issue_read_addr24_slow(uint8_t cmd, uint32_t addr, uint8_t *buf, unsigned size)
+static int fpga__issue_read_addr24_slow(uint8_t cmd, uint32_t addr, spi_transceive_buffer_t buf, unsigned size)
 {
     return spi__transceive_cmd8_addr32(spi0_fpga_slow, cmd, (uint32_t)addr<<8, buf, size);
 }
 
-static int fpga__issue_write(uint8_t cmd, const uint8_t *buf, unsigned size)
+static int fpga__issue_write(uint8_t cmd, spi_transmit_buffer_t buf, unsigned size)
 {
     return spi__transmit_cmd8(spi0_fpga, cmd, buf, size);
 }
 
 #if 0
-static int fpga__issue_write_addr24(uint8_t cmd, uint32_t address, const uint8_t *buf, unsigned size)
+static int fpga__issue_write_addr24(uint8_t cmd, uint32_t address, spi_transmit_buffer_t buf, unsigned size)
 {
     return spi__transmit_cmd8_addr24(spi0_fpga, cmd, address, buf, size);
 }
 #endif
 
-static int fpga__issue_write_addr24_slow(uint8_t cmd, uint32_t address, const uint8_t *buf, unsigned size)
+static int fpga__issue_write_addr24_slow(uint8_t cmd, uint32_t address, spi_transmit_buffer_t buf, unsigned size)
 {
     return spi__transmit_cmd8_addr24(spi0_fpga_slow, cmd, address, buf, size);
 }
 
-static int fpga__issue_write_addr16(uint8_t cmd, uint16_t address, const uint8_t *buf, unsigned size)
+static int fpga__issue_write_addr16(uint8_t cmd, uint16_t address, spi_transmit_buffer_t buf, unsigned size)
 {
     return spi__transmit_cmd8_addr16(spi0_fpga, cmd, address, buf, size);
 }
 
 static unsigned fpga__read_id()
 {
-    uint8_t idbuf[4] = {0};
-
-    int r = fpga__issue_read(FPGA_SPI_CMD_READ_ID, idbuf, 4);
+    //uint8_t idbuf[4] = {0};
+    union u32 idbuf = {0};
+    int r = fpga__issue_read(FPGA_SPI_CMD_READ_ID, &idbuf.w32, 4);
 
     if (r<0) {
         ESP_LOGE(TAG, "SPI transceive: error %d", r);
         return 0;
     }
     printf("FPGA id: ");
-    dump__buffer(&idbuf[0], 4);
+    dump__buffer(&idbuf.w8[0], 4);
     printf("\r\n");
 
-    return extractbe32(&idbuf[0]);
+    return extractbe32(&idbuf.w8[0]);
 }
 
 static int fpga__configurefromflash()
@@ -168,19 +168,18 @@ int fpga__init()
 
 uint8_t fpga__get_status()
 {
-    uint8_t buf[1];
+    union u32 buf;
 
-    ESP_ERROR_CHECK(fpga__issue_read(FPGA_SPI_CMD_READ_STATUS, buf, 1));
+    ESP_ERROR_CHECK(fpga__issue_read(FPGA_SPI_CMD_READ_STATUS, &buf.w32, 1));
 
-    return buf[0];
+    return buf.w8[0];
 }
 
 uint16_t fpga__get_spectrum_pc()
 {
-    uint8_t buf[2];
-    spi__transceive(spi0_fpga, buf, sizeof(buf));
-    ESP_ERROR_CHECK(fpga__issue_read(FPGA_SPI_CMD_READ_PC, buf, 2));
-    return extractbe16(&buf[2]);
+    union u32 buf;
+    ESP_ERROR_CHECK(fpga__issue_read(FPGA_SPI_CMD_READ_PC, &buf.w32, 2));
+    return extractbe16(&buf.w8[0]);
 }
 
 void fpga__set_clear_flags(fpga_flags_t enable, fpga_flags_t disable)
@@ -208,7 +207,7 @@ void fpga__set_trigger(uint8_t trig)
     ESP_ERROR_CHECK(fpga__issue_write(FPGA_SPI_CMD_WRITE_FLAGS, buf, sizeof(buf)));
 }
 
-void fpga__get_framebuffer(uint8_t *target)
+void fpga__get_framebuffer(uint32_t *target)
 {
     uint8_t dummy[1] = { 0x00 };
     ESP_ERROR_CHECK(fpga__issue_read_addr16(FPGA_SPI_CMD_READ_VIDEOMEM, 0x0000, target, SPECTRUM_FRAME_SIZE));
@@ -230,11 +229,11 @@ void fpga__set_register(uint8_t reg, uint32_t value)
 
 uint32_t fpga__get_register(uint8_t reg)
 {
-    uint8_t buf[4];
+    union u32 buf;
 
-    ESP_ERROR_CHECK(fpga__issue_read_addr8(FPGA_SPI_CMD_READ_REG32, reg, buf, sizeof(buf)));
+    ESP_ERROR_CHECK(fpga__issue_read_addr8(FPGA_SPI_CMD_READ_REG32, reg, &buf.w32, sizeof(buf)));
 
-    return extractbe32(&buf[0]);
+    return extractbe32(&buf.w8[0]);
 }
 
 int fpga__upload_rom_chunk(uint32_t baseaddress, uint16_t offset, uint8_t *buffer_sub3, unsigned len)
@@ -351,9 +350,15 @@ int fpga__upload_rom(uint32_t baseaddress, const uint8_t *buffer, unsigned len)
 {
     uint16_t offset = 0;
 #ifdef __linux
-    uint8_t tbuf[4096];
+    union {
+        uint32_t w32[1024];
+        uint8_t w8[4096];
+    } tbuf;
 #else
-    uint8_t tbuf[64];
+    union {
+        uint32_t w32[16];
+        uint8_t w8[64];
+    } tbuf;
 #endif
     ESP_LOGI(TAG, "Uploading ROM, %d bytes", len);
     do {
@@ -362,20 +367,20 @@ int fpga__upload_rom(uint32_t baseaddress, const uint8_t *buffer, unsigned len)
         if (fpga__write_extram_block(baseaddress+(uint32_t)offset, buffer, llen)<0)
             return -1;
 #if 1
-        if (fpga__read_extram_block(baseaddress+(uint32_t)offset, tbuf, llen)<0)
+        if (fpga__read_extram_block(baseaddress+(uint32_t)offset, &tbuf.w32[0], llen)<0)
             return -1;
 
-        if (memcmp(tbuf, buffer, llen)!=0) {
+        if (memcmp(&tbuf.w8[0], buffer, llen)!=0) {
             ESP_LOGE(TAG,"ERROR comparing ROM contents\n");
             dump__buffer(buffer, llen);
-            dump__buffer(tbuf, llen);
+            dump__buffer(&tbuf.w8[0], llen);
 
-            memset(tbuf, 0, sizeof(tbuf));
+            memset(&tbuf.w8[0], 0, sizeof(tbuf));
 
-            if (fpga__read_extram_block(baseaddress+(uint32_t)offset, tbuf, llen)<0)
+            if (fpga__read_extram_block(baseaddress+(uint32_t)offset, &tbuf.w32[0], llen)<0)
                 return -1;
 
-            dump__buffer(tbuf, llen);
+            dump__buffer(&tbuf.w8[0], llen);
 
             return -1;
         }
@@ -392,7 +397,10 @@ int fpga__upload_rom(uint32_t baseaddress, const uint8_t *buffer, unsigned len)
 
 int fpga__passiveserialconfigure(const uint8_t *data, unsigned len)
 {
-    uint8_t txrxbuf[128];
+    union {
+        uint32_t w32[32];
+        uint32_t w8[128];
+    } txrxbuf;
 
     ESP_LOGI(TAG,"Loading FPGA bitfile (%d bytes)", len);
 
@@ -411,9 +419,9 @@ int fpga__passiveserialconfigure(const uint8_t *data, unsigned len)
         int chunk = MIN(len,sizeof(txrxbuf));
         int i;
         for (i=0;i<chunk;i++) {
-            txrxbuf[i] = bitrev__byte(*data++);
+            txrxbuf.w8[i] = bitrev__byte(*data++);
         }
-        spi__transceive(spi0_fpga, txrxbuf, chunk);
+        spi__transceive(spi0_fpga, &txrxbuf.w32[0], chunk);
         if (gpio_get_level(PIN_NUM_NSTATUS)==0) {
             ESP_LOGW(TAG,"FPGA pin NSTATUS LOW while uploading (%d remaining)", len);
             return -1;
@@ -435,7 +443,10 @@ int fpga__passiveserialconfigure(const uint8_t *data, unsigned len)
 
 int fpga__passiveserialconfigure_fromfile(int fh, unsigned len)
 {
-    uint8_t txrxbuf[128];
+    union {
+        uint32_t w32[32];
+        uint8_t w8[128];
+    } txrxbuf;
 
     ESP_LOGI(TAG,"Loading FPGA bitfile (%d bytes)", len);
 
@@ -454,15 +465,15 @@ int fpga__passiveserialconfigure_fromfile(int fh, unsigned len)
         int chunk = MIN(len,sizeof(txrxbuf));
         int i;
         // Read first.
-        int r = read(fh, txrxbuf, chunk);
+        int r = read(fh, &txrxbuf.w8[0], chunk);
         if (r!=chunk) {
             ESP_LOGE(TAG,"Short read from file!");
             return -1;
         }
         for (i=0;i<chunk;i++) {
-            txrxbuf[i] = bitRevTable[ txrxbuf[i] ];
+            txrxbuf.w8[i] = bitRevTable[ txrxbuf.w8[i] ];
         }
-        spi__transceive(spi0_fpga, txrxbuf, chunk);
+        spi__transceive(spi0_fpga, &txrxbuf.w32[0], chunk);
         if (gpio_get_level(PIN_NUM_NSTATUS)==0) {
             ESP_LOGW(TAG,"FPGA pin NSTATUS LOW while uploading (%d remaining)", len);
             return -1;
@@ -484,7 +495,7 @@ int fpga__passiveserialconfigure_fromfile(int fh, unsigned len)
 
 
 
-int fpga__read_command_fifo(uint8_t *dest)
+int fpga__read_command_fifo(uint32_t *dest)
 {
     int r = fpga__get_status();
     if (r<0)
@@ -506,10 +517,10 @@ int fpga__read_command_fifo(uint8_t *dest)
 
 static uint16_t fpga__get_tap_fifo_usage()
 {
-    uint8_t buf[2];
-    ESP_ERROR_CHECK(fpga__issue_read(FPGA_SPI_CMD_READ_TAPFIFO_USAGE, buf, sizeof(buf)));
+    union u32 buf;
+    ESP_ERROR_CHECK(fpga__issue_read(FPGA_SPI_CMD_READ_TAPFIFO_USAGE, &buf.w32, sizeof(buf)));
 
-    return extractbe16(&buf[0]);
+    return extractbe16(&buf.w8[0]);
 }
 
 
@@ -585,26 +596,26 @@ int fpga__load_tap_fifo_command(const uint8_t *data, unsigned len, int timeout)
 
 int fpga__read_extram(uint32_t address)
 {
-    uint8_t buf[1];
+    union u32 buf;
 
-    if (fpga__issue_read_addr24_slow(FPGA_SPI_CMD_READ_EXTRAM, address, buf, 1)<0)
+    if (fpga__issue_read_addr24_slow(FPGA_SPI_CMD_READ_EXTRAM, address, &buf.w32, 1)<0)
         return -1;
 
-    return buf[0];
+    return buf.w8[0];
 }
 
 int fpga__write_extram(uint32_t address, uint8_t val)
 {
-    return  spi__transceive_cmd8_addr24(spi0_fpga_slow,
-                                        0x51,
-                                        address,
-                                        &val, 1);
+    return spi__transmit_cmd8_addr24(spi0_fpga_slow,
+                                     FPGA_SPI_CMD_WRITE_EXTRAM,
+                                     address,
+                                     &val, 1);
 }
 
-int fpga__read_extram_block(uint32_t address, uint8_t *dest, int size)
+int fpga__read_extram_block(uint32_t address, uint32_t *dest, int size)
 {
     return spi__transceive_cmd8_addr32(spi0_fpga_slow,
-                                       0x50,
+                                       FPGA_SPI_CMD_READ_EXTRAM,
                                        address<<8,
                                        dest, size);
 }
@@ -620,15 +631,15 @@ int fpga__write_extram_block(uint32_t address, const uint8_t *buffer, int size)
 
 int fpga__read_usb(uint16_t address)
 {
-    uint8_t v;
-    int r = fpga__read_usb_block(address, &v, 1);
+    union u32 v;
+    int r = fpga__read_usb_block(address, &v.w32, 1);
     if (r<0)
         return r;
-    return v;
+    return v.w8[0];
 
 }
 
-int fpga__read_usb_block(uint16_t address, uint8_t *dest, int size)
+int fpga__read_usb_block(uint16_t address, uint32_t *dest, int size)
 {
     return fpga__issue_read_addr16(FPGA_SPI_CMD_READ_USB,
                                    address,
@@ -736,21 +747,24 @@ int fpga__write_extram_block_from_file_nonblock(uint32_t address, int fd, int si
 
 int fpga__read_extram_block_into_file(uint32_t address, int fd, int size, uint8_t *checksum)
 {
-    uint8_t chunk[128];
+    union {
+        uint32_t w32[32];
+        uint8_t w8[128];
+    } chunk;
 
     while (size) {
         int chunksize = MIN(size, (int)sizeof(chunk));
-        int r = fpga__read_extram_block(address, chunk, chunksize);
+        int r = fpga__read_extram_block(address, &chunk.w32[0], chunksize);
         if (r<0)
             return -1;
         if (checksum) {
             uint8_t lchecksum = 0;
             for (int i=0; i<chunksize; i++) {
-                lchecksum ^= chunk[i];
+                lchecksum ^= chunk.w8[i];
             }
             (*checksum) ^= lchecksum;
         }
-        r = write(fd, chunk, chunksize);
+        r = write(fd, &chunk.w8[0], chunksize);
         if (r!=chunksize) {
             ESP_LOGE(TAG, "Short write into file: %s", strerror(errno));
             return -1;
@@ -776,13 +790,13 @@ int fpga__isBITmode(void)
 
 int fpga__read_uart_status(void)
 {
-    uint8_t stat;
-    if (fpga__issue_read(FPGA_SPI_CMD_READ_UART_STATUS, &stat, 1)<0)
+    union u32 stat;
+    if (fpga__issue_read(FPGA_SPI_CMD_READ_UART_STATUS, &stat.w32, 1)<0)
         return -1;
-    return stat;
+    return stat.w8[0];
 
 }
-int fpga__read_uart_data(uint8_t *buf, int len)
+int fpga__read_uart_data(uint32_t *buf, int len)
 {
     return fpga__issue_read_block(FPGA_SPI_CMD_READ_UART_DATA, buf, len);
 }
@@ -797,13 +811,13 @@ int fpga__write_bit_data(const uint8_t *data, unsigned len)
     return fpga__issue_write(FPGA_SPI_CMD_WRITE_BIT, data, len);
 }
 
-int fpga__read_bit_data(uint8_t *buf, unsigned len)
+int fpga__read_bit_data(uint32_t *buf, unsigned len)
 {
     return fpga__issue_read(FPGA_SPI_CMD_READ_BIT, buf, len);
 
 }
 
-int fpga__read_capture_block(uint16_t address, uint8_t *dest, int size)
+int fpga__read_capture_block(uint16_t address, uint32_t *dest, int size)
 {
     return fpga__issue_read_addr16(FPGA_SPI_CMD_READ_CAP,
                                    address,
@@ -842,7 +856,7 @@ int fpga__write_hook(uint8_t index, uint16_t start, uint8_t len, uint8_t flag)
                                     4);
 }
 
-int fpga__read_hooks(uint8_t *dest)
+int fpga__read_hooks(uint32_t *dest)
 {
     return fpga__issue_read_addr16(FPGA_SPI_CMD_READ_CTRL,
                                    0x40,
@@ -852,22 +866,22 @@ int fpga__read_hooks(uint8_t *dest)
 
 int fpga__read_mic_idle()
 {
-    uint8_t idle;
+    union u32 idle;
 
-    int r = fpga__issue_read(FPGA_SPI_CMD_READ_MICIDLE, &idle, 1);
+    int r = fpga__issue_read(FPGA_SPI_CMD_READ_MICIDLE, &idle.w32, 1);
     if (r<0)
         return -1;
-    return idle;
+    return idle.w8[0];
 }
 
 int fpga__readinterrupt(void)
 {
-    uint8_t intstat;
+    union u32 intstat;
 
-    int r = fpga__issue_read(FPGA_SPI_CMD_READ_INTERRUPT_STATUS, &intstat, 1);
+    int r = fpga__issue_read(FPGA_SPI_CMD_READ_INTERRUPT_STATUS, &intstat.w32, 1);
     if (r<0)
         return -1;
-    return intstat;
+    return intstat.w8[0];
 
 }
 

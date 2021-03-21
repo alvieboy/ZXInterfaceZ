@@ -5,6 +5,7 @@
 #include <inttypes.h>
 #include "esp_system.h"
 #include "esp_partition.h"
+#include "union_types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -125,7 +126,7 @@ int fpga__init(void);
 
 void fpga__set_clear_flags(fpga_flags_t enable, fpga_flags_t disable);
 void fpga__set_trigger(uint8_t trig);
-void fpga__get_framebuffer(uint8_t *target);
+void fpga__get_framebuffer(uint32_t *target);
 void fpga__set_register(uint8_t reg, uint32_t value);
 uint32_t fpga__get_register(uint8_t reg);
 uint32_t fpga__id(void);
@@ -163,7 +164,7 @@ static inline void fpga__clear_flags(fpga_flags_t disable)
     fpga__set_clear_flags(0, disable);
 }
 uint32_t fpga__get_capture_status(void);
-int fpga__read_command_fifo(uint8_t *dest);
+int fpga__read_command_fifo(uint32_t *dest);
 uint16_t fpga__get_spectrum_pc(void);
 int fpga__load_tap_fifo(const uint8_t *data, unsigned len, int timeout);
 int fpga__load_tap_fifo_command(const uint8_t *data, unsigned len, int timeout);
@@ -174,7 +175,7 @@ int fpga__write_rom(unsigned offset, uint8_t val);
 
 /* EXT ram methods */
 int fpga__read_extram(uint32_t address);
-int fpga__read_extram_block(uint32_t address, uint8_t *dest, int size);
+int fpga__read_extram_block(uint32_t address, uint32_t *dest, int size_bytes);
 int fpga__write_extram(uint32_t address, uint8_t val);
 int fpga__write_extram_block(uint32_t address, const uint8_t *buffer, int size);
 int fpga__write_extram_block_from_file(uint32_t address, int fd, int size, bool verify);
@@ -182,7 +183,7 @@ int fpga__read_extram_block_into_file(uint32_t address, int fd, int size, uint8_
 
 
 int fpga__read_usb(uint16_t address);
-int fpga__read_usb_block(uint16_t address, uint8_t *dest, int size);
+int fpga__read_usb_block(uint16_t address, uint32_t *dest, int size);
 int fpga__write_usb(uint16_t address, uint8_t val);
 int fpga__write_usb_block(uint16_t address, const uint8_t *buffer, int size);
 
@@ -193,17 +194,17 @@ int fpga__set_ram(uint8_t ram);
 int fpga__reset_spectrum(void);
 
 int fpga__read_uart_status(void);
-int fpga__read_uart_data(uint8_t *buf, int len);
+int fpga__read_uart_data(uint32_t *buf, int len_bytes);
 int fpga__write_uart_data(uint8_t);
 int fpga__write_bit_data(const uint8_t *data, unsigned len);
-int fpga__read_bit_data(uint8_t *data, unsigned len);
+int fpga__read_bit_data(uint32_t *data, unsigned len_bytes);
 
-int fpga__read_capture_block(uint16_t address, uint8_t *dest, int size);
+int fpga__read_capture_block(uint16_t address, uint32_t *dest, int size_bytes);
 int fpga__write_capture_block(uint16_t address, const uint8_t *buffer, int size);
 
 int fpga__write_hook(uint8_t index, uint16_t start, uint8_t len, uint8_t flag);
 int fpga__disable_hook(uint8_t index);
-int fpga__read_hooks(uint8_t *dest);
+int fpga__read_hooks(uint32_t *dest);
 
 int fpga__write_miscctrl(uint8_t value);
 int fpga__read_mic_idle(void);

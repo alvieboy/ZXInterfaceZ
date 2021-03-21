@@ -75,7 +75,7 @@ void wsys__memoryreadcomplete(uint8_t len)
 
 void wsys__get_screen_from_fpga()
 {
-    fpga__read_extram_block(MEMLAYOUT_NMI_SCREENAREA, &spectrum_framebuffer.screen[0], sizeof(spectrum_framebuffer));
+    fpga__read_extram_block(MEMLAYOUT_NMI_SCREENAREA, &spectrum_framebuffer.w32[0], sizeof(spectrum_framebuffer));
 }
 
 void wsys__nmiready()

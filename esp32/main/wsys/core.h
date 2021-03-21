@@ -113,10 +113,16 @@ struct attr_t {
 
 
 struct framebuffer {
-    uint8_t screen[32*24*8];
-    uint8_t attr[32*24];
-    uint8_t seq;
-} __attribute__((packed));
+    union {
+        struct {
+            uint8_t screen[32*24*8];
+            uint8_t attr[32*24];
+            uint8_t seq;
+            uint8_t unused[3];
+        } ;
+        uint32_t w32[1792];
+    };
+};
 
 #ifdef WSYS_BOUND_CHECKS
 

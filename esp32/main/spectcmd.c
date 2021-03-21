@@ -660,18 +660,18 @@ static int spectcmd__check()
 void spectcmd__request()
 {
     int r;
-    uint8_t data[4];
+    union u32 data;
     uint8_t *dptr;
 
     while (1) {
-        dptr = &data[0];
-        r = fpga__read_command_fifo(data);
+        dptr = &data.w8[0];
+        r = fpga__read_command_fifo(&data.w32);
 
         if (r<0) {
             break; // No more data
         }
         while (r--) {
-            xQueueSend(data_queue, dptr, 10);
+            xQueueSend(data_queue, dptr, 100);
             dptr++;
         }
     }

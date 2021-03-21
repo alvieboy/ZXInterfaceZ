@@ -206,17 +206,20 @@ static int sna__writefromextram(int fh, const uint32_t address)
 
 static int sna__writefromextramblock(int fh, uint32_t address, int len)
 {
-    uint8_t data[LOCAL_CHUNK_SIZE];
+    union {
+        uint8_t w8[LOCAL_CHUNK_SIZE];
+        uint32_t w32[LOCAL_CHUNK_SIZE/4];
+    } data;
 
     while (len>0) {
         int chunklen = MIN(len, LOCAL_CHUNK_SIZE);
 
-        int r = fpga__read_extram_block(address, data, chunklen);
+        int r = fpga__read_extram_block(address, &data.w32[0], chunklen);
 
         if (r<0)
             return -1;
 
-        if (write(fh, data, chunklen)!=chunklen) {
+        if (write(fh, &data.w8[0], chunklen)!=chunklen) {
             ESP_LOGE(TAG, "Cannot write chunk : %d : %s\n", r, strerror(errno));
             return -2;
         }
@@ -240,9 +243,12 @@ int sna__save_from_extram(const char *file)
     }
 
     // DEBUG ONLY
+#if 0
     ESP_LOGI(TAG,"First 8 bytes of extram: ");
     fpga__read_extram_block(0x0, (uint8_t*)fpath, 8);
     dump__buffer((uint8_t*)fpath,8);
+#endif
+
 #define W(addr) if ((ret=sna__writefromextram(fh,addr))<0) break
     do {
 
@@ -331,7 +337,11 @@ int sna__save_from_extram(const char *file)
 
 int sna__load_sna_extram(int fd)
 {
-    uint8_t chunk[LOCAL_CHUNK_SIZE];
+    union {
+        uint8_t w8[LOCAL_CHUNK_SIZE];
+        uint32_t w32[LOCAL_CHUNK_SIZE/4];
+    } chunk;
+
     uint8_t header[SNA_HEADER_SIZE];
 
     unsigned togo = 0xC000; // 48KB
@@ -352,32 +362,32 @@ int sna__load_sna_extram(int fd)
 
     while (togo) {
         int chunksize = MIN(togo, LOCAL_CHUNK_SIZE);
-        int r = read(fd, chunk, chunksize);
+        int r = read(fd, &chunk.w8[0], chunksize);
         if (r!=chunksize) {
             ESP_LOGE(TAG, "Short read from file: %s", strerror(errno));
             return -1;
         }
 #ifdef TEST_WRITES
         uint8_t rdc[LOCAL_CHUNK_SIZE];
-        memcpy(rdc, chunk, chunksize);
+        memcpy(rdc, &chunk.w8[0], chunksize);
         // RDC now stores original data.
 #endif
-        if (fpga__write_extram_block(extram_address, chunk, chunksize)<0) {
+        if (fpga__write_extram_block(extram_address, &chunk.w8[0], chunksize)<0) {
             ESP_LOGE(TAG, "Error writing to external FPGA RAM");
             return -1;
         }
 #ifdef TEST_WRITES
-        if (fpga__read_extram_block(extram_address, chunk, chunksize)<0) {
+        if (fpga__read_extram_block(extram_address, &chunk.w32[0], chunksize)<0) {
             ESP_LOGE(TAG, "Error reading from external FPGA RAM");
             return -1;
         }
-        if (memcmp(rdc,chunk,chunksize)!=0) {
+        if (memcmp(rdc,&chunk.w8[0],chunksize)!=0) {
 
             ESP_LOGE(TAG, "ERROR comparing data!!! address:%08x len=%d", extram_address, chunksize);
             dump__buffer(rdc, chunksize);
-            dump__buffer(chunk, chunksize);
-            memcpy(chunk, rdc, sizeof(chunk) );
-            if (fpga__write_extram_block(extram_address, chunk, chunksize)<0) {
+            dump__buffer(&chunk.w8[0], chunksize);
+            memcpy(&chunk.w8[0], rdc, sizeof(chunk) );
+            if (fpga__write_extram_block(extram_address, &chunk.w8[0], chunksize)<0) {
                 ESP_LOGE(TAG, "Error writing to external FPGA RAM");
                 return -1;
             }

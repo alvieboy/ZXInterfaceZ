@@ -166,11 +166,11 @@ int rom__load_custom_from_file(const char *file, unsigned address)
 
 int rom__load_custom_routine(const uint8_t *data, unsigned size)
 {
-    uint8_t freearea[2];
+    union u32 freearea;
     // Read out free area
-    fpga__read_extram_block(NMI_ROM_BASEADDRESS + 0x0006, freearea, 2);
+    fpga__read_extram_block(NMI_ROM_BASEADDRESS + 0x0006, &freearea.w32, 2);
 
-    uint16_t start = (uint16_t)freearea[0] + (((uint16_t)freearea[1])<<8);
+    uint16_t start = (uint16_t)freearea.w8[0] + (((uint16_t)freearea.w8[1])<<8);
 
     ESP_LOGI(TAG,"Start of ROM custom area: %02x\n", start);
 

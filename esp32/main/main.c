@@ -235,7 +235,7 @@ static bool extram_test(bool simple_test)
         address = 0;
         while (address < topram) {
             readback.u32 = 0;
-            fpga__read_extram_block(address, &readback.u8[0], sizeof(readback.u8));
+            fpga__read_extram_block(address, &readback.u32, sizeof(readback.u32));
             if (readback.u32 != pat.u32) {
                 ESP_LOGE(TAG, "Read error at address %08x: expected %08x, got %08x",
                          address,

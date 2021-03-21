@@ -26,8 +26,8 @@
 volatile int client_socket = -1;
 static volatile unsigned interrupt_count = 0;
 
-static uint8_t fb[SPECTRUM_FRAME_SIZE];
-static uint8_t fb_prev[SPECTRUM_FRAME_SIZE];
+static uint32_t fb[SPECTRUM_FRAME_SIZE/4];
+static uint32_t fb_prev[SPECTRUM_FRAME_SIZE/4];
 
 #define MAX_FRAME_PAYLOAD 1024
 
@@ -168,7 +168,7 @@ static int fill_and_send_frames(int client_socket,
 
 const uint8_t *videostreamer__getlastfb()
 {
-    return fb;
+    return (uint8_t*)fb;
 }
 
 unsigned videostreamer__getinterrupts()
@@ -215,7 +215,7 @@ static void videostreamer__server_task(void *pvParameters)
                         if ((seqno & 0x3F)==0x00) {
                             ESP_LOGI(TAG, "Sending frames seq %d", seqno);
                         }
-                        int r = fill_and_send_frames( client_socket, seqno, fb, fb_prev);
+                        int r = fill_and_send_frames( client_socket, seqno, (uint8_t*)fb, (uint8_t*)fb_prev);
                         if (r<0) {
                             error_counter++;
                         } else {
