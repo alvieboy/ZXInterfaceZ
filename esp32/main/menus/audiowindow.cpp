@@ -10,7 +10,7 @@ class AudioWidget: public FixedLayout
 {
 public:
     AudioWidget();
-    virtual void drawImpl();
+    virtual void drawImpl() override;
     void apply();
     Signal<> &clicked() { return m_button->clicked(); }
 private:
