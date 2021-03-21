@@ -319,6 +319,7 @@ static int usbh__issue_setup_data_request(struct usb_request *req)
                                       req);
     } else {
         // send OUT request.
+        req->out_size = remain;
         return usb_ll__submit_request(req->channel,
                                       PID_OUT,
                                       req->rptr,
@@ -403,15 +404,18 @@ static int usbh__control_request_completed_reply(uint8_t chan, uint8_t stat, str
             if (req->direction==REQ_DEVICE_TO_HOST) {
                 rxlen = usbh__request_data_remain(req, usb_ll__get_channel_maxsize(req->channel));
                 usb_ll__read_in_block(chan, req->rptr, &rxlen);
-            } else {
 
+                req->rptr += rxlen;
+                req->size_transferred += rxlen;
+            } else {
+                req->rptr += req->out_size;
+                req->size_transferred += req->out_size;
+                rxlen = req->out_size;
             }
-            req->rptr += rxlen;
-            req->size_transferred += rxlen;
             //req->seq = !req->seq;
 
             if (usbh__request_data_remain(req, rxlen)>0) {
-                USBHDEBUG("Still data to go");
+                USBHDEBUG("Still data to go (setup)");
                 return usbh__issue_setup_data_request(req);
             } else {
                 USBHDEBUG("Entering status phase");
@@ -457,29 +461,25 @@ static int usbh__bulk_request_completed_reply(uint8_t chan, uint8_t stat, struct
         if (req->direction==REQ_DEVICE_TO_HOST) {
             rxlen = usbh__request_data_remain(req, usb_ll__get_channel_maxsize(req->channel));
             usb_ll__read_in_block(chan, req->rptr, &rxlen);
-        } else {
+            req->rptr += rxlen;
+            req->size_transferred += rxlen;
 
-        }
-        req->rptr += rxlen;
-        req->size_transferred += rxlen;
-        //req->seq = !req->seq;
-
-        if (usbh__request_data_remain(req, rxlen)>0) {
-            USBHDEBUG("Still data to go");
-            return usbh__issue_setup_data_request(req);
-        } else {
-#if 0
-            if (req->direction==REQ_HOST_TO_DEVICE) {
-                // Wait ack
-                USBHDEBUG("Wait ACK");
-                return usbh__wait_ack(req);
+            if (usbh__request_data_remain(req, rxlen)>0) {
+                USBHDEBUG("Still data to go (read)");
+                return usbh__issue_setup_data_request(req);
             } else {
-                req->retries = 3;
-                USBHDEBUG("Send ACK");
-                return usbh__send_ack(req);
+                usbh__request_completed(req);
             }
-#endif
-            usbh__request_completed(req);
+        } else {
+            // OUT request.
+            req->rptr += req->out_size;
+            req->size_transferred += req->out_size;
+            if (usbh__request_data_remain(req, usb_ll__get_channel_maxsize(req->channel))>0) {
+                USBHDEBUG("Still data to go (write) last transfer=%d", req->out_size);
+                return usbh__issue_setup_data_request(req);
+            } else {
+                usbh__request_completed(req);
+            }
         }
     } else {
         ESP_LOGE(USBHTAG, "Request failed 0x%02x",stat);
@@ -531,20 +531,25 @@ static void usbh__submit_request_to_ll(struct usb_request *req)
                                usbh__request_completed_reply,
                                req);
     } else {
+
+        int epsize = usb_ll__get_channel_maxsize(req->channel);
+        int chunk = req->length > epsize ? epsize: req->length;
+
         USBHDEBUG("Submitting BULK %p", req);
         if (req->direction==REQ_DEVICE_TO_HOST) {
             usb_ll__submit_request(req->channel,
                                    PID_IN,
                                    req->target,
-                                   req->length > 64 ? 64: req->length,
+                                   chunk,
                                    usbh__request_completed_reply,
                                    req);
         } else {
             if (req->length) {
+                req->out_size = chunk;
                 usb_ll__submit_request(req->channel,
                                        PID_OUT,
                                        req->target,
-                                       req->length > 64 ? 64: req->length,
+                                       chunk,
                                        usbh__request_completed_reply,
                                        req);
             }
