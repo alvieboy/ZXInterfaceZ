@@ -52,10 +52,10 @@
 #include "tape.h"
 #include "kempston.h"
 #include "fasttap.h"
-
+#include "log.h"
 static int8_t videomode = 0;
 
-uint32_t loglevel;
+uint32_t loglevel = 0;
 
 volatile int restart_requested = 0;
 static volatile uint8_t spectrum_model = 0xff;
@@ -490,12 +490,15 @@ void app_main()
         }
 
 
-        fpga__get_status();
         iter++;
         if (iter==10) {
             int a = activity_monitor__read_mic_idle();
             tape__notify_mic_idle(a);
             //ESP_LOGI(TAG, "Mic IDLE: %d", a);
+#if 0
+            uint32_t free = xPortGetFreeHeapSize();
+            ESP_LOGI(TAG,"Free: %u", free);
+#endif
             iter=0;
         }
         STATUS s;
