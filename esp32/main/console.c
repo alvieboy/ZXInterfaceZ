@@ -116,16 +116,19 @@ void console__hdlc_data(const uint8_t *d, unsigned len)
         // d[1] holds ram and offset;
         uint8_t channel = d[1] & 0x80 ? 1: 0;
         uint8_t offset = d[1] & 0x0F;
-        uint8_t buf[256];
+        union {
+            uint8_t w8[256];
+            uint32_t w32[64];
+        } buf;
 
-        scope__get_capture_data_block64(channel, offset, buf);
+        scope__get_capture_data_block64(channel, offset, &buf.w32[0]);
 
         reply = 0x85;
 
         hdlc_encoder__begin(&enc);
         hdlc_encoder__write(&enc, &reply,1);
         hdlc_encoder__write(&enc, &d[2],1); // Sequence
-        hdlc_encoder__write(&enc, buf, 256);
+        hdlc_encoder__write(&enc, &buf.w8[0], 256);
         hdlc_encoder__end(&enc);
 
     }
