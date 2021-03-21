@@ -40,14 +40,17 @@ static void bit__uart_data(const uint8_t *data, int size)
 
 static bool bit__process_uart_rx(uint8_t status)
 {
-    uint8_t rx[16];
+    union {
+        uint8_t w8[16];
+        uint32_t w32[4];
+    } rx;
     if (status & FPGA_UART_STATUS_RX_AVAIL) {
         // Extract size
         unsigned size = ((status>>2) & 0xF) +1; // 4 bits
         //BIT_LOGI("UART data size %d", size);
-        int c = fpga__read_uart_data(rx, size);
+        int c = fpga__read_uart_data(&rx.w32[0], size);
         if (c>=0) {
-            bit__uart_data(rx, size);
+            bit__uart_data(&rx.w8[0], size);
         }
         return true;
     }
@@ -111,6 +114,7 @@ static void bit__send_ping_reply()
 static void bit__handler(void*self, const uint8_t *data, unsigned datalen)
 {
     uint8_t txd[8];
+    union u32 bdata;
 
     if (datalen<1)
         return;
@@ -126,7 +130,11 @@ static void bit__handler(void*self, const uint8_t *data, unsigned datalen)
     case 0x02:
         // Sample signals.
         txd[0] = 0x02;
-        fpga__read_bit_data(&txd[1], 4);
+        fpga__read_bit_data(&bdata.w32, 4);
+        txd[1] = bdata.w8[0];
+        txd[2] = bdata.w8[1];
+        txd[3] = bdata.w8[2];
+        txd[4] = bdata.w8[3];
         /*BIT_LOGI("BIT data: %02x %02x %02x %02x",
                  txd[1],
                  txd[2],
