@@ -10,7 +10,7 @@ class AboutWidget: public Widget
 {
 public:
     AboutWidget();
-    virtual void drawImpl();
+    virtual void drawImpl() override;
 };
 
 
