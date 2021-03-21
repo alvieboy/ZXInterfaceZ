@@ -12,6 +12,6 @@ void opstatus__set_error(const char *str)
     char errstr[31];
     errstr[0] = 'E';
     errstr[1] = ':';
-    strncpy(&errstr[2], str, 28);
+    strlcpy(&errstr[2], str, 28);
     opstatus_resource__set_status(&opstatusresource, OPSTATUS_ERROR, errstr);
 }
