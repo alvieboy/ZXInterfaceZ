@@ -343,10 +343,10 @@ void Window::setChild(Widget *c)
 
 void Window::setVisible(bool visible)
 {
-    bool changed = false;
+    //bool changed = false;
     WSYS_LOGI("Visibility changed %d\n", visible);
-    if (visible!=m_visible)
-        changed = true;
+    //if (visible!=m_visible)
+    //    changed = true;
 
     Bin::setVisible(visible);
 
