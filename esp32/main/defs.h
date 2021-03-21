@@ -54,5 +54,18 @@
 
 void request_restart(void);
 
+#ifndef __linux__
+#include <esp_heap_caps.h>
+#define HEAPCHECK(xpto...) do { \
+    if (!heap_caps_check_integrity(0xffffffff, true)) { \
+    ESP_LOGE("HEAP","Heap check fail %s line %d", __PRETTY_FUNCTION__, __LINE__); \
+    abort(); \
+    } \
+} while (0)
+#else
+#define HEAPCHECK(x...)
+
+#endif
+
 
 #endif
