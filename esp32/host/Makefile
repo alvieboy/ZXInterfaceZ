@@ -71,7 +71,7 @@ FREERTOS_SRC := $(FREERTOSKERNEL)/list.c \
 		$(FREERTOSKERNEL)/timers.c \
 		$(FREERTOSKERNEL)/event_groups.c
 
-CXXFLAGS=$(CFLAGS)
+CXXFLAGS=$(CFLAGS) -Wsuggest-override -Werror=suggest-override
 
 FREERTOS_OBJS= $(FREERTOS_SRC:.c=.o)
 
