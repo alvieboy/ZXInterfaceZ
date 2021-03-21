@@ -113,7 +113,9 @@ entity systemctrl is
     -- Misc
     miscctrl_o            : out std_logic_vector(7 downto 0);
     -- divMMC compatibility. Usage TBD
-    divmmc_compat_o       : out std_logic
+    divmmc_compat_o       : out std_logic;
+    -- CPU clock
+    tstatecpu_en_o        : out std_logic
 
   );
 end systemctrl;
@@ -500,6 +502,7 @@ begin
   ay_en_o               <= regs32_r(2)(3);
   ay_en_reads_o         <= regs32_r(2)(4);
   divmmc_compat_o       <= regs32_r(2)(5);
+  tstatecpu_en_o        <= regs32_r(2)(6);
 
   kbd_force_press_o     <= regs32_r(4)(7 downto 0) & regs32_r(3);
 

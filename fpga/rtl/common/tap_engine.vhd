@@ -16,6 +16,7 @@ entity tap_engine is
     ffull_o   : out std_logic;
     fused_o   : out std_logic_vector(9 downto 0);
     tstate_o  : out std_logic;
+    tstateclk_o : out std_logic;
 
     audio_o   : out std_logic
 );
@@ -25,6 +26,7 @@ end entity tap_engine;
 architecture beh of tap_engine is
 
   signal tstate_s     : std_logic;
+  signal tstateclk_r  : std_logic;
   constant TSTATECNT  : natural := 27;
   signal count_r      : natural range 0 to TSTATECNT-1 := TSTATECNT-1;
   signal freset_s     : std_logic;
@@ -39,14 +41,19 @@ begin
   begin
     if arst_i='1' then
       count_r <= TSTATECNT-1;
-      tstate_s <='0';
+      tstate_s    <='0';
+      tstateclk_r <='0';
     elsif rising_edge(clk_i) then
       if count_r=0 then
-        tstate_s <='1';
-        count_r <= TSTATECNT-1;
+        tstate_s    <='1';
+        tstateclk_r <= '1';
+        count_r     <= TSTATECNT-1;
       else
         tstate_s <='0';
         count_r <= count_r - 1;
+        if count_r=(TSTATECNT/2) then
+          tstateclk_r <= '0';
+        end if;
       end if;
     end if;
   end process;
@@ -96,7 +103,8 @@ begin
     audio_o   => audio_o
   );
 
-  tstate_o  <= tstate_s;
+  tstate_o    <= tstate_s;
+  tstateclk_o <= tstateclk_r;
 
 end beh;
 

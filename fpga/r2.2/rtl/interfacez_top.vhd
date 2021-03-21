@@ -141,6 +141,9 @@ architecture str of interfacez_top is
   signal audio_enable_s : std_logic;
   signal bit_from_cpu_s : bit_from_cpu_t;
   signal led_s          : std_logic_vector(3 downto 0);
+
+  signal tstate_cpu_en_s: std_logic;
+  signal tstate_cpu_s   : std_logic;
 begin
 
   rstgen_inst: entity work.rstgen
@@ -241,7 +244,10 @@ begin
       -- TEST uart
       testuart_tx_o => testuart_tx_s,
       testuart_rx_i => testuart_rx_s,
-      bit_o         => bit_from_cpu_s
+      bit_o         => bit_from_cpu_s,
+
+      tstate_cpu_o    => tstate_cpu_s,
+      tstate_cpu_en_o => tstate_cpu_en_s
     );
 
   FORCE_ROMCS_o <= FORCE_ROMCS_s;
@@ -287,7 +293,8 @@ begin
 
   testuart_rx_s <= EXT_io(11);
 
-  EXT_io(13) <= 'Z';
+  
+  EXT_io(13) <= 'Z' when tstate_cpu_en_s='0' else tstate_cpu_s;
 
   FORCE_ROMCS_o   <= FORCE_ROMCS_s;
   FORCE_NMI_o     <= FORCE_NMI_s;

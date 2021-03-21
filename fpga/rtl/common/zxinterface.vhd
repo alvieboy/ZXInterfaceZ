@@ -96,6 +96,9 @@ entity zxinterface is
     audio_l_o     : out std_logic;
     audio_r_o     : out std_logic;
     audio_enable_o: out std_logic;
+    --
+    tstate_cpu_o    : out std_logic;
+    tstate_cpu_en_o : out std_logic;
     -- Test UART
     testuart_tx_o : out std_logic;
     testuart_rx_i : in std_logic;
@@ -404,7 +407,8 @@ architecture beh of zxinterface is
 
   signal spi_composite_cs_s     : std_logic;
   signal nmi_was_romcs_r        : std_logic;
-
+  signal tstatecpuclk_s         : std_logic;
+  signal tstatecpu_en_s         : std_logic;
 begin
 
   rst48_inst: entity work.rstgen
@@ -800,7 +804,9 @@ begin
     romsel_we_o           => romsel_we_s,
     hook_o                => hook_s,
     divmmc_compat_o       => divmmc_compat_s,
-    miscctrl_o            => miscctrl_s
+    miscctrl_o            => miscctrl_s,
+
+    tstatecpu_en_o        => tstatecpu_en_s
   );
 
   -- Main AHB intercon.
@@ -912,6 +918,7 @@ begin
     ffull_o   => tapfifo_full_s,
     fused_o   => tapfifo_used_s,
     tstate_o  => tstate_s,
+    tstateclk_o => tstatecpuclk_s,
 
     audio_o   => tap_audio_s
   );
@@ -1399,6 +1406,8 @@ begin
   dbg_o(6) <= intr_dbg_s(1); -- inten_r;
   dbg_o(7) <= intr_dbg_s(2); -- intackn_s;
 
+  tstate_cpu_o <= tstatecpuclk_s;
+  tstate_cpu_en_o <= tstatecpu_en_s;
 
 end beh;
 
