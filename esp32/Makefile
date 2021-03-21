@@ -11,7 +11,7 @@ CP:=cp
 GITVER=$(shell git describe --tags --dirty)
 BUILDDATE=$(shell date --utc)
 EXTRA_CFLAGS+=-DGITVER=\"$(GITVER)\" -DBUILDDATE='"$(BUILDDATE)"'
-
+EXTRA_CXXFLAGS=-Wsuggest-override
 EXTRA_COMPONENT_DIRS=main/wsys main/menus
 
 include $(IDF_PATH)/make/project.mk
