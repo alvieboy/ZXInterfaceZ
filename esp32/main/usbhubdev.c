@@ -159,7 +159,7 @@ int usbhubdev__init(struct usb_hub *h)
 static int usbhubdev__probe(struct usb_device *dev, struct usb_interface *i)
 {
     usb_interface_descriptor_t *intf = i->descriptors[0];
-    int intf_len = i->descriptorlen[0];
+    //int intf_len = i->descriptorlen[0];
     int r = -1;
     unsigned short size_transferred;
 
@@ -249,7 +249,7 @@ static int usbhubdev__probe(struct usb_device *dev, struct usb_interface *i)
     return 0;
 }
 
-
+#if 0
 static int usbhubdev__clear_hub_feature(struct usb_hub_dev *self, int feature)
 {
     return usbh__control_msg(self->dev,
@@ -262,6 +262,7 @@ static int usbhubdev__clear_hub_feature(struct usb_hub_dev *self, int feature)
                              1000,
                              NULL);
 }
+#endif
 
 static int usbhubdev__clear_port_feature(struct usb_hub_dev *self, int port, int feature)
 {

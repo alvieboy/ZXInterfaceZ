@@ -1,6 +1,17 @@
 #ifndef __DEFS_H__
 #define __DEFS_H__
 
+/**
+ * \defgroup misc Miscelaneous
+ * \brief Miscelaneous routines and modules
+ *
+ * \defgroup tools Tools and utilities
+ * \brief Tools and utilities
+ *
+ * \defgroup init System initialization
+ * \brief System initialization
+ */
+
 #define TAG "ZX InterfaceZ"
 
 #define PIN_NUM_IO26 26

@@ -1,5 +1,10 @@
 #ifndef __DEBUGGER_H__
 #define __DEBUGGER_H__
+/**
+ \defgroup debugger Debugger
+ \brief Z80/Spectrum debugging infrastructure
+ */
+
 
 #include <inttypes.h>
 #include "byteorder.h"
@@ -26,6 +31,10 @@ typedef uint8_t z80_reg8;
 
 #define REG8(val8) z80_reg8 val8
 
+/**
+ \ingroup debugger
+ \brief Z80/Spectrum context, as stored in the external RAM
+ */
 struct nmi_cpu_context_extram
 {
     union {

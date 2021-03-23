@@ -1,3 +1,7 @@
+/**
+ \defgroup buttons Button handling
+ \brief Routines to handle the board buttons
+ */
 #include "esp_types.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -92,6 +96,13 @@ void IRAM_ATTR button_check_isr(void *para)
  * auto_reload - should the timer auto reload on alarm?
  * timer_interval_sec - the interval of alarm to set
  */
+
+/**
+ \ingroup buttons
+ \brief Initialize the button subsystem
+
+ This should be called only once during system startup.
+ */
 void buttons__init(void)
 {
     /* Select and initialize basic parameters of the timer */
@@ -124,6 +135,19 @@ void buttons__init(void)
     timer_start(TIMER_GROUP_0, BUTTON_TIMER);
 }
 
+/**
+ \ingroup buttons
+ \brief Retrieve button event, if present
+
+ If block is true, then wait indefenitely for the button event.
+
+ The button propagation is done using an event queue, so only one task should
+ retrieve events.
+
+ \param event Pointer to location where to store the button event
+ \param block Wait indefinitely (block) for a button event.
+ \return -1 if no button event is present, 0 otherwise
+ */
 int buttons__getevent(button_event_t *event, bool block)
 {
     if (!xQueueReceive(button_event_queue, event, block? portMAX_DELAY:0))

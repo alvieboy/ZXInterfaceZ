@@ -167,7 +167,13 @@ static void bit__handler(void*self, const uint8_t *data, unsigned datalen)
     }
 }
 
-
+/**
+ * \ingroup misc
+ * \brief Enter and run BIT (Built-In Test).
+ *
+ * This is only used for post-production checking. Do not use in normal operation.
+ *
+ */
 void bit__run(void)
 {
     txlow  = 0;

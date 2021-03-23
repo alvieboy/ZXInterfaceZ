@@ -1,3 +1,8 @@
+/**
+ * \defgroup startup Startup routines
+ * \brief Starting up the system
+ */
+
 #include "spi.h"
 #include "fpga.h"
 #include "flash_pgm.h"
@@ -53,6 +58,7 @@
 #include "kempston.h"
 #include "fasttap.h"
 #include "log.h"
+
 static int8_t videomode = 0;
 
 uint32_t loglevel = 0;
@@ -62,6 +68,12 @@ static volatile uint8_t spectrum_model = 0xff;
 static volatile uint8_t spectrum_flags = 0x00;
 
 static void detect_spectrum(void);
+/**
+ * \ingroup startup
+ * \brief Request ZX Interface Z restart
+ *
+ * Request ZX Interface Z to be restarted. This will take place once possible
+ */
 void request_restart(void)
 {
     restart_requested = 1;

@@ -14,87 +14,30 @@
 #define DEVMAPTAG "DEVMAP"
 #define DEVMAPDEBUG(x...) LOG_DEBUG(DEBUG_ZONE_DEVMAP, DEVMAPTAG ,x)
 
-
-enum map_type {
-    MAP_NONE,
-    MAP_KEYBOARD,
-    MAP_JOYSTICK,
-    MAP_NMI,
-    MAP_MOUSE
-};
-
-typedef struct devmap_e {
-    struct devmap_e *next;
-    enum map_type map:8;
-    unsigned index:8;
-    int16_t analog_threshold;
-    unsigned action_value:16;
-} devmap_e_t;
-
+#define DEVMAP_JSON_FILENAME "/config/devmap.jsn"
+#define TAG "DEVMAP"
 #define MAX_INTERFACES 2
 
-typedef struct devmap_d {
-    struct devmap_d *next;
-    uint32_t id;
-    char *manufacturer;
-    char *product;
-    char *serial;
-    uint8_t interfaces[MAX_INTERFACES];
-    devmap_e_t *entries[MAX_INTERFACES];
-} devmap_d_t;
+/**
+ \defgroup devmap Device mapper
+ \brief Device mapper
 
-static devmap_d_t *root_devmap;
-
-
-/* For testing purposes */
-/*
- Gamepad indexes
- 6: key 1
- 7: key 2
- 8: key 3
- 9: key 3
- 7: rotR horiz
- 6: rotR vert
- 2: roTl horiz
- 3: roTl vert
- 10: Left 2
- 11: Right 2
- 12: Left 1
- 13: Right 1
- 14: select
- 15: Start
-
+ The device mapper is responsible from dispatching events (such as HID events) from a
+ particular device into actions
 
  */
-/*static const devmap_e_t gamepad_devmap[] = {
-    { MAP_NMI,     14, 0, 0 }, // Select button
-    { MAP_KEYBOARD,15, 0, SPECT_KEYIDX_ENTER }, // Start button
 
-    { MAP_KEYBOARD, 6, 0, SPECT_KEYIDX_Q },
-    { MAP_KEYBOARD, 7, 0, SPECT_KEYIDX_A },
-
-    { MAP_KEYBOARD, 4, 0, SPECT_KEYIDX_O },
-    { MAP_KEYBOARD,12, 0, SPECT_KEYIDX_O }, // Left button 1
-    { MAP_KEYBOARD, 5, 0, SPECT_KEYIDX_P },
-    { MAP_KEYBOARD,13, 0, SPECT_KEYIDX_P }, // Right button 1
-
-    { MAP_KEYBOARD, 8, 0,  SPECT_KEYIDX_M },
-
-    { MAP_KEYBOARD, 2, +64,  SPECT_KEYIDX_P }, // Analog right
-    { MAP_KEYBOARD, 2, -64,  SPECT_KEYIDX_O }, // Analog left
-    { MAP_KEYBOARD, 3, +64,  SPECT_KEYIDX_A }, // Analog down
-    { MAP_KEYBOARD, 3, -64,  SPECT_KEYIDX_Q }, // Analog up
+/**
+ \ingroup devmap
+ \brief Mapping type for event
+ */
+enum map_type {
+    MAP_NONE /** No mapping */,
+    MAP_KEYBOARD /** Map to keyboard */,
+    MAP_JOYSTICK /** Map to joystick */,
+    MAP_NMI /** Map to NMI(USR) key */,
+    MAP_MOUSE /** Map to mouse */
 };
-
-static const devmap_d_t devmap[] = {
-    { 0x0e8f0003 , sizeof(gamepad_devmap)/sizeof(gamepad_devmap[0]), gamepad_devmap }
-};
-*/
-
-
-
-#define DEVMAP_JSON_FILENAME "/config/devmap.jsn"
-#define TAG "Devmap"
 
 static struct {
     const char *name;
@@ -106,7 +49,45 @@ static struct {
     { "mouse", MAP_MOUSE },
 };
 
-            
+
+/**
+ \ingroup devmap
+ \brief Devmap entry linked list entry
+ */
+typedef struct devmap_e {
+    struct devmap_e *next;
+    enum map_type map:8;
+    unsigned index:8;
+    int16_t analog_threshold;
+    unsigned action_value:16;
+} devmap_e_t;
+
+/**
+ \ingroup devmap
+ \brief Devmap device linked list entry
+ */
+typedef struct devmap_d {
+    struct devmap_d *next;
+    uint32_t id;
+    char *manufacturer;
+    char *product;
+    char *serial;
+    uint8_t interfaces[MAX_INTERFACES];
+    devmap_e_t *entries[MAX_INTERFACES];
+} devmap_d_t;
+
+/**
+ \ingroup devmap
+ \brief Root devmap
+ */
+static devmap_d_t *root_devmap;
+
+/**
+ \ingroup devmap
+ \brief Convert a map type to its name
+ \param type The map type
+ \return the map name, or "unknown" if type was not found.
+ */
 static const char *devmap__map_name_from_type(enum map_type type)
 {
     unsigned i;
@@ -118,6 +99,12 @@ static const char *devmap__map_name_from_type(enum map_type type)
     return "unknown";
 }
 
+/**
+ \ingroup devmap
+ \brief Parse a map name into its value
+ \param str The map name
+ \return the map type, or MAP_NONE if type was not found.
+ */
 static enum map_type devmap__parse_map(const char *str)
 {
     unsigned int i;
@@ -129,6 +116,19 @@ static enum map_type devmap__parse_map(const char *str)
     return MAP_NONE;
 }
 
+/**
+ \ingroup devmap
+ \brief Parse a textual usb ID (VVVV:PPPP) into a uint32_t value.
+
+ The vendor part will be placed in the upper 16 bits, while the product part
+ will be in the lower 32-bits.
+
+ Example: converting the id "dead:beef" will return 0xDEADBEEF
+
+ \param str The textual ID
+ \param target_device Pointer to a 32-bit word where the ID will be stored
+ \return 0 if successful, -1 if any parsing error occurred
+ */
 static int devmap__parse_usb_id(const char *str, uint32_t *target_device)
 {
     char hex[5];
@@ -163,6 +163,11 @@ static int devmap__parse_usb_id(const char *str, uint32_t *target_device)
     return 0;
 }
 
+/**
+ \ingroup devmap
+ \brief Free all entries on a devmap entry linked list.
+ \param d the entries linked list
+ */
 static void devmap__free_entries(devmap_e_t *d)
 {
     if (!d)
@@ -174,6 +179,14 @@ static void devmap__free_entries(devmap_e_t *d)
         free(d);
 }
 
+/**
+ \ingroup devmap
+ \brief Free a devmap entry linked list.
+
+ It will free also all entries on the devmap for all interfaces.
+
+ \param d the devmap linked list
+ */
 static void devmap__free_d(devmap_d_t *d)
 {
     if (d->serial)
@@ -189,6 +202,12 @@ static void devmap__free_d(devmap_d_t *d)
     free(d);
 }
 
+/**
+ \ingroup devmap
+ \brief Parse a JSON file into a devmap entry lst
+ \param filename The JSON filename
+ \return A devmap entry linked list, or NULL if any error occurred while parsing
+ */
 static devmap_e_t *devmap__parse_entries(const char *filename)
 {
     devmap_e_t *e_root = NULL, *c;
@@ -233,6 +252,12 @@ static devmap_e_t *devmap__parse_entries(const char *filename)
     return e_root;
 }
 
+/**
+ \ingroup devmap
+ \brief Initalise the devmap.
+
+ It will be loaded from DEVMAP_JSON_FILENAME
+ */
 void devmap__init()
 {
     cJSON *root = json__load_from_file(DEVMAP_JSON_FILENAME);
@@ -379,6 +404,16 @@ static int devmap__save_to_file(const char *filename, const devmap_e_t *devmap)
 }
 #endif
 
+
+/**
+ \ingroup devmap
+ \brief Find devmap device to handle HID device
+
+ Given a particular HID device, find if any devmap device can handle events from it.
+
+ \param dev The HID device
+ \return The devmap device, or NULL if not found
+ */
 static const devmap_d_t *devmap__find(const hid_device_t *dev)
 {
     devmap_d_t *devmap = root_devmap;
@@ -398,6 +433,17 @@ static const devmap_d_t *devmap__find(const hid_device_t *dev)
 }
 
 
+/**
+ \ingroup devmap
+ \brief Get a digital boolean value from a HID field
+
+
+
+ \param field The HID field
+ \param uvalue The HID field value
+ \param analog_threshold the analog threshold, if applicable
+ \return True is the value represents true, false otherwise
+ */
 static bool devmap__get_digital(const struct hid_field *field, uint8_t uvalue, int16_t analog_threshold)
 {
     int32_t value;
@@ -438,6 +484,14 @@ static bool devmap__get_digital(const struct hid_field *field, uint8_t uvalue, i
 }
 
 
+/**
+ \ingroup devmap
+ \brief Trigger action entry for a devmap entry
+
+ \param entry The devmap entry
+ \param field The corresponding HID field definition
+ \param value The field value
+ */
 
 static void devmap__trigger_entry(const devmap_e_t *entry, const struct hid_field* field, uint8_t value)
 {
@@ -472,6 +526,12 @@ static void devmap__trigger_entry(const devmap_e_t *entry, const struct hid_fiel
     }
 }
 
+/**
+ \ingroup devmap
+ \brief HID callback for field changes
+
+ This method is called from within the HID routines whenver a field changes value
+ */
 void hid__field_entry_changed_callback(const hid_device_t *dev, const struct hid_field* field, uint8_t entry_index, uint8_t new_value)
 {
     const devmap_d_t *d = devmap__find(dev);

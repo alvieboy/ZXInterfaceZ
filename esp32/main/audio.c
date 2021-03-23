@@ -1,3 +1,13 @@
+/**
+ * \defgroup audio Audio routines
+ * \brief Audio configuration
+ *
+ * These routines configure the audio subsystem volumes.
+ *
+ * Across all functions, a floating point volume should be between 0.0 and 2.0. The nominal volume is 1.0.
+ * The Balance (left-right) should be between -1.0 (full left) and +1.0 (full right), being 0.0 center.
+ *
+ */
 #include "fpga.h"
 #include "onchip_nvs.h"
 #include <math.h>
@@ -81,7 +91,10 @@ static void audio__balance_to_channel(uint8_t chan,
             );
 }
 
-
+/**
+ * \ingroup audio
+ * \brief Initialise the audio subsystem
+ */
 void audio__init()
 {
     unsigned i;
@@ -100,6 +113,18 @@ void audio__init()
     fpga__set_clear_flags(FPGA_FLAG_ENABLE_AUDIO,0);
 }
 
+/**
+ * \ingroup audio
+ * \brief Set volume and balance for a specific channel (floating point)
+ *
+ * Sets the current volume and balance for a specific channel.
+ *
+ * \param chan The audio channel. See audio channel defines for details
+ * \param volume Volume to be applied. 
+ * \param balance Balance (left-right) to be applied. 
+ *
+ *
+ */
 void audio__set_volume_f(uint8_t chan, float volume, float balance)
 {
     char vol_key[8] = "vol_chX";
@@ -122,6 +147,18 @@ void audio__set_volume_f(uint8_t chan, float volume, float balance)
 
 }
 
+/**
+ * \ingroup audio
+ * \brief Return current volume and balance for a specific channel (floating point)
+ *
+ * Returns the current volume and balance for a specific channel.
+ *
+ * \param chan The audio channel. See audio channel defines for details
+ * \param volume Pointer to variable where volume will be stored
+ * \param balance Pointer to variable where balance will be stored
+ *
+ *
+ */
 void audio__get_volume_f(uint8_t chan, float *volume, float *balance)
 {
     char vol_key[8] = "vol_chX";
