@@ -23,7 +23,7 @@ void usb_ll__interrupt(void);
 int usb_ll__init(void);
 void usb_ll__set_power(int on);
 
-int usb_ll__read_status(uint8_t regs[4]);
+int usb_ll__read_status(uint32_t *);
 /*void usb_ll__device_addressed_callback(struct usb_device_info*);
 void usb_ll__in_completed_callback(uint8_t channel, uint8_t status);
 void usb_ll__out_completed_callback(uint8_t channel, uint8_t status);
@@ -56,7 +56,7 @@ void usb_ll__set_devaddr(uint8_t channel, uint8_t addr);
 
 
 int usb_ll__release_channel(uint8_t channel);
-int usb_ll__read_in_block(uint8_t channel, uint8_t *target, uint8_t *rxlen);
+int usb_ll__read_in_block(uint8_t channel, uint32_t *target, uint8_t *rxlen_bytes);
 void usb_ll__reset(void);
 void usb_ll__dump_info(void);
 #ifdef __linux__

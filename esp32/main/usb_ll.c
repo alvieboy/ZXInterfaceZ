@@ -12,7 +12,7 @@
 #include "byteorder.h"
 #include <string.h>
 #include "log.h"
-
+#include "union_types.h"
 
 #define USBLLTAG "USBLL"
 
@@ -130,7 +130,7 @@ int usb_ll__release_channel(uint8_t channel)
     return 0;
 }
 
-int usb_ll__read_status(uint8_t regs[4])
+int usb_ll__read_status(uint32_t *regs)
 {
     int r = fpga__read_usb_block(USB_REG_STATUS, regs, 4);
     return r;
@@ -201,32 +201,32 @@ static void usb_ll__channel_interrupt(uint8_t channel)
 
 void usb_ll__interrupt()
 {
-    uint8_t regs[4];
+    union u32 regs;
     USBLLDEBUG("USB interrupt");
-    if (usb_ll__read_status(regs)==0) {
+    if (usb_ll__read_status(&regs.w32)==0) {
         USBLLDEBUG(" Status regs %02x %02x %02x %02x",
-                 regs[0],
-                 regs[1],
-                 regs[2],
-                 regs[3]);
+                 regs.w8[0],
+                 regs.w8[1],
+                 regs.w8[2],
+                 regs.w8[3]);
     }
 
 
-    if (regs[1] & USB_INTPEND_CONN) {
-        usb_ll__connected_callback((regs[0] >> 6) & 1);
+    if (regs.w8[1] & USB_INTPEND_CONN) {
+        usb_ll__connected_callback((regs.w8[0] >> 6) & 1);
     }
 
-    if (regs[1] & USB_INTPEND_DISC) {
+    if (regs.w8[1] & USB_INTPEND_DISC) {
         USBLLDEBUG("USB disconnection event");
         usb_ll__disconnected_callback();
     }
 
-    if (regs[1] & USB_INTPEND_OVERCURRENT) {
+    if (regs.w8[1] & USB_INTPEND_OVERCURRENT) {
         USBLLDEBUG("USB overcurrent event");
         usb_ll__overcurrent_callback();
     }
 
-    uint8_t chanint = regs[2];
+    uint8_t chanint = regs.w8[2];
     uint8_t chanidx=0;
     while (chanint) {
         if (chanint&1) {
@@ -236,7 +236,7 @@ void usb_ll__interrupt()
         chanint>>=1;
     }
 
-    fpga__write_usb(USB_REG_INTCLR, regs[1] | USB_INTACK);
+    fpga__write_usb(USB_REG_INTCLR, regs.w8[1] | USB_INTACK);
 
 }
 
@@ -280,22 +280,25 @@ int usb_ll__submit_request(uint8_t channel,
     //channel_conf[channel].memaddr = epmemaddr;
 
     fpga__write_usb_block(USB_REG_CHAN_TRANS1(channel), regconf, 3);
-
+#if 0
     if (DEBUG_ENABLED(DEBUG_ZONE_USBLL)) {
         fpga__read_usb_block(USB_REG_CHAN_TRANS1(channel), regconf, 3);
 
         dump__buffer(regconf, 3);
     }
-
+#endif
     return 0;
 }
 
-int usb_ll__read_in_block(uint8_t channel, uint8_t *target, uint8_t *rxlen)
+int usb_ll__read_in_block(uint8_t channel, uint32_t *target, uint8_t *rxlen)
 {
+    union u32 trans_size_b;
     uint8_t trans_size;
     uint8_t inlen = 0;
 
-    fpga__read_usb_block(USB_REG_CHAN_TRANS3(channel), &trans_size, 1);
+    fpga__read_usb_block(USB_REG_CHAN_TRANS3(channel), &trans_size_b.w32, 1);
+    trans_size = trans_size_b.w8[0];
+
     trans_size &= 0x7F;
     // Read memory address
     if (trans_size>0) {
@@ -313,7 +316,7 @@ int usb_ll__read_in_block(uint8_t channel, uint8_t *target, uint8_t *rxlen)
         fpga__read_usb_block(USB_REG_DATA( channel_conf[channel].memaddr ), target, inlen);
         USBLLDEBUG("Response from device:");
         if (DEBUG_ENABLED(DEBUG_ZONE_USBLL)) {
-            dump__buffer(target,inlen);
+            dump__buffer((uint8_t*)target,inlen);
         }
     }
     *rxlen = inlen;
@@ -354,46 +357,50 @@ void usb_ll__reset()
 
 void usb_ll__dump_info()
 {
-    uint8_t regs[16];
+    union {
+        uint8_t w8[16];
+        uint32_t w32[4];
+    } regs;
     int i;
-    fpga__read_usb_block(USB_REG_STATUS, regs, 16);
+    fpga__read_usb_block(USB_REG_STATUS, &regs.w32[0], 16);
+
     USBLLDEBUG("FPGA register information:");
-    USBLLDEBUG("  Status   : 0x%02x", regs[0]);
-    USBLLDEBUG("  Intpend1 : 0x%02x", regs[1]);
-    USBLLDEBUG("  Intpend2 : 0x%02x", regs[2]);
+    USBLLDEBUG("  Status   : 0x%02x", regs.w8[0]);
+    USBLLDEBUG("  Intpend1 : 0x%02x", regs.w8[1]);
+    USBLLDEBUG("  Intpend2 : 0x%02x", regs.w8[2]);
 
     USBLLDEBUG(" USB debug registers:");
-    USBLLDEBUG("  dbg0   : 0x%02x", regs[3]);
-    USBLLDEBUG("  dbg1   : 0x%02x", regs[4]);
-    USBLLDEBUG("  dbg2   : 0x%02x", regs[5]);
+    USBLLDEBUG("  dbg0   : 0x%02x", regs.w8[3]);
+    USBLLDEBUG("  dbg1   : 0x%02x", regs.w8[4]);
+    USBLLDEBUG("  dbg2   : 0x%02x", regs.w8[5]);
     USBLLDEBUG(" USB counters:");
-    USBLLDEBUG("  ack    : 0x%02x", regs[6]);
-    USBLLDEBUG("  nack   : 0x%02x", regs[7]);
-    USBLLDEBUG("  babble : 0x%02x", regs[8]);
-    USBLLDEBUG("  stall  : 0x%02x", regs[9]);
-    USBLLDEBUG("  crcerr : 0x%02x", regs[10]);
-    USBLLDEBUG("  timeout: 0x%02x", regs[11]);
-    USBLLDEBUG("  errpid : 0x%02x", regs[12]);
-    USBLLDEBUG("  cplt   : 0x%02x", regs[13]);
+    USBLLDEBUG("  ack    : 0x%02x", regs.w8[6]);
+    USBLLDEBUG("  nack   : 0x%02x", regs.w8[7]);
+    USBLLDEBUG("  babble : 0x%02x", regs.w8[8]);
+    USBLLDEBUG("  stall  : 0x%02x", regs.w8[9]);
+    USBLLDEBUG("  crcerr : 0x%02x", regs.w8[10]);
+    USBLLDEBUG("  timeout: 0x%02x", regs.w8[11]);
+    USBLLDEBUG("  errpid : 0x%02x", regs.w8[12]);
+    USBLLDEBUG("  cplt   : 0x%02x", regs.w8[13]);
 
     for (i=0;i<MAX_USB_CHANNELS;i++) {
-        fpga__read_usb_block(USB_REG_CHAN_CONF1(i), regs, 11);
-        if ((regs[2]&0x80)==0) {
+        fpga__read_usb_block(USB_REG_CHAN_CONF1(i), &regs.w32[0], 11);
+        if ((regs.w8[2]&0x80)==0) {
             USBLLDEBUG("  Channel %d: Disabled", i);
         } else {
             USBLLDEBUG("  Channel %d:", i);
-            USBLLDEBUG("    Eptype    : %d", (regs[0]>>6));
-            USBLLDEBUG("    Maxsize   : %d", (regs[0] & 0x1F));
-            USBLLDEBUG("    Ep Num    : %d", (regs[1] & 0x0F));
-            USBLLDEBUG("    Address   : %d", (regs[2] & 0x7F));
-            USBLLDEBUG("    IntConf   : %02x", (regs[3]));
-            USBLLDEBUG("    IntStat   : %02x", (regs[4]));
-            USBLLDEBUG("    Interval  : %d", (regs[5]));
-            USBLLDEBUG("      T Dpid  : %d", (regs[8] & 3));
-            USBLLDEBUG("      T Seq   : %d", ((regs[8] >> 2) & 1));
-            USBLLDEBUG("      T Retr  : %d", ((regs[8] >> 5) & 3));
-            USBLLDEBUG("      T Size  : %d", ((regs[10] & 0x7f)));
-            USBLLDEBUG("      T Cnt   : %d", ((regs[10] >> 7)));
+            USBLLDEBUG("    Eptype    : %d", (regs.w8[0]>>6));
+            USBLLDEBUG("    Maxsize   : %d", (regs.w8[0] & 0x1F));
+            USBLLDEBUG("    Ep Num    : %d", (regs.w8[1] & 0x0F));
+            USBLLDEBUG("    Address   : %d", (regs.w8[2] & 0x7F));
+            USBLLDEBUG("    IntConf   : %02x", (regs.w8[3]));
+            USBLLDEBUG("    IntStat   : %02x", (regs.w8[4]));
+            USBLLDEBUG("    Interval  : %d", (regs.w8[5]));
+            USBLLDEBUG("      T Dpid  : %d", (regs.w8[8] & 3));
+            USBLLDEBUG("      T Seq   : %d", ((regs.w8[8] >> 2) & 1));
+            USBLLDEBUG("      T Retr  : %d", ((regs.w8[8] >> 5) & 3));
+            USBLLDEBUG("      T Size  : %d", ((regs.w8[10] & 0x7f)));
+            USBLLDEBUG("      T Cnt   : %d", ((regs.w8[10] >> 7)));
         }
     }
 }
