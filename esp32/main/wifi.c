@@ -342,7 +342,7 @@ static void wifi__init_softap()
 
     ESP_LOGI(TAG, "Configured WiFi in AP mode");
     ESP_LOGI(TAG, " SSID    : %s", wifi_config.ap.ssid);
-    ESP_LOGI(TAG, " Password: %s", wifi_config.ap.password);
+    // ESP_LOGI(TAG, " Password: %s", wifi_config.ap.password);
     ESP_LOGI(TAG, " Channel : %d", wifi_config.ap.channel);
     ESP_LOGI(TAG, " Max conn: %d", wifi_config.ap.max_connection);
 }
