@@ -309,7 +309,7 @@ static struct {
     int (*handler)(int, char**);
     const char *help;
 } hand[] = {
-    { "vol", &console__volume , "Set audion volume"},
+    { "vol", &console__volume , "Set audio volume"},
     { "usb", &console__usb, "USB commands"},
     { "ulahack", &console__ulahack, "ULA hack settings"},
     { "wifi", &console__wifi, "WiFi configutation"},
