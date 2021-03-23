@@ -184,7 +184,10 @@ out:
 static int usb_hid__transfer_completed(uint8_t channel, uint8_t status, void*userdata)
 {
     struct usb_hid *h = (struct usb_hid*)userdata;
-    uint8_t payload[64];
+    union {
+        uint8_t w8[64];
+        uint32_t w32[16];
+    } payload;
     uint8_t rxlen = sizeof(payload);
 
     if (!h) {
@@ -195,9 +198,9 @@ static int usb_hid__transfer_completed(uint8_t channel, uint8_t status, void*use
 
         HIDDEBUG("got data stat %d", status);
         // Fetch data from ....
-        usb_ll__read_in_block(h->epchan, payload, &rxlen);
+        usb_ll__read_in_block(h->epchan, &payload.w32[0], &rxlen);
         HIDDEBUG("Parsing report");
-        usb_hid__parse_report(h, payload, rxlen);
+        usb_hid__parse_report(h, &payload.w8[0], rxlen);
 
         //HIDDEBUG("Copying data");
         //h->seq = !h->seq;
