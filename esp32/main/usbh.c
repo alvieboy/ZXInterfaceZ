@@ -403,7 +403,10 @@ static int usbh__control_request_completed_reply(uint8_t chan, uint8_t stat, str
             // IN request
             if (req->direction==REQ_DEVICE_TO_HOST) {
                 rxlen = usbh__request_data_remain(req, usb_ll__get_channel_maxsize(req->channel));
-                usb_ll__read_in_block(chan, req->rptr, &rxlen);
+                // At this point we need a 32-bit aligned buffer with 32-bit size.
+                // TODO: check for proper sizing
+                assert(((unsigned)req->rptr&0x3)==0);
+                usb_ll__read_in_block(chan, (uint32_t*)req->rptr, &rxlen);
 
                 req->rptr += rxlen;
                 req->size_transferred += rxlen;
@@ -460,7 +463,10 @@ static int usbh__bulk_request_completed_reply(uint8_t chan, uint8_t stat, struct
         // IN request
         if (req->direction==REQ_DEVICE_TO_HOST) {
             rxlen = usbh__request_data_remain(req, usb_ll__get_channel_maxsize(req->channel));
-            usb_ll__read_in_block(chan, req->rptr, &rxlen);
+            // At this point we need a 32-bit aligned buffer with 32-bit size.
+            // TODO: check for proper sizing
+            assert(((unsigned)req->rptr&0x3)==0);
+            usb_ll__read_in_block(chan, (uint32_t*)req->rptr, &rxlen);
             req->rptr += rxlen;
             req->size_transferred += rxlen;
 
