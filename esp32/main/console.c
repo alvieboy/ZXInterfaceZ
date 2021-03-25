@@ -18,8 +18,9 @@
 #include "scope.h"
 #include "spectctrl.h"
 #include "rom_hook.h"
-char cmd[256];
-uint8_t cmdptr = 0;
+
+static char cmd[256];
+static uint8_t cmdptr = 0;
 static hdlc_encoder_t enc;
 
 #define CTAG "CONSOLE"
