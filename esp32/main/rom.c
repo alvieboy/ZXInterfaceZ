@@ -157,7 +157,7 @@ int rom__load_custom_from_file(const char *file, unsigned address)
 
     ESP_LOGI(TAG, "ROM: loading %ld bytes", st.st_size);
 
-    int r = fpga__write_extram_block_from_file(address, fd, st.st_size, false);
+    int r = fpga__write_extram_block_from_file(address, fd, st.st_size);
 
     close(fd);
 
