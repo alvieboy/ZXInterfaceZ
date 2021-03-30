@@ -170,23 +170,6 @@ static inline u16_8_t getxyscreenstart(uint8_t x, uint8_t y)
     off.l = (y<<5) & 0xE0;
     off.l += x;
     off.h = y & 0x18;
-    //WSYS_LOGI( "Comp %d %d 0x%04x", x,y, off.v);
-    return off;
-    /*GETXYSCREENSTART:
-        LD	A, D
-	RRCA			; multiply
-	RRCA			; by
-	RRCA			; thirty-two.
-	AND	$E0		; mask off low bits to make
-	ADD     A, C
-        LD      L,A
-
-	LD	A,D		; bring back the line to A.
-	AND	$18		; now $00, $08 or $10.
-        OR	$40		; add the base address of screen.
-	LD      H,  A
-        RET
-    */
     return off;
 }
 
