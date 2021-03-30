@@ -77,15 +77,28 @@ typedef uint8_t fpga_status_t;
 #define FPGA_FLAG_ENABLE_AUDIO (1<<15)
 
 
+/**
+ \addtogroup fpga
+ \brief FPGA Triggers
+ @{ */
 
-#define FPGA_FLAG_TRIG_RESOURCEFIFO_RESET (1<<0)
+/** \brief Reset resource FIFO */
+#define FPGA_FLAG_TRIG_RESOURCEFIFO_RESET (1<<0) 
+/** \brief Force regular ROM selection upon RETN detection */
 #define FPGA_FLAG_TRIG_FORCEROMONRETN     (1<<1)
+/** \brief Force ROMCS to ON */
 #define FPGA_FLAG_TRIG_FORCEROMCS_ON      (1<<2)
+/** \brief Force ROMCS to OFF */
 #define FPGA_FLAG_TRIG_FORCEROMCS_OFF     (1<<3)
+/** \brief Acknowledge interrupt */
 #define FPGA_FLAG_TRIG_INTACK             (1<<4)
+/** \brief Reset the command FIFO */
 #define FPGA_FLAG_TRIG_CMDFIFO_RESET      (1<<5)
+/** \brief Force NMI signal ON */
 #define FPGA_FLAG_TRIG_FORCENMI_ON        (1<<6)
+/** \brief Force NMI signal OFF */
 #define FPGA_FLAG_TRIG_FORCENMI_OFF       (1<<7)
+/** @} */
 
 /* UART BIT */
 #define FPGA_UART_STATUS_BUSY (1<<0)
@@ -178,7 +191,7 @@ int fpga__read_extram(uint32_t address);
 int fpga__read_extram_block(uint32_t address, uint32_t *dest, int size_bytes);
 int fpga__write_extram(uint32_t address, uint8_t val);
 int fpga__write_extram_block(uint32_t address, const uint8_t *buffer, int size);
-int fpga__write_extram_block_from_file(uint32_t address, int fd, int size, bool verify);
+int fpga__write_extram_block_from_file(uint32_t address, int fd, int size);
 int fpga__read_extram_block_into_file(uint32_t address, int fd, int size, uint8_t *checksum);
 
 
