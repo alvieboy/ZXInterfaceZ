@@ -5,21 +5,27 @@
 extern "C" {
 #endif
 
-/* Similar to Kempston sequence  000FUDLR */
+/**
+ * \ingroup joystick
+ * \brief Joystick actions
+ *
+ * Similar to Kempston sequence  f00FUDLR
+ *
+ */
 typedef enum {
-    JOY_RIGHT,
-    JOY_LEFT,
-    JOY_DOWN,
-    JOY_UP,
-    JOY_FIRE1,
-    JOY_FIRE2,
-    JOY_FIRE3,
-    JOY_NONE
+    JOY_RIGHT /** Joystick right */,
+    JOY_LEFT /** Joystick left */,
+    JOY_DOWN /** Joystick down */,
+    JOY_UP /** Joystick up */,
+    JOY_FIRE1 /** Joystick fire button 1 */,
+    JOY_FIRE2 /** Joystick fire button 2 */,
+    JOY_FIRE3 /** Joystick fire button 3 */,
+    JOY_NONE  /** No event */
 } __attribute__((packed)) joy_action_t;
 
-int joystick__get_action_by_name(const char *name);
-void joystick__press(int);
-void joystick__release(int);
+joy_action_t joystick__get_action_by_name(const char *name);
+void joystick__press(joy_action_t);
+void joystick__release(joy_action_t);
 
 #ifdef __cplusplus
 }

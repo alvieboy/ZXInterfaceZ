@@ -2,6 +2,11 @@
 #include "kempston.h"
 #include <string.h>
 
+/**
+ * \defgroup joystick
+ * \brief Joystick routines
+ */
+
 static const struct {
     const char *name;
     joy_action_t action;
@@ -15,22 +20,37 @@ static const struct {
     { "fire3", JOY_FIRE3 }
 };
 
-int joystick__get_action_by_name(const char *name)
+/**
+ * \ingroup joystick
+ * \brief Get a joystick action value by name
+ *
+ * \param name The action name
+ * \return the action, or JOY_NONE if action not found
+ */
+joy_action_t joystick__get_action_by_name(const char *name)
 {
     unsigned i;
     for(i=0;i<sizeof(joystick_actions)/sizeof(joystick_actions[0]); i++) {
         if (strcmp(name, joystick_actions[i].name)==0)
             return (int)joystick_actions[i].action;
     }
-    return -1;
+    return JOY_NONE;
 }
 
-void joystick__press(int v)
+/**
+ * \ingroup joystick
+ * \brief Activate a joystick movement
+ */
+void joystick__press(joy_action_t v)
 {
-    kempston__set_joystick( (joy_action_t)v, true );
+    kempston__set_joystick(v, true );
 }
 
-void joystick__release(int v)
+/**
+ * \ingroup joystick
+ * \brief Deactivate a joystick movement
+ */
+void joystick__release(joy_action_t v)
 {
-    kempston__set_joystick( (joy_action_t)v, false );
+    kempston__set_joystick(v, false );
 }
