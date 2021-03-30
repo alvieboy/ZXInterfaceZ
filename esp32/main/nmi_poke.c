@@ -1,3 +1,7 @@
+/**
+ * \defgroup poke
+ * \brief POKE handling
+ */
 #include "nmi_poke.h"
 #include "esp_log.h"
 #include "sna_defs.h"
@@ -8,11 +12,19 @@
 
 #define STORE(x) npoke->pokebuf[npoke->pokeidx++] = x
 
+/**
+ * \ingroup poke
+ * \brief Initialise a new "poker"
+ */
 void nmi_poke__init(nmi_handler_poke_t *npoke)
 {
     npoke->pokeidx = 0;
 }
 
+/**
+ * \ingroup poke
+ * \brief Check if a certain address is stored inside the NMI save buffer
+ */
 static bool nmi_poke__is_saved_address(uint8_t bank, uint16_t addr)
 {
     // Addresses 0x4000 -> 0x5FFF are saved inside NMI save buffer.
@@ -23,6 +35,11 @@ static bool nmi_poke__is_saved_address(uint8_t bank, uint16_t addr)
     }
     return false;
 }
+
+/**
+ * \ingroup poke
+ * \brief Callback implementation. Apply a specific poke to memory
+ */
 
 int nmi_poke__mem_write_fun(void *user, uint8_t bank, uint16_t address, uint8_t value)
 {
@@ -48,6 +65,11 @@ int nmi_poke__mem_write_fun(void *user, uint8_t bank, uint16_t address, uint8_t 
     STORE(value & 0xFF);            // LD (HL), xx
     return 0;
 }
+
+/**
+ * \ingroup poke
+ * \brief Finish poke, and ask ZX Spectrum to execute poke routine
+ */
 
 int nmi_poke__finish(nmi_handler_poke_t *npoke)
 {

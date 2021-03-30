@@ -2,6 +2,15 @@
 #include "usb_hid.h"
 #include <stdlib.h>
 
+/**
+ * \defgroup hid HID
+ * \brief HID (Human Interface Device) routines
+ */
+
+/**
+ * \ingroup hid
+ * \brief Get the device ID from a hid device
+ */
 uint32_t hid__get_id(const hid_device_t *hiddev)
 {
     if (hiddev->bus==HID_BUS_USB) {
@@ -10,6 +19,10 @@ uint32_t hid__get_id(const hid_device_t *hiddev)
     return 0;
 }
 
+/**
+ * \ingroup hid
+ * \brief Get the serial ID from a hid device
+ */
 const char *hid__get_serial(const hid_device_t *hiddev)
 {
     if (hiddev->bus==HID_BUS_USB) {
@@ -18,6 +31,10 @@ const char *hid__get_serial(const hid_device_t *hiddev)
     return NULL;
 }
 
+/**
+ * \ingroup hid
+ * \brief Get the interface from a hid device
+ */
 int hid__get_interface(const hid_device_t *hiddev)
 {
     if (hiddev->bus==HID_BUS_USB) {
@@ -30,8 +47,13 @@ int hid__get_interface(const hid_device_t *hiddev)
 void hid__get_devices(hid_device_t *devices, unsigned *num, unsigned max)
 {
     (*num) = 0;
-
 }
+
+
+/**
+ * \ingroup hid
+ * \brief Get the driver name for the HID device
+ */
 const char* hid__get_driver_name(const hid_device_t*hiddev)
 {
     if (hiddev->bus==HID_BUS_USB) {
@@ -40,6 +62,10 @@ const char* hid__get_driver_name(const hid_device_t*hiddev)
     return NULL;
 }
 
+/**
+ * \ingroup hid
+ * \brief Check if the HID device supports sending multiple reports
+ */
 bool hid__has_multiple_reports(struct hid *h)
 {
     if (h->reports && h->reports->next!=NULL)
@@ -47,6 +73,10 @@ bool hid__has_multiple_reports(struct hid *h)
     return false;
 
 }
+/**
+ * \ingroup hid
+ * \brief Get the number of reports a HID device can send
+ */
 int hid__number_of_reports(struct hid *h)
 {
     hid_report_t * report = h->reports;
@@ -60,6 +90,10 @@ int hid__number_of_reports(struct hid *h)
     return count;
 }
 
+/**
+ * \ingroup hid
+ * \brief Find a HID report by its ID
+ */
 hid_report_t *hid__find_report_by_id(struct hid *h, uint8_t report_id, uint8_t *report_index_out)
 {
     int idx = 0;

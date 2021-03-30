@@ -1,3 +1,18 @@
+/**
+ * \defgroup fasttap Fast TAP
+ * \brief Fast TAP loading routines
+ *
+ * The Fast TAP infrastructure uses objects to handle Fast TAP loading, depending on the file type.
+ *
+ * There are currently three Fast TAP implementations:
+ *
+ * - fasttap_tap
+ * - fasttap_tzx
+ * - fasttap_scr
+ *
+ * Each of them is implemented in a separate file for better organization.
+ *
+ */
 #include "fasttap.h"
 #include "esp_log.h"
 #include "fileaccess.h"
@@ -15,15 +30,30 @@
 #define FASTTAP "FASTTAP"
 
 static int8_t hooks[3] = {-1};
-
 static fasttap_t *fasttap_instance = NULL;
 
+/**
+ * \ingroup fasttap
+ * \brief
+ */
+
+/**
+ * \ingroup fasttap
+ * \brief Inititalise the Fast TAP subsystem
+ */
 void fasttap__init()
 {
     hooks[0] = -1;
     hooks[1] = -1;
     hooks[2] = -1;
 }
+
+/**
+ * \ingroup fasttap
+ * \brief Install Fast TAP hooks for a particular model
+ * \param model The ZX Spectrum model
+ * \return 0 if successful
+ */
 
 int fasttap__install_hooks(model_t model)
 {
@@ -55,6 +85,11 @@ int fasttap__install_hooks(model_t model)
     return 0;
 }
 
+/**
+ * \ingroup fasttap
+ * \brief Remove Fast TAP hooks
+ */
+
 static void fasttap__remove_hooks()
 {
     int i;
@@ -63,6 +98,13 @@ static void fasttap__remove_hooks()
         hooks[i] = -1;
     }
 }
+
+/**
+ * \ingroup fasttap
+ * \brief Allocate a new Fast TAP for a specified file extension
+ * \param ext The file extension ("tap", "tzx" or "scr")
+ * \return pointer to the new Fast TAP object, or NULL if any error
+ */
 
 static fasttap_t *fasttap__allocate(const char *ext)
 {
@@ -81,13 +123,11 @@ static fasttap_t *fasttap__allocate(const char *ext)
     return NULL;
 }
 
-/*static int fasttap__prepare_tap();
-static int fasttap__prepare_tzx();
-static int fasttap__prepare_scr();
-static int fasttap__load_next_block_tzx();
-static int fasttap__load_next_block_scr();
-*/
 
+/**
+ * \ingroup fasttap
+ * \brief Destroy the previous Fast TAP object.
+ */
 static void fasttap__destroy_previous()
 {
     if (fasttap_instance) {
@@ -97,6 +137,13 @@ static void fasttap__destroy_previous()
         fasttap_instance = NULL;
     }
 }
+
+/**
+ * \ingroup fasttap
+ * \brief Prepare Fast TAP loading from a specified file
+ * \param filename The file to load
+ * \return 0 if successful
+ */
 
 int fasttap__prepare(const char *filename)
 {
@@ -142,6 +189,13 @@ int fasttap__prepare(const char *filename)
 
 }
 
+/**
+ * \ingroup fasttap
+ * \brief Check if we reached EOF on a particular fasttap
+ * \param fasttap The FastTAP object
+ * \return true if at EOF, false otherwise
+ */
+
 bool fasttap__is_file_eof(fasttap_t *fasttap)
 {
     unsigned pos = (unsigned)lseek(fasttap->fd, 0, SEEK_CUR);
@@ -152,6 +206,12 @@ bool fasttap__is_file_eof(fasttap_t *fasttap)
     return true;
 }
 
+/**
+ * \ingroup fasttap
+ * \brief Check if we have finished playing a particular fasttap
+ * \param fasttap The FastTAP object
+ * \return true if we finished playing, false otherwise
+ */
 static bool fasttap__file_finished()
 {
     if (fasttap_instance==NULL)
@@ -160,6 +220,11 @@ static bool fasttap__file_finished()
     return fasttap_instance->ops->finished(fasttap_instance);
 }
 
+/**
+ * \ingroup fasttap
+ * \brief Check if we are playing any Fast TAP
+ * \return true if we are playing, false otherwise
+ */
 bool fasttap__is_playing(void)
 {
     if (fasttap_instance==NULL)
@@ -168,6 +233,13 @@ bool fasttap__is_playing(void)
 }
 
 
+/**
+ * \ingroup fasttap
+ * \brief Load next block for current fast TAP
+ * \param type Type of block expected by Spectrum
+ * \param len Length of block requested by Spectrum
+ * \return 0 if loaded successfully
+ */
 int fasttap__next(uint8_t type, uint16_t len)
 {
     if (fasttap_instance==NULL)
@@ -182,6 +254,10 @@ int fasttap__next(uint8_t type, uint16_t len)
     return r;
 }
 
+/**
+ * \ingroup fasttap
+ * \brief Stop the current Fast TAP
+ */
 void fasttap__stop()
 {
     if (fasttap_instance==NULL)

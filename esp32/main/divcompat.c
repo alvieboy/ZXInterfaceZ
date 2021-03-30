@@ -16,6 +16,12 @@ from 1FF8h-1FFFh, referred to as the 'off-area'.
 
 */
 
+/**
+ \ingroup divmmc
+ \brief Enable DivMMC compatibility
+ \param rom ROM number where to enable compatibility
+ \return 0 if successful.
+ */
 int divcompat__enable(uint8_t rom)
 {
 #define DIVCHECK if (divhooks[i]<0) break; i++
@@ -48,6 +54,11 @@ int divcompat__enable(uint8_t rom)
     divcompat__disable();
     return -1;
 }
+
+/**
+ \ingroup divmmc
+ \brief Disable DivMMC compatibility
+ */
 
 void divcompat__disable()
 {

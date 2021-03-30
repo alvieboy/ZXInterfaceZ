@@ -6,6 +6,9 @@ extern "C" {
 #include "esp_log.h"
 };
 
+/**
+ * \brief Resize and move widget
+ */
 void Widget::resize(uint8_t x, uint8_t y, uint8_t w, uint8_t h)
 {
     m_x = x;
@@ -15,6 +18,9 @@ void Widget::resize(uint8_t x, uint8_t y, uint8_t w, uint8_t h)
     recalculateScreenPointers();
 }
 
+/**
+ * \brief Resize widget
+ */
 void Widget::resize(uint8_t w, uint8_t h)
 {
     m_w = w;
@@ -22,6 +28,9 @@ void Widget::resize(uint8_t w, uint8_t h)
     recalculateScreenPointers();
 }
 
+/**
+ * \brief Move widget
+ */
 void Widget::move(uint8_t x, uint8_t y)
 {
     m_x = x;
@@ -29,6 +38,9 @@ void Widget::move(uint8_t x, uint8_t y)
     recalculateScreenPointers();
 }
 
+/**
+ * \brief Draw widget
+ */
 void Widget::draw(bool force)
 {
     if (isVisible()) {
@@ -48,6 +60,9 @@ void Widget::recalculateScreenPointers()
 #endif
 }
 
+/**
+ * \brief Handle event.
+ */
 bool Widget::handleEvent(wsys_input_event_t evt)
 {
     return false;
@@ -60,7 +75,6 @@ Widget::~Widget()
 
 void Widget::removeChild(Widget*)
 {
-
 }
 
 Widget::Widget(Widget *parent): m_parent(parent)
@@ -79,6 +93,10 @@ Widget::Widget(Widget *parent): m_parent(parent)
     redraw();
 }
 
+/**
+ * \brief Set widget damage
+ */
+
 void Widget::setdamage(uint8_t mask)
 {
     m_damage |= mask;
@@ -92,15 +110,32 @@ void Widget::setdamage(uint8_t mask)
 }
 
 
+/**
+ * \brief Clear the specified damage from widget
+ */
+
 void Widget::clear_damage(uint8_t mask)
 {
     m_damage &= ~mask;
 }
 
+/**
+ * \brief Clear all damage from widget
+ */
 void Widget::clear_damage()
 {
     m_damage = 0;
 }
+
+/**
+ * \brief Clear the specified screen area rectangle (bitmap only)
+ *
+ * Attributes are not affected.
+ *
+ * \param start Where to start clearing.
+ * \param len_chars Width (lenght in chars) of the area to clea
+ * \param num_lines Number of lines (pixel lines) to clear
+ */
 
 void Widget::clearLines(screenptr_t start, unsigned len_chars, unsigned num_lines)
 {

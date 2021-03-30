@@ -8,6 +8,10 @@ typedef enum {
     LED2
 } led_t;
 
+/**
+ * \ingroup misc
+ * \brief Set board LED status
+ */
 void led__set(led_t led, uint8_t on);
 
 #endif

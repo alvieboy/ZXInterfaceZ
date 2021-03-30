@@ -4,6 +4,7 @@
 #include "esp_attr.h"
 #include "fpga.h"
 
+
 #define TAG "TAG-SCR"
 // Keep this in RAM to use DMA for SPI transfer
 
@@ -32,6 +33,11 @@ static struct fasttap_ops fasttap_scr_ops = {
     .finished = &fasttap__is_file_eof
 };
 
+/**
+ * \ingroup fasttap
+ * \brief Allocate a new SCR Fast TAP
+ * \return The newly allocated Fast TAP, or NULL if some error ocurred
+ */
 fasttap_t *fasttap_scr__allocate(void)
 {
     struct fasttap_scr *self = (struct fasttap_scr*)malloc(sizeof(struct fasttap_scr));
@@ -77,7 +83,7 @@ static int fasttap_scr__next(fasttap_t *fasttap, uint8_t requested_type, uint16_
     case 1:
         /* Data */
         len = 6912;
-        r = fpga__write_extram_block_from_file(FASTTAP_ADDRESS_DATA, fasttap->fd, len, false);
+        r = fpga__write_extram_block_from_file(FASTTAP_ADDRESS_DATA, fasttap->fd, len);
         fpga__write_extram_block(FASTTAP_ADDRESS_LENLSB, (uint8_t*)&len, 2);
         self->scr_chunk++;
         fasttap__stop();

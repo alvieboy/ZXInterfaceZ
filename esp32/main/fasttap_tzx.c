@@ -32,6 +32,11 @@ static struct fasttap_ops fasttap_tzx_ops = {
     .finished = &fasttap__is_file_eof
 };
 
+/**
+ * \ingroup fasttap
+ * \brief Allocate a new TZX Fast TAP
+ * \return The newly allocated Fast TAP, or NULL if some error ocurred
+ */
 fasttap_t *fasttap_tzx__allocate(void)
 {
     struct fasttap_tzx *self = (struct fasttap_tzx*)malloc(sizeof(struct fasttap_tzx));

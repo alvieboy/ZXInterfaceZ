@@ -7,9 +7,13 @@ extern "C" {
 
 #include <stdbool.h>
 
+/**
+ * \ingroup model
+ * \brief ZX Spectrum models
+ */
 typedef enum {
-    MODEL_UNKNOWN,
-    MODEL_16K,
+    MODEL_UNKNOWN /** Unknown model */,
+    MODEL_16K ,
     MODEL_48K,
     MODEL_128K,
     MODEL_2APLUS,

@@ -1,9 +1,17 @@
+/**
+ * \defgroup kempston
+ * \brief Kempston interfaces
+ */
 #include "kempston.h"
 #include "fpga.h"
 #include "log.h"
 
 static uint32_t kempston_regs = 0x000000;
 
+/**
+ * \ingroup kempston
+ * \brief Intialise the kempston interfaces
+ */
 void kempston__init()
 {
     kempston_regs = 0x000000;
@@ -13,6 +21,10 @@ void kempston__init()
     fpga__set_config1_bits(CONFIG1_JOY_ENABLE);
 }
 
+/**
+ * \ingroup kempston
+ * \brief Set the Kempston mouse values
+ */
 void kempston__set_mouse(uint8_t x, uint8_t y, uint8_t button1, uint8_t button2)
 {
     uint32_t newval = kempston_regs;
@@ -28,6 +40,10 @@ void kempston__set_mouse(uint8_t x, uint8_t y, uint8_t button1, uint8_t button2)
     fpga__set_register(REG_KEMPSTON, kempston_regs);
 }
 
+/**
+ * \ingroup kempston
+ * \brief Set the Kempston joystick raw value, as read from Spectum port $1F
+ */
 void kempston__set_joystick_raw(uint8_t val)
 {
     uint32_t newval = kempston_regs;
@@ -40,6 +56,10 @@ void kempston__set_joystick_raw(uint8_t val)
     fpga__set_register(REG_KEMPSTON, kempston_regs);
 }
 
+/**
+ * \ingroup kempston
+ * \brief Set the Kempston joystick axix/button
+ */
 void kempston__set_joystick(joy_action_t axis, bool on)
 {
     uint32_t newval = kempston_regs;

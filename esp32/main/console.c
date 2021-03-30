@@ -1,3 +1,7 @@
+/**
+ * \defgroup console Console commands
+ * \brief Console command handler
+ */
 #include "console.h"
 #include <string.h>
 #include <inttypes.h>
@@ -32,7 +36,10 @@ static void console__hdlc_write(void *user, uint8_t val)
         vTaskDelay(20 / portTICK_RATE_MS);
     }
 }
-
+/**
+ * \ingroup console
+ * \brief Initialise the console subsystem
+ */
 void console__init(void)
 {
     hdlc_encoder__init(&enc, &console__hdlc_write, NULL, NULL);
@@ -136,6 +143,10 @@ void console__hdlc_data(const uint8_t *d, unsigned len)
 
 }
 
+/**
+ * \ingroup console
+ * \brief Handle console command "volume"
+ */
 static int console__volume(int argc, char **argv)
 {
     int chan;
@@ -179,6 +190,11 @@ static int console__volume(int argc, char **argv)
     return 0;
 }
 
+
+/**
+ * \ingroup console
+ * \brief Handle console command "usb"
+ */
 static int console__usb(int argc, char **argv)
 {
     if (argc<1) {
@@ -199,6 +215,10 @@ static int console__usb(int argc, char **argv)
     return 0;
 }
 
+/**
+ * \ingroup console
+ * \brief Handle console command "ulahack"
+ */
 static int console__ulahack(int argc, char **argv)
 {
     if (argc<1) {
@@ -217,6 +237,10 @@ static int console__ulahack(int argc, char **argv)
     return 0;
 }
 
+/**
+ * \ingroup console
+ * \brief Handle console command "wifi"
+ */
 static int console__wifi(int argc, char **argv)
 {
     const char *ssid = NULL;
@@ -260,6 +284,10 @@ static int console__wifi(int argc, char **argv)
 }
 
 
+/**
+ * \ingroup console
+ * \brief Handle console command "loadrom"
+ */
 static int console__loadrom(int argc, char **argv)
 {
     if (argc<1) {
@@ -279,6 +307,10 @@ static int console__loadrom(int argc, char **argv)
     return 0;
 }
 
+/**
+ * \ingroup console
+ * \brief Handle console command "reset"
+ */
 static int console__reset(int argc, char **argv)
 {
     if (argc>0) {
@@ -291,6 +323,11 @@ static int console__reset(int argc, char **argv)
     spectctrl__reset();
     return 0;
 }
+
+/**
+ * \ingroup console
+ * \brief Handle console command "debug"
+ */
 static int console__debug(int argc, char **argv)
 {
     ESP_LOGI(CTAG, "Enabling ALL debug");
@@ -298,6 +335,10 @@ static int console__debug(int argc, char **argv)
     return 0;
 }
 
+/**
+ * \ingroup console
+ * \brief Handle console command "info"
+ */
 static int console__info(int argc, char **argv)
 {
     ESP_LOGI(CTAG, "Memory hook configuration: ");
@@ -309,7 +350,7 @@ static struct {
     const char *cmd;
     int (*handler)(int, char**);
     const char *help;
-} hand[] = {
+} command_handlers[] = {
     { "vol", &console__volume , "Set audio volume"},
     { "usb", &console__usb, "USB commands"},
     { "ulahack", &console__ulahack, "ULA hack settings"},
@@ -322,6 +363,10 @@ static struct {
 
 static int console__parse_string(char *cmd);
 
+/**
+ * \ingroup console
+ * \brief Handle a console char
+ */
 void console__char(char c)
 {
     if (c==0x0d || c==0x0a) {
@@ -339,6 +384,10 @@ void console__char(char c)
     }
 }
 
+/**
+ * \ingroup console
+ * \brief Parse and execute a console line 
+ */
 static int console__parse_string(char *cmd)
 {
 #define MAX_TOKS 8
@@ -355,9 +404,9 @@ static int console__parse_string(char *cmd)
 
     unsigned i;
 
-    for (i=0; i<sizeof(hand)/sizeof(hand[0]); i++) {
-        if (strcmp(hand[i].cmd, toks[0])==0) {
-            int r = hand[i].handler(tokidx-1, &toks[1] );
+    for (i=0; i<sizeof(command_handlers)/sizeof(command_handlers[0]); i++) {
+        if (strcmp(command_handlers[i].cmd, toks[0])==0) {
+            int r = command_handlers[i].handler(tokidx-1, &toks[1] );
             return r;
         }
     }

@@ -21,17 +21,33 @@ static inline void object__release(struct object *obj)
     }
 }
 
+/**
+ * \ingroup object
+ * \brief "Put" object after usage
+ */
 static inline void object__put(struct object *obj)
 {
     if (__sync_sub_and_fetch(&obj->refcnt,1)==1)
         object__release(obj);
 }
 
+/**
+ * \ingroup object
+ * \brief "Get" object before use
+ */
+
 static inline struct object *object__get(struct object *obj)
 {
     obj->refcnt++;
     return obj;
 }
+
+/**
+ * \ingroup object
+ * \brief Initialise a new object.
+ *
+ * This should not be called directly. object__alloc will initialise the object.
+ */
 
 static inline void object__init(struct object *obj, const struct object_ops *ops)
 {

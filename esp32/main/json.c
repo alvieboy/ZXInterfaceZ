@@ -1,3 +1,8 @@
+/**
+ * \ingroup mics
+ * \defgroup json
+ * \brief JSON helper routines
+ */
 #include "json.h"
 #include "fileaccess.h"
 #include <fcntl.h>
@@ -6,6 +11,10 @@
 #include <arpa/inet.h>
 #include <limits.h>
 
+/**
+ * \ingroup json
+ * \brief Load a JSON document from file
+ */
 cJSON *json__load_from_file(const char *filename)
 {
     cJSON *root = NULL;
@@ -36,6 +45,10 @@ cJSON *json__load_from_file(const char *filename)
     return root;
 }
 
+/**
+ * \ingroup json
+ * \brief Get a string from a JSON subnode with the specified name
+ */
 const char *json__get_string(cJSON*node, const char*name)
 {
     cJSON *n = cJSON_GetObjectItemCaseSensitive(node, name);
@@ -45,6 +58,10 @@ const char *json__get_string(cJSON*node, const char*name)
     return NULL;
 }
 
+/**
+ * \ingroup json
+ * \brief Allocate and get a string from a JSON subnode with the specified name
+ */
 char *json__get_string_alloc(cJSON*node, const char *name)
 {
     const char *s = json__get_string(node,name);
@@ -53,6 +70,10 @@ char *json__get_string_alloc(cJSON*node, const char *name)
     return strdup(s);
 }
 
+/**
+ * \ingroup json
+ * \brief Get an IP address from a JSON subnode with the specified name
+ */
 int json__get_ip(cJSON*node, const char *name, ip4_addr_t *addr)
 {
     const char *ips  = json__get_string(node,name);
@@ -62,6 +83,11 @@ int json__get_ip(cJSON*node, const char *name, ip4_addr_t *addr)
     return ip4addr_aton(ips,addr);
 }
 
+/**
+ * \ingroup json
+ * \brief Get an integer from a JSON subnode with the specified name,
+ * returning the default value if it is not found
+ */
 int json__get_integer_default(cJSON*node, const char*name, int def)
 {
     cJSON *n = cJSON_GetObjectItemCaseSensitive(node, name);
@@ -70,11 +96,21 @@ int json__get_integer_default(cJSON*node, const char*name, int def)
     }
     return def;
 }
+
+/**
+ * \ingroup json
+ * \brief Get an integer from a JSON subnode with the specified name,
+ * returning INT_MIN if it is not found
+ */
 int json__get_integer(cJSON*node, const char*name)
 {
     return json__get_integer_default(node, name, INT_MIN);
 }
 
+/**
+ * \ingroup json
+ * \brief Get the key name for a specified node
+ */
 const char *json__get_key(cJSON*node)
 {
     return node->string;

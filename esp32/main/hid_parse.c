@@ -528,6 +528,10 @@ int hid__extract_field_aligned(const hid_field_t *field, uint8_t index, const ui
 }
 
 
+/**
+ * \ingroup hid
+ * \brief Parse a HID descritor block
+ */
 struct hid * hid__parse(const uint8_t *hiddesc, int len)
 {
     struct hid *h = zalloc(sizeof(struct hid));

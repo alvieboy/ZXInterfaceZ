@@ -1,3 +1,23 @@
+/**
+ \defgroup file File
+ \brief File operations
+
+ In order to support running in host mode, the usual POSIX functions should not be used for file
+ access.
+ A few wrapper functions are provided here to handle host and normal runtime mode.
+
+ The following functions should be used:
+
+ - __chdir (instead of chdir)
+ - __opendir (instead of opendir)
+ - __readdir (instead of readdir)
+ - __open (instead of open)
+ - __fopen (instead of fopen)
+ - __lstat (instead of lopen)
+ - __getcwd (instead of getcwd)
+
+*/
+
 #include <string.h>
 #include "esp_log.h"
 #include "defs.h"
@@ -153,11 +173,26 @@ int __lstat(const char *path, struct stat *st)
     return r;
 }
 
+/**
+ * \ingroup file
+ * \brief Get the current working directory as a const value
+ */
 const char *__getcwd_const()
 {
     init_cwd();
     return cwd;
 }
+
+/**
+ * \ingroup file
+ * \brief Get the current working directory.
+ *
+ * The directory name will be null-terminated.
+ *
+ * \param dest buffer where to place the directory name
+ * \param maxlen maximum size of the buffer.
+ * \return a pointer to dest.
+ */
 
 char *__getcwd(char *dest, int maxlen)
 {
@@ -165,6 +200,15 @@ char *__getcwd(char *dest, int maxlen)
     strlcpy(dest, cwd, maxlen);
     return dest;
 }
+
+/**
+ * \ingroup file
+ * \brief Compute the full path for a file, i.e., prepend the current directory
+ * \param name The file name
+ * \param dest Buffer where to place the full path of the file
+ * \param maxlen maximum size of the buffer
+ * \return pointer to the filename in the buffer
+ */
 
 char *fullpath(const char *name, char *dest, int maxlen)
 {
@@ -203,6 +247,10 @@ char *fullpath(const char *name, char *dest, int maxlen)
 }
 
 
+/**
+ * \ingroup file
+ * \brief Register a new mountpoint
+ */
 void register_mountpoint(const char *path)
 {
     int current = system_mountpoints.count;
@@ -210,6 +258,10 @@ void register_mountpoint(const char *path)
     system_mountpoints.count++;
 }
 
+/**
+ * \ingroup file
+ * \brief Unregister a mountpoint
+ */
 void unregister_mountpoint(const char *path)
 {
     int i;
@@ -225,7 +277,10 @@ void unregister_mountpoint(const char *path)
     }
 }
 
-
+/**
+ * \ingroup file
+ * \brief Return a list of system mountpoints
+ */
 const struct mountpoints *__get_mountpoints()
 {
     return &system_mountpoints;
@@ -266,6 +321,10 @@ filetype_t file_type(const char *filename)
     return TYPE_FILE;
 }
 
+/**
+ * \ingroup file
+ * \brief Read a directory contents, skipping all entries which start with a dot.
+ */
 struct dirent *__readdir(DIR*dir)
 {
     struct dirent *d;
@@ -276,6 +335,14 @@ struct dirent *__readdir(DIR*dir)
     } while ( (d->d_type==DT_DIR) && (d->d_name[0]=='.'));
     return d;
 }
+
+/**
+ * \ingroup file
+ * \brief Read the full contents of a file into a newly allocated memory area
+ * \param filename The file to be read
+ * \param size pointer to size information, which will be filled with the file size
+ * \return The newly allocated area with the file contents
+ */
 
 void *readfile(const char *filename, int *size)
 {

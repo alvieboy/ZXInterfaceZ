@@ -85,6 +85,10 @@ static const char *hid_usage_table_find(const uint8_t *idxtable, unsigned idxtab
     return strtable[0];
 }
 
+/**
+ * \ingroup hid
+ * \brief Find usage name 
+ */
 const char *hid_usage_find(uint16_t usage)
 {
     uint8_t page = usage>>8;

@@ -59,7 +59,6 @@ int __lstat(const char *path, struct stat *st);
 void *readfile(const char *path, int *size);
 FILE *__fopen(const char *path, const char *mode);
 
-
 const struct mountpoints *__get_mountpoints(void);
 void register_mountpoint(const char *path);
 void unregister_mountpoint(const char *path);

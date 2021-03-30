@@ -1,3 +1,7 @@
+/**
+ * \defgroup keyboard
+ * \brief ZX Spectrum keyboard interfacing
+ */
 #include <inttypes.h>
 #include "fpga.h"
 #include "keyboard.h"
@@ -5,6 +9,10 @@
 
 static uint64_t keys = 0;
 
+/**
+ * \ingroup keyboard
+ * \brief Initialise the keyboard subsystem
+ */
 void keyboard__init(void)
 {
     keys = 0;
@@ -23,6 +31,10 @@ static void keyboard__update(void)
     fpga__set_register(REG_KEYB2_DATA, (keys>>32) & 0xFFFFFFFF);
 }
 
+/**
+ * \ingroup keyboard
+ * \brief Press a key on the keyboard. 
+ */
 void keyboard__press(uint8_t key)
 {
     if (key>39)
@@ -32,6 +44,10 @@ void keyboard__press(uint8_t key)
     keyboard__update();
 }
 
+/**
+ * \ingroup keyboard
+ * \brief Release a key on the keyboard.
+ */
 void keyboard__release(uint8_t key)
 {
     if (key>39)
@@ -87,6 +103,10 @@ static struct  {
     { "b", SPECT_KEYIDX_B }
 };
 
+/**
+ * \ingroup keyboard
+ * \brief Get the key identifier by name
+ */
 uint8_t keyboard__get_key_by_name(const char *name)
 {
     unsigned i;
@@ -97,6 +117,11 @@ uint8_t keyboard__get_key_by_name(const char *name)
     }
     return SPECT_KEYIDX_UNKNOWN;
 }
+
+/**
+ * \ingroup keyboard
+ * \brief Get the name for a particular key
+ */
 const char *keyboard__get_name_by_key(const uint8_t key)
 {
     unsigned i;

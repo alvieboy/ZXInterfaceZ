@@ -15,7 +15,10 @@
 
 #include "core.h"
 #include <cassert>
-
+/**
+ * \ingroup wsyswidget
+ * \brief Base class for all widget types
+ */
 class Widget: public WSYSObject
 {
 public:

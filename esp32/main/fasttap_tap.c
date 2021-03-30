@@ -19,6 +19,11 @@ static struct fasttap_ops fasttap_tap_ops = {
     .finished = &fasttap__is_file_eof
 };
 
+/**
+ * \ingroup fasttap
+ * \brief Allocate a new TAP Fast TAP
+ * \return The newly allocated Fast TAP, or NULL if some error ocurred
+ */
 fasttap_t *fasttap_tap__allocate(void)
 {
     fasttap_t *self = (fasttap_t*)malloc(sizeof(fasttap_t));
@@ -65,7 +70,7 @@ static int fasttap_tap__next(fasttap_t *fasttap, uint8_t requested_type, uint16_
 
     len -= 1; // Skip type
 
-    int r = fpga__write_extram_block_from_file(FASTTAP_ADDRESS_DATA, fasttap->fd, len, false);
+    int r = fpga__write_extram_block_from_file(FASTTAP_ADDRESS_DATA, fasttap->fd, len);
     if (r<0) {
         ESP_LOGE(TAG, "Cannot read TAP file");
         //close(fasttap_fd);

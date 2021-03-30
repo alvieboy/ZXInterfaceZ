@@ -1,6 +1,19 @@
 #ifndef __WSYS_H__
 #define __WSYS_H__
 
+/**
+ * \defgroup wsys Windowing SYStem
+ * \brief Windowing SYStem
+ *
+ * \ingroup wsys
+ * \defgroup wsyswidget WSYS Widgets
+ * \brief WSYS Widget subsystem
+ *
+ * Widgets are the base of all windowing system.
+ *
+*/
+
+
 #include <inttypes.h>
 
 #define EVENT_KBD 0

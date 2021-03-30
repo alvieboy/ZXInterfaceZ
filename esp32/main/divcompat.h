@@ -6,7 +6,10 @@ extern "C" {
 #endif
 
 #include <inttypes.h>
-
+/**
+ \defgroup divmmc
+ \brief DivMMC compatibility
+ */
 int divcompat__enable(uint8_t rom);
 void divcompat__disable(void);
 
