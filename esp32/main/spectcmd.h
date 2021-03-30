@@ -6,7 +6,7 @@
 #define SPECTCMD_CMD_GETRESOURCE (0x00)
 #define SPECTCMD_CMD_SETWIFI (0x01)
 #define SPECTCMD_CMD_STARTSCAN (0x02)
-#define SPECTCMD_CMD_SAVESNA (0x05)
+#define SPECTCMD_CMD_SAVESNA (0x03)
 #define SPECTCMD_CMD_LOADSNA (0x06)
 #define SPECTCMD_CMD_SETFILEFILTER (0x07)
 #define SPECTCMD_CMD_PLAYTAPE   (0x08)
@@ -29,6 +29,28 @@
 
 // Esxdos-like calls
 #define SPECTCMD_CMD_ESXDOS_DISKINFO (0x40)
+
+// POSIX File
+#define SPECTCMD_CMD_GETCWD   (0x20)
+#define SPECTCMD_CMD_CHDIR    (0x21)
+#define SPECTCMD_CMD_OPEN     (0x22)
+#define SPECTCMD_CMD_CLOSE    (0x23)
+#define SPECTCMD_CMD_READ     (0x24)
+#define SPECTCMD_CMD_WRITE    (0x25)
+#define SPECTCMD_CMD_OPENDIR  (0x26)
+#define SPECTCMD_CMD_READDIR  (0x27)
+#define SPECTCMD_CMD_CLOSEDIR (0x28)
+
+// Networking
+#define SPECTCMD_CMD_SOCKET         (0x29)
+#define SPECTCMD_CMD_CONNECT        (0x2A)
+#define SPECTCMD_CMD_SENDTO         (0x2B)
+#define SPECTCMD_CMD_RECVFROM       (0x2C)
+#define SPECTCMD_CMD_GETHOSTBYNAME  (0x2D)
+#define SPECTCMD_CMD_GETHOSTBYADDR  (0x2E)
+
+#define SPECTCMD_CMD_WGET           (0x2F)
+
 
 
 void spectcmd__request(void);
