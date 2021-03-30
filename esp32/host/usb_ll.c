@@ -332,12 +332,12 @@ int usb_ll__release_channel(uint8_t channel)
     channels[channel].devaddr = 0xff;
 }
 
-int usb_ll__read_in_block(uint8_t channel, uint8_t *target, uint8_t *rxlen)
+int usb_ll__read_in_block(uint8_t channel, uint32_t *target, uint8_t *rxlen)
 {
     struct epchannel *epc = &channels[channel];
     if (epc->in_datalen) {
         printf("usb_ll: read from %p len %d\n", epc->in_data, epc->in_datalen);
-        memcpy(target, epc->in_data, epc->in_datalen);
+        memcpy((uint8_t*)target, epc->in_data, epc->in_datalen);
         *rxlen = epc->in_datalen;
     }
     else
