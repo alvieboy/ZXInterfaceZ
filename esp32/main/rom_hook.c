@@ -73,17 +73,12 @@ int rom_hook__enable_defaults()
 
 void rom_hook__disable_defaults()
 {
-    if (rom_hook_defaults[0]>=0) {
-        rom_hook__remove(rom_hook_defaults[0]);
-        rom_hook_defaults[0] = -1;
-    }
-    if (rom_hook_defaults[1]>=0) {
-        rom_hook__remove(rom_hook_defaults[1]);
-        rom_hook_defaults[1] = -1;
-    }
-    if (rom_hook_defaults[2]>=0) {
-        rom_hook__remove(rom_hook_defaults[2]);
-        rom_hook_defaults[2] = -1;
+    int i;
+    for (i=0; i<sizeof(rom_hook_defaults)/sizeof(rom_hook_defaults[0]);i++) {
+        if (rom_hook_defaults[i]>=0) {
+            rom_hook__remove(rom_hook_defaults[i]);
+            rom_hook_defaults[i] = -1;
+        }
     }
 }
 
