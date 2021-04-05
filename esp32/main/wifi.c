@@ -169,6 +169,8 @@ static void setup_mdns()
 {
     char hostname[64];
 
+    ESP_LOGI(TAG,"Installing MDNS service");
+
     ESP_ERROR_CHECK(mdns_init());
     nvs__str("hostname",hostname,sizeof(hostname),"interfacez.local");
     ESP_ERROR_CHECK(mdns_instance_name_set("ZX InterfaceZ"));
@@ -176,10 +178,10 @@ static void setup_mdns()
     ESP_ERROR_CHECK(mdns_hostname_set("interfacez"));
 
     mdns_service_add(NULL, "_http", "_tcp", 80, NULL, 0);
-    mdns_service_instance_name_set("_http", "_tcp", "XZ InterfaceZ Web Interface");
+    mdns_service_instance_name_set("_http", "_tcp", "ZX InterfaceZ Web Interface");
 
     mdns_service_add(NULL, "_zxictrl", "_tcp", BUFFER_PORT, NULL, 0);
-    mdns_service_instance_name_set("_zxictrl", "_tcp", "XZ InterfaceZ Control Interface");
+    mdns_service_instance_name_set("_zxictrl", "_tcp", "ZX InterfaceZ Control Interface");
 }
 
 static void ip_event_handler(void* arg, esp_event_base_t event_base,
@@ -187,6 +189,9 @@ static void ip_event_handler(void* arg, esp_event_base_t event_base,
 
 {
     ip_event_got_ip_t* event;
+
+    if (event_base!=IP_EVENT)
+        return;
 
     switch (event_id) {
     case IP_EVENT_STA_GOT_IP:
@@ -199,7 +204,7 @@ static void ip_event_handler(void* arg, esp_event_base_t event_base,
 #endif
         wifi__emit_network_changed();
 
-        setup_mdns();
+        //setup_mdns();
 
         break;
     default:
@@ -265,7 +270,7 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,
     case WIFI_EVENT_AP_START:
         ESP_LOGI(TAG,"WiFi AP started");
         wifi__set_status(WIFI_ACCEPTING);
-        setup_mdns();
+        //setup_mdns();
         break;
     default:
         ESP_LOGW(TAG,"Unhandled WIFI event %d", event_id);
@@ -285,7 +290,7 @@ static void wifi__teardown()
 {
     esp_wifi_disconnect();
     esp_wifi_stop();
-    mdns_free();
+    //mdns_free();
     esp_wifi_deinit();
 }
 
@@ -410,6 +415,8 @@ void wifi__init()
     ESP_ERROR_CHECK(esp_event_loop_create_default());
 
     wifi__init_core();
+
+    setup_mdns();
 
     if (nvs__u8("wifi", WIFI_MODE_AP)==WIFI_MODE_STA) {
         wifi__init_wpa2();
