@@ -9,6 +9,7 @@
 #include "flash_pgm.h"
 #include "ota.h"
 #include "rle.h"
+#include "stream.h"
 
 #define TAG "Firmware"
 
@@ -67,7 +68,7 @@ static int firmware__read_block_target(firmware_upgrade_t *f, uint8_t *target)
     do {
         if (ptr<sizeof(struct tar_header)) {
             int remain =  sizeof(struct tar_header) - ptr;
-            int read = f->readfun( f->readfundata, &target[ptr], remain);
+            int read = stream__read( f->stream, &target[ptr], remain);
             if (read<=0) {
                 ESP_LOGE(TAG,"Short read, requested %d got %d", remain, read);
                 return -1;
@@ -198,12 +199,12 @@ static int firmware__check_manifest(firmware_upgrade_t *f)
     }
     const char *version = json__get_string(update, "version");
     //const char *compat = json__get_string(f->manifest, "compat");
-
+#if 0
     if ((!version) || strcmp(version,"1.0")!=0) {
         ESP_LOGE(TAG,"Invalid version '%s' in manifest", version);
         return -1;
     }
-
+#endif
     // Build entry array to undestand which files have been processed.
 
     int i;
@@ -282,7 +283,7 @@ static int firmware__stream_file(firmware_upgrade_t *f,
 
     if (compression == FIRMWARE_COMPRESS_NONE) {
         while (size>0) {
-            int read = f->readfun(f->readfundata, f->buffer, 512);
+            int read = stream__read(f->stream, f->buffer, 512);
             if (read<=0) {
                 ESP_LOGE(TAG,"Short read on fpga file");
                 return -1;
@@ -293,8 +294,7 @@ static int firmware__stream_file(firmware_upgrade_t *f,
     } else {
         // RLE compression.
 
-        r = rle_decompress_stream(f->readfun,
-                                  f->readfundata,
+        r = rle_decompress_stream(f->stream,
                                   streamer,
                                   streamerdata,
                                   size);
@@ -305,7 +305,7 @@ static int firmware__stream_file(firmware_upgrade_t *f,
         if (partial_read>0) {
             ESP_LOGI(TAG, "Reading remaining %d", 512-partial_read);
 
-            if (f->readfun(f->readfundata, f->buffer, 512-partial_read)<0)
+            if (stream__read(f->stream, f->buffer, 512-partial_read)<0)
                 return -1;
         }
 
@@ -449,12 +449,10 @@ int firmware__upgrade(firmware_upgrade_t *f)
 }
 
 void firmware__init(firmware_upgrade_t *f,
-                    firmware_read_fun fun,
-                    void *data)
+                    struct stream *stream)
 {
     f->state = WAIT_MANIFEST_HDR;
-    f->readfun = fun;
-    f->readfundata = data;
+    f->stream = stream;
     f->dynbuf = NULL;
     f->manifest = NULL;
     f->fileinfo = NULL;

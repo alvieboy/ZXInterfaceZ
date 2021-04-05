@@ -6,7 +6,7 @@
 #include <stdbool.h>
 
 typedef int (*firmware_read_fun)(void *, uint8_t *buffer, size_t len);
-
+struct stream;
 
 typedef enum {
     FIRMWARE_TYPE_OTA,
@@ -39,16 +39,15 @@ typedef struct {
     uint8_t filecount;
     uint8_t buffer[512];
     int current_size;
-    firmware_read_fun readfun;
-    void *readfundata;
+    struct stream *stream;
     cJSON *manifest;
     struct manifest_file_info *fileinfo;
 } firmware_upgrade_t;
 
 
 void firmware__init(firmware_upgrade_t *f,
-                    firmware_read_fun fun,
-                    void *data);
+                    struct stream *);
+
 void firmware__deinit(firmware_upgrade_t *f);
 
 int firmware__upgrade(firmware_upgrade_t *f);
