@@ -96,7 +96,7 @@ static void io0_long_press()
     }
 
     ESP_LOGI(TAG, "Resetting to custom ROM");
-    if (fpga__reset_to_custom_rom(ROM_2, false)<0) {
+    if (fpga__reset_to_custom_rom(ROM_2, 0x00, false)<0) {
         ESP_LOGE(TAG, "Cannot reset");
     }
 }
@@ -113,7 +113,7 @@ static void load_esxdos()
     divcompat__enable(0); // 48K only for now
 
     ESP_LOGI(TAG, "Resetting to custom ROM");
-    if (fpga__reset_to_custom_rom(ROM_1, false)<0) {
+    if (fpga__reset_to_custom_rom(ROM_1, 0x00, false)<0) {
         ESP_LOGE(TAG, "Cannot reset");
     }
 }
@@ -271,7 +271,7 @@ static void detect_spectrum()
     spectrum_model = 0xfe;
     int timeout = 100;
 
-    fpga__reset_to_custom_rom(ROM_0, false);
+    fpga__reset_to_custom_rom(ROM_0, 0x00, false);
     // We need to wait for 1000ms,
     do {
         if (spectrum_model !=0xfe)
@@ -474,6 +474,7 @@ void app_main()
     detect_spectrum();
 
     rom_hook__enable_defaults();
+
 
     unsigned iter = 0;
     while(1) {
