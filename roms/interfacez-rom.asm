@@ -13,13 +13,37 @@ START:	DI			; disable interrupts.
 
 ORG $0006
 	DW	FREEAREA
-	ORG	$0008
+ORG	$0008
 		      
-RST8:	JP 	RST8
+RST8:	EX	(SP), HL	; Get return address in HL
+	LD	A, (HL)		; Load syscall
+        SUB	$C0
+        JR	C, _std8handler
+        ; Valid syscall number
+        ; Fix return address
+        INC	HL
+        EX	(SP), HL
+        JR	handlesyscall
+_std8handler:
+        EX	(SP), HL	; Place it back
+        LD	HL, CH_ADD
+        RET_TO_ROM_AT	$000B
+        
+	; Original ROM:	LD	HL,(CH_ADD)	; fetch the character address from CH_ADD.
+	;		LD	(X_PTR),HL	; copy it to the error pointer X_PTR.
+	;   		JR	ERROR_2		; forward to continue at ERROR_2.
+handlesyscall:
+	; Check bounds: TODO
+        PUSH	HL
+        LD	HL, SYSCALLTABLE
+        ADD	A, A ; Two bytes per sysall
+        ADD_HL_A
+        EX	(SP), HL
+        RET	     ; Jump into syscall
 
-	ORG	$0038
-
-	RETI
+ORG	$0038
+	EI
+        RET
 
 
 	ORG	$0066
@@ -38,6 +62,24 @@ _dlyloop: ; (T=35), 10us
         LD 	A,B             ; T=9
         OR 	C               ; T=4
         JR 	NZ, _dlyloop    ; T=12
+
+	; Check for special command
+;        IN	A, (PORT_MISCCTRL)
+;        OR	A
+;        JR	NZ, _bootcommand
+        JR	DETECT
+	;; 128K reset hook. This area is never executed in 48K mode.
+ORG $00C7
+	LD	A, CMD_128RESET
+        CALL	WRITECMDFIFO	; Notify firmware we are about to reset.
+        LD   	BC,$7FFD     	;
+        LD   	A, $30       	; Force ROM to 48K, block any further changes
+        DI                	; Disable interrupts whilst switching ROMs.
+        OUT  (C),A        	; Switch to the other ROM.
+        EI                	;
+        RET_TO_ROM_AT $0000	; Reset! !
+
+
 DETECT:
 	; Notify CRC
 	LD	A, CMD_ROMCRC
@@ -100,6 +142,8 @@ _memoryerror:
         CALL 	WRITECMDFIFO
         ENDLESS
 
+
+
 DETECT_YM:
 	LD	BC, $C001
         LD	A, $07	; Volume register
@@ -131,95 +175,48 @@ _2plus:
 
         
 	
-ROM_CHECK:
-	LD	A,$07		; select a white border
-	OUT	($FE),A		; and set it now.
-	LD	A,$3F		; load accumulator with last page in ROM.
-	LD	I,A		; set the I register - this remains constant
-				; and can't be in range $40 - $7F as 'snow'
-				; appears on the screen.
-RAM_CHECK:	
-	LD	H,D		; transfer the top value to
-	LD	L,E		; the HL register pair.
-					;;;$11DC
-RAM_FILL:
-	LD	(HL),$02	; load with 2 - red ink on black paper
-	DEC	HL		; next lower
-	CP	H		; have we reached ROM - $3F ?
-	JR	NZ,RAM_FILL	; back to RAM_FILL if not.
-RAM_READ:	
-	AND	A		; clear carry - prepare to subtract
-	SBC	HL,DE		; subtract and add back setting
-	ADD	HL,DE		; carry when back at start.
-	INC	HL		; and increment for next iteration.
-	JR	NC,RAM_DONE	; forward to RAM_DONE if we've got back to
-				; starting point with no errors.
-	DEC	(HL)		; decrement to 1.
-	JR	Z,RAM_DONE	; forward to RAM_DONE if faulty.
-
-	DEC	(HL)		; decrement to zero.
-	JR	Z,RAM_READ	; back to RAM_READ if zero flag was set.
-
-RAM_DONE:
-        HALT
-IGNORE:	
-	RET
-
-
-SETATTRS:
-        LD	HL, ATTR
-        LD	D, $3
-        LD	B, $00
-        LD	A, $38
-ALOOP:
-        LD	(HL), A
-	INC	HL
-        DJNZ	ALOOP
-        DEC 	D
-        JR 	NZ, ALOOP
-        RET
-
-INTERNALERROR:
-	DEBUGHEXA
-	LD	DE, LINE23
-        LD	HL, INTERNALERRORSTR
-        LD	A, 32
-        CALL	PRINTSTRINGPAD
-	LD	DE, LINE22
-        LD	HL, EMPTYSTRING
-        LD	A, 32
-        CALL	PRINTSTRINGPAD
+;INTERNALERROR:
+;	DEBUGHEXA
+;	LD	DE, LINE23
+;        LD	HL, INTERNALERRORSTR
+;        LD	A, 32
+;        CALL	PRINTSTRINGPAD
+;	LD	DE, LINE22
+;        LD	HL, EMPTYSTRING
+;        LD	A, 32
+;        CALL	PRINTSTRINGPAD
 _endl1: HALT
 	JR _endl1
 
+
+        
+        
+
+        include "syscall.asm"
 	include "debug.asm"
         include "string.asm"
         include "keyboard.asm"
-        include	"graphics.asm"
-        include	"print.asm"
-        include	"regdebug.asm"
+        ;include	"graphics.asm"
+;        include	"print.asm"
         include "utils.asm"
         ; WARNING WARNING -  this does need correct placement in ROM
         ; Make sure it does not overlap with other routines.
         include "savepatch.asm"
         include "loadpatch.asm"
+	include "kinject.asm"      	
+
         include	"resource.asm"
         include "romcrc.asm"
 	include "nmihandler.asm"
-	include	"charmap.asm"
-	include "keybtest.asm"
+;	include	"charmap.asm"
+;	include "keybtest.asm"
 	include "snaram.asm"
         include "z80restore.asm"
-       
+
                ; 00000000001111111111222222222233
                ; 01234567890123456789012345678901
 INTERNALERRORSTR: DB "Internal ERROR, aborting" ; Fallback to EMPTYSYRING
 EMPTYSTRING:	DB 0
-COPYRIGHT:DB	"ZX Interface Z (C) Alvieboy 2020", 0
-
-PASSWDTMP: DB "Spectrum", 0
-DISCONNECTED:	DB	"Disconnected", 0
-SCANNING:	DB	"Scanning...", 0
 
 FREEAREA	EQU	$
 	LD	HL, 1234

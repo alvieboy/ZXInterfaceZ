@@ -1,3 +1,7 @@
+; From ZX Spectrum
+
+CH_ADD		equ	$5C5D  
+WAIT_KEY	equ 	$15D4
 
 SCREEN		equ	$4000
 LINE1		equ 	$4020
