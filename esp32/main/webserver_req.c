@@ -16,6 +16,10 @@
 #include <errno.h>
 #include "firmware.h"
 #include "minmax.h"
+#include "fasttap.h"
+#include "remotetap.h"
+#include "stream.h"
+#include "tapeplayer.h"
 
 struct webserver_req_entry {
     const char *path;
@@ -451,45 +455,25 @@ static esp_err_t webserver_req__post_volume(httpd_req_t *req, const char *querys
     return ESP_FAIL;
 }
 
-static int firmware_read_wrapper(void *user, uint8_t *buf, size_t size)
-{
-    int remain = size;
-    int read = 0;
-    char *rbuf = (char*)buf;
-    do {
-        int r = httpd_req_recv((httpd_req_t*)user, rbuf, remain);
-        if (r<0)
-            return -1;
-        if (r==0) {
-            return read;
-        }
-        read += r;
-        rbuf += r;
-        remain -= r;
-    } while (remain>0);
-
-#if 0
-    ESP_LOGI(TAG, "FW READ: %d %d\n", size, read);
-    int i;
-    for (i=0;i<size;i++) {
-        printf("%02x ", buf[i]);
-        if ((i%32)==31)
-            printf("\n");
-    }
-#endif
-    return read;
-}
-
 static esp_err_t webserver_req__firmware_upgrade(httpd_req_t *req, const char *querystr)
 {
     firmware_upgrade_t f;
 
-    firmware__init(&f,
-                   firmware_read_wrapper,
-                   req);
+    ESP_LOGI(TAG,"Preparing FW upgrade");
 
-    int r =firmware__upgrade(&f);
+    struct stream *stream = stream__alloc_httpd(req, NULL);
+
+    firmware__init(&f, stream);
+
+    stream__nonblock(stream, false);  // Force block
+
+    ESP_LOGI(TAG,"Starting FW upgrade");
+
+    int r = firmware__upgrade(&f);
+
     firmware__deinit(&f);
+
+    stream__destroy(stream);
 
     if (r<0) {
         httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Error");
@@ -534,6 +518,85 @@ static esp_err_t webserver_req__set_wifi(httpd_req_t *req, const char *querystr)
 
 }
 
+static volatile bool load_done = false;
+
+static void notify_finished(httpd_req_t *req)
+{
+    load_done = true;
+}
+
+#define METHOD_FAST 0
+#define METHOD_SLOW 1
+
+static esp_err_t webserver_req__loadtap(httpd_req_t *req, const char *querystr)
+{
+    char val[64];
+    const char *error = NULL;
+    // For now we use a temporary file.
+    int method = METHOD_FAST;
+    esp_err_t err = 0;
+    do {
+        err = httpd_query_key_value(querystr, "method", val, sizeof(val));
+        if (err) {
+            error = "Missing TAP method";
+            break;
+        }
+        if (strcmp(val,"slow")==0) {
+            method=METHOD_SLOW;
+        } else if (strcmp(val,"fast")==0) {
+            method=METHOD_FAST;
+        } else {
+            err = -1;
+            ESP_LOGE(TAG,"Invalid method %s", val);
+            error = "Invalid TAP method";
+            break;
+        }
+        err = httpd_query_key_value(querystr, "type", val, sizeof(val));
+        if (err) {
+            error = "Missing TAP type";
+            break;
+        }
+        // check tap, tzx, etc.
+        tap_type_t type = fasttap__type_from_ext(val);
+        if ((type==TAP_TYPE_UNKNOWN) ||
+            (method==METHOD_SLOW && (type!=TAP_TYPE_TAP&&type!=TAP_TYPE_TZX))) {
+            err = -1;
+            error = "Invalid TAP type";
+            break;
+        }
+
+
+        load_done = false;
+        switch (method) {
+        case METHOD_FAST:
+            fasttap__prepare_from_stream( stream__alloc_httpd(req, &notify_finished),
+                                         req->content_len, type);
+            //req->content_len;
+            remotetap__prepareload();
+            break;
+        case METHOD_SLOW:
+            tapeplayer__play_stream(stream__alloc_httpd(req, &notify_finished), req->content_len, type==TAP_TYPE_TZX, 4000);
+            remotetap__prepareload();
+            break;
+        }
+
+        ESP_LOGI(TAG,"Waiting for TAP");
+        while (!load_done) {
+            vTaskDelay(1000 / portTICK_RATE_MS);
+        }
+        ESP_LOGI(TAG,"TAP finished");
+
+    } while (0);
+
+    if (err) {
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, error);
+    } else {
+        httpd_resp_sendstr(req,"OK");
+    }
+
+    return ESP_OK;
+}
+
 
 static const struct webserver_req_entry req_handlers[] = {
     { "version", &webserver_req__version },
@@ -555,6 +618,7 @@ static const struct webserver_req_entry post_handlers[] = {
     { "volume",    &webserver_req__post_volume },
     { "restart",   &webserver_req__restart },
     { "wifi",      &webserver_req__set_wifi },
+    { "loadtap",   &webserver_req__loadtap },
 };
 
 
@@ -590,6 +654,7 @@ static webserver_req_handler_t webserver_find_handler(const char *path, const st
 
     for (i=0; i<num_entries; i++) {
         if (strcmp(handlers[i].path, delim)==0) {
+            ESP_LOGI(TAG,"Found handler for '%s'", delim);
             return handlers[i].req;
         }
     }
