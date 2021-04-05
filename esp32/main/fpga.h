@@ -14,6 +14,8 @@ extern "C" {
 typedef uint16_t fpga_flags_t;
 typedef uint8_t fpga_status_t;
 
+struct stream;
+
 #define FPGA_SPI_CMD_READ_STATUS (0xDE)
 #define FPGA_SPI_CMD_READ_VIDEOMEM (0xDF)
 #define FPGA_SPI_CMD_READ_CAPMEM (0xE0)
@@ -151,7 +153,7 @@ int fpga__upload_rom(const uint32_t baseaddress, const uint8_t *buffer, unsigned
 
 int fpga__isBITmode(void);
 
-int fpga__reset_to_custom_rom(int romno, bool activate_retn_hook);
+int fpga__reset_to_custom_rom(int romno, uint8_t miscctrl, bool activate_retn_hook);
 
 int fpga__load_resource_fifo(const uint8_t *data, unsigned len, int timeout);
 
@@ -192,6 +194,7 @@ int fpga__read_extram_block(uint32_t address, uint32_t *dest, int size_bytes);
 int fpga__write_extram(uint32_t address, uint8_t val);
 int fpga__write_extram_block(uint32_t address, const uint8_t *buffer, int size);
 int fpga__write_extram_block_from_file(uint32_t address, int fd, int size);
+int fpga__write_extram_block_from_stream(uint32_t address, struct stream *, int size);
 int fpga__read_extram_block_into_file(uint32_t address, int fd, int size, uint8_t *checksum);
 
 
@@ -205,6 +208,7 @@ void fpga__clear_config1_bits(uint32_t bits);
 int fpga__set_rom(uint8_t rom);
 int fpga__set_ram(uint8_t ram);
 int fpga__reset_spectrum(void);
+int fpga__get_reset_time(void);
 
 int fpga__read_uart_status(void);
 int fpga__read_uart_data(uint32_t *buf, int len_bytes);

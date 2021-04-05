@@ -26,6 +26,7 @@
 #include "string.h"
 #include "errno.h"
 #include "bitrev.h"
+#include "stream.h"
 
 #define FPGA_BINARYFILE "/spiffs/fpga0.rbf"
 
@@ -367,10 +368,11 @@ int fpga__get_reset_time()
  * \brief Reset the ZX Spectrum and force it into a custom ROM
  *
  * \param romno ROM number to activate. See ROM architecture details.
+ * \param miscctrl Value to be written to MISCCTRL register. This is used to control ROM behaviour
  * \param activate_retn_hook Whether to activate the RETN hook.
  * \return 0 if successful
  */
-int fpga__reset_to_custom_rom(int romno, bool activate_retn_hook)
+int fpga__reset_to_custom_rom(int romno, uint8_t miscctrl, bool activate_retn_hook)
 {
     ESP_LOGI(TAG, "Resetting spectrum (to custom ROM)");
 
@@ -383,6 +385,9 @@ int fpga__reset_to_custom_rom(int romno, bool activate_retn_hook)
     if (activate_retn_hook) {
         fpga__set_trigger(FPGA_FLAG_TRIG_FORCEROMONRETN);
     }
+
+    fpga__write_miscctrl(miscctrl);
+
 
     vTaskDelay(fpga__get_reset_time() / portTICK_RATE_MS);
     fpga__clear_flags(FPGA_FLAG_RSTSPECT);
@@ -1020,6 +1025,39 @@ int fpga__write_extram_block_from_file(uint32_t address, int fd, int size)
         }
         address += chunksize;
         size -= chunksize;
+    }
+    return 0;
+}
+
+/**
+ * \ingroup fpgaram
+ * \brief Write a block of data to external RAM from a stream.
+ *
+ * This method waits until all data has been written.
+ *
+ * \param address external RAM address to start writing to
+ * \param stream Stream
+ * \param size size, in bytes, to be written
+ * \return 0 if successful
+ */
+int fpga__write_extram_block_from_stream(uint32_t address, struct stream *stream, int size)
+{
+    uint8_t chunk[128];
+
+    while (size) {
+        int chunksize = MIN(size, (int)sizeof(chunk));
+
+        int r = stream__read(stream, chunk, chunksize);
+        if (r<=0) {
+            ESP_LOGE(TAG, "Short read from file: %s", strerror(errno));
+            return -1;
+        }
+        if (fpga__write_extram_block(address, chunk, r)<0) {
+            ESP_LOGE(TAG, "Error writing address 0x%06x", address);
+            return -1;
+        }
+        address += r;
+        size -= r;
     }
     return 0;
 }
