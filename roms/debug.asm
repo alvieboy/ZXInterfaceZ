@@ -110,13 +110,13 @@ DEBUGHEXHL_INTERNAL:
         RET
 
 
-PRINTHEXHL:
-        LD	A, L
-        LD	B, A
-        LD	A, H
-        CALL	PRINTHEX
-        LD	A, B
-        JP 	PRINTHEX
+;PRINTHEXHL:
+;        LD	A, L
+;        LD	B, A
+;        LD	A, H
+;        CALL	PRINTHEX
+;        LD	A, B
+;        JP 	PRINTHEX
 
 ; Debug A
 DEBUGHEXA_INTERNAL:
