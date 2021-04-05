@@ -3,6 +3,7 @@
 #include "rle.h"
 #include "esp_log.h"
 #include "minmax.h"
+#include "stream.h"
 
 #define TAG "RLE"
 
@@ -49,7 +50,7 @@ static int rle_copy_block(int size, int (*reader)(void*user, uint8_t*buf,size_t)
     return 0;
 }
 
-int rle_decompress_stream(int (*reader)(void*user, uint8_t*buf,size_t), void *read_user,
+int rle_decompress_stream_fn(int (*reader)(void*user, uint8_t*buf,size_t), void *read_user,
                           int (*writer)(void*user, const uint8_t*buf,size_t), void *write_user,
                           int sourcelen)
 {
@@ -106,4 +107,12 @@ int rle_decompress_stream(int (*reader)(void*user, uint8_t*buf,size_t), void *re
         }
     }
     return 0;
+}
+
+int rle_decompress_stream(struct stream * s,
+                          int (*writer)(void*user, const uint8_t*buf,size_t), void *write_user,
+                          int sourcelen)
+{
+    return rle_decompress_stream_fn( (int(*)(void*,uint8_t*,size_t))&stream__read, s,
+                                    writer, write_user, sourcelen);
 }
