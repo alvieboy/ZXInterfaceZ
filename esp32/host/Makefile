@@ -175,6 +175,10 @@ disassemble.c         \
 disassemble_tables.c  \
 joystick.c            \
 kempston.c            \
+spectfd.c             \
+basickey.c            \
+remotetap.c           \
+stream.c              \
 wsys/charmap.c        \
 wsys/tomthumb.c        
 
