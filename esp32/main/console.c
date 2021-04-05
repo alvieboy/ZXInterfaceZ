@@ -300,7 +300,7 @@ static int console__loadrom(int argc, char **argv)
         return -1;
     }
 
-    if (fpga__reset_to_custom_rom(ROM_2, false)<0) {
+    if (fpga__reset_to_custom_rom(ROM_2, 0x00, false)<0) {
         ESP_LOGE(CTAG, "Cannot reset");
         return -1;
     }
@@ -316,7 +316,7 @@ static int console__reset(int argc, char **argv)
     if (argc>0) {
         if (strcmp(argv[0], "custom")==0) {
             ESP_LOGI(CTAG, "Resetting to custom ROM0");
-            fpga__reset_to_custom_rom(ROM_0, false);
+            fpga__reset_to_custom_rom(ROM_0, 0x00, false);
             return 0;
         }
     }
