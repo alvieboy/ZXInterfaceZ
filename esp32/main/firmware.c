@@ -316,6 +316,7 @@ static int firmware__stream_file(firmware_upgrade_t *f,
 static int firmware__program_resources(firmware_upgrade_t *f, firmware_compress_t compress)
 {
     flash_program_handle_t handle;
+    int r;
 
     if (flash_pgm__prepare_programming(&handle,
                                        ESP_PARTITION_TYPE_DATA,
@@ -326,7 +327,11 @@ static int firmware__program_resources(firmware_upgrade_t *f, firmware_compress_
         return -1;
     }
 
-    return firmware__stream_file(f, compress, (firmware_streamer_t)&flash_pgm__program_chunk, &handle);
+    r = firmware__stream_file(f, compress, (firmware_streamer_t)&flash_pgm__program_chunk, &handle);
+
+    flash_pgm__flush(&handle);
+
+    return r;
 }
 
 static int firmware__ota(firmware_upgrade_t *f, firmware_compress_t compress)

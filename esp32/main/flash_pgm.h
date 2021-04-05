@@ -10,6 +10,8 @@ typedef struct
 {
     const esp_partition_t *partition;
     unsigned offset;
+    uint8_t *buffer;
+    unsigned bufferpos;
 } flash_program_handle_t;
 
 int flash_pgm__prepare_programming(flash_program_handle_t*handle,
@@ -18,7 +20,7 @@ int flash_pgm__prepare_programming(flash_program_handle_t*handle,
                                   const char *label,
                                   unsigned len);
 int flash_pgm__program_chunk(flash_program_handle_t *handle, const uint8_t *data, unsigned len);
-
+int flash_pgm__flush(flash_program_handle_t *handle);
 
 
 #endif

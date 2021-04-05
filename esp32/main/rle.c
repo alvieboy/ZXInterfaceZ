@@ -7,6 +7,8 @@
 
 #define TAG "RLE"
 
+#define RLE_READ_BLOCK_SIZE 128
+
 static int rle_read_s16(int (*reader)(void*user, uint8_t*buf,size_t), void *read_user, int *target)
 {
     union {
@@ -28,13 +30,13 @@ static int rle_read_s16(int (*reader)(void*user, uint8_t*buf,size_t), void *read
 static int rle_copy_block(int size, int (*reader)(void*user, uint8_t*buf,size_t), void *read_user,
                           int (*writer)(void*user, const uint8_t*buf,size_t), void *write_user)
 {
-    uint8_t buffer[32];
+    uint8_t buffer[RLE_READ_BLOCK_SIZE];
     int chunk;
     int r;
 
     while (size>0) {
         chunk = MIN(size,(int)sizeof(buffer));
-        ESP_LOGI(TAG,"Read chunk %d", chunk);
+        //ESP_LOGI(TAG,"Read chunk %d", chunk);
         r = reader(read_user, buffer, chunk);
         if (r!=chunk) {
             ESP_LOGE(TAG,"copy block is too short!");
@@ -57,6 +59,7 @@ int rle_decompress_stream_fn(int (*reader)(void*user, uint8_t*buf,size_t), void 
     int countChar;
     uint8_t currChar;
     int r;
+    uint8_t repblock[RLE_READ_BLOCK_SIZE];
 
     while (sourcelen>1) {
         r = rle_read_s16(reader, read_user, &countChar);
@@ -79,15 +82,18 @@ int rle_decompress_stream_fn(int (*reader)(void*user, uint8_t*buf,size_t), void 
                 return -1;
                 countChar = 0;
             }
-            ESP_LOGI(TAG, "Run block 0x%02x : %d", currChar, countChar);
+            //ESP_LOGI(TAG, "Run block 0x%02x : %d", currChar, countChar);
 
+            memset( repblock, currChar, sizeof(repblock));
             while (countChar > 0)
             {
-                if (writer(write_user, &currChar,sizeof(uint8_t))<0)  {
+                int chunk = MIN(countChar, RLE_READ_BLOCK_SIZE);
+
+                if (writer(write_user, repblock, chunk)<0)  {
                     ESP_LOGE(TAG, "Error writing run block");
                     return -1;
                 }
-                countChar--;
+                countChar-=chunk;
             }
             sourcelen--;
 
@@ -96,7 +102,7 @@ int rle_decompress_stream_fn(int (*reader)(void*user, uint8_t*buf,size_t), void 
         {
             countChar++;
             //printf("Block %d (%d bytes)\n", countChar, countChar+1);
-            ESP_LOGI(TAG, "Copy block %d", countChar);
+            //ESP_LOGI(TAG, "Copy block %d", countChar);
             if (rle_copy_block(countChar, reader, read_user, writer, write_user)<0) {
                 ESP_LOGE(TAG, "Cannot copy run block");
 
