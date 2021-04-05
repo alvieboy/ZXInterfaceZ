@@ -24,6 +24,7 @@ model_t model__get(void);
 void model__set(model_t);
 
 bool model__supports_ula_override();
+int model__get_basic_rom();
 
 #ifdef __cplusplus
 }

@@ -45,3 +45,17 @@ bool model__supports_ula_override()
     }
     return support;
 }
+
+int model__get_basic_rom()
+{
+    int rom = 1;
+    switch(model) {
+    case MODEL_16K:
+    case MODEL_48K:
+        rom = 0;
+        break;
+    default:
+        break;
+    }
+    return rom;
+}
