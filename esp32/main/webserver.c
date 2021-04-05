@@ -254,8 +254,8 @@ static esp_err_t webserver__req_post_handler(httpd_req_t *req)
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid query string");
         return ESP_FAIL;
     }
-
     if (qptr) {
+        ESP_LOGI(TAG, "Query string: '%s'", qptr);
         webserver__decodeurl(qptr);
     }
 
@@ -311,6 +311,7 @@ int webserver__init(void)
         .handler   = &webserver__get_handler,
         .user_ctx  = NULL    // Pass server data as context
     };
+
     httpd_register_uri_handler(server, &file_download);
 
 
