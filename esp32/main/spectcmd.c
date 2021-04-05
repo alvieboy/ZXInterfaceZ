@@ -29,6 +29,8 @@
 #include "debugger.h"
 #include "memdata.h"
 #include "interfacez_tasks.h"
+#include "basickey.h"
+#include "remotetap.h"
 
 #define COMMAND_BUFFER_MAX 256+2
 
@@ -218,7 +220,7 @@ static int spectcmd__playtape(const uint8_t *cmdbuf, unsigned len)
     memcpy(filename, &cmdbuf[1], filenamelen);
     filename[filenamelen] = '\0';
 
-    tapeplayer__play(filename);
+    tapeplayer__play_file(filename);
 
     return ret;
 }
@@ -240,7 +242,7 @@ static int spectcmd__playtape_fast(const uint8_t *cmdbuf, unsigned len)
     memcpy(filename, &cmdbuf[1], filenamelen);
     filename[filenamelen] = '\0';
 
-    return fasttap__prepare(filename);
+    return fasttap__prepare_from_file(filename);
 }
 
 static int spectcmd__setvideomode(const uint8_t *cmdbuf, unsigned len)
@@ -589,6 +591,26 @@ static int spectcmd__memdata(const uint8_t *cmdbuf, unsigned len)
     return 0;
 }
 
+static int spectcmd__keyinject(const uint8_t *cmdbuf, unsigned len)
+{
+    uint8_t val = 0xff;
+    spectcmd__removedata();
+
+    if (basickey__has_inject()) {
+        val = basickey__get_inject();
+    }
+    fpga__load_resource_fifo(&val, 1, 1000);
+
+    return 0;
+}
+
+static int spectcmd__128reset(const uint8_t *cmdbuf, unsigned len)
+{
+    spectcmd__removedata();
+    remotetap__128resetcallback();
+    return 0;
+}
+
 static const spectcmd_handler_t spectcmd_handlers[] = {
     &spectcmd__load_resource, // 00 SPECTCMD_CMD_GETRESOURCE
     &spectcmd__setwifi,       // 01 SPECTCMD_CMD_SETWIFI
@@ -616,8 +638,8 @@ static const spectcmd_handler_t spectcmd_handlers[] = {
     &spectcmd__savetrap,      // 17 SPECTCMD_CMD_SAVETRAP
     &spectcmd__savedata,      // 18 SPECTCMD_CMD_SAVEDATA,
     &spectcmd__memdata,       // 19 SPECTCMD_CMD_MEMDATA,
-    NULL,                     // 1A
-    NULL,                     // 1B
+    &spectcmd__keyinject,     // 19 SPECTCMD_CMD_KEYINJECT,
+    &spectcmd__128reset,      // 19 SPECTCMD_CMD_128RESET,
     NULL,                     // 1C
     NULL,                     // 1D
     NULL,                     // 1E
