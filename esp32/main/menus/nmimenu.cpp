@@ -242,7 +242,7 @@ static void do_load_tape(FileChooserDialog *d, int status)
 {
     if (status==0) {
         WSYS_LOGI("Tape is: %s", d->getSelection());
-        tapeplayer__play(d->getSelection());
+        tapeplayer__play_file(d->getSelection());
         screen__destroyAll();
         wsys__send_command(0xFF);
     }
@@ -255,7 +255,7 @@ static int do_load_tape_fast(FileChooserDialog *d, int status)
         WSYS_LOGI("Tape is: %s", d->getSelection());
 
         fullpath(d->getSelection(), fp, 127);
-        if (fasttap__prepare(fp)==0) {
+        if (fasttap__prepare_from_file(fp)==0) {
             screen__destroyAll();
             wsys__send_command(0xFF);
             return 0;

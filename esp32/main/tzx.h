@@ -2,6 +2,7 @@
 #define __TZX_H__
 
 #include <inttypes.h>
+struct stream;
 
 enum tzx_state
 {
@@ -46,15 +47,18 @@ struct tzx {
     uint8_t pulsecount;
     uint8_t pulses;
     uint32_t datachunk;
+    int initial_delay;
     const struct tzx_callbacks *callbacks;
     void *userdata;
 };
 
 
 void tzx__init(struct tzx *t, const struct tzx_callbacks *callbacks,void *userdata);
+void tzx__set_initial_delay(struct tzx *t, int initial_delay);
+
 void tzx__chunk(struct tzx *t, const uint8_t *data, int len);
 
 int tzx__can_fastplay(const char *filename);
-int tzx__can_fastplay_fd(int fd);
+int tzx__can_fastplay_stream(struct stream*);
 
 #endif

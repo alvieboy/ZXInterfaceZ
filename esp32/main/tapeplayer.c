@@ -17,10 +17,12 @@
 #include "tzx.h"
 #include "byteops.h"
 #include "interfacez_tasks.h"
+#include "stream.h"
 
 #define TAP_CMD_STOP 0
 #define TAP_CMD_PLAY 1
 #define TAP_CMD_RECORD 2
+#define TAP_CMD_PLAYSTREAM 3
 
 static xQueueHandle tap_evt_queue = NULL;
 
@@ -32,7 +34,15 @@ static union {
 struct tapcmd
 {
     int cmd;
-    char file[128];
+    union {
+        char file[128];
+        struct {
+            struct stream *stream;
+            size_t stream_size;
+            bool is_tzx;
+            int initial_delay;
+        };
+    };
 };
 
 enum tapstate {
@@ -43,7 +53,7 @@ enum tapstate {
 };
 
 static enum tapstate state = TAP_IDLE;
-static int tapfh = -1;
+static struct stream *tap_stream = NULL;
 static int playsize;
 static int currplay;
 static bool is_tzx = false;
@@ -353,9 +363,8 @@ void tapeplayer__tzx_data_finished_callback(void *userdata)
 
 static void tapeplayer__finished()
 {
-    if (tapfh>0)
-        close(tapfh);
-    tapfh = -1;
+    if (tap_stream!=NULL)
+        tap_stream = stream__destroy(tap_stream);
 
     state = TAP_WAITDRAIN;
 
@@ -389,11 +398,22 @@ void tapeplayer__stop()
     xQueueSend(tap_evt_queue, &cmd, 1000);
 }
 
-void tapeplayer__play(const char *filename)
+void tapeplayer__play_file(const char *filename)
 {
     struct tapcmd cmd;
     cmd.cmd = TAP_CMD_PLAY;
     fullpath(filename, &cmd.file[0], sizeof(cmd.file)-1);
+    xQueueSend(tap_evt_queue, &cmd, 1000);
+}
+
+void tapeplayer__play_stream(struct stream *s, size_t size, bool is_tzx, int initial_delay)
+{
+    struct tapcmd cmd;
+    cmd.cmd = TAP_CMD_PLAYSTREAM;
+    cmd.stream = s;
+    cmd.stream_size = size;
+    cmd.is_tzx = is_tzx;
+    cmd.initial_delay = initial_delay;
     xQueueSend(tap_evt_queue, &cmd, 1000);
 }
 
@@ -410,7 +430,7 @@ const struct tzx_callbacks tapeplayer_tzx_callbacks =
 };
 
 
-static void tapeplayer__do_start_play(const char *filename)
+static void tapeplayer__do_start_play_from_file(const char *filename)
 {
     struct stat st;
 
@@ -421,16 +441,16 @@ static void tapeplayer__do_start_play(const char *filename)
         /* Fall-through */
     case TAP_PLAYING:
         // Stop tape first.
-        if (tapfh>=0) {
-            close(tapfh);
-            tapfh = -1;
+        if (tap_stream!=NULL) {
+            tap_stream = stream__destroy(tap_stream);
         }
         break;
     case TAP_WAITDRAIN:
         return; // Don't
     }
+
     // Attempt to open file
-    tapfh = __open(filename, O_RDONLY);
+    int tapfh = __open(filename, O_RDONLY);
     is_tzx = false;
 
 
@@ -457,6 +477,8 @@ static void tapeplayer__do_start_play(const char *filename)
         }
     }
 
+    tap_stream = stream__alloc_system(tapfh);
+
     playsize = st.st_size;
     currplay = 0;
 
@@ -468,11 +490,54 @@ static void tapeplayer__do_start_play(const char *filename)
     state = TAP_PLAYING;
 }
 
+static void tapeplayer__do_start_play_from_stream(struct stream *stream, size_t size, bool r_is_tzx, int initial_delay)
+{
+    struct stat st;
+
+    switch (state) {
+    case TAP_IDLE:
+        break;
+    case TAP_RECORDING:
+        /* Fall-through */
+    case TAP_PLAYING:
+        // Stop tape first.
+        if (tap_stream!=NULL) {
+            tap_stream = stream__destroy(tap_stream);
+        }
+        break;
+    case TAP_WAITDRAIN:
+        return; // Don't
+    }
+
+    is_tzx = r_is_tzx;
+    if (r_is_tzx) {
+        ESP_LOGI(TAG,"Initializing TZX structure");
+        tzx__init(&tape_data.tzx, &tapeplayer_tzx_callbacks, NULL);
+        tzx__set_initial_delay(&tape_data.tzx, initial_delay);
+    } else {
+        ESP_LOGI(TAG,"Initializing TAP structure");
+        tap__init(&tape_data.tap);
+        tap__set_initial_delay(&tape_data.tap, initial_delay);
+    }
+
+    tap_stream = stream;
+
+    playsize = size;
+    currplay = 0;
+
+    fpga__set_flags(FPGA_FLAG_TAPFIFO_RESET| FPGA_FLAG_TAP_ENABLED | FPGA_FLAG_ULAHACK);
+    fpga__clear_flags(FPGA_FLAG_TAPFIFO_RESET);
+
+    ESP_LOGI(TAG, "Starting stream TAP/TZX play");
+    // Fill in buffers
+
+    state = TAP_PLAYING;
+}
+
 static void tapeplayer__do_stop()
 {
-    if (tapfh) {
-        close(tapfh);
-        tapfh = -1;
+    if (tap_stream) {
+        tap_stream = stream__destroy(tap_stream);
     }
     fpga__clear_flags(FPGA_FLAG_TAP_ENABLED | FPGA_FLAG_ULAHACK);
     fpga__set_flags(FPGA_FLAG_TAPFIFO_RESET);
@@ -498,13 +563,12 @@ static void do_play_tap()
     }
 
     if (av>0) {
-        r = read( tapfh, chunk, av);
+        r = stream__read( tap_stream, chunk, av);
         if (r<0) {
             // Error reading
             ESP_LOGE(TAG,"Read error");
             state = TAP_IDLE;
-            close(tapfh);
-            tapfh = -1;
+            tap_stream = stream__destroy(tap_stream);
             return;
         }
         tap__chunk(&tape_data.tap, chunk, r);
@@ -526,13 +590,12 @@ static void do_play_tzx()
     }
 
     if (av>0) {
-        r = read( tapfh, chunk, av);
+        r = stream__read( tap_stream, chunk, av);
         if (r<0) {
             // Error reading
             ESP_LOGE(TAG,"Read error");
             state = TAP_IDLE;
-            close(tapfh);
-            tapfh = -1;
+            tap_stream = stream__destroy(tap_stream);
             return;
         }
         tzx__chunk(&tape_data.tzx, chunk, r);
@@ -548,7 +611,10 @@ static void tapeplayer__task(void*data)
 
             switch (cmd.cmd) {
             case TAP_CMD_PLAY:
-                tapeplayer__do_start_play(cmd.file);
+                tapeplayer__do_start_play_from_file(cmd.file);
+                break;
+            case TAP_CMD_PLAYSTREAM:
+                tapeplayer__do_start_play_from_stream(cmd.stream, cmd.stream_size, cmd.is_tzx, cmd.initial_delay);
                 break;
             case TAP_CMD_STOP:
                 tapeplayer__do_stop();
@@ -562,8 +628,8 @@ static void tapeplayer__task(void*data)
             // No data
             switch (state) {
             case TAP_PLAYING:
-                if (tapfh<0) {
-                    ESP_LOGW(TAG,"Negative FD! Cannot play!");
+                if (tap_stream==NULL) {
+                    ESP_LOGW(TAG,"NULL stream! Cannot play!");
                     state = TAP_IDLE;
                 } else {
                     //ESP_LOGI(TAG,"TAP tick!");

@@ -83,7 +83,7 @@ static int fasttap_scr__next(fasttap_t *fasttap, uint8_t requested_type, uint16_
     case 1:
         /* Data */
         len = 6912;
-        r = fpga__write_extram_block_from_file(FASTTAP_ADDRESS_DATA, fasttap->fd, len);
+        r = fpga__write_extram_block_from_stream(FASTTAP_ADDRESS_DATA, fasttap->stream, len);
         fpga__write_extram_block(FASTTAP_ADDRESS_LENLSB, (uint8_t*)&len, 2);
         self->scr_chunk++;
         fasttap__stop();

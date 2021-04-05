@@ -4,6 +4,7 @@
 #include <fpga.h>
 #include "log.h"
 #include <unistd.h>
+#include "stream.h"
 
 /* TZX version */
 
@@ -164,14 +165,17 @@ static int fasttap_tzx__init(fasttap_t *fasttap)
 {
     struct fasttap_tzx *self = (struct fasttap_tzx*)fasttap;
 
-    int r = tzx__can_fastplay_fd(fasttap->fd);
-    if (r<0) {
-        return r;
+    if (stream__seekable(fasttap->stream)) {
+
+        int r = tzx__can_fastplay_stream(fasttap->stream);
+        if (r<0) {
+            return r;
+        }
+        if (r!=0) {
+            return -1;
+        }
+        stream__seek(fasttap->stream,0,SEEK_SET);
     }
-    if (r!=0) {
-        return -1;
-    }
-    lseek(fasttap->fd,0,SEEK_SET);
 
     self->tzx = malloc(sizeof(struct tzx));
     if (self->tzx==NULL) {
@@ -196,7 +200,7 @@ static int fasttap_tzx__next(fasttap_t *fasttap, uint8_t type, uint16_t len)
     self->tzx_block_done = 0;
     ESP_LOGI(TAG,"TZX fast load next block");
     do {
-        r = read(fasttap->fd, buf, sizeof(buf));
+        r = fasttap__read(fasttap, buf, sizeof(buf));
         if (r<0) {
             ESP_LOGI(TAG,"TZX error read!");
             return -1;

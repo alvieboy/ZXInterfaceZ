@@ -14,6 +14,7 @@ struct tap {
     uint8_t tapbuf[16];
     uint8_t tapbufptr;
     uint16_t datachunk;
+    int initial_delay;
 };
 
 struct spectrum_tape_header
@@ -40,6 +41,7 @@ struct spectrum_tape_header
 
 void tap__standard_block_callback(uint16_t length, uint16_t pause_after);
 void tap__init(struct tap *t);
+void tap__set_initial_delay(struct tap *t, int initial_delay);
 void tap__chunk(struct tap *t, const uint8_t *data, int len);
 void tap__finished_callback(void);
 void tap__data_finished_callback(void);

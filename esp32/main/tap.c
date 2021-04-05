@@ -3,6 +3,8 @@
 #include "esp_log.h"
 #include "minmax.h"
 #include "byteorder.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 
 #define TAG "TAP"
 
@@ -27,6 +29,12 @@ void tap__init(struct tap *t)
 {
     t->state = LENGTH;
     t->tapbufptr = 0;
+    t->initial_delay = 0;
+}
+
+void tap__set_initial_delay(struct tap *t, int initial_delay)
+{
+    t->initial_delay = initial_delay;
 }
 
 void tap__chunk(struct tap *t, const uint8_t *data, int len)
@@ -39,6 +47,12 @@ void tap__chunk(struct tap *t, const uint8_t *data, int len)
         return;
     }
     //ESP_LOGI(TAG, "Parse chunk len %d state %d", len, t->state);
+
+    if (t->initial_delay) {
+        vTaskDelay(t->initial_delay/portTICK_RATE_MS);
+        t->initial_delay = 0;
+    }
+
     do {
         switch (t->state) {
         case LENGTH:

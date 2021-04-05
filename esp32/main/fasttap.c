@@ -26,6 +26,7 @@
 #include "fasttap_tap.h"
 #include "fasttap_tzx.h"
 #include "fasttap_scr.h"
+#include "stream.h"
 
 #define FASTTAP "FASTTAP"
 
@@ -101,28 +102,70 @@ static void fasttap__remove_hooks()
 
 /**
  * \ingroup fasttap
+ * \brief Allocate a new Fast TAP for a specified type
+ * \param ext The type
+ * \return pointer to the new Fast TAP object, or NULL if any error
+ */
+
+static fasttap_t *fasttap__allocate_by_type(tap_type_t type)
+{
+    fasttap_t *tap = NULL;
+
+    switch (type) {
+    case TAP_TYPE_TZX:
+        tap = fasttap_tzx__allocate();
+        break;
+    case TAP_TYPE_TAP:
+        tap = fasttap_tap__allocate();
+        break;
+    case TAP_TYPE_SCR:
+        tap = fasttap_scr__allocate();
+        break;
+    default:
+        break;
+    }
+
+    if (tap==NULL) {
+        ESP_LOGE(FASTTAP, "Invalid file extension, cannot load");
+    }
+    return tap;
+}
+
+tap_type_t fasttap__type_from_ext(const char *ext)
+{
+    tap_type_t type = TAP_TYPE_UNKNOWN;
+    if (ext) {
+        do {
+            if (ext_match(ext,"tzx")) {
+                type = TAP_TYPE_TZX;
+                break;
+            }
+            if (ext_match(ext,"tap")) {
+                type = TAP_TYPE_TAP;
+                break;
+            }
+            if (ext_match(ext,"scr")) {
+                type = TAP_TYPE_SCR;
+                break;
+            }
+        } while (0);
+    }
+    return type;
+}
+
+
+/**
+ * \ingroup fasttap
  * \brief Allocate a new Fast TAP for a specified file extension
  * \param ext The file extension ("tap", "tzx" or "scr")
  * \return pointer to the new Fast TAP object, or NULL if any error
  */
 
-static fasttap_t *fasttap__allocate(const char *ext)
+static fasttap_t *fasttap__allocate_by_ext(const char *ext)
 {
-    if (ext) {
-        if (ext_match(ext,"tzx")) {
-            return fasttap_tzx__allocate();
-        }
-        if (ext_match(ext,"tap")) {
-            return fasttap_tap__allocate();
-        }
-        if (ext_match(ext,"scr")) {
-            return fasttap_scr__allocate();
-        }
-    }
-    ESP_LOGE(FASTTAP, "Invalid file extension, cannot load");
-    return NULL;
+    tap_type_t type = fasttap__type_from_ext(ext);
+    return fasttap__allocate_by_type(type);
 }
-
 
 /**
  * \ingroup fasttap
@@ -131,8 +174,9 @@ static fasttap_t *fasttap__allocate(const char *ext)
 static void fasttap__destroy_previous()
 {
     if (fasttap_instance) {
-        if (fasttap_instance->fd >=0)
-            close(fasttap_instance->fd);
+        ESP_LOGI(FASTTAP, "Destroying stream");
+        if (fasttap_instance->stream!=NULL)
+            fasttap_instance->stream = stream__destroy(fasttap_instance->stream);
         fasttap_instance->ops->free(fasttap_instance);
         fasttap_instance = NULL;
     }
@@ -145,7 +189,7 @@ static void fasttap__destroy_previous()
  * \return 0 if successful
  */
 
-int fasttap__prepare(const char *filename)
+int fasttap__prepare_from_file(const char *filename)
 {
     struct stat st;
     const char *ext = get_file_extension(filename);
@@ -168,7 +212,7 @@ int fasttap__prepare(const char *filename)
         return -1;
     }
 
-    fasttap_instance = fasttap__allocate(ext);
+    fasttap_instance = fasttap__allocate_by_ext(ext);
 
     if (!fasttap_instance) {
         ESP_LOGE(FASTTAP, "Could not instantiate FASTTAP engine");
@@ -176,8 +220,33 @@ int fasttap__prepare(const char *filename)
         return -1;
     }
 
-    fasttap_instance->fd = fasttap_fd;
+    fasttap_instance->stream = stream__alloc_system(fasttap_fd);
     fasttap_instance->size = st.st_size;
+    fasttap_instance->read = 0;
+
+    if (fasttap_instance->ops->init(fasttap_instance)<0) {
+        ESP_LOGE(FASTTAP, "Could not prepare FASTTAP engine");
+        fasttap__destroy_previous();
+        return -1;
+    }
+
+    return 0;
+}
+
+int fasttap__prepare_from_stream(struct stream *stream, size_t size, tap_type_t type)
+{
+    fasttap__destroy_previous();
+
+    fasttap_instance = fasttap__allocate_by_type(type);
+
+    if (!fasttap_instance) {
+        ESP_LOGE(FASTTAP, "Could not instantiate FASTTAP engine");
+        return -1;
+    }
+
+    fasttap_instance->stream = stream;
+    fasttap_instance->size = size;
+    fasttap_instance->read = 0;
 
     if (fasttap_instance->ops->init(fasttap_instance)<0) {
         ESP_LOGE(FASTTAP, "Could not prepare FASTTAP engine");
@@ -189,6 +258,7 @@ int fasttap__prepare(const char *filename)
 
 }
 
+
 /**
  * \ingroup fasttap
  * \brief Check if we reached EOF on a particular fasttap
@@ -198,12 +268,18 @@ int fasttap__prepare(const char *filename)
 
 bool fasttap__is_file_eof(fasttap_t *fasttap)
 {
-    unsigned pos = (unsigned)lseek(fasttap->fd, 0, SEEK_CUR);
+    bool r = true;
+    if (fasttap_instance->read < fasttap_instance->size)
+        r = false;
+
+    ESP_LOGI(FASTTAP, "File is eof %d %d: %d", fasttap_instance->read,
+             fasttap_instance->size, r);
+    /*unsigned pos = (unsigned)lseek(fasttap->fd, 0, SEEK_CUR);
 
     if (pos < (unsigned)fasttap->size)
         return false;
-
-    return true;
+        */
+    return r;
 }
 
 /**
@@ -269,4 +345,13 @@ void fasttap__stop()
     fasttap__destroy_previous();
 }
 
+int fasttap__read(fasttap_t *tap, void *buf, size_t size)
+{
+    int r = stream__read(tap->stream, buf, size);
 
+    if (r>0) {
+        ESP_LOGI(FASTTAP," -- Read %d, totoal now %d", r, tap->read);
+        tap->read += r;
+    }
+    return r;
+}

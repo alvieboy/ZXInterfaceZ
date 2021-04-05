@@ -8,6 +8,7 @@
 #include "byteops.h"
 #include "minmax.h"
 #include "fileaccess.h"
+#include "stream.h"
 
 #ifdef __linux__
 
@@ -71,8 +72,13 @@ void tzx__chunk(struct tzx *t, const uint8_t *data, int len)
                 break;
             }
             ESP_LOGI(TAG,"TZX version: %d.%d",
-                   t->tzxbuf[8],
-                   t->tzxbuf[9]);
+                     t->tzxbuf[8],
+                     t->tzxbuf[9]);
+
+            if (t->initial_delay) {
+                vTaskDelay(t->initial_delay/portTICK_RATE_MS);
+            }
+
             t->state = BLOCK;
             break;
 
@@ -267,6 +273,7 @@ void tzx__init(struct tzx *t, const struct tzx_callbacks *callbacks, void *userd
     t->state = HEADER;
     t->callbacks = callbacks;
     t->userdata = userdata;
+    t->initial_delay = 0;
 }
 
 //static int analyser_is_not_trivial;
@@ -334,7 +341,7 @@ const struct tzx_callbacks analyser_tzx_callbacks =
     .finished_callback       = analyser_tzx_finished_callback
 };
 
-int tzx__can_fastplay_fd(int fd)
+int tzx__can_fastplay_stream(struct stream *stream)
 {
     struct tzx t;
     unsigned char buf[64];
@@ -345,7 +352,7 @@ int tzx__can_fastplay_fd(int fd)
     int r;
 
     do {
-        r = read(fd, buf, sizeof(buf));
+        r = stream__read(stream, buf, sizeof(buf));
         if (r<0) {
             break;
         }
@@ -360,6 +367,12 @@ int tzx__can_fastplay_fd(int fd)
     return analyser_is_not_trivial;
 }
 
+void tzx__set_initial_delay(struct tzx *t, int initial_delay)
+{
+    t->initial_delay = initial_delay;
+}
+
+#if 0
 int tzx__can_fastplay(const char *filename)
 {
 
@@ -368,6 +381,8 @@ int tzx__can_fastplay(const char *filename)
     if (fd<0)
         return -1;
 
+
+
     int r = tzx__can_fastplay_fd(fd);
 
     close(fd);
@@ -375,7 +390,7 @@ int tzx__can_fastplay(const char *filename)
     return r;
 }
 
-
+#endif
 
 
 

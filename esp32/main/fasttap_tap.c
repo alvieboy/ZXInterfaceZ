@@ -53,15 +53,19 @@ static int fasttap_tap__next(fasttap_t *fasttap, uint8_t requested_type, uint16_
 {
     uint16_t len;
     uint8_t type;
-    if (fasttap->fd<0)
+    if (fasttap->stream==NULL) {
+        ESP_LOGE(TAG,"Invalid stream descriptor!");
         return -1;
+    }
 
-    if (read(fasttap->fd, &len, 2)<2)
+    if (fasttap__read(fasttap, &len, 2)<2) {
+        ESP_LOGE(TAG,"Short read from stream");
         return -1;
+    }
 
     ESP_LOGI(TAG, "Block len %d", len);
 
-    if (read(fasttap->fd, &type, 1)<1)
+    if (fasttap__read(fasttap, &type, 1)<1)
         return -1;
 
     ESP_LOGI(TAG, "Block type %d", type);
@@ -70,7 +74,10 @@ static int fasttap_tap__next(fasttap_t *fasttap, uint8_t requested_type, uint16_
 
     len -= 1; // Skip type
 
-    int r = fpga__write_extram_block_from_file(FASTTAP_ADDRESS_DATA, fasttap->fd, len);
+    int r = fpga__write_extram_block_from_stream(FASTTAP_ADDRESS_DATA, fasttap->stream, len);
+
+    fasttap->read += len;
+
     if (r<0) {
         ESP_LOGE(TAG, "Cannot read TAP file");
         //close(fasttap_fd);
@@ -82,7 +89,9 @@ static int fasttap_tap__next(fasttap_t *fasttap, uint8_t requested_type, uint16_
     fpga__write_extram_block(FASTTAP_ADDRESS_LENLSB, (uint8_t*)&len, 2);
     // Mark ready
     ESP_LOGI(TAG,"Block ready (%d)",len);
-    if (lseek(fasttap->fd,0,SEEK_CUR)==fasttap->size) {
+
+    if (fasttap__is_file_eof(fasttap)) {
+        ESP_LOGI(TAG, "Reached EOF");
         fasttap__stop();
     }
 
