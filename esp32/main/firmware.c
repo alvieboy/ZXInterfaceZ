@@ -288,7 +288,10 @@ static int firmware__stream_file(firmware_upgrade_t *f,
                 ESP_LOGE(TAG,"Short read on fpga file");
                 return -1;
             }
-            streamer(streamerdata, f->buffer, read > size ? size: read);
+            if (streamer(streamerdata, f->buffer, read > size ? size: read)<0) {
+                ESP_LOGE(TAG, "Error streaming firmware data");
+                return -1;
+            }
             size-=read;
         }
     } else {
