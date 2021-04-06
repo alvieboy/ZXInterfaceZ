@@ -9,7 +9,14 @@
 
 #define BINFILE "partition.bin"
 
-#if 0
+
+typedef struct esp_partition_iterator_opaque_ {
+    const esp_partition_t* info;                // pointer to info (it is redundant, but makes code more readable)
+} esp_partition_iterator_opaque_t;
+
+/*
+ # FPGA size: 120226 0x1D5A2
+# Max FPGA size (as per documentation): 0x59D8B
 # ESP-IDF Partition Table
 # Name,   Type, SubType, Offset,  Size, Flags
 nvs,      data, nvs,     0x9000,  0x4000,
@@ -18,27 +25,11 @@ phy_init, data, phy,     0xf000,  0x1000,
 factory,  0,    0,       0x10000, 1M,
 ota_0,    0,    ota_0,  0x110000, 1M,
 ota_1,    0,    ota_1,  0x210000, 1M,
-fpga,     0x40, 0x00,   0x310000, 0x5A000,
-mainrom,  0x42, 0x00,   0x36A000, 0x4000,
-config,   data, spiffs, 0x36E000, 0x8000
-resources,data, spiffs, 0x376000, 0x8A000
+config,   data, spiffs, 0x310000, 0x8000
+resources,data, spiffs, 0x318000, 0xE8000
 
-typedef struct {
-    esp_flash_t* flash_chip;            /*!< SPI flash chip on which the partition resides */
-    esp_partition_type_t type;          /*!< partition type (app/data) */
-    esp_partition_subtype_t subtype;    /*!< partition subtype */
-    uint32_t address;                   /*!< starting address of the partition in flash */
-    uint32_t size;                      /*!< size of the partition, in bytes */
-    char label[17];                     /*!< partition label, zero-terminated ASCII string */
-    bool encrypted;                     /*!< flag is set to true if partition is encrypted */
-} esp_partition_t;
-#endif
-
-typedef struct esp_partition_iterator_opaque_ {
-    const esp_partition_t* info;                // pointer to info (it is redundant, but makes code more readable)
-} esp_partition_iterator_opaque_t;
-
-
+# End of flash: 0x400000
+*/
 
 static const esp_partition_t partitions[] = {
     { NULL, ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_NVS,       0x9000, 0x4000, "nvs", false },
@@ -47,10 +38,8 @@ static const esp_partition_t partitions[] = {
     { NULL, ESP_PARTITION_TYPE_APP,  ESP_PARTITION_SUBTYPE_APP_FACTORY,   0x10000,0x100000, "factory", false },
     { NULL, ESP_PARTITION_TYPE_APP,  ESP_PARTITION_SUBTYPE_APP_OTA_0,    0x110000,0x100000, "ota_0", false },
     { NULL, ESP_PARTITION_TYPE_APP,  ESP_PARTITION_SUBTYPE_APP_OTA_0,    0x210000,0x100000, "ota_1", false },
-    { NULL, 0x40,                    0x00,                               0x310000,0x5A000, "fpga", false },
-    { NULL, 0x42,                    0x00,                               0x36A000,0x4000, "mainrom", false },
-    { NULL, ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_SPIFFS,  0x36E000,0x8000, "config", false },
-    { NULL, ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_SPIFFS,  0x376000,0x8A000, "resources", false },
+    { NULL, ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_SPIFFS,  0x31E000,0x8000, "config", false },
+    { NULL, ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_SPIFFS,  0x318000,0xE8000, "resources", false },
 };
 
 #define FLASH_CHIP_SIZE (4*1024*1024*8)
@@ -82,13 +71,29 @@ esp_err_t esp_partition_write(const esp_partition_t* partition,
                               size_t dst_offset, const void* src, size_t size)
 {
     if ((dst_offset+size-1) > partition->size) {
+        fprintf(stderr,"esp_partition_write: Invalid size!\n");
         return ESP_ERR_INVALID_SIZE;
     }
     lseek( flashfd, partition->address + dst_offset, SEEK_SET);
-    if (write( flashfd, src, size)==size)
-        return 0;
+    do {
+        int r = write( flashfd, src, size);
+        if (r<0) {
+            if (errno==EINTR) {
+                continue;
+            }
+            fprintf(stderr,"esp_partition_write: error writing: %s\n", strerror(errno));
+            return -1;
+        }
 
-    return -1;
+        if (r==size) {
+
+            break;
+        }
+        fprintf(stderr,"esp_partition_write: error writing: %s\n", strerror(errno));
+        return -1;
+    } while (1);
+
+    return 0;
 }
 
 
