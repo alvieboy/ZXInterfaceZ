@@ -81,24 +81,10 @@ static const char* webserver__get_path_from_uri(char *dest, const char *base_pat
     return dest + base_pathlen;
 }
 
-#ifdef __linux__
-
-static char path[512];
-
-static const char *webserver__rootpath()
-{
-    printf("%s\n", startupdir);
-    strcpy(path,startupdir);
-    strcat(path,"/spiffs");
-    return path;
-}
-
-#else
 static const char *webserver__rootpath()
 {
     return "/spiffs";
 }
-#endif
 
 static esp_err_t webserver__get_handler(httpd_req_t *req)
 {
@@ -138,19 +124,25 @@ static esp_err_t webserver__get_handler(httpd_req_t *req)
     strcpy(oldpathend,".gz");
 
     ESP_LOGI(TAG, "Scanning for compressed %s", filepath);
-    if (stat(filepath, &file_stat) == -1) {
+    if (__lstat(filepath, &file_stat) == -1) {
         *oldpathend = '\0'; // no
     } else {
         httpd_resp_set_hdr(req, "Content-Encoding", "gzip");
     }
 
 
-    if (stat(filepath, &file_stat) == -1) {
-        ESP_LOGE(TAG, "Failed to stat file : %s, falling back to index.html", filepath);
-        strcpy(filepath, "/spiffs/index.html");
+    if (__lstat(filepath, &file_stat) == -1) {
+        if (strchr(filename, '.')==NULL) {
+            // No  extension on request, fall back to index.html
+            ESP_LOGI(TAG, "Failed to stat file : %s, falling back to index.html", filepath);
+            strcpy(filepath, "/spiffs/index.html");
+        } else {
+            httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to read existing file");
+            return ESP_FAIL;
+        }
     }
 
-    fd = fopen(filepath, "r");
+    fd = __fopen(filepath, "r");
     if (!fd) {
         ESP_LOGE(TAG, "Failed to read existing file : %s", filepath);
         /* Respond with 500 Internal Server Error */
