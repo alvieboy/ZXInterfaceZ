@@ -164,7 +164,7 @@ int __lstat(const char *path, struct stat *st)
     do {
         char fpath[512];
         sprintf(fpath,"%s/%s", startupdir, path);
-        ESP_LOGI(TAG, "Statting %s\n", fpath);
+        ESP_LOGI(TAG, "Statting %s", fpath);
         r = stat(fpath, st);
     } while (0);
 #else
