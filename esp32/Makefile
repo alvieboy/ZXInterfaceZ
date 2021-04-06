@@ -11,6 +11,7 @@ CP:=cp
 GITVER=$(shell git describe --tags --dirty)
 BUILDDATE=$(shell date --utc)
 EXTRA_CFLAGS+=-DGITVER=\"$(GITVER)\" -DBUILDDATE='"$(BUILDDATE)"'
+
 EXTRA_CXXFLAGS=-Wsuggest-override
 EXTRA_COMPONENT_DIRS=main/wsys main/menus
 
@@ -70,3 +71,9 @@ release: all $(BUILD_DIR_BASE)/resources.bin rle
 flashconfig: config_bin
 	$(ESPTOOLPY_WRITE_FLASH) \
 	$(shell $(GET_PART_INFO) --partition-table-file $(PARTITION_TABLE_BIN) get_partition_info --partition-name config --info offset) $(BUILD_DIR_BASE)/config.bin
+
+factorynvs:
+	$(ESPTOOLPY_SERIAL) erase_region \
+	$(shell $(GET_PART_INFO) --partition-table-file $(PARTITION_TABLE_BIN) get_partition_info --partition-name nvs --info offset --info offset) \
+	$(shell $(GET_PART_INFO) --partition-table-file $(PARTITION_TABLE_BIN) get_partition_info --partition-name nvs --info offset --info size)
+
