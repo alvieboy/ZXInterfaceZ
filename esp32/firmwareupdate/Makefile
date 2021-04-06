@@ -1,4 +1,4 @@
-all:    upgrade.tar
+all:    upgrade.izf
 
 
 RLE=./rle
@@ -12,11 +12,11 @@ intz.rle: ../intz.rom rle $(RLE)
 resources.rle: ../build/resources.bin $(RLE)
 	$(RLE) ../build/resources.bin resources.rle
 
-upgrade.tar: MANIFEST.json ../fpga.bin intz.rle resources.rle ../build//esp32_interfacez.bin
-	tar cfv upgrade.tar --transform="s/.*\///" \
+upgrade.izf: MANIFEST.json ../fpga.bin intz.rle resources.rle ../build//esp32_interfacez.bin
+	tar cfv upgrade.izf --transform="s/.*\///" \
 	MANIFEST.json \
 	resources.rle \
 	../build//esp32_interfacez.bin
 
 clean:
-	rm upgrade.tar resources.rle
+	rm upgrade.izf resources.rle
