@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpEvent, HttpRequest } from '@angular/common/http';
+import { HttpClient, HttpEvent, HttpRequest, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
 @Injectable()
@@ -9,11 +9,11 @@ export class UploadService {
   constructor(private http: HttpClient) { }
 
   uploadFirmware(file: File): Observable<HttpEvent<any>> {
-    const formData: FormData = new FormData();
+    const headers : HttpHeaders = new HttpHeaders({
+      'Content-Type': 'binary/octet-stream'});
 
-    formData.append('file', file);
-
-    const req = new HttpRequest('POST', this.uploadFwUrl, formData, {
+    const req = new HttpRequest('POST', this.uploadFwUrl, file, {
+      headers: headers,
       reportProgress: true,
       responseType: 'json'
     });
