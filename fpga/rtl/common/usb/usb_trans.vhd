@@ -148,7 +148,8 @@ architecture beh of usb_trans is
   signal  pid_PING:   std_logic;
 	signal	pid_cks_err:std_logic;
 
-  signal itg_r            : natural range 0 to C_DEFAULT_ITG-1;
+  signal itg_r            : natural range 0 to C_DEFAULT_ITG-1 := C_DEFAULT_ITG-1;
+
   signal itg_zero_s       : boolean;
 
 	signal rx_data_st       : std_logic_vector(7 downto 0);
@@ -239,7 +240,7 @@ begin
   process(usbclk_i, r, pid_i, daddr_i, dsize_i,data_seq_i,strobe_i,frame_i, addr_i, ep_i,
     phy_txactive_i, phy_txready_i, phy_rxactive_i, crc5_out_s, udata_i, crc16_out_s, rx_data_valid,
     rx_data_done,pid_ACK,pid_NACK, ausbrst_i, speed_i, fs_ce_i,crc16_err,seq_err,pid_STALL,
-    itg_zero_s)
+    itg_zero_s, hostspeed_i,pid_DATA0, pid_DATA1)
     variable w: regs_type;
   begin
     w := r;

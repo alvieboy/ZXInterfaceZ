@@ -177,6 +177,18 @@ ARCHITECTURE rtl OF usbhostctrl is
     interval        : std_logic_vector(7 downto 0); -- for interrupt endpoints
   end record;
 
+  constant C_RESET_CHANNEL_CONF: channel_conf_reg_type := (
+    '0',
+    'X',
+    'X',
+    'X',
+    (others => 'X'),
+    (others => 'X'),
+    (others => 'X'),
+    (others => 'X'),
+    (others => '0')
+  );
+
   type channel_trans_reg_type is record
     dpid            : std_logic_vector(1 downto 0);  -- Data PID.;
                                                      -- 11: setup
@@ -189,11 +201,22 @@ ARCHITECTURE rtl OF usbhostctrl is
     retries         : unsigned(1 downto 0);
     intervalcnt     : unsigned(7 downto 0); -- for interrupt endpoints
     issued          : std_logic;
-  end record;                                           
+  end record;
+
+  constant C_RESET_TRANS: channel_trans_reg_type := (
+    (others => 'X'),
+    'X',
+    'X',
+    (others => 'X'),
+    (others => 'X'),
+    (others => 'X'),
+    (others => 'X'),
+    'X'
+  );
 
   type channel_interrupt_conf_reg_type is record
     datatogglerror  : std_logic;
-    crcerror    : std_logic;
+    crcerror        : std_logic;
     babble          : std_logic;
     transerror      : std_logic; -- Timeout
                                  -- Bit stuff error
@@ -203,6 +226,9 @@ ARCHITECTURE rtl OF usbhostctrl is
     stall           : std_logic;
     cplt            : std_logic; -- Completed
   end record;
+
+  constant C_RESET_INTERRUPT_CONF: channel_interrupt_conf_reg_type := ( others => 'X' );
+  constant C_RESET_INTERRUPT_PEND: channel_interrupt_conf_reg_type := ( others => '0' );
 
 
   type channel_type is record
@@ -229,7 +255,25 @@ ARCHITECTURE rtl OF usbhostctrl is
     int_holdoff     : natural range 0 to C_INTERRUPT_HOLDOFF-1;
   end record;
 
-  signal r                    : regs_type;
+  signal r                    : regs_type := (
+    DETACHED,
+    ( others => 'X'),
+    ( others => 'X'),
+    ( others => 'X'),
+    'X',
+    C_ATTACH_DELAY-1,
+    C_SOF_TIMEOUT-1,
+    ( others => 'X'),
+    0,
+    C_RESET_DELAY-1,
+    ( others => ( C_RESET_CHANNEL_CONF,
+      C_RESET_TRANS,
+      C_RESET_INTERRUPT_CONF,
+      C_RESET_INTERRUPT_PEND
+      )
+    ),
+    C_INTERRUPT_HOLDOFF-1
+  );
   --signal frame_crc5_s         : std_logic_vector(4 downto 0);
 
   signal statusreg_s          : std_logic_vector(7 downto 0);

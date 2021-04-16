@@ -23,10 +23,28 @@ end entity usb_epmem;
 
 architecture beh of usb_epmem is
 
+  COMPONENT epram IS
+	PORT
+	(
+		address_a		: IN STD_LOGIC_VECTOR (9 DOWNTO 0);
+		address_b		: IN STD_LOGIC_VECTOR (9 DOWNTO 0);
+		clock_a		: IN STD_LOGIC  := '1';
+		clock_b		: IN STD_LOGIC ;
+		data_a		: IN STD_LOGIC_VECTOR (7 DOWNTO 0);
+		data_b		: IN STD_LOGIC_VECTOR (7 DOWNTO 0);
+		rden_a		: IN STD_LOGIC  := '1';
+		rden_b		: IN STD_LOGIC  := '1';
+		wren_a		: IN STD_LOGIC  := '0';
+		wren_b		: IN STD_LOGIC  := '0';
+		q_a		: OUT STD_LOGIC_VECTOR (7 DOWNTO 0);
+		q_b		: OUT STD_LOGIC_VECTOR (7 DOWNTO 0)
+	);
+  END COMPONENT epram;
+
 
 begin
 
-  epram_inst : entity work.epram
+  epram_inst : epram
   PORT MAP (
 		address_a	 => uaddr_i,
 		clock_a	 => uclk_i,

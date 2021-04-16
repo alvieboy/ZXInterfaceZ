@@ -86,7 +86,7 @@ architecture RTL of usb_phy is
   signal div8q          : std_logic_vector(2 downto 0);
 
   constant C_RESET_CNT  : natural := 120;
-  signal rst_cnt        : natural range 0 to C_RESET_CNT-1;
+  signal rst_cnt        : natural range 0 to C_RESET_CNT-1 := C_RESET_CNT-1;
 
   signal rxdp_filtered_s: std_logic;
   signal rxdn_filtered_s: std_logic;
