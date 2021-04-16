@@ -10,7 +10,7 @@ entity tap_engine is
     enable_i  : in std_logic;
     restart_i : in std_logic;
 
-    fclk_i    : in std_logic;
+    --fclk_i    : in std_logic;
     fdata_i   : in std_logic_vector(8 downto 0);
     fwr_i     : in std_logic;
     ffull_o   : out std_logic;
@@ -62,24 +62,18 @@ begin
   -- TODO: convert this into a single clock FIFO
   fifo_inst: entity work.tap_fifo
   port map (
+    clk_i     => clk_i,
     -- Write port
-    wclk_i    => fclk_i,
     wdata_i   => fdata_i,
     wen_i     => fwr_i,
-    wusedw_o  => fused_o,
-    wfull_o   => ffull_o,
-    wempty_o  => open,
-    wqfull_o  => open,
-    whfull_o  => open,
-    wqqqfull_o=> open,
+    usedw_o   => fused_o,
+    full_o    => ffull_o,
 
     -- Read port
-    rclk_i    => clk_i,
+    --rclk_i    => clk_i,
     rdata_o   => data_s,
     ren_i     => rd_s,
-    rempty_o  => empty_s,
-    rfull_o   => open,
-    rusedw_o  => open,
+    empty_o  => empty_s,
 
     -- Others
     aclr_i    => freset_s

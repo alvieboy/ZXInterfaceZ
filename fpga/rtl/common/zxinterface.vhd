@@ -664,18 +664,17 @@ begin
   -- TODO: convert this into a single clock FIFO
   resourcefifo_inst: entity work.resource_fifo
   port map (
-    wclk_i      => clk_i,--SPI_SCK_i,
-    rclk_i      => clk_i,
+    clk_i       => clk_i,
     aclr_i      => resfifo_reset_s,
     wen_i       => resfifo_wr_s,
     ren_i       => resfifo_rd_s,
     wdata_i     => resfifo_write_s,
     rdata_o     => resfifo_read_s,
-    wfull_o     => resfifo_full_s(0),
-    wqfull_o    => resfifo_full_s(1),
-    whfull_o    => resfifo_full_s(2),
-    wqqqfull_o  => resfifo_full_s(3),
-    rempty_o    => resfifo_empty_s
+    full_o     => resfifo_full_s(0),
+    qfull_o    => resfifo_full_s(1),
+    hfull_o    => resfifo_full_s(2),
+    qqqfull_o  => resfifo_full_s(3),
+    empty_o    => resfifo_empty_s
   );
 
   --
@@ -912,7 +911,7 @@ begin
     enable_i  => tap_enable_s,
     restart_i => tapfifo_reset_s,
 
-    fclk_i    => clk_i,--SPI_SCK_i,
+    --fclk_i    => clk_i,--SPI_SCK_i,
     fdata_i   => tapfifo_write_s,
     fwr_i     => tapfifo_wr_s,
     ffull_o   => tapfifo_full_s,
