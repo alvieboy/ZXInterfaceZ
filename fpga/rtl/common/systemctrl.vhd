@@ -191,7 +191,7 @@ begin
 
   -- Read multiplexing
   process(clk_i, arst_i)
-    variable hook_index_v: natural range 0 to 7;
+    variable hook_index_v: natural range 0 to 15;
   begin
     if arst_i='1' then
       dat_out_s               <= (others => 'X');
@@ -212,7 +212,7 @@ begin
       else
         dat_out_s <= (others => 'X');
 
-        hook_index_v := to_integer(unsigned(addr_s(4 downto 2)));
+        hook_index_v := to_integer(unsigned(addr_s(5 downto 2)));
 
         case addr_s is
           when "0000000" =>
@@ -279,36 +279,35 @@ begin
           when "0011111" => -- SMC
             dat_out_s   <= page128_smc_i;
 
-          when "1000000" | "1000100" | "1001000" | "1001100" |
-               "1010000" | "1010100" | "1011000" | "1011100" => -- Hook low
-            dat_out_s   <= std_logic_vector(hook_r(hook_index_v).base(7 downto 0));
-
-          when "1000001" | "1000101" | "1001001" | "1001101" |
-               "1010001" | "1010101" | "1011001" | "1011101" => -- Hook high
-            dat_out_s   <= std_logic_vector("00" & hook_r(hook_index_v).base(13 downto 8));
-
-          when "1000010" | "1000110" | "1001010" | "1001110" !
-               "1010010" | "1010110" | "1011010" | "1011110" => -- Hook len
-            dat_out_s   <= std_logic_vector(hook_r(hook_index_v).len);
-
-          when "1000011" | "1000111" | "1001011" | "1001111" |
-               "1010011" | "1010111" | "1011011" | "1011111" => -- Hook flags
-
-            dat_out_s(0) <= hook_r(hook_index_v).flags.romno;
-            dat_out_s(3 downto 1) <= "000";
-            dat_out_s(4) <= hook_r(hook_index_v).flags.ranged;
-            dat_out_s(5) <= hook_r(hook_index_v).flags.prepost;
-            dat_out_s(6) <= hook_r(hook_index_v).flags.setreset;
-            dat_out_s(7) <= hook_r(hook_index_v).flags.valid;
-
           when others =>
+            if ENABLE_HOOK_READ then
+              if addr_s(6)='1' then
+                -- ROM hook
+                case addr_s(1 downto 0) is
+                  when "00" =>
+                    dat_out_s   <= std_logic_vector(hook_r(hook_index_v).base(7 downto 0));
+                  when "01" =>
+                    dat_out_s   <= std_logic_vector("00" & hook_r(hook_index_v).base(13 downto 8));
+                  when "10" =>
+                    dat_out_s   <= "00000" & std_logic_vector(hook_r(hook_index_v).len);
+                  when "11" =>
+                    dat_out_s(0) <= hook_r(hook_index_v).flags.romno;
+                    dat_out_s(3 downto 1) <= "000";
+                    dat_out_s(4) <= hook_r(hook_index_v).flags.ranged;
+                    dat_out_s(5) <= hook_r(hook_index_v).flags.prepost;
+                    dat_out_s(6) <= hook_r(hook_index_v).flags.setreset;
+                    dat_out_s(7) <= hook_r(hook_index_v).flags.valid;
+                  when others =>
+                end case;
+              end if;
+            end if;
         end case;
       end if;
     end if;
   end process;
 
   process(clk_i, arst_i)
-    variable hook_index_v: natural range 0 to 7;
+    variable hook_index_v: natural range 0 to 15;
   begin
     if arst_i='1' then
 
@@ -366,7 +365,7 @@ begin
 
       if wr_s='1' then
 
-        hook_index_v := to_integer(unsigned(addr_s(4 downto 2)));
+        hook_index_v := to_integer(unsigned(addr_s(5 downto 2)));
 
         case addr_s is
           when "0000000" => null;
@@ -427,32 +426,29 @@ begin
                "0110011" | "0110111" | "0111011" | "0111111" =>
             regs32_r( to_integer(unsigned(addr_s(4 downto 2)))) <= tempreg_r & dat_in_s;
 
-          when "1000000" | "1000100" | "1001000" | "1001100" |
-               "1010000" | "1010100" | "1011000" | "1011100" => -- Hook low
-            hook_r(hook_index_v).base(7 downto 0) <= unsigned(dat_in_s);
-
-          when "1000001" | "1000101" | "1001001" | "1001101" |
-               "1010001" | "1010101" | "1011001" | "1011101" => -- Hook high
-            hook_r(hook_index_v).base(13 downto 8)  <= unsigned(dat_in_s(5 downto 0));
-
-          when "1000010" | "1000110" | "1001010" | "1001110" !
-               "1010010" | "1010110" | "1011010" | "1011110" => -- Hook len
-            hook_r(hook_index_v).len                <= unsigned(dat_in_s(7 downto 0));
-
-          when "1000011" | "1000111" | "1001011" | "1001111" |
-               "1010011" | "1010111" | "1011011" | "1011111" => -- Hook flags
-
-            hook_r(hook_index_v).flags.romno        <= dat_in_s(0);
-            hook_r(hook_index_v).flags.ranged       <= dat_in_s(4);
-            hook_r(hook_index_v).flags.prepost      <= dat_in_s(5);
-            hook_r(hook_index_v).flags.setreset     <= dat_in_s(6);
-            hook_r(hook_index_v).flags.valid        <= dat_in_s(7);
-
 
           when others =>
-          -- synthesis translate_off
-            report "TBD write addr " & str(addr_s) severity failure;
-          -- synthesis translate_on
+            if addr_s(6)='1' then
+              case addr_s(1 downto 0) is
+                when "00" =>
+                  hook_r(hook_index_v).base(7 downto 0) <= unsigned(dat_in_s);
+                when "01" =>
+                  hook_r(hook_index_v).base(13 downto 8)  <= unsigned(dat_in_s(5 downto 0));
+                when "10" =>
+                  hook_r(hook_index_v).len                <= unsigned(dat_in_s(2 downto 0));
+                when "11" =>
+                  hook_r(hook_index_v).flags.romno        <= dat_in_s(0);
+                  hook_r(hook_index_v).flags.ranged       <= dat_in_s(4);
+                  hook_r(hook_index_v).flags.prepost      <= dat_in_s(5);
+                  hook_r(hook_index_v).flags.setreset     <= dat_in_s(6);
+                  hook_r(hook_index_v).flags.valid        <= dat_in_s(7);
+                when others =>
+              end case;
+            else
+              -- synthesis translate_off
+              report "TBD write addr " & str(addr_s) severity failure;
+              -- synthesis translate_on
+            end if;
         end case;
       end if;
 

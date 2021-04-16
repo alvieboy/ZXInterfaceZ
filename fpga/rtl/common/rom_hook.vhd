@@ -47,8 +47,8 @@ begin
       variable len    : unsigned(13 downto 0);
     begin
       a_u_v := unsigned( a_i(13 downto 0) );
-      len(7 downto 0)   := unsigned( hook_i(i).len );
-      len(13 downto 8)  := (others => '0');
+      len(2 downto 0)   := unsigned( hook_i(i).len );
+      len(13 downto 3)  := (others => '0');
 
       if not is_x(std_logic_vector(a_u_v)) and a_u_v >= hook_i(i).base
          and a_u_v <= len + hook_i(i).base 

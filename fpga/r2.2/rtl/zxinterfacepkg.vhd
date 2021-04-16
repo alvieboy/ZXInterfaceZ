@@ -82,7 +82,8 @@ package zxinterfacepkg is
   end record;
 
 
-  constant ROM_MAX_HOOKS: natural := 8;
+  constant ROM_MAX_HOOKS: natural := 16;
+  constant ENABLE_HOOK_READ: boolean := false;
 
   type rom_hookflag_t is record
     valid     : std_logic;
@@ -94,7 +95,7 @@ package zxinterfacepkg is
 
   type rom_hook_t is record
     base    : unsigned(13 downto 0);
-    len     : unsigned(7 downto 0);  -- Max 256 bytes
+    len     : unsigned(2 downto 0);  -- Max 8 bytes
     flags   : rom_hookflag_t;
   end record;
 
