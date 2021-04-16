@@ -4,20 +4,27 @@
 
 #define TAG "ROM_HOOK"
 
-static uint8_t hook_usage_bitmap = 0;
-static int8_t rom_hook_defaults[3] = { -1 };
+typedef uint16_t hook_mask_t;
 
-static uint8_t rom_hook__get_free_hook_mask()
+static hook_mask_t hook_usage_bitmap = 0;
+
+
+
+static int8_t rom_hook_defaults[4] = { -1 };
+
+static hook_mask_t rom_hook__get_free_hook_mask()
 {
     return ~hook_usage_bitmap & (hook_usage_bitmap+1);
 }
 
 int rom_hook__add(uint16_t start, uint8_t len, uint8_t flags)
 {
+    hook_mask_t newmask = rom_hook__get_free_hook_mask();
 
-    uint8_t newmask = rom_hook__get_free_hook_mask();
-    if (newmask==0)
+    if (newmask==0) {
+        ESP_LOGE(TAG, "MAX hooks exceeded!");
         return -1;
+    }
 
     uint8_t index = __builtin_ctz(newmask);
 
@@ -39,7 +46,8 @@ void rom_hook__remove(int hook)
 {
     if (hook<0)
         return;
-    uint8_t mask = (1<<hook);
+    hook_mask_t mask = (1<<hook);
+
     ESP_LOGI(TAG,"Removing hook %d mask 0x%02x", hook, mask);
     fpga__disable_hook(hook);
     hook_usage_bitmap &= ~mask;
@@ -67,6 +75,7 @@ int rom_hook__enable_defaults()
     rom_hook_defaults[0] = rom_hook__add_pre_set(rom, 0x0767, 1); // LOAD
     rom_hook_defaults[1] = rom_hook__add_pre_set(rom, 0x04D7, 1); // SAVE
     rom_hook_defaults[2] = rom_hook__add_post_reset(rom, 0x01FFE, 1); // Will have a RET instruction
+    rom_hook_defaults[3] = rom_hook__add_pre_set(rom, 0x0008, 1); // RST 8
 
     return 0;
 }
@@ -84,6 +93,7 @@ void rom_hook__disable_defaults()
 
 void rom_hook__dump()
 {
+#if 0
     ESP_LOGI(TAG, "Current bitmap: %02x", hook_usage_bitmap);
     ESP_LOGI(TAG, "Default hooks: %d %d %d",
              rom_hook_defaults[0],
@@ -94,4 +104,5 @@ void rom_hook__dump()
 
     fpga__read_hooks(&dest[0].w32);
     BUFFER_LOGI(TAG,"Hook conf:", &dest[0].w8[0], 4*8);
+#endif
 }
