@@ -128,3 +128,17 @@ _l3:
         CALL	WRITECMDFIFO
         DJNZ 	_l3
         RET
+        
+        ; A: size to read
+        ; HL: target
+        ; DE: count, which will be decremented.
+READRESTOBUFFER:
+        ; Copy chunk of data first
+        LD	B, A
+_readmore:
+        CALL	READRESFIFO
+        LD	(HL), A
+        INC	HL
+        DEC	DE
+        DJNZ	_readmore
+        RET

@@ -33,12 +33,24 @@ _std8handler:
 	;		LD	(X_PTR),HL	; copy it to the error pointer X_PTR.
 	;   		JR	ERROR_2		; forward to continue at ERROR_2.
 handlesyscall:
-	; Check bounds: TODO
+	
+        ; Check bounds: TODO
+        
         PUSH	HL
+        
         LD	HL, SYSCALLTABLE
         ADD	A, A ; Two bytes per sysall
         ADD_HL_A
-        EX	(SP), HL
+        ; Load it into stack
+        LD	A, (HL)
+        INC	HL
+        LD	H, (HL)
+        LD	L, A
+        
+        
+        
+        EX	(SP), HL ; Restores HL
+        
         RET	     ; Jump into syscall
 
 ORG	$0038
