@@ -240,8 +240,10 @@ static int setupgui(int argc, char **argv, int sock=-1)
     QHBoxLayout *hl = new QHBoxLayout();
     QPushButton *nmi = new QPushButton("NMI");
     QPushButton *io0 = new QPushButton("IO0");
+    QPushButton *scr = new QPushButton("Screenshot");
     hl->addWidget(nmi);
     hl->addWidget(io0);
+    hl->addWidget(scr);
 
     l->addLayout(hl);
     l->addWidget(spectrumWidget);
@@ -317,6 +319,13 @@ static int setupgui(int argc, char **argv, int sock=-1)
 
     iz->linkGPIO(nmi, 34);
     iz->linkGPIO(io0, 0);
+
+    QObject::connect(scr, &QPushButton::clicked,
+                     iz, [=] {
+                         QImage i =
+                             spectrumWidget->getImage().scaled(spectrumWidget->size(), Qt::IgnoreAspectRatio, Qt::FastTransformation);
+                         iz->screenshot(i);
+                     });
 
     if (trace_set) {
         iz->enableTrace("trace.txt");
