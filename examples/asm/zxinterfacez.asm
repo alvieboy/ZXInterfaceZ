@@ -19,7 +19,8 @@ ZXZ_SYSCALL_SENDTO              EQU     203
 ZXZ_SYSCALL_RECVFROM            EQU     204
 ZXZ_SYSCALL_GETHOSTBYNAME       EQU     205
 ZXZ_SYSCALL_GETHOSTBYADDR       EQU     206
-ZXZ_SYSCALL_STRERROR            EQU     207
+ZXZ_SYSCALL_WGET                EQU     207
+ZXZ_SYSCALL_STRERROR            EQU     208
 
 ; Socket types, to be used with ZXZ_SOCKET
 ZXZ_SOCKET_TCP            EQU    6
@@ -355,10 +356,10 @@ ZXZ_SOCKET_UDP            EQU    17
 ;   socket address if the socket is connected.
 ;
 ;   Arguments:
-;       A:  File/Socket descriptor
+;       B:  File/Socket descriptor
 ;       HL: Pointer to source memory area which contains the data to be written
-;       BC: Number of bytes to write
-;       DE: Pointer to a structure containing:
+;       DE: Number of bytes to write
+;       IX: Pointer to a structure containing:
 ;           - 4 bytes host IP address
 ;           - 2 bytes port (little-endian)
 ;   Returns:
@@ -373,7 +374,7 @@ ZXZ_SOCKET_UDP            EQU    17
 ;       HL will point to the location past the last byte written.
 ;
 ;       Destroys/Modifies:
-;           A, Flags, HL, BC
+;           A, Flags, HL, B, DE
 ;
 
     MACRO ZXZ_SENDTO
@@ -386,13 +387,12 @@ ZXZ_SOCKET_UDP            EQU    17
 ;
 ;   Send data packet 
 ;   This call may block if the descriptor is not non-blocking.
-;   Note that unlike most syscalls, the socket argument is in A, not B.
-;   This function behaves like ZXZ_SENDTO with DE = 0x0000
+;   This function behaves like ZXZ_SENDTO with Target Host IP = 0x0000
 ;
 ;   Arguments:
-;       A:  File/Socket descriptor
+;       B:  File/Socket descriptor
 ;       HL: Pointer to source memory area which contains the data to be written
-;       BC: Number of bytes to write
+;       DE: Number of bytes to write
 ;
 ;   Returns:
 ;       If any error occured, carry flag will be set upon exit.
@@ -402,7 +402,7 @@ ZXZ_SOCKET_UDP            EQU    17
 ;       If carry is not set:
 ;           A:  zero
 ;
-;       BC will contain the number of bytes actually written.
+;       DE will contain the number of bytes actually written.
 ;       HL will point to the location past the last byte written.
 ;
 ;       Destroys/Modifies:
@@ -426,10 +426,10 @@ ZXZ_SOCKET_UDP            EQU    17
 ;   Note that unlike most syscalls, the socket argument is in A, not B.
 ;
 ;   Arguments:
-;       A:  File/Socket descriptor
+;       B:  File/Socket descriptor
 ;       HL: Pointer to source memory area which contains the data to be written
-;       BC: Number of bytes to write
-;       DE: Pointer to a structure containing:
+;       DE: Number of bytes to write
+;       IX: Pointer to a structure containing:
 ;           - 4 bytes host IP address
 ;           - 2 bytes port (little-endian)
 ;   Returns:
@@ -440,7 +440,7 @@ ZXZ_SOCKET_UDP            EQU    17
 ;       If carry is not set:
 ;           A:  zero
 ;
-;       BC will contain the number of bytes actually written.
+;       DE will contain the number of bytes actually written.
 ;       HL will point to the location past the last byte written.
 ;
 ;       Destroys/Modifies:
@@ -458,7 +458,7 @@ ZXZ_SOCKET_UDP            EQU    17
 ;   Convert an error code into a null-terminated string
 ;
 ;   Arguments:
-;       A:  Error code
+;       E:  Error code
 ;       HL: Pointer to target memory area which will contain the null-terminated string
 ;       B:  Max size of target memory area
 ;
@@ -474,7 +474,7 @@ ZXZ_SOCKET_UDP            EQU    17
 ;       HL will point to after the NULL character
 ;
 ;       Destroys/Modifies:
-;           A, Flags, DE
+;           A, Flags
 ;
 
     MACRO ZXZ_STRERROR
