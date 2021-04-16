@@ -50,9 +50,8 @@
 #define SPECTCMD_CMD_RECVFROM       (0x2C)
 #define SPECTCMD_CMD_GETHOSTBYNAME  (0x2D)
 #define SPECTCMD_CMD_GETHOSTBYADDR  (0x2E)
-
 #define SPECTCMD_CMD_WGET           (0x2F)
-
+#define SPECTCMD_CMD_STRERROR       (0x30)
 
 
 void spectcmd__request(void);

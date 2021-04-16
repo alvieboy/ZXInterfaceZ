@@ -31,6 +31,11 @@
 #include "interfacez_tasks.h"
 #include "basickey.h"
 #include "remotetap.h"
+#include "byteops.h"
+#include "networkapi.h"
+#include "errorapi.h"
+#include "strlcpy.h"
+#include "minmax.h"
 
 #define COMMAND_BUFFER_MAX 256+2
 
@@ -611,6 +616,187 @@ static int spectcmd__128reset(const uint8_t *cmdbuf, unsigned len)
     return 0;
 }
 
+static int spectcmd__socket(const uint8_t *cmdbuf, unsigned len)
+{
+    uint8_t result;
+    int ret;
+
+    NEED(1); // Protocol: TCP (0x06), UDP (0x11)
+
+    spectcmd__removedata();
+
+
+    result = (uint8_t)networkapi__socket(cmdbuf[0]);
+
+    ESP_LOGI(TAG, "SOCKET type 0x%02x = %d\n", cmdbuf[0], (int)result);
+
+    ret = fpga__load_resource_fifo(&result, sizeof(result), RESOURCE_DEFAULT_TIMEOUT);
+    return ret;
+}
+
+static int spectcmd__connect(const uint8_t *cmdbuf, unsigned len)
+{
+    uint8_t result;
+    int ret;
+
+    NEED(1+4+2); // FD + host + port
+
+    uint8_t fd = cmdbuf[0];
+    uint32_t address = extractle32(&cmdbuf[1]);
+    uint32_t port = extractle16(&cmdbuf[5]);
+
+    spectcmd__removedata();
+
+    result = (uint8_t)networkapi__connect(fd, address, port);
+
+    ret = fpga__load_resource_fifo(&result, sizeof(result), RESOURCE_DEFAULT_TIMEOUT);
+    return ret;
+}
+
+static int spectcmd__gethostbyname(const uint8_t *cmdbuf, unsigned len)
+{
+    uint32_t ip;
+    int8_t result;
+    char hostname[128];
+
+    int ret;
+
+    NEED(1);
+
+    uint8_t hostlen = cmdbuf[0];
+    NEED(hostlen);
+
+    spectcmd__removedata();
+
+    strlcpy(hostname, (char*)&cmdbuf[1], hostlen+1);
+    result = (int8_t)networkapi__gethostbyname(hostname, &ip);
+
+    ESP_LOGI(TAG,"Resolving '%s': %d (%08x)", hostname, result, ip);
+
+    ret = fpga__load_resource_fifo((uint8_t*)&result, sizeof(result), RESOURCE_DEFAULT_TIMEOUT);
+
+    if (result==0) {
+        fpga__load_resource_fifo((uint8_t*)&ip, sizeof(ip), RESOURCE_DEFAULT_TIMEOUT); // LE format
+    }
+
+    return ret;
+}
+
+static int spectcmd__read(const uint8_t *cmdbuf, unsigned len)
+{
+    uint8_t readlen;
+
+    int8_t result;
+    uint8_t chunk[256];
+
+    int ret = -1;
+
+    NEED(1+1); // FD, len
+
+    uint8_t spectfd = cmdbuf[0];
+    readlen = cmdbuf[1];
+
+    ESP_LOGI(TAG, "Attempt to read size %d, spectfd %02x\n", readlen, spectfd);
+
+    spectcmd__removedata();
+
+
+    int filefd = spectfd__spect_to_system(spectfd);
+    if (filefd>=0) {
+        ret = __read(filefd, chunk, readlen);
+        if (ret<0) {
+            result = errorapi__from_errno();
+        } else {
+            result = ret;
+        }
+    } else {
+        result = -EINVAL;
+    }
+
+    fpga__load_resource_fifo((uint8_t*)&result, sizeof(result), RESOURCE_DEFAULT_TIMEOUT); // LE format
+
+    ESP_LOGI(TAG, "Request read size %d, ret %d\n", readlen, ret);
+    if (ret>0) {
+        // Write it to fifo
+        if (fpga__load_resource_fifo(chunk, ret, RESOURCE_DEFAULT_TIMEOUT)<0) {
+            // Time out, give up
+            ESP_LOGE(TAG,"Spectrum timeout while writing resource FIFO");
+        }
+        // Ret is still number of bytes
+    }
+
+    return ret;
+}
+
+static int spectcmd__close(const uint8_t *cmdbuf, unsigned len)
+{
+    int8_t result;
+
+    NEED(1); // FD
+
+    uint8_t spectfd = cmdbuf[0];
+
+    spectcmd__removedata();
+
+    int filefd = spectfd__spect_to_system(spectfd);
+    if (filefd>=0) {
+        result = close(filefd);
+    } else {
+        result = -EINVAL;
+    }
+
+    fpga__load_resource_fifo((uint8_t*)&result, sizeof(result), RESOURCE_DEFAULT_TIMEOUT); // LE format
+
+    return 0;
+}
+
+static int spectcmd__strerror(const uint8_t *cmdbuf, unsigned len)
+{
+    char str[128];
+    NEED(1+1); // Code + max length
+    int8_t code = (int8_t)cmdbuf[0];
+    uint8_t maxlen = cmdbuf[1];
+
+    ESP_LOGI(TAG,"Request STRERROR for code %d (%02x) maxlen %d\n", code, cmdbuf[0], maxlen);
+
+    spectcmd__removedata();
+
+    str[0] = '\0'; // In case we cannot lookup error
+
+    if (code<0) {
+        /* Valid code */
+        code = -code;
+        switch (code) {
+        case EDESTADDRREQ:
+            strlcpy(str, "Host not found", maxlen);
+            maxlen = strlen(str);
+            break;
+        default:
+
+            if (strerror_r((int)code, str, MIN(sizeof(str), maxlen))==0) {
+                maxlen = strlen(str);
+            } else {
+                maxlen = 0;
+            }
+            break;
+        }
+    } else {
+        maxlen = 0;
+    }
+
+    ESP_LOGI(TAG,"Return %d bytes", maxlen);
+
+    // Send maxlen
+    fpga__load_resource_fifo(&maxlen, sizeof(maxlen), RESOURCE_DEFAULT_TIMEOUT);
+    // Send string if needed
+    if (maxlen>0) {
+        fpga__load_resource_fifo((uint8_t*)str, maxlen, RESOURCE_DEFAULT_TIMEOUT);
+    }
+
+    return 0;
+}
+
+
 static const spectcmd_handler_t spectcmd_handlers[] = {
     &spectcmd__load_resource, // 00 SPECTCMD_CMD_GETRESOURCE
     &spectcmd__setwifi,       // 01 SPECTCMD_CMD_SETWIFI
@@ -638,12 +824,45 @@ static const spectcmd_handler_t spectcmd_handlers[] = {
     &spectcmd__savetrap,      // 17 SPECTCMD_CMD_SAVETRAP
     &spectcmd__savedata,      // 18 SPECTCMD_CMD_SAVEDATA,
     &spectcmd__memdata,       // 19 SPECTCMD_CMD_MEMDATA,
-    &spectcmd__keyinject,     // 19 SPECTCMD_CMD_KEYINJECT,
-    &spectcmd__128reset,      // 19 SPECTCMD_CMD_128RESET,
+    &spectcmd__keyinject,     // 1A SPECTCMD_CMD_KEYINJECT,
+    &spectcmd__128reset,      // 1B SPECTCMD_CMD_128RESET,
     NULL,                     // 1C
     NULL,                     // 1D
     NULL,                     // 1E
     NULL,                     // 1F
+    NULL,                     // 20 SPECTCMD_CMD_GETCWD   (0x20)
+    NULL,                     // 21 SPECTCMD_CMD_CHDIR    (0x21)
+    NULL,                     // 22 SPECTCMD_CMD_OPEN     (0x22)
+    &spectcmd__close,         // 23 SPECTCMD_CMD_CLOSE    (0x23)
+    &spectcmd__read,          // 24 SPECTCMD_CMD_READ     (0x24)
+    NULL,                     // 25 SPECTCMD_CMD_WRITE    (0x25)
+    NULL,                     // 26 SPECTCMD_CMD_OPENDIR  (0x26)
+    NULL,                     // 27 SPECTCMD_CMD_READDIR  (0x27)
+    NULL,                     // 28 SPECTCMD_CMD_CLOSEDIR (0x28)
+    &spectcmd__socket,        // 29 SPECTCMD_CMD_SOCKET         (0x29)
+    &spectcmd__connect,       // 2A SPECTCMD_CMD_CONNECT        (0x2A)
+    NULL,                     // 2B SPECTCMD_CMD_SENDTO         (0x2B)
+    NULL,                     // 2C SPECTCMD_CMD_RECVFROM       (0x2C)
+    &spectcmd__gethostbyname, // 2D SPECTCMD_CMD_GETHOSTBYNAME  (0x2D)
+    NULL,                     // 2F SPECTCMD_CMD_GETHOSTBYADDR  (0x2E)
+
+    NULL,                     // 2F SPECTCMD_CMD_WGET           (0x2F)
+    &spectcmd__strerror,      // 30 SPECTCMD_CMD_STRERROR       (0x30)
+    NULL,                     // 31
+    NULL,                     // 32
+    NULL,                     // 33
+    NULL,                     // 34
+    NULL,                     // 35
+    NULL,                     // 36
+    NULL,                     // 37
+    NULL,                     // 38
+    NULL,                     // 39
+    NULL,                     // 3A
+    NULL,                     // 3B
+    NULL,                     // 3C
+    NULL,                     // 3D
+    NULL,                     // 3E
+    NULL,                     // 3F,
     &spectcmd__esxdos_diskinfo, // 20
     &spectcmd__esxdos_driveinfo, // 21
     &spectcmd__esxdos_open, // 22
