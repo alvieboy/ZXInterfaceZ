@@ -179,6 +179,8 @@ spectfd.c             \
 basickey.c            \
 remotetap.c           \
 stream.c              \
+networkapi.c          \
+errorapi.c            \
 wsys/charmap.c        \
 wsys/tomthumb.c        
 
