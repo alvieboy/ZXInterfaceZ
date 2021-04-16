@@ -12,6 +12,7 @@
  - __opendir (instead of opendir)
  - __readdir (instead of readdir)
  - __open (instead of open)
+ - __read (instead of read: to avoid -EINTR in linux)
  - __fopen (instead of fopen)
  - __lstat (instead of lopen)
  - __getcwd (instead of getcwd)
@@ -26,6 +27,7 @@
 #include <string.h>
 #include <fcntl.h>
 #include <stdarg.h>
+#include "strlcpy.h"
 
 #define CWD_MAX 255
 
@@ -384,4 +386,23 @@ void *readfile(const char *filename, int *size)
     }
     *size = st.st_size;
     return data;
+}
+
+int __read(int fd, void *buf, size_t len)
+{
+#ifndef __linux__
+    return read(fd,buf,len);
+#else
+    int r;
+    do {
+        r = read(fd,buf,len);
+        if (r<0) {
+            if (errno!=EINTR)
+                break;
+        } else {
+            break;
+        }
+    } while (1);
+    return r;
+#endif
 }

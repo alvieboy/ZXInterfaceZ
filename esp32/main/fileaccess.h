@@ -62,7 +62,7 @@ FILE *__fopen(const char *path, const char *mode);
 const struct mountpoints *__get_mountpoints(void);
 void register_mountpoint(const char *path);
 void unregister_mountpoint(const char *path);
-
+int __read(int fd, void *buf, size_t len);
 
 typedef enum {
     TYPE_INVALID,
