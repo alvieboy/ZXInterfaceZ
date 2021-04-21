@@ -144,12 +144,16 @@ lone:
         LD	C, A ; Restore C, so we don't mess with it.
         EXX
         
+        ; Enable interrupts so we can sync screen updates
+        EI
         
 ;        DEBUGSTR "Serving NMI\n"
         CALL	NMIPROCESS_VIDEOONLY
 
 NMIRESTORE:
-	; Restore SP first, since we need to manipulate RAM 
+
+	DI
+        ; Restore SP first, since we need to manipulate RAM 
         ; in order to restore it
         LD	C, PORT_RAM_DATA	       ; Data port 
         LD	A, $10		; LSB 
@@ -399,6 +403,7 @@ _snapshot:
 _processvideo:
 	;DEBUGSTR "Sequence "
         ;DEBUGHEXA
+        ; Wait for next interrupt
         LD	(FRAMES1), A
 
         LD	C, PORT_RAM_ADDR_0
@@ -412,6 +417,10 @@ _processvideo:
 	;	6912 bytes. 216 blocks of 32 bytes, 108 blocks of 64 bytes, 54 blocks of 128 bytes.
         LD	A, 54
         LD	C, PORT_RAM_DATA
+
+	; Sync to interrupt
+        HALT
+
 _loop1:
         REPT	128                 	; T16, T2048 total
           INI
