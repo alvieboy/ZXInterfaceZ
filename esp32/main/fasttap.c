@@ -350,7 +350,9 @@ int fasttap__read(fasttap_t *tap, void *buf, size_t size)
     int r = stream__read(tap->stream, buf, size);
 
     if (r>0) {
+	/*
         ESP_LOGI(FASTTAP," -- Read %d, totoal now %d", r, tap->read);
+	*/
         tap->read += r;
     }
     return r;

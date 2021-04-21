@@ -27,7 +27,7 @@ struct fasttap_ops;
 
 typedef struct fasttap {
     const struct fasttap_ops *ops;
-    struct stream *stream;//int fd;
+    struct stream *stream;
     size_t size;
     size_t read;
 } fasttap_t;
