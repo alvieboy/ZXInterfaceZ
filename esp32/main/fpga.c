@@ -350,70 +350,6 @@ int fpga__upload_rom_chunk(uint32_t baseaddress, uint16_t offset, uint8_t *buffe
     }
     return len;
 }
-/**
- * \ingroup fpga
- * \brief Return the reset time
- *
- * Return the time, in milisseconds, that ZX Spectrum reset signal must be active to
- * safely perform a reset.
- * \return time in milisseconds
- */
-int fpga__get_reset_time()
-{
-    return 500;
-}
-
-/**
- * \ingroup fpgarom
- * \brief Reset the ZX Spectrum and force it into a custom ROM
- *
- * \param romno ROM number to activate. See ROM architecture details.
- * \param miscctrl Value to be written to MISCCTRL register. This is used to control ROM behaviour
- * \param activate_retn_hook Whether to activate the RETN hook.
- * \return 0 if successful
- */
-int fpga__reset_to_custom_rom(int romno, uint8_t miscctrl, bool activate_retn_hook)
-{
-    ESP_LOGI(TAG, "Resetting spectrum (to custom ROM)");
-
-    fpga__set_flags(FPGA_FLAG_RSTSPECT | FPGA_FLAG_CAPCLR);
-
-    fpga__set_rom(romno);
-
-    fpga__set_trigger(FPGA_FLAG_TRIG_FORCEROMCS_ON);
-
-    if (activate_retn_hook) {
-        fpga__set_trigger(FPGA_FLAG_TRIG_FORCEROMONRETN);
-    }
-
-    fpga__write_miscctrl(miscctrl);
-
-
-    vTaskDelay(fpga__get_reset_time() / portTICK_RATE_MS);
-    fpga__clear_flags(FPGA_FLAG_RSTSPECT);
-
-    ESP_LOGI(TAG, "Reset completed");
-    return 0;
-}
-
-/**
- * \ingroup fpga
- * \brief Reset the spectrum
- */
-int fpga__reset_spectrum()
-{
-    ESP_LOGI(TAG, "Resetting spectrum");
-
-    fpga__set_flags(FPGA_FLAG_RSTSPECT);
-
-    fpga__set_trigger(FPGA_FLAG_TRIG_FORCEROMCS_OFF | FPGA_FLAG_TRIG_FORCENMI_OFF);
-
-    vTaskDelay(fpga__get_reset_time() / portTICK_RATE_MS);
-    fpga__clear_flags(FPGA_FLAG_RSTSPECT);
-
-    ESP_LOGI(TAG, "Reset completed");
-    return 0;
-}
 
 /**
  * \ingroup fpga
@@ -1042,7 +978,11 @@ int fpga__write_extram_block_from_file(uint32_t address, int fd, int size)
  */
 int fpga__write_extram_block_from_stream(uint32_t address, struct stream *stream, int size)
 {
+#ifdef __linux__
+    uint8_t chunk[4096];
+#else
     uint8_t chunk[128];
+#endif
 
     while (size) {
         int chunksize = MIN(size, (int)sizeof(chunk));

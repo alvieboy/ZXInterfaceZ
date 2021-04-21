@@ -4,6 +4,7 @@
 #include "freertos/task.h"
 #include "rom_hook.h"
 #include "log.h"
+#include "reset.h"
 
 #define TAG "REMOTETAP"
 
@@ -29,7 +30,7 @@ void remotetap__prepareload()
     };
     basickey__inject(loadbuf, 4);
 
-    vTaskDelay(fpga__get_reset_time() / portTICK_RATE_MS);
+    vTaskDelay(reset__get_reset_time() / portTICK_RATE_MS);
     fpga__clear_flags(FPGA_FLAG_RSTSPECT);
 }
 

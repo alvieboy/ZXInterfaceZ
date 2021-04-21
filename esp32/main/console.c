@@ -20,7 +20,7 @@
 #include "esp32/rom/uart.h"
 #include "byteops.h"
 #include "scope.h"
-#include "spectctrl.h"
+#include "reset.h"
 #include "rom_hook.h"
 
 static char cmd[256];
@@ -300,7 +300,7 @@ static int console__loadrom(int argc, char **argv)
         return -1;
     }
 
-    if (fpga__reset_to_custom_rom(ROM_2, 0x00, false)<0) {
+    if (reset__reset_to_custom_rom(ROM_2, 0x00, false)<0) {
         ESP_LOGE(CTAG, "Cannot reset");
         return -1;
     }
@@ -316,11 +316,11 @@ static int console__reset(int argc, char **argv)
     if (argc>0) {
         if (strcmp(argv[0], "custom")==0) {
             ESP_LOGI(CTAG, "Resetting to custom ROM0");
-            fpga__reset_to_custom_rom(ROM_0, 0x00, false);
+            reset__reset_to_custom_rom(ROM_0, 0x00, false);
             return 0;
         }
     }
-    spectctrl__reset();
+    reset__reset_spectrum();
     return 0;
 }
 

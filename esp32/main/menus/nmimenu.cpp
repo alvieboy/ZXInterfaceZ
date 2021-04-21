@@ -15,9 +15,9 @@
 #include "poke.h"
 #include "nmi_poke.h"
 #include "standardfilefilter.h"
-#include "spectctrl.h"
 #include "debugger.h"
 #include "debugwindow.h"
+#include "reset.h"
 
 static MenuWindow *nmimenu;
 
@@ -307,7 +307,7 @@ static void cb_exit_nmi()
 static void cb_reset()
 {
     screen__destroyAll();
-    spectctrl__reset();
+    reset__reset_spectrum();
 }
 
 static void cb_about(void)

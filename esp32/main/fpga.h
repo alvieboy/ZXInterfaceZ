@@ -153,8 +153,6 @@ int fpga__upload_rom(const uint32_t baseaddress, const uint8_t *buffer, unsigned
 
 int fpga__isBITmode(void);
 
-int fpga__reset_to_custom_rom(int romno, uint8_t miscctrl, bool activate_retn_hook);
-
 int fpga__load_resource_fifo(const uint8_t *data, unsigned len, int timeout);
 
 
@@ -207,8 +205,6 @@ void fpga__set_config1_bits(uint32_t bits);
 void fpga__clear_config1_bits(uint32_t bits);
 int fpga__set_rom(uint8_t rom);
 int fpga__set_ram(uint8_t ram);
-int fpga__reset_spectrum(void);
-int fpga__get_reset_time(void);
 
 int fpga__read_uart_status(void);
 int fpga__read_uart_data(uint32_t *buf, int len_bytes);

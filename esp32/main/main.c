@@ -52,12 +52,12 @@
 #include "divcompat.h"
 #include "rom_hook.h"
 #include "storage.h"
-#include "spectctrl.h"
 #include "activity_monitor.h"
 #include "tape.h"
 #include "kempston.h"
 #include "fasttap.h"
 #include "log.h"
+#include "reset.h"
 
 static int8_t videomode = 0;
 
@@ -96,7 +96,7 @@ static void io0_long_press()
     }
 
     ESP_LOGI(TAG, "Resetting to custom ROM");
-    if (fpga__reset_to_custom_rom(ROM_2, 0x00, false)<0) {
+    if (reset__reset_to_custom_rom(ROM_2, 0x00, false)<0) {
         ESP_LOGE(TAG, "Cannot reset");
     }
 }
@@ -113,7 +113,7 @@ static void load_esxdos()
     divcompat__enable(0); // 48K only for now
 
     ESP_LOGI(TAG, "Resetting to custom ROM");
-    if (fpga__reset_to_custom_rom(ROM_1, 0x00, false)<0) {
+    if (reset__reset_to_custom_rom(ROM_1, 0x00, false)<0) {
         ESP_LOGE(TAG, "Cannot reset");
     }
 }
@@ -220,6 +220,10 @@ static bool extram_test(bool simple_test)
     const unsigned topram = 0x00800000;
 #endif
 
+#ifdef __linux__
+    return true;
+#endif
+
 
     if (simple_test)
     {
@@ -271,7 +275,7 @@ static void detect_spectrum()
     spectrum_model = 0xfe;
     int timeout = 100;
 
-    fpga__reset_to_custom_rom(ROM_0, 0x00, false);
+    reset__reset_to_custom_rom(ROM_0, 0x00, false);
     // We need to wait for 1000ms,
     do {
         if (spectrum_model !=0xfe)
@@ -279,7 +283,7 @@ static void detect_spectrum()
         vTaskDelay(100 / portTICK_RATE_MS);
     } while (--timeout);
 
-    spectctrl__reset();
+    reset__reset_spectrum();
 
 
     ESP_LOGI(TAG," AY-3-8912: %s", spectrum_flags& SPECTRUM_FLAGS_AY ? "PRESENT": "absent");

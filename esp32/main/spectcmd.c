@@ -24,7 +24,6 @@
 #include "tapeplayer.h"
 #include "save.h"
 #include "memlayout.h"
-#include "spectctrl.h"
 #include "tape.h"
 #include "debugger.h"
 #include "memdata.h"
@@ -36,6 +35,7 @@
 #include "errorapi.h"
 #include "strlcpy.h"
 #include "minmax.h"
+#include "reset.h"
 
 #define COMMAND_BUFFER_MAX 256+2
 
@@ -308,7 +308,7 @@ static int spectcmd__setwifi(const uint8_t *cmdbuf, unsigned len)
 
 static int spectcmd__reset(const uint8_t *cmdbuf, unsigned len)
 {
-    spectctrl__reset();
+    reset__reset_spectrum();
     spectcmd__removedata();
     return 0;
 }
