@@ -166,8 +166,8 @@ usbhubdev.c           \
 object.c              \
 bitmap_allocator.c    \
 save.c                \
-spectctrl.c           \
 tape.c                \
+reset.c               \
 activity_monitor.c    \
 debugger.c            \
 memdata.c             \
@@ -176,6 +176,7 @@ disassemble_tables.c  \
 joystick.c            \
 kempston.c            \
 spectfd.c             \
+spectdir.c            \
 basickey.c            \
 remotetap.c           \
 stream.c              \
