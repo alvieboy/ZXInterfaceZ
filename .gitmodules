@@ -2,3 +2,8 @@
 	path = esp32/host/QtSpecem
 	url = https://github.com/alvieboy/QtSpecem.git
 	branch = interfacez
+
+[submodule "esp32/host/QtGifImage"]
+	path = esp32/host/QtGifImage
+	url = https://github.com/dbzhang800/QtGifImage.git
+	branch = master
