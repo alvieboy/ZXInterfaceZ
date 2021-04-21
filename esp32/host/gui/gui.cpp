@@ -1,5 +1,4 @@
-#include "SpectrumWidget.h"
-#include "QtSpecem.h"
+#include "gui.h"
 #include <sys/socket.h>
 #include <QVBoxLayout>
 #include <QPushButton>
@@ -60,6 +59,7 @@ static void logger(int level, const char *tag, char *fmt, va_list ap)
 
 void LogEmitter::log(int level, const char *tag, char *fmt, va_list ap)
 {
+    Q_UNUSED(tag);
     char line[512];
     vsprintf(line, fmt, ap);
     // Remove newlines
@@ -129,7 +129,7 @@ static int populateUSB(QMenu *menu, InterfaceZ *intf)
     libusb_device *dev, **devs;
     int i, status;
     struct libusb_device_descriptor desc;
-    struct usb_device_handle *devhandle;
+    //struct usb_device_handle *devhandle;
 
 
     if (libusb_init(&ctx)<0) {
@@ -216,140 +216,10 @@ static int setupgui(int argc, char **argv, int sock=-1)
     } while (1);
 
 
-    SpectrumWidget *spectrumWidget = new SpectrumWidget();
+    GuiWindow *mainw = new GuiWindow();
 
-    QMainWindow *mainw = new EmulatorWindow();
+    mainw->setupui(filename,sock,trace_set,trace_address);
 
-    logemitter = new LogEmitter();
-
-    KeyCapturer *keycapture = new KeyCapturer();
-    qApp->installEventFilter(keycapture);
-    //spectrumWidget->installEventFilter(mainw);
-
-    QWidget *mainwidget = new QWidget();
-
-    mainw->setCentralWidget(mainwidget);
-
-    QVBoxLayout *l = new QVBoxLayout();
-    l->setSpacing(0);
-
-
-    mainwidget->setLayout(l);
-
-    // Add buttons.
-    QHBoxLayout *hl = new QHBoxLayout();
-    QPushButton *nmi = new QPushButton("NMI");
-    QPushButton *io0 = new QPushButton("IO0");
-    QPushButton *scr = new QPushButton("Screenshot");
-    hl->addWidget(nmi);
-    hl->addWidget(io0);
-    hl->addWidget(scr);
-
-    l->addLayout(hl);
-    l->addWidget(spectrumWidget);
-
-    QMenuBar *menuBar = mainw->menuBar();
-
-    QMenu *fileMenu = menuBar->addMenu("&File");
-    QAction *exitAct = new QAction("&Exit", mainw);
-    exitAct->setShortcuts(QKeySequence::Quit);
-    exitAct->setStatusTip("Exit");
-    QObject::connect(exitAct, &QAction::triggered, mainwidget, &EmulatorWindow::close);
-
-    fileMenu->addAction(exitAct);
-
-
-    QMenu *usbMenu = menuBar->addMenu("&USB");
-    QMenu *connectMenu = usbMenu->addMenu("&Connect");
-
-    edit = new QPlainTextEdit();
-    l->addWidget(edit);
-    edit->setReadOnly(true);
-    edit->ensureCursorVisible();
-
-    char style[1024];
-    ansi_get_stylesheet(style);
-
-    edit->setStyleSheet(style);
-    //printf("Style: %s\n", style);
-
-    htmllogger = new HTMLLogger(edit);
-
-
-    QObject::connect( logemitter,
-                     &LogEmitter::logstring,
-                     htmllogger,
-                     &HTMLLogger::log,
-                     Qt::QueuedConnection);
-
-    set_logger(&logger);
-
-    mainw->show();
-
-    printf("Using rom %s\n", filename.toLatin1().constData());
-    QFile file(filename);
-
-    printf("Init pallete\n");
-    init_pallete();
-    
-    printf("Init emul\n");
-    init_emul();
-
-    QByteArray data;
-    const char *p;
-    int i;
-
-    if(file.open(QIODevice::ReadOnly)){
-        data=file.readAll();
-        file.close();
-        p=data;
-        for (i=0; i < 16384 ; i++)
-            *(mem+i) = *(p++);
-    } else {
-        printf("Cannot open ROM file\n");
-        return -1;
-    }
-
-    iz = InterfaceZ::get();
-
-    if (iz->init()<0) {
-        fprintf(stderr,"Cannot init InterfaceZ\n");
-        return -1;
-    }
-
-    iz->linkGPIO(nmi, 34);
-    iz->linkGPIO(io0, 0);
-
-    QObject::connect(scr, &QPushButton::clicked,
-                     iz, [=] {
-                         QImage i =
-                             spectrumWidget->getImage().scaled(spectrumWidget->size(), Qt::IgnoreAspectRatio, Qt::FastTransformation);
-                         iz->screenshot(i);
-                     });
-
-    if (trace_set) {
-        iz->enableTrace("trace.txt");
-        iz->addTraceAddressMatch(trace_address);
-    }
-
-#ifdef FPGA_USE_SOCKET_PROTOCOL
-    iz->setCommsSocket(sock);
-#else
-
-    localClient = new MyLinkClient(iz);
-
-    interface__set_comms_fun(&spi_transceive_fun);
-
-    iz->addClient(localClient);
-
-#endif
-
-    populateUSB(connectMenu, iz);
-
-    QObject::connect( spectrumWidget, &SpectrumWidget::NMI, iz, &InterfaceZ::onNMI);
-
-    spectrumWidget->show();
-    return 0;
 }
 
 
@@ -389,3 +259,219 @@ void HTMLLogger::log(int level, QString str)
     ansi_convert_line_to_html(str.toLocal8Bit().constData(), out, 4096);
     m_text->appendHtml(out);
 }
+
+
+void GuiWindow::onPaintCompleted(QImage&i)
+{
+    qDebug()<<"Frame";
+    if (m_gif) {
+
+        QDateTime exposeTime = QDateTime::currentDateTime();
+
+        if (m_lastImage!=i) {
+
+            if (m_lastImage.width()) {
+                // Calculate delay.
+                qint64 deltamsecs = exposeTime.toMSecsSinceEpoch() -
+                    m_lastImageTime.toMSecsSinceEpoch();
+                m_gif->addFrame(m_lastImage, deltamsecs);
+            } 
+            m_lastImage = i;
+            m_lastImageTime = exposeTime;
+        }
+    } else {
+        m_lastImage = QImage();
+    }
+}
+
+void GuiWindow::stopGif()
+{
+    QImage nullimage;
+    if (m_gif) {
+        // Update last frame
+        onPaintCompleted(nullimage);
+        m_gif->save("demo1.gif");
+        delete(m_gif);
+        m_gif = NULL;
+    }
+}
+
+void GuiWindow::initGifSave()
+{
+    QVector<QRgb> ctable;
+
+    m_gif = new QGifImage(QSize(256+64, 192+64));
+
+    for (unsigned i=0;i<16;i++) {
+        ctable << m_spectrumwidget->getColorPallete(i);
+    }
+
+    m_gif->setGlobalColorTable(ctable, Qt::black);
+    m_gif->setDefaultDelay(100);
+}
+
+GuiWindow::GuiWindow()
+{
+    m_spectrumwidget = new SpectrumWidget();
+}
+
+
+int GuiWindow::setupui(const QString &romfilename, int sock, bool trace_set, unsigned trace_address)
+{
+    logemitter = new LogEmitter();
+    KeyCapturer *keycapture = new KeyCapturer();
+    qApp->installEventFilter(keycapture);
+
+    QWidget *mainwidget = new QWidget();
+
+    setCentralWidget(mainwidget);
+
+    QVBoxLayout *l = new QVBoxLayout();
+    l->setSpacing(0);
+
+
+    mainwidget->setLayout(l);
+
+    // Add buttons.
+    QHBoxLayout *hl = new QHBoxLayout();
+    QPushButton *nmi = new QPushButton("NMI");
+    QPushButton *io0 = new QPushButton("IO0");
+    QPushButton *scr = new QPushButton("Screenshot");
+    gif_button = new QPushButton("Start GIF");
+    hl->addWidget(nmi);
+    hl->addWidget(io0);
+    hl->addWidget(scr);
+    hl->addWidget(gif_button);
+
+    l->addLayout(hl);
+    l->addWidget(m_spectrumwidget);
+
+    QMenuBar *menuBar = this->menuBar();
+
+    QMenu *fileMenu = menuBar->addMenu("&File");
+    QAction *exitAct = new QAction("&Exit", this);
+    exitAct->setShortcuts(QKeySequence::Quit);
+    exitAct->setStatusTip("Exit");
+    QObject::connect(exitAct, &QAction::triggered, mainwidget, &EmulatorWindow::close);
+
+    fileMenu->addAction(exitAct);
+
+
+    QMenu *usbMenu = menuBar->addMenu("&USB");
+    QMenu *connectMenu = usbMenu->addMenu("&Connect");
+
+    edit = new QPlainTextEdit();
+    l->addWidget(edit);
+    edit->setReadOnly(true);
+    edit->ensureCursorVisible();
+
+    char style[1024];
+    ansi_get_stylesheet(style);
+
+    edit->setStyleSheet(style);
+    //printf("Style: %s\n", style);
+
+    htmllogger = new HTMLLogger(edit);
+
+
+    QObject::connect( logemitter,
+                     &LogEmitter::logstring,
+                     htmllogger,
+                     &HTMLLogger::log,
+                     Qt::QueuedConnection);
+
+    set_logger(&logger);
+
+    show();
+
+    printf("Using rom %s\n", romfilename.toLatin1().constData());
+    QFile file(romfilename);
+
+    printf("Init pallete\n");
+    init_pallete();
+    
+    printf("Init emul\n");
+    init_emul();
+
+    QByteArray data;
+    const char *p;
+    int i;
+
+    if(file.open(QIODevice::ReadOnly)){
+        data=file.readAll();
+        file.close();
+        p=data;
+        for (i=0; i < 16384 ; i++)
+            *(mem+i) = *(p++);
+    } else {
+        printf("Cannot open ROM file\n");
+        return -1;
+    }
+
+    iz = InterfaceZ::get();
+
+    if (iz->init()<0) {
+        fprintf(stderr,"Cannot init InterfaceZ\n");
+        return -1;
+    }
+
+    iz->linkGPIO(nmi, 34);
+    iz->linkGPIO(io0, 0);
+
+    QObject::connect(m_spectrumwidget,
+                     &SpectrumWidget::paintCompleted,
+                     this,
+                     &GuiWindow::onPaintCompleted);
+
+    QObject::connect(scr, &QPushButton::clicked,
+                     iz, [=] {
+                         QImage i =
+                             m_spectrumwidget->getImage().scaled(m_spectrumwidget->size(), Qt::IgnoreAspectRatio, Qt::FastTransformation);
+                         iz->screenshot(i);
+                     });
+
+    QObject::connect(gif_button,
+                     &QPushButton::clicked,
+                     this, &GuiWindow::onGifButtonPressed
+                    );
+
+    if (trace_set) {
+        iz->enableTrace("trace.txt");
+        iz->addTraceAddressMatch(trace_address);
+    }
+
+#ifdef FPGA_USE_SOCKET_PROTOCOL
+    iz->setCommsSocket(sock);
+#else
+
+    localClient = new MyLinkClient(iz);
+
+    interface__set_comms_fun(&spi_transceive_fun);
+
+    iz->addClient(localClient);
+
+#endif
+
+    populateUSB(connectMenu, iz);
+
+    QObject::connect( m_spectrumwidget, &SpectrumWidget::NMI, iz, &InterfaceZ::onNMI);
+
+    m_spectrumwidget->show();
+    return 0;
+}
+
+void GuiWindow::onGifButtonPressed()
+{
+    if (!m_gif) {
+        initGifSave();
+        qDebug()<<"Started GIF save";
+        gif_button->setText("Stop GIF");
+
+    } else {
+        stopGif();
+        gif_button->setText("Start GIF");
+
+    }
+}
+
+
