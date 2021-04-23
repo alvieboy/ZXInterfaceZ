@@ -304,6 +304,7 @@ set_global_assignment -name VHDL_FILE ../rtl/common/usb/usb_dpll.vhd
 set_global_assignment -name VHDL_FILE ../rtl/common/usb/maj_filter.vhd
 set_global_assignment -name VHDL_FILE ../rtl/common/usb/usb_filter.vhd
 set_global_assignment -name VHDL_FILE rtl/zxinterfacepkg.vhd
+set_global_assignment -name VHDL_FILE ../rtl/common/zxinterfaceports.vhd
 set_global_assignment -name VHDL_FILE ../rtl/common/async_dualpulse_data.vhd
 set_global_assignment -name VHDL_FILE ../rtl/common/async_pulse_data.vhd
 set_global_assignment -name VHDL_FILE ../rtl/common/generic_dp_ram2.vhd
