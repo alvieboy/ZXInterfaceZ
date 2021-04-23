@@ -4,6 +4,7 @@ use IEEE.STD_LOGIC_misc.all;
 use IEEE.numeric_std.all;
 library work;
 use work.zxinterfacepkg.all;
+use work.zxinterfaceports.all;
 -- synthesis translate_off
 use work.txt_util.all;
 -- synthesis translate_on
@@ -127,6 +128,7 @@ architecture beh of interfacez_io is
 
   signal has_key_inject_s : std_logic;
 
+  signal internal_reg_sel_s     : std_logic; -- Internal register access
   signal kempston_joy_sel_s     : std_logic;
   signal kempston_mousex_sel_s  : std_logic;
   signal kempston_mousey_sel_s  : std_logic;
@@ -135,6 +137,8 @@ architecture beh of interfacez_io is
 
   signal ay_register_sel_s      : std_logic;
   signal ay_data_sel_s          : std_logic;
+  signal ay_sel_s               : std_logic;
+  signal ay_read_active_s       : std_logic;
   signal ayreg_r                : std_logic_vector(3 downto 0);
 
   signal romsel_r               : std_logic_vector(1 downto 0);
@@ -150,43 +154,45 @@ architecture beh of interfacez_io is
 
 begin
 
-  kempston_joy_sel_s    <= '1' when ((adr_i AND SPECT_PORT_KEMPSTON_JOYSTICK_MASK) = SPECT_PORT_KEMPSTON_JOYSTICK) else '0';
-  kempston_mousex_sel_s <= '1' when ((adr_i AND SPECT_PORT_KEMPSTON_MOUSEX_MASK) = SPECT_PORT_KEMPSTON_MOUSEX) else '0';
-  kempston_mousey_sel_s <= '1' when ((adr_i AND SPECT_PORT_KEMPSTON_MOUSEY_MASK) = SPECT_PORT_KEMPSTON_MOUSEY) else '0';
-  kempston_mouseb_sel_s <= '1' when ((adr_i AND SPECT_PORT_KEMPSTON_MOUSEB_MASK) = SPECT_PORT_KEMPSTON_MOUSEB) else '0';
+  --
+  -- Port matching flags. Set to '1' if address matches the defined "range" for the device.
+  -- See zxinterfaceports.vhd for a list of supported ports.
+  --
+
+  -- Internal register access
+  internal_reg_sel_s    <= z80_address_match_std_logic(adr_i, SPECT_PORT_INTERNAL_REGISTER);
+
+  -- Kempston joystick
+  kempston_joy_sel_s    <= z80_address_match_std_logic(adr_i, SPECT_PORT_KEMPSTON_JOYSTICK);
+
+  -- Kempston mouse
+  kempston_mousex_sel_s <= z80_address_match_std_logic(adr_i, SPECT_PORT_KEMPSTON_MOUSEX);
+  kempston_mousey_sel_s <= z80_address_match_std_logic(adr_i, SPECT_PORT_KEMPSTON_MOUSEY);
+  kempston_mouseb_sel_s <= z80_address_match_std_logic(adr_i, SPECT_PORT_KEMPSTON_MOUSEB);
+  -- Aggregate mouse match (x, y or button)
   kempston_mouse_sel_s  <= kempston_mousex_sel_s or kempston_mousey_sel_s or kempston_mouseb_sel_s;
 
-  ay_register_sel_s     <= '1' when ((adr_i AND SPECT_PORT_AY_REGISTER_MASK) = SPECT_PORT_AY_REGISTER) else '0';
-  ay_data_sel_s         <= '1' when ((adr_i AND SPECT_PORT_AY_DATA_MASK) = SPECT_PORT_AY_DATA) else '0';
+  -- AY
+  ay_register_sel_s     <= z80_address_match_std_logic(adr_i, SPECT_PORT_AY_REGISTER);
+  ay_data_sel_s         <= z80_address_match_std_logic(adr_i, SPECT_PORT_AY_DATA);
+  -- Aggregate AY select (register or data)
+  ay_sel_s              <= ay_register_sel_s OR ay_data_sel_s;
+  -- AY read active will also depend if AY is enabled and if AY reads are also enabled.
+  ay_read_active_s      <= ay_sel_s AND ay_en_reads_i AND ay_en_i;
 
-  page128_sel_s         <= '1' when ((adr_i AND SPECT_PORT_128PAGE_REGISTER_MASK) = SPECT_PORT_128PAGE_REGISTER) and mode2a_i='0' else '0';
-  page2a_pmc_sel_s      <= '1' when ((adr_i AND SPECT_PORT_2A_PMC_REGISTER_MASK) = SPECT_PORT_2A_PMC_REGISTER) and mode2a_i='1' else '0';
-  page2a_smc_sel_s      <= '1' when ((adr_i AND SPECT_PORT_2A_SMC_REGISTER_MASK) = SPECT_PORT_2A_SMC_REGISTER) and mode2a_i='1' else '0';
-
-  ay_adr_o <= ayreg_r;       
+  -- Page registers selection, depends also if we are using +2A mode or not.
+  page128_sel_s         <= z80_address_match_std_logic(adr_i, SPECT_PORT_128PAGE_REGISTER) AND NOT mode2a_i;
+  page2a_pmc_sel_s      <= z80_address_match_std_logic(adr_i, SPECT_PORT_2A_PMC_REGISTER) AND mode2a_i;
+  page2a_smc_sel_s      <= z80_address_match_std_logic(adr_i, SPECT_PORT_2A_SMC_REGISTER) AND mode2a_i;
 
   -- Address match for reads
-  process (adr_i, joy_en_i, mouse_en_i, ay_register_sel_s,
-    ay_en_reads_i, ay_en_i, ay_data_sel_s, kempston_mouse_sel_s, kempston_joy_sel_s)
-  begin
-    addr_match_s<='0';
-    if adr_i(0)='1' and adr_i(1)='1' and adr_i(5)='1' and adr_i(7)='0' then
-      addr_match_s<='1'; -- Internal 4-bit registers (16)
-    else
-      if kempston_joy_sel_s='1' then -- We always reply even if disabled.
-        addr_match_s <= '1';
-      end if;
-      if kempston_mouse_sel_s='1' then -- We always reply even if disabled.
-        addr_match_s <= '1';
-      end if;
-      if (ay_register_sel_s='1' or ay_data_sel_s='1') and ay_en_reads_i='1' and ay_en_i='1' then -- We only reply if enabled
-        addr_match_s <= '1';
-      end if;
-      -- We don't reply to PMC/SMC registers.
-		end if;
-  end process;
 
-	enable_s  <=  active_i and addr_match_s; -- Report all IOs
+  addr_match_s <= internal_reg_sel_s
+    OR kempston_joy_sel_s
+    OR kempston_mouse_sel_s
+    OR ay_read_active_s;
+
+	enable_s  <=  active_i and addr_match_s;
 
   process(clk_i, rst_i)
   begin
@@ -476,5 +482,6 @@ begin
   page128_smc_o   <= page128_smc_r;
   trig_force_clearromcsonret_o <= trig_force_clearromcsonret_r;
   miscctrl_o      <= scratch1_r;
+  ay_adr_o        <= ayreg_r;
 
 end beh;
