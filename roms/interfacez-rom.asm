@@ -10,13 +10,41 @@ START:	DI			; disable interrupts.
 	;JP	ROM_CHECK	; jump forward to common code at START_NEW.
         JP	DELAY
         ;JP	REGTEST
-
 ORG $0006
 	DW	FREEAREA
 ORG	$0008
 		      
 RST8:	EX	(SP), HL	; Get return address in HL
-	LD	A, (HL)		; Load syscall
+
+	; When entering from main ROM we are not able to load the syscall number directly.
+	; So we need to use a small trick here, otherwise we break the ROM RST8 calls.
+
+	; To be confirmed if we can overwrite "A" safely.
+
+	; HL now contains PC return address.
+        PUSH	DE
+        LD 	DE, RET1
+        PUSH	DE
+        LD 	DE, $00A0
+        PUSH	DE
+        LD	DE, $007B
+        PUSH	DE
+
+	; The trick is to force the system behaviour such that:
+	;	- We jump into 1FFE, which holds a RET. When RET is executed the address in stack is 0x007B.
+	;	  After this RET is executed the normal ROM enters operation due to the Hook set up at 0x1FFE
+	;	- The routine at 0x007B does "LOAD A,(HL)" and then "RET". When RET is executed the address in stack
+	;	  is 0x00A0. This address (in standard ROM) holds a RET instruction which is never executed under
+	;	  normal operation
+	;	- The RET at 0x00A0 executes, and the address in stack is the below RET1. A hook has been set at this 
+	;	  address to re-enable InterfaceZ ROM. After the RET is executed the InterfazeZ ROM is enabled, and it
+	;	  effectively jumps to RET1 below.
+
+	JP	$1FFE	; Jump to main rom @007B. It will return...
+RET1:   POP	DE	; .. here after a series of jumps.
+
+        ; Now "A" contains the correct syscall number or RST8 error code.
+
         SUB	$C0
         JR	C, _std8handler
         ; Valid syscall number
@@ -32,6 +60,11 @@ _std8handler:
 	; Original ROM:	LD	HL,(CH_ADD)	; fetch the character address from CH_ADD.
 	;		LD	(X_PTR),HL	; copy it to the error pointer X_PTR.
 	;   		JR	ERROR_2		; forward to continue at ERROR_2.
+
+ORG	$0038
+	EI
+        RET
+
 handlesyscall:
 	
         ; Check bounds: TODO
@@ -52,10 +85,6 @@ handlesyscall:
         EX	(SP), HL ; Restores HL
         
         RET	     ; Jump into syscall
-
-ORG	$0038
-	EI
-        RET
 
 
 	ORG	$0066
@@ -81,6 +110,11 @@ _dlyloop: ; (T=35), 10us
 ;        JR	NZ, _bootcommand
         JR	DETECT
 	;; 128K reset hook. This area is never executed in 48K mode.
+
+ORG	$00A0
+
+	RET; Just to be the same as regular ROM
+
 ORG $00C7
 	LD	A, CMD_128RESET
         CALL	WRITECMDFIFO	; Notify firmware we are about to reset.
@@ -90,7 +124,6 @@ ORG $00C7
         OUT  (C),A        	; Switch to the other ROM.
         EI                	;
         RET_TO_ROM_AT $0000	; Reset! !
-
 
 DETECT:
 	; Notify CRC
