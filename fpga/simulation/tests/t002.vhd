@@ -1,6 +1,7 @@
 use work.tbc_device_p.all;
 use work.logger.all;
 use work.zxinterfacepkg.all;
+--use work.zxinterfaceports.all;
 
 architecture t002 of tbc_device is
 

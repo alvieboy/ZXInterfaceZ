@@ -1,5 +1,6 @@
 use work.tbc_device_p.all;
 use work.zxinterfacepkg.all;
+--use work.zxinterfaceports.all;
 use work.logger.all;
 
 architecture t003 of tbc_device is

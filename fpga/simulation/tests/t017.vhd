@@ -63,23 +63,26 @@ begin
     romWrite(Rom_Cmd, 0, x"01");
     romWrite(Rom_Cmd, 1, x"FE");
     romWrite(Rom_Cmd, 2, x"BB");  -- LD BC, x"BBAA
-    romWrite(Rom_Cmd, 3, x"05");  -- DEC B
-    romWrite(Rom_Cmd, 4, x"00");  -- NOP
-    romWrite(Rom_Cmd, 5, x"78");  -- LD A, B
-    romWrite(Rom_Cmd, 6, x"ED");  --
-    romWrite(Rom_Cmd, 7, x"79");  -- OUT [C], A
-    romWrite(Rom_Cmd, 8, x"18");
-    romWrite(Rom_Cmd, 9, x"FE");  -- JR -1
+    -- Align to power of 2, so masks workd
+    romWrite(Rom_Cmd, 3, x"00");  -- NOP
+
+    romWrite(Rom_Cmd, 4, x"05");  -- DEC B
+    romWrite(Rom_Cmd, 5, x"00");  -- NOP
+    romWrite(Rom_Cmd, 6, x"78");  -- LD A, B
+    romWrite(Rom_Cmd, 7, x"ED");  --
+    romWrite(Rom_Cmd, 8, x"79");  -- OUT [C], A
+    romWrite(Rom_Cmd, 9, x"18");
+    romWrite(Rom_Cmd, 10, x"FE");  -- JR -1
 
 
-    qspiramWrite(QSPIRam0_Cmd, 3 ,x"00"); -- NOP
-    qspiramWrite(QSPIRam0_Cmd, 4 ,x"04"); -- INC B
+    qspiramWrite(QSPIRam0_Cmd, 4 ,x"00"); -- NOP
+    qspiramWrite(QSPIRam0_Cmd, 5 ,x"04"); -- INC B
 
     
     spiPayload_in_s(0) <= x"65";
     spiPayload_in_s(1) <= x"00";
     spiPayload_in_s(2) <= x"40";
-    spiPayload_in_s(3) <= x"03";   -- Base low
+    spiPayload_in_s(3) <= x"04";   -- Base low
     spiPayload_in_s(4) <= x"00";   -- Base high
     spiPayload_in_s(5) <= x"00";   -- Base len
     spiPayload_in_s(6) <= x"00";   -- Not active
