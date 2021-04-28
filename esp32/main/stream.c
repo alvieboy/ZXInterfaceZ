@@ -2,6 +2,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include "log.h"
+#include "fileaccess.h"
 
 struct streamops {
     int (*read)(struct stream *, void *buf, size_t size);
@@ -49,7 +50,7 @@ static const struct streamops httpd_stream_ops = {
 
 static int system_read(struct stream *s, void *buf, size_t size)
 {
-    return read(s->fd, buf, size);
+    return __read(s->fd, buf, size);
 }
 
 static int system_close(struct stream *s)
@@ -162,6 +163,26 @@ struct stream *stream__destroy(struct stream *s)
 int stream__read(struct stream *s, void *buf, size_t size)
 {
     return s->ops->read(s, buf, size);
+}
+
+int stream__read_blocking(struct stream *s, void *buf, size_t size)
+{
+    size_t remain = size;
+    uint8_t *target = (uint8_t*)buf;
+    do {
+        int r = s->ops->read(s, target, remain);
+
+        if (r<0)
+            return -1;
+
+        if (r==0)
+            return size - remain;
+
+        target += r;
+        remain -= r;
+    } while (remain>0);
+
+    return size - remain;
 }
 
 bool stream__seekable(struct stream *s)

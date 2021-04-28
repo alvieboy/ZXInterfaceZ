@@ -63,26 +63,13 @@ static int firmware__validate_tar_header(firmware_upgrade_t *f)
 
 static int firmware__read_block_target(firmware_upgrade_t *f, uint8_t *target)
 {
-    unsigned ptr = 0;
+    int read = stream__read_blocking( f->stream, target, sizeof(struct tar_header));
 
-    do {
-        if (ptr<sizeof(struct tar_header)) {
-            int remain =  sizeof(struct tar_header) - ptr;
-            int read = stream__read( f->stream, &target[ptr], remain);
-            if (read<=0) {
-                ESP_LOGE(TAG,"Short read, requested %d got %d", remain, read);
-                return -1;
-            }
-            ptr += read;
-            if (ptr==sizeof(struct tar_header)) {
-                ptr = 0;
-                return 0;
-            }
-        } else {
-            ptr = 0;
-            return 0;
-        }
-    } while (1);
+    if (read==sizeof(struct tar_header))
+        return 0;
+
+    ESP_LOGE(TAG,"Short read, requested %d got %d", sizeof(struct tar_header), read);
+    return -1;
 }
 
 static int firmware__read_block(firmware_upgrade_t *f)
@@ -300,7 +287,7 @@ static int firmware__stream_file(firmware_upgrade_t *f,
         r = rle_decompress_stream(f->stream,
                                   streamer,
                                   streamerdata,
-                                  size);
+                                  (size_t)size);
         if (r<0)
             return r;
         // Read rest of TAR block.
@@ -308,7 +295,7 @@ static int firmware__stream_file(firmware_upgrade_t *f,
         if (partial_read>0) {
             ESP_LOGI(TAG, "Reading remaining %d", 512-partial_read);
 
-            if (stream__read(f->stream, f->buffer, 512-partial_read)<0)
+            if (stream__read_blocking(f->stream, f->buffer, 512-partial_read)<0)
                 return -1;
         }
 
