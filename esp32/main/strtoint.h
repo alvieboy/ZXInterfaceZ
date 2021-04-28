@@ -6,7 +6,7 @@
 static inline int strtoint(const char *str, int *dest)
 {
     char *endptr;
-    int val = strtoul(str,&endptr, 0);
+    int val = strtol(str,&endptr, 0);
     if (endptr) {
         if (*endptr=='\0') {
             *dest = val;
@@ -19,7 +19,7 @@ static inline int strtoint(const char *str, int *dest)
 static inline int strtoint_octal(const char *str, int *dest)
 {
     char *endptr;
-    int val = strtoul(str,&endptr, 8);
+    int val = strtol(str,&endptr, 8);
     if (endptr) {
         if (*endptr=='\0') {
             *dest = val;
