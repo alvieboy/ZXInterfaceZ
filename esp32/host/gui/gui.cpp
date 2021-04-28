@@ -263,7 +263,6 @@ void HTMLLogger::log(int level, QString str)
 
 void GuiWindow::onPaintCompleted(QImage&i)
 {
-    qDebug()<<"Frame";
     if (m_gif) {
 
         QDateTime exposeTime = QDateTime::currentDateTime();
