@@ -19,7 +19,7 @@ void remotetap__prepareload()
     // Check if we are running in 128K mode. We need to switch to 48K ROM
 
     if (hook128reset<0) {
-        hook128reset = rom_hook__add_pre_set(0, 0x00C7, 1); // ORG $00C7
+        hook128reset = rom_hook__add_pre_set(0, 0x00C7, MASK_LEN_1); // ORG $00C7
     }
 
     const uint8_t loadbuf[] = {

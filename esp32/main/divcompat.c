@@ -29,22 +29,22 @@ int divcompat__enable(uint8_t rom)
     int i = 0;
     do {
         // Page in, immediate, 3D00-3DFF range.
-        divhooks[i] = rom_hook__add_pre_set(rom, 0x3D00, 0);  // 256 bytes, 0 will underflow. This is intended.
+        divhooks[i] = (int8_t)rom_hook__add_pre_set(rom, 0x3D00, MASK_LEN_256);  // 256 bytes, 0 will underflow. This is intended.
         DIVCHECK;
         // Page out, off-area
-        divhooks[i] = rom_hook__add_post_reset(rom, 0x1FF8, 8);
+        divhooks[i] = (int8_t)rom_hook__add_post_reset(rom, 0x1FF8, MASK_LEN_8);
         DIVCHECK;
         // RST handlers
-        divhooks[i] = rom_hook__add_post_set(rom, 0x0000, 1);
+        divhooks[i] = (int8_t)rom_hook__add_post_set(rom, 0x0000, MASK_LEN_1);
         DIVCHECK;
-        divhooks[i] = rom_hook__add_post_set(rom, 0x0008, 1);
+        divhooks[i] = (int8_t)rom_hook__add_post_set(rom, 0x0008, MASK_LEN_1);
         DIVCHECK;
-        divhooks[i] = rom_hook__add_post_set(rom, 0x0038, 1); // Interrupt handler
+        divhooks[i] = (int8_t)rom_hook__add_post_set(rom, 0x0038, MASK_LEN_1); // Interrupt handler
         DIVCHECK;
-        //divhook [2] = rom_hook__add_post_set(rom, 0x0066, 1); // NMI handler. TBD.
-        divhooks[i] = rom_hook__add_post_set(rom, 0x04C6, 1); // SA-BYTES (we think)
+        //divhook [2] = rom_hook__add_post_set(rom, 0x0066, MASK_LEN_1); // NMI handler. TBD.
+        divhooks[i] = (int8_t)rom_hook__add_post_set(rom, 0x04C6, MASK_LEN_1); // SA-BYTES (we think)
         DIVCHECK;
-        divhooks[i] = rom_hook__add_post_set(rom, 0x0562, 1); // LD-BYTES (we think)
+        divhooks[i] = (int8_t)rom_hook__add_post_set(rom, 0x0562, MASK_LEN_1); // LD-BYTES (we think)
         DIVCHECK;
 
         fpga__set_config1_bits(CONFIG1_DIVMMC_COMPAT);

@@ -77,11 +77,11 @@ int fasttap__install_hooks(model_t model)
         break;
     }
     if (hooks[0]<0)
-        hooks[0] = rom_hook__add_pre_set_ranged( rom, 0x056C, 2); // LD-START
+        hooks[0] = rom_hook__add_pre_set_ranged( rom, 0x056C, MASK_LEN_2); // LD-START, 2 bytes
     if (hooks[1]<0)
-        hooks[1] = rom_hook__add_pre_set_ranged( rom, 0x059E, 1);   // "RET NC" on LD-SYNC, set NOP
+        hooks[1] = rom_hook__add_pre_set_ranged( rom, 0x059E, MASK_LEN_1);   // "RET NC" on LD-SYNC, set NOP
     if (hooks[2]<0)
-        hooks[2] = rom_hook__add_pre_set( rom, 0x05C8, 1);  // LD-MARKER, not ranged
+        hooks[2] = rom_hook__add_pre_set( rom, 0x05C8, MASK_LEN_1);  // LD-MARKER, not ranged
 
     return 0;
 }
