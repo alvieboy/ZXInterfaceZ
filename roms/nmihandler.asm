@@ -3,14 +3,30 @@ include "command_defs.asm"
 
 ; ENTRY point when we are already runnning ROM.
 NMIHANDLER_FROM_ROM:
-	LD	A, $01
+	LD	A, $02
         JR	NMIHANDLER1
         
 ; ENTRY point when we are called from physical NMI
 NMIHANDLER_FROM_NMIREQUEST:
 	; From NMI, we already saved AF.
-        XOR	A
+        ; We need to understand if we had interrupts enabled prior to entering NMI.
+        ; This is because we need to manipulate IFFx later on, and by doing that we
+        ; destroy IFF2 contents.
+        LD	A, R
+        LD	A, 0
+        ; At this point, IFF2 is in parity flag
+        JP	PO, _iff_not_enabled
+        INC	A 	; Set bit 0, indicating we need to re-enable interrupts
+_iff_not_enabled:
+        
 NMIHANDLER1:
+	; At this point A contains:
+	; bit 0: interrupts enabled, need to be restored.
+        ; bit 1: "soft" call, do not use RETN
+        
+        ; This is NOT reentrant! We need to figure out a way to
+        ; bring up the menu while other menu is running.
+        
         OUT     (PORT_SCRATCH0), A
 	; Upon entry we already have AF on the stack.
         XOR	A
@@ -108,7 +124,7 @@ lone:
         LD	SP, NMI_SPVAL
         PUSH	AF
         
-        ; Get flags from SP
+        ; Get flags from SP. THIS IS WRONG!
         LD	HL, NMI_SPVAL-2
         LD	A, (HL)
         OUT	(C), A	   	; Ram: 0x4019
@@ -223,21 +239,45 @@ _l2:
 	
         ; Before we leave, check if we ought to return with RETN or regular RET
         IN	A, (PORT_SCRATCH0)
-        OR	A
+        BIT	1, A
         JR	NZ, _return_with_ret
+        BIT	0, A
+        JR	NZ, _retn_with_ei
+
+
         ; Last one is C.
         XOR	A
         OUT	(PORT_RAM_ADDR_0), A        ; Ram: 0x2000
         IN	C, (C)
         ; SP is "good" here.
 	POP 	AF
+        DI	; Clear IFF1 AND IFF2
         RETN
-_return_with_ret:
+_retn_with_ei;
+        ; Last one is C.
         XOR	A
         OUT	(PORT_RAM_ADDR_0), A        ; Ram: 0x2000
         IN	C, (C)
         ; SP is "good" here.
-	; For RET, we do not save AF
+	POP 	AF
+        EI	; Set IFF1 AND IFF2
+        RETN
+        
+_return_with_ret:
+        BIT	0, A
+        JR	NZ, _ret_with_ei
+
+        XOR	A
+        OUT	(PORT_RAM_ADDR_0), A        ; Ram: 0x2000
+        IN	C, (C)
+	; For RET, we did not save AF. We already have interrupts disabled.
+        RET
+_ret_with_ei:
+        XOR	A
+        OUT	(PORT_RAM_ADDR_0), A        ; Ram: 0x2000
+        IN	C, (C)
+	; For RET, we did not save AF. 
+        EI
         RET
         
 
