@@ -266,6 +266,7 @@ set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to RAMD_IO[*]
 #set_global_assignment -name SOURCE_FILE db/interfacez.cmp.rdb
 
 set_global_assignment -name VHDL_FILE ../rtl/common/interruptctrl.vhd
+set_global_assignment -name VHDL_FILE ../rtl/common/rom_hook_single.vhd
 set_global_assignment -name VHDL_FILE ../rtl/common/rom_hook.vhd
 set_global_assignment -name VHDL_FILE ../rtl/common/ahb_intercon5.vhd
 set_global_assignment -name VHDL_FILE ../rtl/common/systemctrl.vhd
@@ -372,4 +373,5 @@ set_global_assignment -name QIP_FILE ../rtl/common/audiomult.qip
 set_global_assignment -name QIP_FILE ../rtl/common/smallfifo.qip
 set_global_assignment -name QIP_FILE ../rtl/common/smallfifo_dualclock.qip
 set_global_assignment -name QIP_FILE ../rtl/common/audiorec_fifo.qip
+set_global_assignment -name OPTIMIZATION_MODE "AGGRESSIVE AREA"
 set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top

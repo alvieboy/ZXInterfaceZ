@@ -287,9 +287,9 @@ begin
                   when "00" =>
                     dat_out_s   <= std_logic_vector(hook_r(hook_index_v).base(7 downto 0));
                   when "01" =>
-                    dat_out_s   <= std_logic_vector("00" & hook_r(hook_index_v).base(13 downto 8));
+                    dat_out_s   <= "00" & hook_r(hook_index_v).base(13 downto 8);
                   when "10" =>
-                    dat_out_s   <= "00000" & std_logic_vector(hook_r(hook_index_v).len);
+                    dat_out_s   <= "000000" & std_logic_vector(hook_r(hook_index_v).masklen);
                   when "11" =>
                     dat_out_s(0) <= hook_r(hook_index_v).flags.romno;
                     dat_out_s(3 downto 1) <= "000";
@@ -330,7 +330,7 @@ begin
       memromsel_r           <= (others => 'X');
       hook_r                <= (others => (
                                     base => (others => '0'),
-                                    len  => (others => '0'),
+                                    masklen  => (others => '0'),
                                     flags => (
                                       valid=>'0',
                                       romno=>'0',
@@ -431,11 +431,11 @@ begin
             if addr_s(6)='1' then
               case addr_s(1 downto 0) is
                 when "00" =>
-                  hook_r(hook_index_v).base(7 downto 0) <= unsigned(dat_in_s);
+                  hook_r(hook_index_v).base(7 downto 0) <= dat_in_s;
                 when "01" =>
-                  hook_r(hook_index_v).base(13 downto 8)  <= unsigned(dat_in_s(5 downto 0));
+                  hook_r(hook_index_v).base(13 downto 8)  <= dat_in_s(5 downto 0);
                 when "10" =>
-                  hook_r(hook_index_v).len                <= unsigned(dat_in_s(2 downto 0));
+                  hook_r(hook_index_v).masklen            <= dat_in_s(1 downto 0);
                 when "11" =>
                   hook_r(hook_index_v).flags.romno        <= dat_in_s(0);
                   hook_r(hook_index_v).flags.ranged       <= dat_in_s(4);

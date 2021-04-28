@@ -266,6 +266,7 @@ set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to RAMD_IO[*]
 #set_global_assignment -name SOURCE_FILE db/interfacez.cmp.rdb
 
 set_global_assignment -name VHDL_FILE ../rtl/common/interruptctrl.vhd
+set_global_assignment -name VHDL_FILE ../rtl/common/rom_hook_single.vhd
 set_global_assignment -name VHDL_FILE ../rtl/common/rom_hook.vhd
 set_global_assignment -name VHDL_FILE ../rtl/common/ahb_intercon5.vhd
 set_global_assignment -name VHDL_FILE ../rtl/common/systemctrl.vhd

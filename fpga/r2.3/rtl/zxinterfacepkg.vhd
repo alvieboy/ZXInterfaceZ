@@ -94,8 +94,8 @@ package zxinterfacepkg is
   end record;
 
   type rom_hook_t is record
-    base    : unsigned(13 downto 0);
-    len     : unsigned(2 downto 0);  -- Max 8 bytes
+    base    : std_logic_vector(13 downto 0);
+    masklen : std_logic_vector(1 downto 0);  -- 1,2,8 or 256 bytes (aligned)
     flags   : rom_hookflag_t;
   end record;
 
