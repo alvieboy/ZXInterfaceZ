@@ -22,6 +22,7 @@ entity interfacez_io is
     active_i  : in std_logic;
     ulahack_i : in std_logic;
     mode2a_i  : in std_logic;
+    tap_enable_i: in std_logic;
 
     -- NMI reason
     nmireason_i: in std_logic_vector(7 downto 0);
@@ -151,6 +152,7 @@ architecture beh of interfacez_io is
   signal page128_pmc_r          : std_logic_vector(7 downto 0); -- Reused in 128K mode
   signal page128_smc_r          : std_logic_vector(7 downto 0);
   signal trig_force_clearromcsonret_r : std_logic;
+  signal pseudo_audio_s         : std_logic_vector(7 downto 0);
 
 begin
 
@@ -326,6 +328,9 @@ begin
           when SPECT_PORT_NMIREASON =>
             dataread_r <= nmireason_i;
 
+          when SPECT_PORT_PSEUDO_AUDIO_DATA =>
+            dataread_r <= pseudo_audio_s;
+
           when others =>
             dataread_r <= (others => '1');
         end case;
@@ -462,6 +467,19 @@ begin
         if dat_i(4 downto 0)="11100" then
           keyb_trigger_o <= '1';
         end if;
+      end if;
+    end if;
+  end process;
+
+  process(tap_enable_i, audio_i)
+  begin
+    if tap_enable_i='0' then
+      pseudo_audio_s <= (others => '0');
+    else
+      if audio_i='1' then
+        pseudo_audio_s <= "00001011";
+      else
+        pseudo_audio_s <= "00000100";
       end if;
     end if;
   end process;

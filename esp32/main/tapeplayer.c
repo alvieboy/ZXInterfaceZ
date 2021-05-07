@@ -18,6 +18,7 @@
 #include "byteops.h"
 #include "interfacez_tasks.h"
 #include "stream.h"
+#include "model.h"
 
 #define TAP_CMD_STOP 0
 #define TAP_CMD_PLAY 1
@@ -429,6 +430,24 @@ const struct tzx_callbacks tapeplayer_tzx_callbacks =
     .finished_callback       = tapeplayer__tzx_finished_callback
 };
 
+static void tapeplayer__start_tap_engine()
+{
+    fpga_flags_t flags;
+
+    flags = FPGA_FLAG_TAPFIFO_RESET| FPGA_FLAG_TAP_ENABLED;
+
+    if (model__supports_ula_override()) {
+        flags |= FPGA_FLAG_ULAHACK;
+    }
+    fpga__set_flags(flags);
+    fpga__clear_flags(FPGA_FLAG_TAPFIFO_RESET);
+}
+
+static void tapeplayer__stop_tap_engine()
+{
+    fpga__clear_flags(FPGA_FLAG_TAP_ENABLED | FPGA_FLAG_ULAHACK);
+    fpga__set_flags(FPGA_FLAG_TAPFIFO_RESET);
+}
 
 static void tapeplayer__do_start_play_from_file(const char *filename)
 {
@@ -482,8 +501,7 @@ static void tapeplayer__do_start_play_from_file(const char *filename)
     playsize = st.st_size;
     currplay = 0;
 
-    fpga__set_flags(FPGA_FLAG_TAPFIFO_RESET| FPGA_FLAG_TAP_ENABLED | FPGA_FLAG_ULAHACK);
-    fpga__clear_flags(FPGA_FLAG_TAPFIFO_RESET);
+    tapeplayer__start_tap_engine();
 
     ESP_LOGI(TAG, "Starting TAP/TZX play of '%s'", filename);
     // Fill in buffers
@@ -525,8 +543,7 @@ static void tapeplayer__do_start_play_from_stream(struct stream *stream, size_t 
     playsize = size;
     currplay = 0;
 
-    fpga__set_flags(FPGA_FLAG_TAPFIFO_RESET| FPGA_FLAG_TAP_ENABLED | FPGA_FLAG_ULAHACK);
-    fpga__clear_flags(FPGA_FLAG_TAPFIFO_RESET);
+    tapeplayer__start_tap_engine();
 
     ESP_LOGI(TAG, "Starting stream TAP/TZX play");
     // Fill in buffers
@@ -539,8 +556,7 @@ static void tapeplayer__do_stop()
     if (tap_stream) {
         tap_stream = stream__destroy(tap_stream);
     }
-    fpga__clear_flags(FPGA_FLAG_TAP_ENABLED | FPGA_FLAG_ULAHACK);
-    fpga__set_flags(FPGA_FLAG_TAPFIFO_RESET);
+    tapeplayer__stop_tap_engine();
     state = TAP_IDLE;
 }
 
@@ -645,8 +661,7 @@ static void tapeplayer__task(void*data)
             case TAP_WAITDRAIN:
                 if (fpga__tap_fifo_empty()) {
                     ESP_LOGI(TAG, "Finished TAP play");
-                    fpga__clear_flags(FPGA_FLAG_TAP_ENABLED | FPGA_FLAG_ULAHACK);
-                    fpga__set_flags(FPGA_FLAG_TAPFIFO_RESET);
+                    tapeplayer__stop_tap_engine();
                     state = TAP_IDLE;
                 }
             default:

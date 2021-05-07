@@ -417,6 +417,8 @@ _command:
         JP	Z, _readmem
         CP 	$FA
         JP	Z, _readrom
+        CP 	$F9
+        JP	Z, _tapfiletophysical
         JR	screenloop
 _leavenmi:
 	LD	A, CMD_LEAVENMI
@@ -510,7 +512,60 @@ _readrom:
         CALL	ROMCRC_RAM
 
         JP	screenloop
+_tapfiletophysical:
+	; Convert a TAP/TZX file into normal tape.
+        ; 
+        ; For this to work, we read 
+        ; 00000_010 - 00001_101
+        ; 00001_110 - 00000_001 
+        ;
+
+	; Ultra-fast version
+      	DI
+        ; Save border so we can restore later
+        IN	A, ($FE)
+        AND	$07
+        LD	B, A
+        ;
+        LD	C, PORT_VIRTUALAUDIO
+        ; First, wait until tape is playing.
+_waitfortape:
+	IN	A, (C)	; Flags updated accordingly
+        JR	Z, _waitfortape
+_loop:
+	IN	A, (C)	; Flags updated accordingly
+        OUT	($FE), A
+	JR 	NZ, _loop
+        ; Duplication complete, restore border
+        ; Do not disturb other bits except border, otherwise
+        ; we can cause glitches int the audio
+        ;
+        AND	$F8 	; Remove border, keep other bits.
+        OR	B
+        OUT	($FE), A
+        EI
+        RET
+
+_nextbit:
+	LD	A,$7F		; test the space key and
+	IN	A,($FE)		; 
         
+        RRA			; if a space is pressed
+	JR	NC, _break	; return to SA_LD_RET - - >
+        RLA
+        ; Rotate bit into carry
+        LD	C, $0E
+        RLA
+        RLA
+        LD	A, C
+        JR	NC, _noinv
+	XOR	$0F
+_noinv:	
+        OUT	($FE), A
+        JR	_nextbit
+_break:
+	RET
+
 READROM_ROM:
         LD	A, $02
         OUT	(PORT_NMIREASON), A 	; Temporarly disable ROMCS

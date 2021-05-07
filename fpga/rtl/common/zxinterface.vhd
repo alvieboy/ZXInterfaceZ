@@ -551,6 +551,7 @@ begin
       nmireason_i     => nmireason_s,
       keyb_trigger_o  => keyb_trigger_s,
       audio_i         => tap_audio_s,
+      tap_enable_i    => tap_enable_s,
 
       port_fe_o       => port_fe_s,
       ear_o           => ear_s,

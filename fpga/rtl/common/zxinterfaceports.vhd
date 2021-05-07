@@ -25,9 +25,9 @@ package zxinterfaceports is
   constant SPECT_PORT_RAM_ADDR_HIGH           : std_logic_vector(7 downto 0) := "00111111";   -- x"3F"
   constant SPECT_PORT_RAM_DATA                : std_logic_vector(7 downto 0) := "01100011";   -- x"63"
   constant SPECT_PORT_CMD_FIFO_DATA           : std_logic_vector(7 downto 0) := "01100111";   -- x"67"
-  constant SPECT_PORT_MEMSEL                  : std_logic_vector(7 downto 0) := "01101011";   -- x"6B";
-  constant SPECT_PORT_NMIREASON               : std_logic_vector(7 downto 0) := "01101111";   -- x"6F";
-  -- UNUSED: "01110011"; -- x"73"
+  constant SPECT_PORT_MEMSEL                  : std_logic_vector(7 downto 0) := "01101011";   -- x"6B"
+  constant SPECT_PORT_NMIREASON               : std_logic_vector(7 downto 0) := "01101111";   -- x"6F"
+  constant SPECT_PORT_PSEUDO_AUDIO_DATA       : std_logic_vector(7 downto 0) := "01110011";   -- x"73"
   -- UNUSED: "01110111"; -- x"77"
   -- UNUSED: "01111011"; -- x"7b"
   -- UNUSED: "01111111"; -- x"7f"
