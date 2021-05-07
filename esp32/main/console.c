@@ -185,8 +185,8 @@ static int console__volume(int argc, char **argv)
         return -1;
     }
 
-    audio__set_volume_f(chan, (float)volume/100.0F,
-                        -1.0 + ((float)balance/50.0));
+    audio__set_volume_f(chan, (float)(volume/100.0F),
+                        -1.0F + ((float)balance/50.0F));
     return 0;
 }
 
@@ -265,7 +265,7 @@ static int console__wifi(int argc, char **argv)
                 }
             }
         }
-        return wifi__config_ap(ssid, password, channel);
+        return wifi__config_ap(ssid, password, (uint8_t)channel);
 
     } else if (strcmp(argv[0],"sta")==0) {
         if (argc<3) {
