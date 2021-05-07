@@ -57,22 +57,22 @@ static void audio__balance_to_channels(float volume,
 
     float p, gl, gr;
 
-    p=M_PI*(balance+1)/4;
+    p = (float)(M_PI*(balance+1)/4.0F);
 
-    gl = cos(p)*volume;
-    gr = sin(p)*volume;
+    gl = cosf(p)*volume;
+    gr = sinf(p)*volume;
 
-    unsigned left = 255.0F * gl;
+    unsigned left = (unsigned)(255.0F * gl);
 
-    unsigned right = 255.0F * gr;
+    unsigned right = (unsigned)(255.0F * gr);
 
     if (left>255)
         left=255;
     if (right>255)
         right=255;
 
-    *l = left;
-    *r = right;
+    *l = (uint8_t)left;
+    *r = (uint8_t)right;
 }
 
 static void audio__balance_to_channel(uint8_t chan,
@@ -97,12 +97,12 @@ static void audio__balance_to_channel(uint8_t chan,
  */
 void audio__init()
 {
-    unsigned i;
+    uint8_t i;
     char vol_key[8] = "vol_chX";
     char bal_key[8] = "bal_chX";
     for (i=0; i<4; i++) {
-        vol_key[6] = '0' + i;
-        bal_key[6] = '0' + i;
+        vol_key[6] = (char)('0' + i);
+        bal_key[6] = (char)('0' + i);
         audio__balance_to_channel(i,
                                   nvs__float(vol_key, 1.0F),
                                   nvs__float(bal_key, 0.0F),
@@ -130,8 +130,8 @@ void audio__set_volume_f(uint8_t chan, float volume, float balance)
     char vol_key[8] = "vol_chX";
     char bal_key[8] = "bal_chX";
 
-    vol_key[6] = '0' + chan;
-    bal_key[6] = '0' + chan;
+    vol_key[6] = (char)('0' + chan);
+    bal_key[6] = (char)('0' + chan);
 
     audio__balance_to_channel(chan,
                               volume,
@@ -164,8 +164,9 @@ void audio__get_volume_f(uint8_t chan, float *volume, float *balance)
     char vol_key[8] = "vol_chX";
     char bal_key[8] = "bal_chX";
 
-    vol_key[6] = '0' + chan;
-    bal_key[6] = '0' + chan;
+    vol_key[6] = (char)('0' + chan);
+    bal_key[6] = (char)('0' + chan);
+
     *volume = nvs__float(vol_key, 1.0F);
     *balance = nvs__float(bal_key, 0.0F);
 }
