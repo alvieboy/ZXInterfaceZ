@@ -5,6 +5,8 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 
+#define TAG "SPI"
+
 static SemaphoreHandle_t spi_sem;
 
 #define xSPI_HOST VSPI_HOST
@@ -55,6 +57,23 @@ void spi__init_device(spi_device_handle_t *dev, uint32_t speed_hz, gpio_num_t cs
     ESP_LOGI(TAG,"Registered new SPI device speed=%d cs=%d", speed_hz, cs_pin);
 }
 
+static int spi__lock()
+{
+    int r = xSemaphoreTake( spi_sem,  portMAX_DELAY );
+    if (r!= pdTRUE) {
+        ESP_LOGE(TAG, "Cannot take SPI semaphore: %d %d", r, pdTRUE);
+        return -1;
+    }
+    return 0;
+}
+static void spi__unlock()
+{
+    xSemaphoreGive(spi_sem);
+}
+
+#define SPI_LOCK(x) do { if (spi__lock()<0) return -1; } while (0)
+#define SPI_UNLOCK spi__unlock
+
 int spi__transceive(spi_device_handle_t spi, spi_transceive_buffer_t buffer, unsigned len)
 {
     spi_transaction_t t;
@@ -69,15 +88,10 @@ int spi__transceive(spi_device_handle_t spi, spi_transceive_buffer_t buffer, uns
     t.tx_buffer = buffer;               //Data
     t.rx_buffer = buffer;               //Data
 
-
-    if (xSemaphoreTake( spi_sem,  portMAX_DELAY )!= pdTRUE) {
-        ESP_LOGE(TAG, "Cannot take semaphore");
-        return -1;
-    }
+    SPI_LOCK();
     int ret = spi_device_polling_transmit(spi, &t);  //Transmit!
+    SPI_UNLOCK();
 
-
-    xSemaphoreGive(spi_sem);
     if (ret<0) {
         ESP_LOGE(TAG, "Cannot SPI transmit!!");
     }
@@ -107,14 +121,9 @@ int spi__transceive_cmd8_addr24(spi_device_handle_t spi,
     ext.base.cmd = (uint16_t)cmd;
     ext.base.addr = addr;
 
-
-    if (xSemaphoreTake( spi_sem,  portMAX_DELAY )!= pdTRUE) {
-        ESP_LOGE(TAG, "Cannot take semaphore");
-        return -1;
-    }
+    SPI_LOCK();
     int ret = spi_device_polling_transmit(spi, &ext.base);  //Transmit!
-
-    xSemaphoreGive(spi_sem);
+    SPI_UNLOCK();
 
     if (ret<0) {
         ESP_LOGE(TAG, "Cannot SPI transmit!!");
@@ -146,14 +155,9 @@ int spi__transceive_cmd8_addr16(spi_device_handle_t spi,
     ext.base.cmd = (uint16_t)cmd;
     ext.base.addr = addr;
 
-
-    if (xSemaphoreTake( spi_sem,  portMAX_DELAY )!= pdTRUE) {
-        ESP_LOGE(TAG, "Cannot take semaphore");
-        return -1;
-    }
+    SPI_LOCK();
     int ret = spi_device_polling_transmit(spi, &ext.base);  //Transmit!
-
-    xSemaphoreGive(spi_sem);
+    SPI_UNLOCK();
 
     if (ret<0) {
         ESP_LOGE(TAG, "Cannot SPI transmit!!");
@@ -185,14 +189,9 @@ int spi__transceive_cmd8_addr8(spi_device_handle_t spi,
     ext.base.cmd = (uint16_t)cmd;
     ext.base.addr = addr;
 
-
-    if (xSemaphoreTake( spi_sem,  portMAX_DELAY )!= pdTRUE) {
-        ESP_LOGE(TAG, "Cannot take semaphore");
-        return -1;
-    }
+    SPI_LOCK();
     int ret = spi_device_polling_transmit(spi, &ext.base);  //Transmit!
-
-    xSemaphoreGive(spi_sem);
+    SPI_UNLOCK();
 
     if (ret<0) {
         ESP_LOGE(TAG, "Cannot SPI transmit!!");
@@ -221,14 +220,9 @@ int spi__transceive_cmd8(spi_device_handle_t spi,
     ext.command_bits = 8;
     ext.base.cmd = (uint16_t)cmd;
 
-
-    if (xSemaphoreTake( spi_sem,  portMAX_DELAY )!= pdTRUE) {
-        ESP_LOGE(TAG, "Cannot take semaphore");
-        return -1;
-    }
+    SPI_LOCK();
     int ret = spi_device_polling_transmit(spi, &ext.base);  //Transmit!
-
-    xSemaphoreGive(spi_sem);
+    SPI_UNLOCK();
 
     if (ret<0) {
         ESP_LOGE(TAG, "Cannot SPI transmit!!");
@@ -260,14 +254,9 @@ int spi__transceive_cmd8_addr32(spi_device_handle_t spi,
     ext.base.cmd = (uint16_t)cmd;
     ext.base.addr = addr;
 
-//    ESP_LOGI(TAG, "%s: Take", __FUNCTION__);
-    if (xSemaphoreTake( spi_sem,  portMAX_DELAY )!= pdTRUE) {
-        ESP_LOGE(TAG, "Cannot take semaphore");
-        return -1;
-    }
+    SPI_LOCK();
     int ret = spi_device_polling_transmit(spi, &ext.base);  //Transmit!
-
-    xSemaphoreGive(spi_sem);
+    SPI_UNLOCK();
 
     if (ret<0) {
         ESP_LOGE(TAG, "Cannot SPI transmit!!");
@@ -299,14 +288,9 @@ int spi__transmit_cmd8_addr16(spi_device_handle_t spi,
     ext.base.cmd = (uint16_t)cmd;
     ext.base.addr = addr;
 
-
-    if (xSemaphoreTake( spi_sem,  portMAX_DELAY )!= pdTRUE) {
-        ESP_LOGE(TAG, "Cannot take semaphore");
-        return -1;
-    }
+    SPI_LOCK();
     int ret = spi_device_polling_transmit(spi, &ext.base);  //Transmit!
-
-    xSemaphoreGive(spi_sem);
+    SPI_UNLOCK();
 
     if (ret<0) {
         ESP_LOGE(TAG, "Cannot SPI transmit!!");
@@ -338,14 +322,9 @@ int spi__transmit_cmd8_addr24(spi_device_handle_t spi,
     ext.base.cmd = (uint16_t)cmd;
     ext.base.addr = addr;
 
-
-    if (xSemaphoreTake( spi_sem,  portMAX_DELAY )!= pdTRUE) {
-        ESP_LOGE(TAG, "Cannot take semaphore");
-        return -1;
-    }
+    SPI_LOCK();
     int ret = spi_device_polling_transmit(spi, &ext.base);  //Transmit!
-
-    xSemaphoreGive(spi_sem);
+    SPI_UNLOCK();
 
     if (ret<0) {
         ESP_LOGE(TAG, "Cannot SPI transmit!!");
@@ -375,13 +354,9 @@ int spi__transmit_cmd8(spi_device_handle_t spi,
     ext.address_bits = 0;
     ext.base.cmd = (uint16_t)cmd;
 
-    if (xSemaphoreTake( spi_sem,  portMAX_DELAY )!= pdTRUE) {
-        ESP_LOGE(TAG, "Cannot take semaphore");
-        return -1;
-    }
+    SPI_LOCK();
     int ret = spi_device_polling_transmit(spi, &ext.base);  //Transmit!
-
-    xSemaphoreGive(spi_sem);
+    SPI_UNLOCK();
 
     if (ret<0) {
         ESP_LOGE(TAG, "Cannot SPI transmit!!");
