@@ -20,6 +20,8 @@
 
 #define HASH_LEN 32 /* SHA-256 digest length */
 
+#define TAG "OTA"
+
 int ota__init(ota_stream_handle_t *h)
 {
     h->size = 0;
@@ -172,20 +174,37 @@ int ota__chunk(ota_stream_handle_t *h, const uint8_t *data, int len)
 
     if (remain==0) {
         ESP_LOGI(TAG, "OTA: finished");
-        err = esp_ota_end(h->update_handle);
-
-        if (err != ESP_OK) {
-            if (err == ESP_ERR_OTA_VALIDATE_FAILED) {
-                ESP_LOGE(TAG, "Image validation failed, image is corrupted");
-            }
-            ESP_LOGE(TAG, "esp_ota_end failed (%s)!", esp_err_to_name(err));
-            return -1;
-        }
-
-        err = esp_ota_set_boot_partition(h->update_partition);
-
-        return err;
+        return 0;
     }
     return 1; // In progress
+}
+
+int ota__finish(ota_stream_handle_t *h)
+{
+    esp_err_t err = esp_ota_end(h->update_handle);
+
+    if (err != ESP_OK) {
+        if (err == ESP_ERR_OTA_VALIDATE_FAILED) {
+            ESP_LOGE(TAG, "Image validation failed, image is corrupted");
+        }
+        ESP_LOGE(TAG, "esp_ota_end failed (%s)!", esp_err_to_name(err));
+        return -1;
+    }
+
+    err = esp_ota_set_boot_partition(h->update_partition);
+
+    return err;
+}
+
+int ota__abort(ota_stream_handle_t *h)
+{
+#if 0
+    // This is still not implemented in this ESP SDK version.
+    int r = esp_ota_abort(h->update_handle);
+    h->update_handle = NULL;
+    return r;
+#else
+    return 0;
+#endif
 }
 

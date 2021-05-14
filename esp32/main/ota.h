@@ -27,5 +27,8 @@ int ota__init(ota_stream_handle_t *);
 int ota__performota_cmd(command_t *cmdt, int argc, char **argv);
 int ota__start(ota_stream_handle_t *, int size);
 int ota__chunk(ota_stream_handle_t *, const uint8_t *data, int len);
+int ota__abort(ota_stream_handle_t *h);
+int ota__finish(ota_stream_handle_t *h);
+
 
 #endif
