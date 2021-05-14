@@ -29,7 +29,7 @@ int hdlc_encoder__begin(hdlc_encoder_t *hdlc)
     return 1;
 }
 
-int hdlc_encoder__write(hdlc_encoder_t *hdlc, const void *udata, uint16_t datalen)
+int hdlc_encoder__write(hdlc_encoder_t *hdlc, const void *udata, unsigned datalen)
 {
     int c = 0;
     const uint8_t *data = (const uint8_t*)udata;
@@ -76,7 +76,7 @@ uint8_t* hdlc_encoder__begin_mem(hdlc_encoder_t *hdlc, uint8_t *target)
     return target;
 }
 
-uint8_t *hdlc_encoder__write_mem(hdlc_encoder_t *hdlc, const uint8_t *data, uint16_t datalen, uint8_t *target)
+uint8_t *hdlc_encoder__write_mem(hdlc_encoder_t *hdlc, const uint8_t *data, unsigned datalen, uint8_t *target)
 {
     while (datalen--) {
         hdlc_encoder__update_crc(hdlc, *data);
