@@ -1,14 +1,13 @@
 #include "event_task.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "freertos/queue.h"
-#include "freertos/semphr.h"
+#include "os/task.h"
+#include "os/queue.h"
+#include "os/semaphore.h"
 #include "esp_event.h"
 #include "list.h"
 #include <vector>
 
-static xQueueHandle event_queue = NULL;
-static SemaphoreHandle_t mutex;
+static Queue event_queue = NULL;
+static Semaphore mutex;
 
 //    xQueueSend(scan_queue, &val, 1000);
 
@@ -93,7 +92,7 @@ esp_err_t esp_event_handler_unregister(esp_event_base_t event_base,
 {
     std::vector<hentry>::iterator it;
 
-    xSemaphoreTake(mutex, portMAX_DELAY);
+    semaphore__take(mutex, portMAX_DELAY);
     for (it = handlers.begin(); it!=handlers.end();it++) {
         if ((it->event_handler == event_handler)
             && (it->event_id == event_id)
