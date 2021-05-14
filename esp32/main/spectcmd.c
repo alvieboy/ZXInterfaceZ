@@ -36,6 +36,8 @@
 #include "strlcpy.h"
 #include "minmax.h"
 #include "reset.h"
+#include "os/queue.h"
+#include "os/task.h"
 
 #define TAG "SPECTCMD"
 
