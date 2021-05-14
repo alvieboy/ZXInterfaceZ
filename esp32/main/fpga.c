@@ -15,6 +15,8 @@
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "os/semaphore.h"
+#include "os/core.h"
 #include <string.h>
 #include "flash_pgm.h"
 #include "gpio.h"
@@ -27,8 +29,9 @@
 #include "errno.h"
 #include "bitrev.h"
 #include "stream.h"
+#include "flash_resource.h"
 
-#define FPGA_BINARYFILE "/spiffs/fpga0.rbf"
+#define TAG "FPGA"
 
 #define USE_DUAL_SPI_CS
 
@@ -41,9 +44,20 @@ static spi_device_handle_t spi0_fpga;
 #define spi0_fpga_slow spi0_fpga
 #endif
 
-static fpga_flags_t latched_flags = 0;
-static uint32_t config1_latch = 0;
+// Do we need a mutex here?
+
+static Semaphore fpga_lock;
+
+static volatile fpga_flags_t latched_flags = 0;
+static volatile uint32_t config1_latch = 0;
+
+
 static uint32_t fpga_id;
+
+static void fpga__get_binary_filename(char *target)
+{
+    sprintf(target, "%s/fpga0.rbf", flash_resource__get_root());
+}
 
 
 /**
@@ -139,16 +153,18 @@ static unsigned fpga__read_id()
 static int fpga__configurefromflash()
 {
 #ifndef __linux__
+    char filename[128];
     int fh;
     int r = -1;
     struct stat st;
+    fpga__get_binary_filename(filename);
     do {
-        r = __lstat(FPGA_BINARYFILE, &st);
+        r = __lstat(filename, &st);
         if (r<0) {
             ESP_LOGE(TAG, "Cannot stat FPGA image");
             break;
         }
-        fh = __open(FPGA_BINARYFILE, O_RDONLY);
+        fh = __open(filename, O_RDONLY);
         if (fh<0) {
             ESP_LOGE(TAG, "Cannot open FPGA image");
             break;
@@ -176,6 +192,8 @@ static int fpga__configurefromflash()
 
 int fpga__init()
 {
+    fpga_lock = semaphore__create_mutex();
+
     fpga__init_spi();
 
     if (fpga__configurefromflash()<0)
@@ -237,15 +255,22 @@ uint16_t fpga__get_spectrum_pc()
 void fpga__set_clear_flags(fpga_flags_t enable, fpga_flags_t disable)
 {
     uint8_t buf[3];
+
+    semaphore__take(fpga_lock, OS_MAX_DELAY);
     fpga_flags_t newflags = (latched_flags & ~disable) | enable;
 
     buf[0] = newflags&0xff;
     buf[1] = 0x00;
     buf[2] = newflags>>8;
 
+    latched_flags = newflags;
+    semaphore__give(fpga_lock);
+
+    ESP_LOGI(TAG,"Set flags 0x%08x enable 0x%08x disable 0x%08x", newflags, enable, disable);
+
+
     ESP_ERROR_CHECK(fpga__issue_write(FPGA_SPI_CMD_WRITE_FLAGS, buf, sizeof(buf)));
 
-    latched_flags = newflags;
 }
 
 /**
@@ -262,9 +287,14 @@ void fpga__set_clear_flags(fpga_flags_t enable, fpga_flags_t disable)
 void fpga__set_trigger(uint8_t trig)
 {
     uint8_t buf[3];
+
+    semaphore__take(fpga_lock, OS_MAX_DELAY);
+
     buf[0] = latched_flags & 0xff;
     buf[1] = trig;
     buf[2] = latched_flags >> 8;
+
+    semaphore__give(fpga_lock);
 
     ESP_ERROR_CHECK(fpga__issue_write(FPGA_SPI_CMD_WRITE_FLAGS, buf, sizeof(buf)));
 }
@@ -306,7 +336,7 @@ void fpga__set_register(uint8_t reg, uint32_t value)
     buf[2] = (value >> 16)& 0xff;
     buf[3] = (value >> 8)& 0xff;
     buf[4] = (value)& 0xff;
-
+    ESP_LOGI(TAG,"Writing register %d\n", reg);
     ESP_ERROR_CHECK(fpga__issue_write(FPGA_SPI_CMD_WRITE_REG32, buf, sizeof(buf)));
 }
  /**
@@ -873,7 +903,10 @@ int fpga__write_usb_block(uint16_t address, const uint8_t *buffer, int size)
 
 void fpga__set_config1_bits(uint32_t bits)
 {
+    semaphore__take(fpga_lock, OS_MAX_DELAY);
     config1_latch |= bits;
+    semaphore__give(fpga_lock);
+    //ESP_LOGI(TAG,"Setting config1 bits 0x%08x", bits);
     fpga__set_register(REG_CONFIG1, config1_latch);
 }
 
@@ -886,7 +919,10 @@ void fpga__set_config1_bits(uint32_t bits)
  */
 void fpga__clear_config1_bits(uint32_t bits)
 {
+    semaphore__take(fpga_lock, OS_MAX_DELAY);
     config1_latch &= ~bits;
+    semaphore__give(fpga_lock);
+    //ESP_LOGI(TAG,"Clear config1 bits 0x%08x", bits);
     fpga__set_register(REG_CONFIG1, config1_latch);
 }
 
