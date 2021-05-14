@@ -12,6 +12,8 @@
 #include "fpga.h"
 #include "res.h"
 
+#define TAG "RES"
+
 static int res__chunk(command_t *cmdt);
 
 int res__upload(command_t *cmdt, int argc, char **argv)
