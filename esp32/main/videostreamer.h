@@ -6,7 +6,7 @@
 #include "lwip/sys.h"
 #include <lwip/netdb.h>
 
-void videostreamer__init(void);
+int videostreamer__init(void);
 int videostreamer__start_stream(struct in_addr addr, uint16_t port);
 const uint8_t *videostreamer__getlastfb(void);
 unsigned videostreamer__getinterrupts(void);

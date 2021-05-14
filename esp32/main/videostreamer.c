@@ -1,6 +1,5 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "freertos/event_groups.h"
 #include "esp_system.h"
 #include "soc/gpio_struct.h"
 #include "driver/gpio.h"
@@ -22,16 +21,39 @@
 #include <arpa/inet.h>
 #include "videostreamer.h"
 #include "interfacez_tasks.h"
+#include "list.h"
+#include <netinet/in.h>
 
-volatile int client_socket = -1;
+#define TAG "VIDEOSTREAMER"
+
 static volatile unsigned interrupt_count = 0;
-
 static uint32_t fb[SPECTRUM_FRAME_SIZE/4];
 static uint32_t fb_prev[SPECTRUM_FRAME_SIZE/4];
 
 #define MAX_FRAME_PAYLOAD 1024
-
 #define MAX_PACKET_SIZE   1080
+
+static dlist_t *clients = NULL;
+static int server_sock;
+
+struct video_client {
+    struct sockaddr_in addr;
+    unsigned error_counter;
+};
+
+struct client_packet {
+    uint8_t cmd;
+    union {
+        struct {
+            uint32_t addr;
+            uint16_t port;
+            uint8_t unused;
+        } __attribute__((packed));
+        struct {
+            uint8_t keys[7];
+        } __attribute__((packed));
+    };
+} __attribute__((packed));
 
 extern void usb__trigger_interrupt(void);
 
@@ -47,19 +69,23 @@ struct frame {
 static uint8_t video_packet[MAX_PACKET_SIZE];
 static uint8_t *videodata;
 
+static struct video_client *videostreamer__get_client_by_addr(const struct sockaddr_in *s);
+
 static inline bool has_room_for_frame(unsigned payloadsize)
 {
     payloadsize += 2;
     return ((videodata+payloadsize) < &video_packet[MAX_PACKET_SIZE]);
 }
 
-static inline int transmit_video_data(int socket)
+static inline int transmit_video_data(struct video_client *vc)
 {
     int retries = 3;
     int r;
     do {
         //ESP_LOGI(TAG, "Send frame %d bytes", videodata - &video_packet[0]);
-        r = send( socket, video_packet, videodata - &video_packet[0], 0);
+        r = sendto( server_sock, video_packet, videodata - &video_packet[0], 0,
+                   (struct sockaddr*)&vc->addr, sizeof(struct sockaddr_in)
+                  );
         if (r<0) {
            // ESP_LOGI(TAG, "ERR TX %d\n", r);
             if ((retries--)==0)
@@ -70,7 +96,7 @@ static inline int transmit_video_data(int socket)
     return r;
 }
 
-static int fill_and_send_frames(int client_socket,
+static int fill_and_send_frames(struct video_client *vc,
                                 uint8_t seq,
                                 const uint8_t *data,
                                 const uint8_t *prev_data)
@@ -91,7 +117,7 @@ static int fill_and_send_frames(int client_socket,
 
         unsigned chunk = size > MAX_FRAME_PAYLOAD?MAX_FRAME_PAYLOAD:size;
 
-        if (seq & 1) {
+        if ((seq & 15) == 15) {
             need_send = 1;
         } else {
             // Compare with previous data.
@@ -113,7 +139,7 @@ static int fill_and_send_frames(int client_socket,
         if (!has_room_for_frame(chunk)) {
             //ESP_LOGI(TAG,"No room, flush");
             // Send out what we have so far.
-            r = transmit_video_data(client_socket);
+            r = transmit_video_data(vc);
             if (r<0) {
                 ESP_LOGI(TAG,"Error TX");
                 break;
@@ -139,7 +165,7 @@ static int fill_and_send_frames(int client_socket,
 
         if (size==0) {
             // Last chunk of data.
-            r = transmit_video_data(client_socket);
+            r = transmit_video_data(vc);
             if (r<0) {
                 break;
             }
@@ -176,22 +202,55 @@ unsigned videostreamer__getinterrupts()
     return interrupt_count;
 }
 
+static void videostreamer__handle_packet()
+{
+    struct sockaddr_in sock;
+    struct client_packet packet;
+    struct video_client *vc;
+    socklen_t len = sizeof(sock);
+
+    // if client is behind a firewall, we might need to look at the actual IP+port inside the packet.
+    int r = recvfrom(server_sock, &packet, sizeof(packet), 0, (struct sockaddr*)&sock, &len);
+    if (r<0 || len!=sizeof(sock))
+        return;
+    if (r!=sizeof(packet)) {
+        ESP_LOGE(TAG,"Invalid packet size received %d (expect %d)", r, sizeof(packet));
+        return;
+    }
+
+    switch (packet.cmd) {
+    case 0:
+        // Login.
+        vc = videostreamer__get_client_by_addr(&sock);
+        if (vc!=NULL) {
+            ESP_LOGE(TAG,"Client already registered!");
+            break;
+        }
+        vc = malloc(sizeof(struct video_client));
+        memcpy(&vc->addr, &sock, sizeof(sock));
+        vc->error_counter = 0;
+        clients = dlist__append(clients, vc);
+
+        break;
+    }
+}
+
 static void videostreamer__server_task(void *pvParameters)
 {
     uint32_t io_num;
     uint8_t seqno = 0;
-    int error_counter = 0;
     interrupt_count = 0;
 
     unsigned framecounter = 0;
     ESP_LOGI(TAG, "VideoStreamer task initialised");
     do {
-        io_num = spectint__getinterrupt();
+        io_num = spectint__getinterrupt(10);
         if(io_num)
         {
             uint8_t intstatus;
             // Get interrupt status
             intstatus = fpga__readinterrupt();
+            //ESP_LOGI(TAG, "Spect int %08x", intstatus);
 
             if (intstatus & FPGA_INTERRUPT_USB) {
                 // Command request
@@ -205,50 +264,115 @@ static void videostreamer__server_task(void *pvParameters)
             
             if (intstatus & FPGA_INTERRUPT_SPECT) {
                 interrupt_count++;
-
                 if (framecounter == 1) {
                     framecounter = 0;
 
-                    if (client_socket>0) {
+                    if ( dlist__count(clients)>0 ) {
                         memcpy(fb_prev, fb, sizeof(fb_prev));
                         fpga__get_framebuffer(fb);
                         if ((seqno & 0x3F)==0x00) {
-                            ESP_LOGI(TAG, "Sending frames seq %d", seqno);
+                            //ESP_LOGI(TAG, "Sending frames seq %d", seqno);
                         }
-                        int r = fill_and_send_frames( client_socket, seqno, (uint8_t*)fb, (uint8_t*)fb_prev);
-                        if (r<0) {
-                            error_counter++;
-                        } else {
-                            error_counter = 0;
+#ifdef __linux__
+                        if (memcpy(fb, fb_prev, SPECTRUM_FRAME_SIZE)==0) {
+                            ESP_LOGI(TAG, "Frames mismatch");
                         }
-                        if (error_counter>32) {
-                            ESP_LOGE(TAG, "Error sending to client socket: %d errno %d", r,errno);
-                            shutdown(client_socket,3);
-                            close(client_socket);
-                            client_socket = -1;
+#endif
+                        dlist_t *client = clients;
+                        while (client) {
+                            struct video_client *vc = (struct video_client*) dlist__data(client);
+
+                            int r = fill_and_send_frames( vc, seqno, (uint8_t*)fb, (uint8_t*)fb_prev);
+                            if (r<0) {
+                                vc->error_counter++;
+                            } else {
+                                vc->error_counter = 0;
+                            }
+                            if (vc->error_counter>32) {
+                                ESP_LOGE(TAG, "Error sending to client socket: %d errno %d", r,errno);
+                                client = dlist__remove(clients, client);
+                                free(vc);
+                            }
+                            client = dlist__next(client);
                         }
-                    } else {
-                        error_counter = 0;
-                    }
+                    } 
                     seqno++;
                 } else {
                     framecounter++;
                 }
             }
-
-
-
             // Re-enable
             fpga__ackinterrupt(intstatus);
+        } else {
+            // Process socket data.
+            fd_set rfs;
+            FD_ZERO(&rfs);
+            FD_SET(server_sock, &rfs);
+            struct timeval tv = {0,0};
+            switch (select(server_sock+1, &rfs, NULL, NULL, &tv)) {
+            case 0:
+                break;
+            case -1:
+                break;
+            default:
+                if (FD_ISSET(server_sock, &rfs)) {
+                    videostreamer__handle_packet();
+                }
+                break;
+            }
         }
     } while (1);
 }
 
-
-void videostreamer__init()
+static struct video_client *videostreamer__get_client_by_addr(const struct sockaddr_in *s)
 {
-    xTaskCreate(videostreamer__server_task, "streamer_task", VIDEOSTREAMER_TASK_STACK_SIZE, NULL, VIDEOSTREAMER_TASK_PRIORITY, NULL);
+    dlist_t *client = clients;
+    struct video_client *vc = NULL;
+
+    while (client) {
+        struct video_client *this_vc = (struct video_client*) dlist__data(client);
+        if ((this_vc->addr.sin_addr.s_addr == s->sin_addr.s_addr)
+            && (this_vc->addr.sin_port == s->sin_port)) {
+                vc = this_vc;
+                break;
+            }
+        client = dlist__next(client);
+    };
+
+    return vc;
 }
+
+int videostreamer__init()
+{
+    // create socket.
+    struct sockaddr_in bind_addr;
+
+    server_sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+
+    if (server_sock < 0) {
+        ESP_LOGE(TAG, "Unable to create socket: errno %d", errno);
+        return -1;
+    }
+
+    bind_addr.sin_family = AF_INET;
+    bind_addr.sin_port = htons(8002);
+    bind_addr.sin_addr.s_addr = INADDR_ANY;
+
+    if (bind(server_sock, (struct sockaddr*)&bind_addr, sizeof(struct sockaddr_in))!=0) {
+        ESP_LOGE(TAG, "Unable to bind socket: errno %d", errno);
+        return -1;
+    }
+#if 0
+    if (listen(server_sock, 2)<0) {
+        ESP_LOGE(TAG, "Unable to listen socket: errno %d", errno);
+        return -1;
+    }
+#endif
+    xTaskCreate(videostreamer__server_task, "streamer_task", VIDEOSTREAMER_TASK_STACK_SIZE, NULL, VIDEOSTREAMER_TASK_PRIORITY, NULL);
+
+    return 0;
+}
+#if 0
 
 int videostreamer__start_stream(struct in_addr addr, uint16_t port)//command_t *cmdt, int argc, char **argv)
 {
@@ -287,3 +411,4 @@ int videostreamer__start_stream(struct in_addr addr, uint16_t port)//command_t *
 
     return r;
 }
+#endif
