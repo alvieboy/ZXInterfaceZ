@@ -13,6 +13,8 @@
 #include "esp_log.h"
 #include "defs.h"
 
+#define TAG "USBMOUSE"
+
 #define DEBUG(x...)
 
 #define INTERFACE_CLASS_HID 0x03
@@ -24,7 +26,7 @@ struct usb_mouse {
     uint8_t seq:1;
     struct usb_device *dev;
     struct usb_interface *intf;
-    uint8_t payload[0];
+    uint32_t payload[0];
 };
 
 static int usb_mouse__submit_in(struct usb_mouse *m);
@@ -65,7 +67,7 @@ static int usb_mouse__submit_in(struct usb_mouse *m)
 {
     return usb_ll__submit_request(m->epchan,
                                   PID_IN,
-                                  &m->payload[0],
+                                  (uint8_t*)&m->payload[0],
                                   8, // Report descriptor size!!!
                                   usb_mouse__transfer_completed,
                                   m);
