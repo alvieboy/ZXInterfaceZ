@@ -23,6 +23,8 @@
 #include "reset.h"
 #include "rom_hook.h"
 
+#define TAG "CONSOLE"
+
 static char cmd[256];
 static uint8_t cmdptr = 0;
 static hdlc_encoder_t enc;
@@ -47,7 +49,7 @@ void console__init(void)
 
 static void console__send_scope_group(hdlc_encoder_t *enc, scope_group_t group)
 {
-    uint8_t len = scope__get_group_size(group);
+    uint8_t len = (uint8_t)scope__get_group_size(group);
     int i;
 
     hdlc_encoder__write(enc, &len, 1);
@@ -185,8 +187,8 @@ static int console__volume(int argc, char **argv)
         return -1;
     }
 
-    audio__set_volume_f(chan, (float)(volume/100.0F),
-                        -1.0F + ((float)balance/50.0F));
+    audio__set_volume_f((uint8_t)chan, (float)volume/100.0F,
+                        -1.0F + (float)balance/50.0F);
     return 0;
 }
 
