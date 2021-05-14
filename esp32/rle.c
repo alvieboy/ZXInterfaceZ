@@ -2,7 +2,7 @@
 #include <stdio.h>
 
 #include "rle.h"
-
+#include "string.h"
 
 int writes16(int16_t val, FILE*out)
 {
@@ -140,9 +140,21 @@ int main(int argc, char **argv)
     FILE *out;
     if (argc<3)
         return -1;
-    in = fopen(argv[1],"r");
-    out = fopen(argv[2],"w");
+
+    if (strcmp(argv[1], "-")==0) {
+        in = stdin;
+    } else {
+        in = fopen(argv[1],"r");
+    }
+    if (strcmp(argv[2], "-")==0) {
+        out = stdout;
+    } else {
+        out = fopen(argv[2],"w");
+    }
     rle_compress(in, out);
-    fclose(in);
-    fclose(out);
+    if (in!=stdin)
+        fclose(in);
+    fflush(out);
+    if (out!=stdout)
+        fclose(out);
 }
