@@ -6,9 +6,9 @@
 #include "hdlc_decoder.h"
 #include <string.h>
 #include <unistd.h>
-#include "freertos/FreeRTOS.h"
-#include "freertos/queue.h"
-#include "freertos/semphr.h"
+#include "os/queue.h"
+#include "os/semaphore.h"
+#include "os/task.h"
 #include <malloc.h>
 #include <errno.h>
 #include <string.h>
@@ -18,8 +18,8 @@
 #include "interface.h"
 #include "usb_link.h"
 
-static xQueueHandle fpga_spi_queue = NULL;
-static SemaphoreHandle_t spi_sem;
+static Queue fpga_spi_queue = NULL;
+static Semaphore spi_sem;
 
 
 static hdlc_encoder_t hdlc_encoder;
@@ -29,7 +29,7 @@ static uint8_t writebuf[8192];
 static unsigned writebufptr = 0;
 static unsigned hdlcrxlen = 0;
 
-#define FPGA_USE_SOCKET_PROTOCOL
+#undef FPGA_USE_SOCKET_PROTOCOL
 
 #ifdef FPGA_USE_SOCKET_PROTOCOL
 static int emulator_socket = -1;
@@ -73,6 +73,7 @@ static void fpga_rxthread(void *arg);
 int fpga_set_comms_socket(int socket)
 {
     emulator_socket = socket;
+    return 0;
 }
 #endif
 
@@ -85,8 +86,8 @@ int fpga_init(void)
     struct sockaddr_in sockaddr;
     int yes = 1;
 
-    fpga_spi_queue = xQueueCreate(4, sizeof(struct spi_payload));
-    spi_sem = xSemaphoreCreateMutex();
+    fpga_spi_queue = queue__create(4, sizeof(struct spi_payload));
+    spi_sem = semaphore__create_mutex();
 
     if (emulator_socket <0) {
         emulator_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP );
@@ -117,7 +118,7 @@ int fpga_init(void)
     hdlc_encoder__init(&hdlc_encoder, &hdlc_writer, &hdlc_flusher, NULL);
     printf("Starting FPGA thread\n");
     // Start RX thread
-    xTaskCreate(fpga_rxthread, "fpgathread", 4096, NULL, 6, NULL);
+    task__create(fpga_rxthread, "fpgathread", 4096, NULL, 6, NULL);
 #else
     // Ignore
 #endif
@@ -164,7 +165,7 @@ void hdlc_data(void *user, const uint8_t *data, unsigned datalen)
     switch (data[0]) {
     case 0x00:
         // Interrupt (pin) data
-        printf("**** Interrupt **** source=%d\n", data[1]);
+        //printf("**** Interrupt **** source=%d\n", data[1]);
         gpio_isr_do_trigger(data[1]);
 
         break;
@@ -174,7 +175,7 @@ void hdlc_data(void *user, const uint8_t *data, unsigned datalen)
         memcpy(payload.data, &data[1], datalen-1);
         payload.len = datalen - 1;
 
-        xQueueSendFromISR(fpga_spi_queue, &payload, NULL);
+        queue__send_from_isr(fpga_spi_queue, &payload, NULL);
 
         break;
     case 0x02:
@@ -213,7 +214,7 @@ void fpga_rxthread(void *arg)
         do {
             r = recv(emulator_socket, localbuf, sizeof(localbuf), 0);
             if (r<0 && errno==EAGAIN) {
-                vTaskDelay(10 / portTICK_RATE_MS);
+                task__delay_ms(10);
             }
         } while ((r<0) && (errno==EINTR || errno==EAGAIN));
         if (r<=0) {
@@ -234,26 +235,28 @@ void fpga_do_transaction(uint8_t *buffer, size_t len)
 {
 
 #ifdef FPGA_USE_SOCKET_PROTOCOL
-
     struct spi_payload payload;
 
     if (emulator_socket>=0) {
 
         // Mutex.
-        if (xSemaphoreTake( spi_sem,  portMAX_DELAY )!= pdTRUE) {
-            printf("Cannot take semaphore!!!\n");
-            return -1;
+        if (semaphore__take( spi_sem,  OS_MAX_DELAY )!= OS_TRUE) {
+            printf("Cannot take SPI semaphore!!!\n");
+            abort();
+            return;
         }
 
         hdlc_encoder__begin(&hdlc_encoder);
         hdlc_encoder__write(&hdlc_encoder, buffer, len);
         hdlc_encoder__end(&hdlc_encoder);
         // Wait for response
-        if (!xQueueReceive(fpga_spi_queue, &payload, portMAX_DELAY)) {
-            xSemaphoreGive(spi_sem);
+        if (queue__receive(fpga_spi_queue, &payload, 200)!=OS_TRUE) {
+            semaphore__give(spi_sem);
+            printf("*****\nSPI TIMEOUT!!!!\n Command: 0x%02x\n*******\n\n", buffer[0]);
+            abort();
             return;
         }
-        xSemaphoreGive(spi_sem);
+        semaphore__give(spi_sem);
         // Assert payload size: TODO
 #if 0
         printf("SPI req %02x reply %02x\n", buffer[0], payload.data[0]);
