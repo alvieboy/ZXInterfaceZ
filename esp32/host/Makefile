@@ -17,6 +17,7 @@ CFLAGS= -fpic -DPIC -Wall -Wextra -Wno-format -Wno-unused-variable -Wno-unused-p
 	-DGITVER=\"$(GITVER)\" \
 	-DBUILDDATE='"$(BUILDDATE)"' \
 	-DCONFIG_LOG_TIMESTAMP_SOURCE_RTOS \
+	-DCONFIG_HTTPD_WS_SUPPORT=1 \
 	-DFPGA_USE_SOCKET_PROTOCOL=1 \
 	-O0 -g -Wall -Wextra -DIDF_VER=\"0.1\" \
 	$(shell pkg-config --cflags glib-2.0 libusb-1.0) \
@@ -26,6 +27,7 @@ CFLAGS= -fpic -DPIC -Wall -Wextra -Wno-format -Wno-unused-variable -Wno-unused-p
        -Iesplayer \
        -Icjson \
        -I. \
+       -I./os/ \
        -I../main/ \
        -I$(FREERTOSKERNEL) \
        -I$(ESP_IDF)/components/esp_system/include/ 	\
@@ -150,6 +152,8 @@ json.c                \
 audio.c               \
 console.c             \
 firmware.c            \
+firmware_ws.c         \
+progress.c            \
 rle.c                 \
 vga.c                 \
 adc.c                 \
@@ -240,7 +244,9 @@ COBJ:=$(patsubst %, $(SRCPATH)/%, $(_COBJ))
 CXXOBJ:=$(patsubst %, $(SRCPATH)/%, $(_CXXOBJ))
 
 
-OBJS:=$(FREERTOS_OBJS) $(COBJ) $(CXXOBJ) \
+#OBJS:=$(FREERTOS_OBJS) $(COBJ) $(CXXOBJ)
+
+OBJS:=$(COBJ) $(CXXOBJ) \
 	main.o \
 	wifi_task.o \
 	event_task.o \
@@ -254,6 +260,9 @@ OBJS:=$(FREERTOS_OBJS) $(COBJ) $(CXXOBJ) \
 	usb_ll.o \
 	usbh.o   \
 	tests.o \
+	os/queue.o \
+	os/task.o \
+	os/semaphore.o \
 	cjson/cJSON.o \
 	cjson/cJSON_Utils.o \
 	esplayer/nvs_flash.o \
@@ -273,7 +282,17 @@ OBJS:=$(FREERTOS_OBJS) $(COBJ) $(CXXOBJ) \
 	$(ESP_IDF)/components/esp_http_server/src/httpd_uri.o   \
 	$(ESP_IDF)/components/esp_http_server/src/httpd_main.o  \
 	$(ESP_IDF)/components/esp_http_server/src/util/ctrl_sock.o  \
-	$(ESP_IDF)/components/nghttp/nghttp2/third-party/http-parser/http_parser.o 
+	$(ESP_IDF)/components/nghttp/nghttp2/third-party/http-parser/http_parser.o \
+	$(ESP_IDF)/components/mbedtls/mbedtls/library/md.o \
+	$(ESP_IDF)/components/mbedtls/mbedtls/library/md_wrap.o \
+	$(ESP_IDF)/components/mbedtls/mbedtls/library/sha256.o \
+	$(ESP_IDF)/components/mbedtls/mbedtls/library/sha1.o \
+	$(ESP_IDF)/components/mbedtls/mbedtls/library/sha512.o \
+	$(ESP_IDF)/components/mbedtls/mbedtls/library/ripemd160.o \
+	$(ESP_IDF)/components/mbedtls/mbedtls/library/md5.o \
+	$(ESP_IDF)/components/mbedtls/mbedtls/library/platform_util.o \
+	$(ESP_IDF)/components/mbedtls/mbedtls/library/base64.o \
+	
 
 interfacez: libinterfacez.so main_standalone.o
 	$(CXX) -o interfacez main_standalone.o libinterfacez.so -lutil
