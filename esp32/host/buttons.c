@@ -1,7 +1,6 @@
 #include "buttons.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "freertos/queue.h"
+#include "os/task.h"
+#include "os/queue.h"
 #include "gpio.h"
 #include "defs.h"
 static uint8_t button_counters[2];
@@ -13,8 +12,8 @@ static uint8_t debounce[2];
 #define PRESS_LONG 254
 #define PRESS_MAX  255
 
-static xQueueHandle button_event_queue;
-static TaskHandle_t button_task;
+static Queue button_event_queue;
+static Task button_task;
 
 static inline void button__check(int index, uint32_t gpio_num)
 {
@@ -63,7 +62,7 @@ static inline void button__check(int index, uint32_t gpio_num)
     }
     if (event.type!=BUTTON_IDLE) {
         printf("Button event\n");
-        xQueueSend(button_event_queue, &event, NULL);
+        queue__send(button_event_queue, &event, NULL);
     }
 }
 
@@ -74,25 +73,25 @@ static void button_scan_task(void *data)
     while (1) {
         button__check(0, PIN_NUM_SWITCH);
         button__check(1, PIN_NUM_IO0);
-        vTaskDelay(10 / portTICK_RATE_MS);
+        task__delay_ms(10);
     };
 }
 
 void buttons__init(void)
 {
-    button_event_queue = xQueueCreate(4, sizeof(button_event_t));
+    button_event_queue = queue__create(4, sizeof(button_event_t));
 
     debounce[0] = 3;
     debounce[1] = 3;
     button_counters[0] = 0;
     button_counters[1] = 0;
     ESP_LOGI("Buttons", "Starting button scan task");
-    xTaskCreate(button_scan_task, "button_scan", 4096, NULL, 6, &button_task);
+    task__create(button_scan_task, "button_scan", 4096, NULL, 6, &button_task);
 }
 
 int buttons__getevent(button_event_t *event, bool block)
 {
-    if (!xQueueReceive(button_event_queue, event, block? portMAX_DELAY:0))
+    if (queue__receive(button_event_queue, event, block? OS_MAX_DELAY:0)!=OS_TRUE)
         return -1;
     return 0;
 }
