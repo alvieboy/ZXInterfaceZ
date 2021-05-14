@@ -8,9 +8,9 @@
 #include <sys/stat.h>
 #include "fileaccess.h"
 #include "fcntl.h"
+#include "flash_resource.h"
 
-#define ROM_FILENAME "/spiffs/intz.rom"
-
+#define TAG "ROM"
 static char romversion[64];
 
 const rom_model_t *detected_rom[4] ={ NULL };
@@ -43,6 +43,11 @@ static const rom_model_t rom_models[] = {
 };
 
 
+void rom__get_rom_filename(char *target)
+{
+    sprintf(target, "%s/intz.rom", flash_resource__get_root());
+}
+
 static int rom__read_version(const char *file);
 
 
@@ -69,23 +74,14 @@ const rom_model_t *rom__set_rom_crc(uint8_t index, uint32_t crc)
 
 int rom__load_from_flash(void)
 {
-    /*int size;
-    void *data = readfile(ROM_FILENAME, &size);
+    char romfilename[128];
 
-    if (data==NULL) {
-        ESP_LOGE(TAG,"Cannot load ROM file");
-    }
-
-    int r = fpga__upload_rom(NMI_ROM_BASEADDRESS, data, size);
-
-    free(data);
-
-    return r;*/
+    rom__get_rom_filename(romfilename);
     romversion[0] = '\0';
-    if (rom__read_version(ROM_FILENAME)<0)
+    if (rom__read_version(romfilename)<0)
         return -1;
 
-    return rom__load_custom_from_file(ROM_FILENAME, NMI_ROM_BASEADDRESS);
+    return rom__load_custom_from_file(romfilename, NMI_ROM_BASEADDRESS);
 }
 
 char *rom__get_version()
