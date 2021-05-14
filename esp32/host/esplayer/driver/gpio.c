@@ -2,6 +2,10 @@
 #include <malloc.h>
 #include "hal/gpio_ll.h"
 
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "freertos/queue.h"
+
 void gpio_isr_do_trigger(gpio_num_t num);
 
 struct gpioh {
@@ -55,7 +59,9 @@ void gpio_isr_do_trigger(gpio_num_t num)
     struct gpioh *h = handlers;
     while (h) {
         if (h->num == num) {
+            taskENTER_CRITICAL();
             h->isr(h->args);
+            taskEXIT_CRITICAL();
         }
         h = h->next;
     }

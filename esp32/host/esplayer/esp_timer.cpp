@@ -1,14 +1,14 @@
 #include "esp_timer.h"
-#include <freertos/FreeRTOS.h>
-#include <freertos/task.h>
-#include <freertos/semphr.h>
+#include "os/task.h"
+#include "os/semaphore.h"
+#include "os/core.h"
 #include <stdlib.h>
 #include <vector>
 #include <algorithm>
 
 static bool initialized = false;
 
-static SemaphoreHandle_t timer_sem;
+static Semaphore timer_sem;
 
 struct esp_timer {
     bool active;
@@ -24,14 +24,14 @@ static timerlist_t timers;
 
 static void esp_timer_lock()
 {
-    if (xSemaphoreTake( timer_sem,  portMAX_DELAY )!= pdTRUE) {
+    if (semaphore__take( timer_sem,  OS_MAX_DELAY )!= OS_TRUE) {
         abort();
     }
 }
 
 static void esp_timer_unlock()
 {
-    xSemaphoreGive(timer_sem);
+    semaphore__give(timer_sem);
 }
 
 esp_err_t esp_timer_delete(struct esp_timer *timer)
@@ -69,7 +69,7 @@ extern "C" void esp_timer_task(void*)
             }
         }
         esp_timer_unlock();
-        vTaskDelay(20 / portTICK_RATE_MS);
+        task__delay_ms(20);
     }
 }
 
@@ -78,9 +78,9 @@ static void esp_timer_init_pvt()
     if (initialized)
         return;
 
-    timer_sem = xSemaphoreCreateMutex();
+    timer_sem = semaphore__create_mutex();
 
-    if (xTaskCreate(&esp_timer_task, "wsys_task", 4096, NULL, 6, NULL)!=pdPASS) {
+    if (task__create(&esp_timer_task, "wsys_task", 4096, NULL, 6, NULL)!=OS_TRUE) {
         
     }
 

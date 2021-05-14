@@ -1,6 +1,9 @@
 #include "esp_log.h"
 #include <stdarg.h>
 #include <stdio.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include <sys/signal.h>
 
 extern int ptyfd;
 
@@ -29,15 +32,33 @@ void esp_log_write(esp_log_level_t level, const char *tag, const char *fmt, ...)
 
 }
 
+static pthread_mutex_t logmutex = PTHREAD_MUTEX_INITIALIZER;
+
 void esp_log_writev(esp_log_level_t level, const char *tag, const char *fmt, va_list ap)
 {
     char line[512];
     char *ptr = line;
+#if 0
+    sigset_t xSignalToBlock, xOldSet;
 
-    //va_start(ap, fmt);
+    sigemptyset(&xSignalToBlock);
+    sigaddset(&xSignalToBlock, SIG_SUSPEND);
+    sigaddset(&xSignalToBlock, SIG_RESUME);
+    sigaddset(&xSignalToBlock, SIG_TICK);
+
+    pthread_sigmask(SIG_BLOCK, &xSignalToBlock, NULL);
+#endif
+
+    pthread_mutex_lock(&logmutex);
+
     if (extern_logger) {
         extern_logger((int)level, tag, (char*)fmt,ap);
     }
+
+    pthread_mutex_unlock(&logmutex);
+#if 0
+    pthread_sigmask(SIG_UNBLOCK, &xSignalToBlock, NULL);
+#endif
     //va_end(ap);
     //va_start(ap, fmt);
     //vfprintf(stdout, fmt, ap);
