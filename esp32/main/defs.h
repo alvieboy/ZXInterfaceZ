@@ -12,8 +12,6 @@
  * \brief System initialization
  */
 
-#define TAG "ZX InterfaceZ"
-
 #define PIN_NUM_IO26 26
 #define PIN_NUM_IO21 21
 #define PIN_NUM_IO22 22
