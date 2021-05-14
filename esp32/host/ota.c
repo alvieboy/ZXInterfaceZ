@@ -52,13 +52,15 @@ esp_err_t esp_ota_begin(const esp_partition_t *partition, size_t image_size, esp
 
 esp_err_t esp_ota_write(esp_ota_handle_t handle, const void *data, size_t size)
 {
-    int r =esp_partition_write(ota_partitions[handle].p,
-                               ota_partitions[handle].off,
-                               data, size);
+    int r = esp_partition_write(ota_partitions[handle].p,
+                                ota_partitions[handle].off,
+                                data, size);
     if (r<0)
         return r;
 
     ota_partitions[handle].off += size;
+
+    return r;
 }
 
 esp_err_t esp_ota_end(esp_ota_handle_t handle)
