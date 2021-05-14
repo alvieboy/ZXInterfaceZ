@@ -20,6 +20,8 @@
 #include "stream.h"
 #include "model.h"
 
+#define TAG "TAPEPLAYER"
+
 #define TAP_CMD_STOP 0
 #define TAP_CMD_PLAY 1
 #define TAP_CMD_RECORD 2
