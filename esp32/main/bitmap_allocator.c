@@ -10,17 +10,18 @@
 #include "bitmap_allocator.h"
 #include "log.h"
 #include "esp_assert.h"
+#include "os/core.h"
 
 static void bitmap_allocator__lock(bitmap32_t *bitmap)
 {
-    if (xSemaphoreTake( bitmap->sem,  portMAX_DELAY )!= pdTRUE) {
+    if (semaphore__take( bitmap->sem,  OS_MAX_DELAY )!= OS_TRUE) {
         ESP_LOGE("BITMAP", "Cannot take semaphore");
         assert(false);
     }
 }
 static void bitmap_allocator__unlock(bitmap32_t *bitmap)
 {
-    xSemaphoreGive(bitmap->sem);
+    semaphore__give(bitmap->sem);
 }
 /**
  \ingroup bitmap_allocator
@@ -32,7 +33,7 @@ static void bitmap_allocator__unlock(bitmap32_t *bitmap)
  */
 void bitmap_allocator__init(bitmap32_t *bitmap)
 {
-    bitmap->sem = xSemaphoreCreateMutex();
+    bitmap->sem = semaphore__create_mutex();
     bitmap->bitmap = 0;
 }
 

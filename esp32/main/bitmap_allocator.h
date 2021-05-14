@@ -1,8 +1,8 @@
 #ifndef __BITMAP_ALLOCATOR_H__
 #define __BITMAP_ALLOCATOR_H__
 
-#include "freertos/FreeRTOS.h"
-#include "freertos/semphr.h"
+#include "os/semaphore.h"
+#include <inttypes.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -10,7 +10,7 @@ extern "C" {
 
 typedef struct {
     uint32_t bitmap;
-    SemaphoreHandle_t sem;
+    Semaphore sem;
 } bitmap32_t;
 
 void bitmap_allocator__init(bitmap32_t *bitmap);
