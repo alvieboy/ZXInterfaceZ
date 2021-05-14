@@ -5,6 +5,8 @@
 #include "defs.h"
 #include "esp_spiffs.h"
 
+#define TAG "CONFIG"
+
 void config__init()
 {
 #ifndef __linux__
