@@ -2,6 +2,6 @@
 #define __SPECTINT_H__
 
 void spectint__init(void);
-int spectint__getinterrupt(void);
+int spectint__getinterrupt(int timeout);
 
 #endif
