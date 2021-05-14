@@ -1,8 +1,6 @@
 #include <stdio.h>
 #include "esp_system.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "freertos/queue.h"
+#include "os/task.h"
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <string.h>
@@ -10,6 +8,7 @@
 #include "wifi_task.h"
 #include "event_task.h"
 #include <pty.h>
+#include <unistd.h>
 
 BaseType_t xTaskCreatePinnedToCore(TaskFunction_t pvTaskCode, const char *const pcName, const uint32_t usStackDepth, void *const pvParameters,
                                    UBaseType_t uxPriority, TaskHandle_t *const pvCreatedTask, const BaseType_t xCoreID);
@@ -59,7 +58,7 @@ void esp_restart()
 
 BaseType_t xTaskCreatePinnedToCore(TaskFunction_t pvTaskCode, const char *const pcName, const uint32_t usStackDepth, void *const pvParameters, UBaseType_t uxPriority, TaskHandle_t *const pvCreatedTask, const BaseType_t xCoreID)
 {
-    BaseType_t r = xTaskCreate(pvTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pvCreatedTask);
+    BaseType_t r = task__create(pvTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pvCreatedTask);
     return r;
 }
 
@@ -74,9 +73,15 @@ STATUS uart_rx_one_char(uint8_t *c)
             printf("DATA %d %02x\n",ptyfd, *c);
             return 0;
         } else {
-            if (r<0 && errno!=EINTR) {
-                reopen_pty();
-                //printf("CANNOT READ FROM PTY\n");
+            if (r<0) {
+                switch (errno) {
+                case EINTR: /* Fall-through */
+                case EWOULDBLOCK:
+                    break;
+                default:
+                    reopen_pty();
+                    break;
+                }
             }
             return -1;
         }
@@ -158,6 +163,9 @@ void reopen_pty()
 
     printf("Console PTY %s\n", pts);
 
+    fcntl(ptyfd, F_SETFL, fcntl(ptyfd,F_GETFL)|O_NONBLOCK);
+
+
 #if 0
     ptyfd = posix_openpt(O_RDWR|O_NOCTTY);
 
@@ -194,6 +202,13 @@ int interfacez_main(int argc, char **argv)
 {
     TaskHandle_t h;
     getcwd(startupdir, sizeof(startupdir));
+
+
+    setvbuf(stdout, NULL, _IONBF, 0);
+    setvbuf(stderr, NULL, _IONBF, 0);
+    setlinebuf(stdout);
+    setlinebuf(stderr);
+
 
     fcntl(0, F_SETFL, fcntl(0,F_GETFL)|O_NONBLOCK);
 
