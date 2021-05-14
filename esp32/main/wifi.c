@@ -1,7 +1,7 @@
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "freertos/event_groups.h"
+//#include "freertos/event_groups.h"
 #include "esp_wifi.h"
 #include "esp_event.h"
 #include "esp_log.h"
@@ -21,14 +21,14 @@
 #include "wifi.h"
 #include "systemevent.h"
 
+#define TAG "WIFI"
+
+
 #define EXAMPLE_ESP_WIFI_SSID      CONFIG_ESP_WIFI_SSID
 #define EXAMPLE_ESP_WIFI_PASS      CONFIG_ESP_WIFI_PASSWORD
 #define EXAMPLE_MAX_STA_CONN       CONFIG_MAX_STA_CONN
 
 #define DEFAULT_TXPOWER 20 /* +5dB */
-
-/* FreeRTOS event group to signal when we are connected*/
-static EventGroupHandle_t s_wifi_event_group;
 
 #define WIFI_CONNECTED_BIT (1<<0)
 #define WIFI_SCANNING_BIT (1<<1)
@@ -44,6 +44,7 @@ static void *scan_parser_data = NULL;
 static esp_netif_t *netif;
 
 static volatile wifi_status_t wifi_status;
+static volatile uint8_t wifi_status_bits;
 
 const struct channel_list wifi_channels =
 {
@@ -148,12 +149,14 @@ char wifi_ssid[33];
 
 bool wifi__isconnected()
 {
-    return xEventGroupGetBits(s_wifi_event_group) & WIFI_CONNECTED_BIT;
+    //return xEventGroupGetBits(s_wifi_event_group) & WIFI_CONNECTED_BIT;
+    return wifi_status_bits & WIFI_CONNECTED_BIT;
 }
 
 bool wifi__scanning()
 {
-    return xEventGroupGetBits(s_wifi_event_group) & WIFI_SCANNING_BIT;
+    //    return xEventGroupGetBits(s_wifi_event_group) & WIFI_SCANNING_BIT;
+    return wifi_status_bits & WIFI_SCANNING_BIT;
 }
 
 bool wifi__issta()
@@ -197,7 +200,8 @@ static void ip_event_handler(void* arg, esp_event_base_t event_base,
     case IP_EVENT_STA_GOT_IP:
         event = (ip_event_got_ip_t*) event_data;
         ESP_LOGI(TAG, "got ip: " IPSTR, IP2STR(&event->ip_info.ip));
-        xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
+        //xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
+        wifi_status_bits |= WIFI_CONNECTED_BIT;
         led__set(LED2, 1);
 #if 1
         wifi__set_status(WIFI_CONNECTED);
@@ -229,7 +233,8 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,
         break;
     case WIFI_EVENT_STA_DISCONNECTED:
         led__set(LED2, 0);
-        xEventGroupClearBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
+        //xEventGroupClearBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
+        wifi_status_bits &= ~WIFI_CONNECTED_BIT;
         wifi__set_status(WIFI_DISCONNECTED);
         esp_wifi_connect();
         break;
@@ -262,7 +267,8 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,
 
     case WIFI_EVENT_SCAN_DONE:
         wifi__parse_scan();
-        xEventGroupClearBits(s_wifi_event_group, WIFI_SCANNING_BIT);
+        //xEventGroupClearBits(s_wifi_event_group, WIFI_SCANNING_BIT);
+        wifi_status_bits &= ~WIFI_SCANNING_BIT;
         wifi__emit_scan_finished();
 
         //case WIFI_EVENT_STA_CONNECTED:
@@ -408,7 +414,8 @@ static void wifi__init_wpa2()
 
 void wifi__init()
 {
-    s_wifi_event_group = xEventGroupCreate();
+    //  s_wifi_event_group = xEventGroupCreate();
+    wifi_status_bits = 0;
 
     esp_netif_init();
 
@@ -434,7 +441,8 @@ int wifi__start_scan()
         ESP_LOGE(TAG, "Cannot start scan process: %s", esp_err_to_name(r));
         return r;
     }
-    xEventGroupSetBits(s_wifi_event_group, WIFI_SCANNING_BIT);
+    //xEventGroupSetBits(s_wifi_event_group, WIFI_SCANNING_BIT);
+    wifi_status_bits |= WIFI_SCANNING_BIT;
     return 0;
 }
 
