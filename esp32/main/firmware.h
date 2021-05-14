@@ -4,6 +4,8 @@
 #include <inttypes.h>
 #include <cJSON.h>
 #include <stdbool.h>
+#include "mbedtls/md.h"
+#include "progress.h"
 
 typedef int (*firmware_read_fun)(void *, uint8_t *buffer, size_t len);
 struct stream;
@@ -19,10 +21,16 @@ typedef enum {
 } firmware_compress_t;
 
 struct manifest_file_info {
-    const char *name;  // Points into JSON object
-    bool completed;
+    const char *name;  // Points into JSON object! Do not read this unless the JSON node is still "alive".
+    unsigned size;
+    unsigned processed_size;
+    uint8_t sha[32];
+#ifdef ENABLE_COMPRESS_SHA
+    uint8_t compressed_sha[32];
+#endif
     firmware_type_t type;
     firmware_compress_t compress;
+    bool completed;
 };
 
 typedef enum {
@@ -42,6 +50,12 @@ typedef struct {
     struct stream *stream;
     cJSON *manifest;
     struct manifest_file_info *fileinfo;
+    mbedtls_md_context_t shactx;
+#ifdef ENABLE_COMPRESS_SHA
+    mbedtls_md_context_t compressed_shactx;
+#endif
+    const progress_reporter_t *progress_reporter;
+    void *progress_reporter_data;
 } firmware_upgrade_t;
 
 
@@ -51,5 +65,7 @@ void firmware__init(firmware_upgrade_t *f,
 void firmware__deinit(firmware_upgrade_t *f);
 
 int firmware__upgrade(firmware_upgrade_t *f);
+
+void firmware__set_reporter(firmware_upgrade_t *,const progress_reporter_t *reporter, void *userdata);
 
 #endif

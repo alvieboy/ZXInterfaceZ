@@ -93,3 +93,27 @@ int flash_pgm__flush(flash_program_handle_t *handle)
     return err;
 }
 
+
+int flash_pgm__abort(flash_program_handle_t *handle)
+{
+    // Zero out the first sector.
+
+    if (handle->buffer==NULL) {
+        handle->buffer = malloc(FLASH_BLOCK_SIZE);
+    }
+
+    memset(handle->buffer, 0, FLASH_BLOCK_SIZE);
+
+    esp_err_t err = esp_partition_write(handle->partition,
+                                        0,
+                                        handle->buffer,
+                                        FLASH_BLOCK_SIZE);
+
+    if (handle->buffer) {
+        free(handle->buffer);
+        handle->buffer = NULL;
+    }
+
+    return err;
+}
+

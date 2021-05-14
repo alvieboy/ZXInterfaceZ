@@ -6,6 +6,12 @@
 #include "flash_resource.h"
 #include "esp_spiffs.h"
 #include "fpga.h"
+#include "fileaccess.h"
+#include "version.h"
+
+#define TAG "FLASH"
+
+static bool fallback = false;
 
 int flash_resource__deinit(void)
 {
@@ -16,12 +22,17 @@ int flash_resource__deinit(void)
 #endif
 }
 
-int flash_resource__init(void)
+bool flash_resource__is_fallback(void)
+{
+    return fallback;
+}
+
+static int flash_resource__mount_partition(const char *pname)
 {
 #ifndef __linux__
     esp_vfs_spiffs_conf_t conf = {
       .base_path = "/spiffs",
-      .partition_label = "resources",
+      .partition_label = pname,
       .max_files = 128,
       .format_if_mount_failed = false
     };
@@ -40,7 +51,58 @@ int flash_resource__init(void)
     }
     return 0;
 #endif
+    return 0;
 }
+
+static bool flash_resource__version_match()
+{
+    char fversion[256];
+    int fd = __open("/spiffs/VERSION", O_RDONLY);
+    if (fd<0)
+        return -1;
+
+    int r = __read(fd, fversion, sizeof(fversion)-1);
+
+    close(fd);
+
+    if (r<0) {
+        return -1;
+    }
+    fversion[r] = '\0';
+    if (strcmp(fversion, gitversion)==0)
+        return 0;
+
+    return -1;
+
+}
+
+int flash_resource__init(void)
+{
+    if (flash_resource__mount_partition("resources")==0) {
+        if (flash_resource__version_match()==0)  {
+            return 0;
+        }
+        ESP_LOGE(TAG,"Version mismatch on resources partition");
+        // version problem, umount
+#ifndef __linux__
+        esp_vfs_spiffs_unregister("/spiffs");
+#endif
+    }
+    // Use fallback
+    fallback = true;
+    ESP_LOGE(TAG,"Using fallback resources partition");
+    return flash_resource__mount_partition("fallback");
+}
+
+const char *flash_resource__get_root()
+{
+    if (fallback) {
+        return "/fallback";
+    }
+    return "/spiffs";
+}
+
+
 #if 0
 uint8_t flash_resource__type(struct resource *r)
 {

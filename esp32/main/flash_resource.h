@@ -16,3 +16,4 @@ struct flash_resource *flash_resource__find(uint8_t id);
 
 int flash_resource__init(void);
 int flash_resource__deinit(void);
+const char *flash_resource__get_root();
