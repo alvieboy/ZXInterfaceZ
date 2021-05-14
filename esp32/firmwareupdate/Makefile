@@ -6,9 +6,6 @@ RLE=./rle
 ./rle: rle.c
 	$(CC) -O2 rle.c -o rle
 
-intz.rle: ../intz.rom rle $(RLE)
-	$(RLE) ../intz.rom intz.rle
-
 resources.rle: ../build/resources.bin $(RLE)
 	$(RLE) ../build/resources.bin resources.rle
 
