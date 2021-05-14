@@ -1,7 +1,5 @@
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "freertos/event_groups.h"
-#include "freertos/queue.h"
+#include "os/queue.h"
+#include "os/task.h"
 #include "wsys.h"
 #include "wsys/screen.h"
 #include "wsys/menuwindow.h"
@@ -35,7 +33,7 @@ struct wsys_event {
 
 static wsys_mode_t wsys_mode = WSYS_MODE_NMI;
 
-static xQueueHandle wsys_evt_queue = NULL;
+static Queue wsys_evt_queue = NULL;
 volatile bool can_update = false;
 
 static void wsys_systemevent_handleevent(const systemevent_t *event, void*user);
@@ -47,8 +45,8 @@ void wsys__keyboard_event(uint16_t raw, char ascii)
     struct wsys_event evt;
     evt.data.v = raw;
     evt.type = EVENT_KBD;
-    xQueueSend(wsys_evt_queue, &evt, portMAX_DELAY);
-    portYIELD();
+    queue__send(wsys_evt_queue, &evt, OS_MAX_DELAY);
+    task__yield();
 }
 
 void wsys__joystick_event(joy_action_t action, bool on)
@@ -57,8 +55,8 @@ void wsys__joystick_event(joy_action_t action, bool on)
     evt.joy_action = action;
     evt.joy_on = on;
     evt.type = EVENT_JOYSTICK;
-    xQueueSend(wsys_evt_queue, &evt, portMAX_DELAY);
-    portYIELD();
+    queue__send(wsys_evt_queue, &evt, OS_MAX_DELAY);
+    task__yield();
 }
 
 void wsys__memoryreadcomplete(uint8_t len)
@@ -69,8 +67,8 @@ void wsys__memoryreadcomplete(uint8_t len)
 
     evt.data.v = len;
     evt.type = EVENT_MEMORYREADCOMPLETE;
-    xQueueSend(wsys_evt_queue, &evt, portMAX_DELAY);
-    portYIELD();
+    queue__send(wsys_evt_queue, &evt, OS_MAX_DELAY);
+    task__yield();
 }
 
 void wsys__get_screen_from_fpga()
@@ -83,8 +81,8 @@ void wsys__nmiready()
     can_update = true;
     struct wsys_event evt;
     evt.type = EVENT_NMIENTER;
-    xQueueSend(wsys_evt_queue, &evt, portMAX_DELAY);
-    portYIELD();
+    queue__send(wsys_evt_queue, &evt, OS_MAX_DELAY);
+    task__yield();
 }
 
 void wsys__nmileave()
@@ -92,7 +90,7 @@ void wsys__nmileave()
     can_update = false;
     struct wsys_event evt;
     evt.type = EVENT_NMILEAVE;
-    xQueueSend(wsys_evt_queue, &evt, portMAX_DELAY);
+    queue__send(wsys_evt_queue, &evt, OS_MAX_DELAY);
 }
 
 
@@ -121,7 +119,7 @@ void wsys__reset(wsys_mode_t mode)
     evt.data.v = (uint8_t)mode;
     can_update = false;
     wsys__send_command(0x00); // Clear sequence immediatly
-    xQueueSend(wsys_evt_queue, &evt, portMAX_DELAY);
+    queue__send(wsys_evt_queue, &evt, OS_MAX_DELAY);
 }
 
 #define MAX_KEYBOARD_TIMER 6
@@ -186,7 +184,7 @@ void wsys__eventloop_iter()
 {
     struct wsys_event evt;
     WSYS_LOGI("Wait for event");
-    if (xQueueReceive(wsys_evt_queue, &evt, portMAX_DELAY)) {
+    if (queue__receive(wsys_evt_queue, &evt, OS_MAX_DELAY)==OS_TRUE) {
         WSYS_LOGI("Dispatch event");
         wsys__dispatchevent(evt);
     }
@@ -197,7 +195,7 @@ void wsys__task(void *data __attribute__((unused)))
 {
     WSYS_LOGI("Starting task");
     screen__init();
-    //xQueueSend(wsys_evt_queue, &gpio_num, NULL);
+    //queue__send(wsys_evt_queue, &gpio_num, NULL);
     while (1) {
         wsys__eventloop_iter();
         screen__do_cleanup();
@@ -218,8 +216,8 @@ static void wsys__keyboard_timer(void *data)
 
 void wsys__init()
 {
-    wsys_evt_queue = xQueueCreate(4, sizeof(struct wsys_event));
-    if (xTaskCreate(wsys__task, "wsys_task", 4096, NULL, 9, NULL)!=pdPASS) {
+    wsys_evt_queue = queue__create(4, sizeof(struct wsys_event));
+    if (task__create(wsys__task, "wsys_task", 4096, NULL, 9, NULL)!=OS_TRUE) {
         ESP_LOGE("WSYS", "Cannot create task");
     }
     WSYS_LOGI("WSYS task created");
@@ -261,7 +259,7 @@ static void wsys_systemevent_handleevent(const systemevent_t *event, void*user)
     struct wsys_event evt;
     evt.type = EVENT_SYSTEM;
     evt.sysevent = *event; // Check copy!
-    xQueueSend(wsys_evt_queue, &evt, portMAX_DELAY);
+    queue__send(wsys_evt_queue, &evt, OS_MAX_DELAY);
 }
 
 
