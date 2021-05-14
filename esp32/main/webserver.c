@@ -8,6 +8,7 @@
 #include "freertos/task.h"
 #include <stdlib.h>
 #include <ctype.h>
+#include "flash_resource.h"
 
 #include "esp_err.h"
 #include "esp_log.h"
@@ -19,6 +20,9 @@
 #include <limits.h>
 #include "webserver.h"
 #include "fileaccess.h"
+#include "firmware_ws.h"
+
+#define TAG "WEBSERVER"
 
 size_t
 strlcpy(char *dst, const char *src, size_t siz);
@@ -296,6 +300,28 @@ int webserver__init(void)
     };
     httpd_register_uri_handler(server, &req_get);
 
+    httpd_uri_t req_post = {
+        .uri       = "/upload/*",   // Match all URIs of type /upload/path/to/file
+        .method    = HTTP_POST,
+        .handler   = &webserver__req_post_handler,
+        .user_ctx  = NULL    // Pass server data as context
+    };
+
+    httpd_register_uri_handler(server, &req_post);
+
+    // WS seems not to pass the full request URI once connected.
+    // So we tie this to a single handler for now.
+
+    httpd_uri_t ws_get = {
+        .uri       = "/ws/fwupgrade",   // Match all URIs of type /upload/path/to/file
+        .method    = HTTP_GET,
+        .handler   = &firmware_ws__firmware_upgrade,
+        .user_ctx  = NULL,    // Pass server data as context
+        .is_websocket = true
+    };
+
+    httpd_register_uri_handler(server, &ws_get);
+
     /* URI handler for getting uploaded files */
     httpd_uri_t file_download = {
         .uri       = "/*",  // Match all URIs of type /path/to/file
@@ -307,14 +333,7 @@ int webserver__init(void)
     httpd_register_uri_handler(server, &file_download);
 
 
-    httpd_uri_t req_post = {
-        .uri       = "/upload/*",   // Match all URIs of type /upload/path/to/file
-        .method    = HTTP_POST,
-        .handler   = &webserver__req_post_handler,
-        .user_ctx  = NULL    // Pass server data as context
-    };
 
-    httpd_register_uri_handler(server, &req_post);
 
     ESP_LOGI(TAG,"Registered all handlers");
     return ESP_OK;

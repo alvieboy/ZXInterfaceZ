@@ -21,6 +21,8 @@
 #include "stream.h"
 #include "tapeplayer.h"
 
+#define TAG "WEBSERVERREQ"
+
 struct webserver_req_entry {
     const char *path;
     webserver_req_handler_t req;
