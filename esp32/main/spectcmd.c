@@ -37,13 +37,15 @@
 #include "minmax.h"
 #include "reset.h"
 
+#define TAG "SPECTCMD"
+
 #define COMMAND_BUFFER_MAX 256+2
 
 static uint8_t command_buffer[COMMAND_BUFFER_MAX]; // Max 256+2 bytes.
 static uint16_t __cmdptr = 0;
 typedef int (*spectcmd_handler_t)(const uint8_t *cmdbuf, unsigned len);
 
-static xQueueHandle data_queue = NULL;
+static Queue data_queue = NULL;
 
 static void spectcmd__task(void *pvParam);
 
@@ -59,8 +61,8 @@ void spectcmd__init()
 
     spectcmd__removedata();
 
-    data_queue  = xQueueCreate(64, sizeof(uint8_t));
-    xTaskCreate(spectcmd__task, "spectcmd_task", SPECTCMD_TASK_STACK_SIZE, NULL, SPECTCMD_TASK_PRIORITY, NULL);
+    data_queue  = queue__create(64, sizeof(uint8_t));
+    task__create(spectcmd__task, "spectcmd_task", SPECTCMD_TASK_STACK_SIZE, NULL, SPECTCMD_TASK_PRIORITY, NULL);
 }
 
 static int spectcmd__do_load_resource(struct resource *r)
@@ -912,7 +914,7 @@ void spectcmd__request()
             break; // No more data
         }
         while (r--) {
-            xQueueSend(data_queue, dptr, 100);
+            queue__send(data_queue, dptr, 100);
             dptr++;
         }
     }
@@ -924,7 +926,7 @@ static void spectcmd__task(void *pvParam)
     uint8_t cmd;
 
     while (1) {
-        if (xQueueReceive(data_queue, &cmd, 1000)==pdTRUE) {
+        if (queue__receive(data_queue, &cmd, 1000)==pdTRUE) {
 
             if (__cmdptr<sizeof(command_buffer)) {
 #if 0
