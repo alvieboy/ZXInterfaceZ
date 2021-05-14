@@ -64,10 +64,15 @@ void LogEmitter::log(int level, const char *tag, char *fmt, va_list ap)
     vsprintf(line, fmt, ap);
     // Remove newlines
     chomp(line);
-    printf("%s\n", line);
+
+    fputs_unlocked(line, stdout);
+    putchar_unlocked('\n');
+
+    fflush(stdout);
     if (logfile) {
-        fprintf(logfile, "%s\n", line);
-        fflush(logfile);
+        fputs_unlocked(line, logfile);
+        putc_unlocked('\n', logfile);
+        fflush_unlocked(logfile);
     }
 
     emit logstring(level, QString(line));
@@ -75,10 +80,10 @@ void LogEmitter::log(int level, const char *tag, char *fmt, va_list ap)
 
 extern "C" void ansi_get_stylesheet(char *dest);
 
-#define FPGA_USE_SOCKET_PROTOCOL
+#undef FPGA_USE_SOCKET_PROTOCOL
 
 #ifndef FPGA_USE_SOCKET_PROTOCOL
-#error Still Unsupported
+//#error Still Unsupported
 
 #include <mqueue.h>
 struct MyLinkClient: public LinkClient
@@ -312,6 +317,7 @@ void GuiWindow::initGifSave()
 GuiWindow::GuiWindow()
 {
     m_spectrumwidget = new SpectrumWidget();
+    m_gif = NULL;
 }
 
 
