@@ -4,7 +4,7 @@
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "freertos/event_groups.h"
+//#include "freertos/event_groups.h"
 #include "esp_system.h"
 #include "esp_log.h"
 #include "defs.h"
@@ -22,6 +22,8 @@
 #include "fpga_ota.h"
 #include "memlayout.h"
 #include "interfacez_tasks.h"
+
+#define TAG "NETCMD"
 
 #ifdef __linux__
 
@@ -44,6 +46,7 @@ static int netcmd__send_captures(command_t *cmdt, int argc, char **argv);
 
 static int netcmd__start_stream(command_t *cmdt, int argc, char **argv)
 {
+#if 0
     int port;
 
     if(cmdt->source_addr->sin_family!=AF_INET)
@@ -54,6 +57,8 @@ static int netcmd__start_stream(command_t *cmdt, int argc, char **argv)
     }
 
     return videostreamer__start_stream(cmdt->source_addr->sin_addr, port );
+#endif
+    return -1;
 }
 
 
