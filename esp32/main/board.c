@@ -4,6 +4,18 @@
 #include "esp_log.h"
 #include "defs.h"
 #include "fpga.h"
+#include "log.h"
+
+#ifndef __USE_GNU
+#define __USE_GNU
+#endif
+#include <string.h>
+
+#ifndef strdupa
+#error No strdupa available, cannot proceed!
+#endif
+
+#define TAG "BOARD"
 
 /**
  * \ingroup init
@@ -132,3 +144,66 @@ bool board__isCompatible(uint8_t major, uint8_t minor)
     }
 }
 
+
+int board__parseRevision(const char *str, uint8_t *major, uint8_t *minor)
+{
+    char *delim;
+    char *endl;
+
+    if (!str || str[0]!='r') {
+        ESP_LOGE(TAG, "board revision does not start with 'r'");
+        return -1;
+    }
+
+    char *localstr = strdupa(str+1); // Skip 'r'
+
+    if (NULL==localstr) {
+        ESP_LOGE(TAG, "Cannot allocate memory");
+        return -1;
+    }
+
+    delim = strchr(localstr, '.');
+
+    if (NULL==delim) {
+        ESP_LOGE(TAG, "No delimiter in Board revision");
+        return -1; // No delimiter
+    }
+
+    *delim='\0'; // Null-terminate major
+    delim++;
+
+    if (*delim=='\0') {
+        ESP_LOGE(TAG, "Minor number missing in Board revision");
+        return -1; // Missing minor number
+    }
+
+    unsigned long major_l = strtoul(localstr, &endl, 10);
+
+    if (*endl!='\0') {
+        ESP_LOGE(TAG, "Malformed major version in Board revision");
+        return -1; // Malformed
+    }
+
+    if (major_l>255) {
+        ESP_LOGE(TAG, "Malformed major version (too big) in Board revision");
+        return -1; // Malformed
+    }
+
+    unsigned long minor_l = strtoul(delim, &endl, 10);
+
+    if (*endl!='\0') {
+        ESP_LOGE(TAG, "Malformed minor version in Board revision");
+        return -1; // Malformed
+    }
+
+    if (minor_l>255) {
+        ESP_LOGE(TAG, "Malformed minor version (too big) in Board revision");
+
+        return -1; // Malformed
+    }
+
+    *major = (uint8_t)major_l;
+    *minor = (uint8_t)minor_l;
+
+    return 0;
+}

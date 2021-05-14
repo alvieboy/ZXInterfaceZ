@@ -21,6 +21,8 @@ static inline bool board__isplus2plus3supply(void)
 
 bool board__hasVoltageSensor(void);
 
+int board__parseRevision(const char *str, uint8_t *major, uint8_t *minor);
+
 #ifdef __cplusplus
 }
 #endif
