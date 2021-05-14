@@ -29,6 +29,8 @@
 #include <stdarg.h>
 #include "strlcpy.h"
 
+#define TAG "FILEACCESS"
+
 #define CWD_MAX 255
 
 static char cwd[CWD_MAX];
