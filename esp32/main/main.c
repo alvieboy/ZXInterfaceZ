@@ -32,8 +32,7 @@
 #include "keyboard.h"
 #include "webserver.h"
 #include "config.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
+#include "os/task.h"
 #include "devmap.h"
 #include "audio.h"
 #include "console.h"
@@ -58,6 +57,8 @@
 #include "fasttap.h"
 #include "log.h"
 #include "reset.h"
+
+#define TAG "MAIN"
 
 static int8_t videomode = 0;
 
@@ -280,7 +281,7 @@ static void detect_spectrum()
     do {
         if (spectrum_model !=0xfe)
             break;
-        vTaskDelay(100 / portTICK_RATE_MS);
+        task__delay_ms(100);
     } while (--timeout);
 
     reset__reset_spectrum();
@@ -525,6 +526,7 @@ void app_main()
                 uart_char(c);
             }
         } while (s==OK);
+
         // Process buttons
         process_buttons();
     }
