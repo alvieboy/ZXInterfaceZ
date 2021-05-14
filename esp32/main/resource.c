@@ -4,6 +4,8 @@
 #include "flash_resource.h"
 #include "fpga.h"
 
+#define TAG "RESOURCE"
+
 struct resource_entry
 {
     uint8_t id;
