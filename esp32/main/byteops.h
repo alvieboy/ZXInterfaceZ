@@ -111,9 +111,9 @@ static inline int putle16_c(uint8_t *dest, uint16_t val)
  */
 static inline uint8_t *putle32(uint8_t *dest, uint32_t val)
 {
-    *dest++ = val & 0xff;
-    *dest++ = val >> 8;
-    *dest++ = val >> 16;
-    *dest++ = val >> 24;
+    *dest++ = (uint8_t)(val & 0xff);
+    *dest++ = (uint8_t)(val >> 8);
+    *dest++ = (uint8_t)(val >> 16);
+    *dest++ = (uint8_t)(val >> 24);
     return dest;
 }
