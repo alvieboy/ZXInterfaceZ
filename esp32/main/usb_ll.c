@@ -15,6 +15,7 @@
 #include "union_types.h"
 
 #define USBLLTAG "USBLL"
+#define TAG USBLLTAG
 
 #define USBLLDEBUG(x...) LOG_DEBUG(DEBUG_ZONE_USBLL, USBLLTAG, x)
 
