@@ -8,6 +8,8 @@
 #include "sdcard.h"
 #include "fileaccess.h"
 
+#define TAG "SDCARD"
+
 #ifndef __linux__
 
 void sdcard__init()

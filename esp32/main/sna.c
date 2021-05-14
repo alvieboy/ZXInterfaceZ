@@ -19,6 +19,8 @@
 #include "minmax.h"
 #include <assert.h>
 
+#define TAG "SNA"
+
 #define TEST_WRITES
 
 #undef TEST_ROM

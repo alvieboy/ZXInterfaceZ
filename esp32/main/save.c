@@ -9,6 +9,8 @@
 #include "errno.h"
 #include "tape.h"
 
+#define TAG "SAVE"
+
 static char savefilename[11];
 
 // NOTE NOTE NOTE: we need a semaphore here!!!
