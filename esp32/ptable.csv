@@ -9,6 +9,7 @@ factory,  0,    0,       0x10000, 1M,
 ota_0,    0,    ota_0,  0x110000, 1M,
 ota_1,    0,    ota_1,  0x210000, 1M,
 config,   data, spiffs, 0x310000, 0x8000
-resources,data, spiffs, 0x318000, 0xE8000
+fallback, data, spiffs, 0x318000, 0x30000
+resources,data, spiffs, 0x348000, 0xB8000
 
 # End of flash: 0x400000
