@@ -33,6 +33,8 @@ static uint32_t fb_prev[SPECTRUM_FRAME_SIZE/4];
 #define MAX_FRAME_PAYLOAD 1024
 #define MAX_PACKET_SIZE   1080
 
+#define VIDEOSTREAMER_PACKET_LOGIN (0x00)
+
 static dlist_t *clients = NULL;
 static int server_sock;
 
@@ -171,22 +173,6 @@ static int fill_and_send_frames(struct video_client *vc,
             }
             videodata = &video_packet[0];
         }
-#if 0
-        int r;
-        do {
-            if (need_send) {
-                r = send( client_socket, &f, chunk, 0);
-            } else {
-                // Send header only
-                r = send( client_socket, &f, 2, 0);
-            }
-            if (r<0) {
-                retries--;
-                if (retries==0)
-                    return r;
-            }
-        } while (r<0);
-#endif
         frag++;
     }
     return 0;
@@ -202,12 +188,28 @@ unsigned videostreamer__getinterrupts()
     return interrupt_count;
 }
 
+static int videostreamer__handle_login(const struct sockaddr_in *sock, const struct client_packet *packet)
+{
+    struct video_client *vc;
+    // Login.
+    vc = videostreamer__get_client_by_addr(sock);
+    if (vc!=NULL) {
+        ESP_LOGE(TAG,"Client already registered!");
+        return -1;
+    }
+    vc = malloc(sizeof(struct video_client));
+    memcpy(&vc->addr, sock, sizeof(*sock));
+    vc->error_counter = 0;
+    clients = dlist__append(clients, vc);
+    return 0;
+}
+
+
 static void videostreamer__handle_packet()
 {
     struct sockaddr_in sock;
-    struct client_packet packet;
-    struct video_client *vc;
     socklen_t len = sizeof(sock);
+    struct client_packet packet;
 
     // if client is behind a firewall, we might need to look at the actual IP+port inside the packet.
     int r = recvfrom(server_sock, &packet, sizeof(packet), 0, (struct sockaddr*)&sock, &len);
@@ -219,18 +221,28 @@ static void videostreamer__handle_packet()
     }
 
     switch (packet.cmd) {
-    case 0:
-        // Login.
-        vc = videostreamer__get_client_by_addr(&sock);
-        if (vc!=NULL) {
-            ESP_LOGE(TAG,"Client already registered!");
-            break;
-        }
-        vc = malloc(sizeof(struct video_client));
-        memcpy(&vc->addr, &sock, sizeof(sock));
-        vc->error_counter = 0;
-        clients = dlist__append(clients, vc);
+    case VIDEOSTREAMER_PACKET_LOGIN:
+        videostreamer__handle_login(&sock, &packet);
+        break;
+    }
+}
 
+static void videostreamer__process_socket_data()
+{
+    // Process socket data.
+    fd_set rfs;
+    FD_ZERO(&rfs);
+    FD_SET(server_sock, &rfs);
+    struct timeval tv = {0,0};
+    switch (select(server_sock+1, &rfs, NULL, NULL, &tv)) {
+    case 0:
+        break;
+    case -1:
+        break;
+    default:
+        if (FD_ISSET(server_sock, &rfs)) {
+            videostreamer__handle_packet();
+        }
         break;
     }
 }
@@ -250,7 +262,7 @@ static void videostreamer__server_task(void *pvParameters)
             uint8_t intstatus;
             // Get interrupt status
             intstatus = fpga__readinterrupt();
-            //ESP_LOGI(TAG, "Spect int %08x", intstatus);
+           // ESP_LOGI(TAG, "Spect int %08x", intstatus);
 
             if (intstatus & FPGA_INTERRUPT_USB) {
                 // Command request
@@ -266,15 +278,18 @@ static void videostreamer__server_task(void *pvParameters)
                 interrupt_count++;
                 if (framecounter == 1) {
                     framecounter = 0;
-
+                    //ESP_LOGI(TAG, "Frame");
                     if ( dlist__count(clients)>0 ) {
                         memcpy(fb_prev, fb, sizeof(fb_prev));
                         fpga__get_framebuffer(fb);
+#if 0
                         if ((seqno & 0x3F)==0x00) {
-                            //ESP_LOGI(TAG, "Sending frames seq %d", seqno);
+                            ESP_LOGI(TAG, "Sending frames seq %d", seqno);
                         }
+#endif
+
 #ifdef __linux__
-                        if (memcpy(fb, fb_prev, SPECTRUM_FRAME_SIZE)==0) {
+                        if (memcmp(fb, fb_prev, SPECTRUM_FRAME_SIZE)!=0) {
                             ESP_LOGI(TAG, "Frames mismatch");
                         }
 #endif
@@ -304,22 +319,7 @@ static void videostreamer__server_task(void *pvParameters)
             // Re-enable
             fpga__ackinterrupt(intstatus);
         } else {
-            // Process socket data.
-            fd_set rfs;
-            FD_ZERO(&rfs);
-            FD_SET(server_sock, &rfs);
-            struct timeval tv = {0,0};
-            switch (select(server_sock+1, &rfs, NULL, NULL, &tv)) {
-            case 0:
-                break;
-            case -1:
-                break;
-            default:
-                if (FD_ISSET(server_sock, &rfs)) {
-                    videostreamer__handle_packet();
-                }
-                break;
-            }
+            videostreamer__process_socket_data();
         }
     } while (1);
 }
@@ -362,53 +362,8 @@ int videostreamer__init()
         ESP_LOGE(TAG, "Unable to bind socket: errno %d", errno);
         return -1;
     }
-#if 0
-    if (listen(server_sock, 2)<0) {
-        ESP_LOGE(TAG, "Unable to listen socket: errno %d", errno);
-        return -1;
-    }
-#endif
+
     xTaskCreate(videostreamer__server_task, "streamer_task", VIDEOSTREAMER_TASK_STACK_SIZE, NULL, VIDEOSTREAMER_TASK_PRIORITY, NULL);
 
     return 0;
 }
-#if 0
-
-int videostreamer__start_stream(struct in_addr addr, uint16_t port)//command_t *cmdt, int argc, char **argv)
-{
-    struct sockaddr_in s;
-    int r = -1;
-
-    do {
-        if (client_socket>0)
-            close(client_socket);
-        client_socket = -1;
-
-        // create socket.
-        int tsock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-
-        if (tsock < 0) {
-            ESP_LOGE(TAG, "Unable to create socket: errno %d", errno);
-            break;
-        }
-
-        s.sin_family = AF_INET;
-        s.sin_port = htons(port);
-
-        s.sin_addr = addr;
-
-        int err = connect(tsock, (struct sockaddr *)&s, sizeof(s));
-        if (err != 0) {
-            ESP_LOGE(TAG, "Socket unable to connect: errno %d", errno);
-            break;
-        }
-
-        ESP_LOGI(TAG, "Socket created, %s:%d", inet_ntoa(s.sin_addr), (int)port);
-        client_socket = tsock;
-        r = 0;
-
-    } while (0);
-
-    return r;
-}
-#endif
