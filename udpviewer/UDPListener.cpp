@@ -4,16 +4,31 @@
 #include <QNetworkDatagram>
 #include <cassert>
 
-UDPListener::UDPListener(QUdpSocket *s, SpectrumRenderArea *r): m_socket(s), m_render(r)
+UDPListener::UDPListener(QUdpSocket *s, const QHostAddress &address,
+                         quint16 port,
+                         SpectrumRenderArea *r): m_socket(s), m_render(r), m_address(address), m_port(port)
 {
     QObject::connect(s, &QUdpSocket::readyRead,  this, &UDPListener::onReadyRead);
     m_fpstimer = new QTimer(this);
     m_fpstimer->setSingleShot(false);
     m_fps = 0;
     connect(m_fpstimer, &QTimer::timeout, this, &UDPListener::updateFPS);
+    sendConnect();
     m_fpstimer->start(1000);
     currentseq = 0;
 }
+
+
+void UDPListener::sendConnect()
+{
+    uint8_t datagram[8];
+    memset(datagram,0,sizeof(datagram));
+    // TBD: populate port and IP address
+    qDebug()<<"Send connect";
+    m_socket->writeDatagram((const char*)datagram, sizeof(datagram), m_address, m_port);
+}
+
+
 
 void UDPListener::onReadyRead()
 {
@@ -32,12 +47,14 @@ struct frame {
     uint8_t frag:4;
     uint8_t fragsize_bits:4;
     uint8_t payload[MAX_FRAME_PAYLOAD];
-};
+} __attribute__((packed));
 
 
 void UDPListener::updateFPS()
 {
     emit fpsUpdated(m_fps);
+    if (m_fps==0)
+        sendConnect();
     m_fps=0;
 }
 
@@ -79,6 +96,32 @@ void UDPListener::process(QNetworkDatagram&datagram)
                f->frag,
                f->fragsize_bits,
                fragsize);
+        if(f->val) {
+            memcpy( &m_framedata[ f->frag * fragsize ],
+                   f->payload,
+                   fragsize);
+            //payloadlen);
+            if (f->frag>=6) {
+                m_render->startFrame();
+                m_render->renderSCR(m_framedata);
+                m_render->finishFrame();
+                for (int i=0;i<32;i++) {
+                    printf("%02x ", m_framedata[i]);
+                }
+                printf("\n");
+                m_fps++;
+                emit frameReceived();
+            }
+        } else {
+            // Just FPS update
+            if (f->frag>=6) {
+                m_fps++;
+            }
+
+        }
+
+
+
         len-=2;
         d+=2;
         if (f->val) {

@@ -2,6 +2,7 @@
 #define __UDPLISTENER_H__
 
 #include <QObject>
+#include <QHostAddress>
 #include <inttypes.h>
 
 class QUdpSocket;
@@ -13,10 +14,11 @@ class UDPListener: public QObject
 {
     Q_OBJECT
 public:
-    UDPListener(QUdpSocket*s, SpectrumRenderArea *r);
+    UDPListener(QUdpSocket*s, const QHostAddress &addr, quint16 port, SpectrumRenderArea *r);
     void onReadyRead();
     void process(QNetworkDatagram&datagram);
     void updateFPS();
+    void sendConnect();
 signals:
     void frameReceived();
     void fpsUpdated(unsigned);
@@ -28,6 +30,8 @@ private:
     uint8_t currentseq;
     unsigned m_frames;
     unsigned m_fps;
+    QHostAddress m_address;
+    quint16 m_port;
 };
 
 #endif
