@@ -99,11 +99,12 @@ MainWindow::MainWindow(const char *host)
 
     m_udpsocket = new QUdpSocket();
 
+#if 0
     if (!m_udpsocket->bind(QHostAddress::Any, 8010, QUdpSocket::ReuseAddressHint)) {
         qDebug()<<"Cannot bind";
         throw 1;
     }
-
+#endif
 
     // Add buttons
 
@@ -154,7 +155,7 @@ MainWindow::MainWindow(const char *host)
             this, &MainWindow::onStatusLineReceived);
 
 
-    m_listener = new UDPListener(m_udpsocket, m_renderer);
+    m_listener = new UDPListener(m_udpsocket, m_zxaddress, 8002, m_renderer);
 
     connect(m_listener, &UDPListener::fpsUpdated,
             this, &MainWindow::onFpsUpdated);
@@ -260,6 +261,7 @@ void MainWindow::sendInChunks(QTcpSocket*sock, QByteArray&data)
             return ;
     }
 }
+
 void MainWindow::commandSocketConnected()
 {
     // Send data.
@@ -315,7 +317,6 @@ void MainWindow::commandSocketRead()
         }
     }
 }
-
 
 
 void MainWindow::commandSocketError(QAbstractSocket::SocketError error)
