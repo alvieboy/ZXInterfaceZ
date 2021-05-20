@@ -47,14 +47,15 @@ gulp install-into-spiffs
 ## Building ESP32 firmware
 ### Pre-requesites
 
-- Install ESP IDF somewhere on your PC,  but outside the InterfaceZ project.
+- Install ESP IDF somewhere on your PC,  but outside the InterfaceZ project. For this 
+project a slightly modified ESP IDF is used which is published also in github, 
+based in ESP IDF release 4.2
 ```bash
-git clone git@github.com:espressif/esp-idf.git
+git clone git@github.com:alvieboy/esp-idf.git
 cd esp-idf
+git checkout interfacez
 bash install.sh
 source export.sh
-# Patch the httpd server code - only needed for host-mode
-cat $INTERFACE_Z/patches/esp-idf-patch-webserver-select.diff | patch -p1
 ```
 
 Note that anytime you need to use the IDF you need to source the "export.sh" file as above.
