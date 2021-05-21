@@ -161,19 +161,19 @@ static int fpga__configurefromflash()
     do {
         r = __lstat(filename, &st);
         if (r<0) {
-            ESP_LOGE(TAG, "Cannot stat FPGA image");
+            ESP_LOGE(TAG, "Cannot stat FPGA image %s", filename);
             break;
         }
         fh = __open(filename, O_RDONLY);
         if (fh<0) {
-            ESP_LOGE(TAG, "Cannot open FPGA image");
+            ESP_LOGE(TAG, "Cannot open FPGA image %s", filename);
             break;
         }
         r = fpga__passiveserialconfigure_fromfile( fh, st.st_size );
     } while (0);
 
     if (r!=0) {
-        ESP_LOGE(TAG, "Cannot load FPGA binary!");
+        ESP_LOGE(TAG, "Cannot load FPGA binary %s!", filename);
     }
     return r;
 #else
