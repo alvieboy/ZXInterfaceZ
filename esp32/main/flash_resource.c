@@ -95,10 +95,10 @@ int flash_resource__init(void)
 }
 
 const char *flash_resource__get_root()
-{
+{/*
     if (fallback) {
         return "/fallback";
-    }
+    }*/
     return "/spiffs";
 }
 
