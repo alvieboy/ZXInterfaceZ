@@ -21,6 +21,7 @@
 MyMainWindow::MyMainWindow()
 {
     setup();
+    connect(&m_statustimer, &QTimer::timeout, this, &MyMainWindow::onStatusTimeout);
 }
 
 void MyMainWindow::setup()
@@ -146,6 +147,7 @@ void MyMainWindow::onConnected()
 void MyMainWindow::onDisconnected()
 {
     m_status->showMessage("Disconnected");
+    m_statustimer.stop();
 }
 
 void MyMainWindow::updatePercent(int p)
@@ -159,6 +161,11 @@ void MyMainWindow::updatePercent(int p)
 
 void MyMainWindow::updateAction(const QString &level, const QString&message)
 {
+    if (level=="error") {
+        m_action->setStyleSheet("color: red");
+    } else {
+        m_action->setStyleSheet("color: green");
+    }
     m_action->setText(message);
 }
 
@@ -167,7 +174,7 @@ void MyMainWindow::updatePhase(const QString &phase)
     m_phase->setText(phase);
 }
 
-void MyMainWindow::onTextFrameReceived(const QString &frame, bool isLastFrame)
+void MyMainWindow::progressReceived(const QString &frame)
 {
     QJsonDocument doc = QJsonDocument::fromJson(frame.toLocal8Bit());
 
@@ -179,12 +186,69 @@ void MyMainWindow::onTextFrameReceived(const QString &frame, bool isLastFrame)
 
     if (percent!=obj.end() && percent->isDouble()) {
         updatePercent((int)percent->toDouble());
+        if (percent->toDouble()>=100.0) {
+            stop();
+        }
     }
     if (action!=obj.end()) {
         updateAction(level->toString(), action->toString());
+        if (level->toString()=="error") {
+            stop();
+        }
     }
     if (phase!=obj.end()) {
         updatePhase(phase->toString());
+    }
+}
+
+void MyMainWindow::stop()
+{
+    m_statustimer.stop();
+    m_socket->disconnect();
+}
+
+
+void MyMainWindow::confirmationReceived(const QString &frame)
+{
+    if (frame=="OK") {
+        m_state = STREAM;
+        m_statustimer.setSingleShot(false);
+        m_statustimer.start(1000);
+        qDebug()<<"Starting periodic status timer";
+        onBytesWritten(0); // Fix: this should be elsewhere
+    } else {
+        m_state = FAIL;
+    }
+}
+
+void MyMainWindow::onStatusTimeout()
+{
+    switch( m_state) {
+    case STREAM: /* Fall-through */
+    case FLUSH:
+        qDebug()<<"Requesting status";
+        m_socket->sendTextMessage("STATUS");
+        break;
+    default:
+        break;
+    }
+}
+
+void MyMainWindow::onTextFrameReceived(const QString &frame, bool isLastFrame)
+{
+    qDebug()<<"Text frame received"<<frame;
+    switch (m_state) {
+    case START:
+        // Expect OK
+        confirmationReceived(frame);
+        break;
+    case STREAM:
+    case FLUSH:
+        // Progress report
+        progressReceived(frame);
+        break;
+    default:
+        break;
     }
 }
 
@@ -197,6 +261,7 @@ void MyMainWindow::onBytesWritten(quint64 amount)
     QByteArray data;
     switch (m_state) {
     case START:
+        break;
     case STREAM:
         data = m_file->read(512);
         if (data.length()>0) {

@@ -1,6 +1,7 @@
 #include <QMainWindow>
 #include <QSettings>
 #include <QFile>
+#include <QTimer>
 
 class QStatusBar;
 class QLabel;
@@ -11,7 +12,8 @@ enum state {
     IDLE,
     START,
     STREAM,
-    FLUSH
+    FLUSH,
+    FAIL
 };
 
 class MyMainWindow: public QMainWindow
@@ -28,8 +30,13 @@ public slots:
     void onConnected();
     void onDisconnected();
     void onBytesWritten(quint64);
+    void onStatusTimeout();
+
 private:
 
+    void progressReceived(const QString &frame);
+    void confirmationReceived(const QString &frame);
+    void stop();
     void updatePercent(int p);
     void updateAction(const QString &level, const QString&message);
     void updatePhase(const QString &phase);
@@ -44,4 +51,5 @@ private:
     QWebSocket *m_socket;
     QFile *m_file;
     enum state m_state;
+    QTimer m_statustimer;
 };
