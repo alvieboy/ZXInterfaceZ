@@ -3,9 +3,8 @@
  \brief Routines to handle the board buttons
  */
 #include "esp_types.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "freertos/queue.h"
+#include "os/task.h"
+#include "os/queue.h"
 #include "driver/periph_ctrl.h"
 #include "driver/timer.h"
 #include "driver/gpio.h"
@@ -75,7 +74,7 @@ static inline void IRAM_ATTR button__check(int index, uint32_t gpio_num)
         }
     }
     if (event.type!=BUTTON_IDLE) {
-        xQueueSendFromISR(button_event_queue, &event, 0);
+        queue__send_from_isr(button_event_queue, &event, 0);
     }
 }
 
@@ -125,7 +124,7 @@ void buttons__init(void)
                        (void *)BUTTON_TIMER, ESP_INTR_FLAG_IRAM, NULL);
 
 
-    button_event_queue = xQueueCreate(4, sizeof(button_event_t));
+    button_event_queue = queue__create(4, sizeof(button_event_t));
 
     debounce[0] = 3;
     debounce[1] = 3;
@@ -150,7 +149,7 @@ void buttons__init(void)
  */
 int buttons__getevent(button_event_t *event, bool block)
 {
-    if (!xQueueReceive(button_event_queue, event, block? portMAX_DELAY:0))
+    if (!queue__receive(button_event_queue, event, block? portMAX_DELAY:0))
         return -1;
     return 0;
 }
