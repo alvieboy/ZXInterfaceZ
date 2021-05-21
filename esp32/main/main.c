@@ -57,6 +57,7 @@
 #include "fasttap.h"
 #include "log.h"
 #include "reset.h"
+#include <driver/periph_ctrl.h>
 
 #define TAG "MAIN"
 
@@ -376,6 +377,12 @@ void app_main()
     int lstatus = 0;
     int do_restart = 0;
 
+    // First, reset some of the modules.
+    ESP_LOGI(TAG, "Resetting modules");
+    periph_module_reset(PERIPH_WIFI_BT_COMMON_MODULE);
+    periph_module_reset(PERIPH_WIFI_MODULE);
+
+
     gpio__init();
     console__init();
     adc__init();
@@ -494,7 +501,7 @@ void app_main()
         lastsw = sw;
         */
         if (restart_requested) {
-            do_restart = 20;
+            do_restart = 20; // 20*100 = 2 seconds
             restart_requested = 0;
         }
 
