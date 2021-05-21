@@ -8,6 +8,7 @@ extern "C" {
 typedef int percent_t;
 
 typedef enum {
+    PROGRESS_LEVEL_NONE,
     PROGRESS_LEVEL_DEBUG,
     PROGRESS_LEVEL_INFO,
     PROGRESS_LEVEL_WARN,

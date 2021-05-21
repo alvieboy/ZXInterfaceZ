@@ -20,6 +20,8 @@
 
 #define ALIGN(x, blocksize) ((((uint32_t)(x)+(blocksize-1)) & ~(blocksize-1)))
 
+#define FIRMWARE_DEBUG_MEM
+
 struct tar_header {
     char name[100];
     uint8_t mode[8];
@@ -66,6 +68,15 @@ static int firmware__progress_start(firmware_upgrade_t *f)
     return 0;
 }
 
+static int firmware__progress_end(firmware_upgrade_t *f)
+{
+    if (f->progress_reporter)
+    {
+        f->progress_reporter->report_phase_action(f, 100, "Completed", PROGRESS_LEVEL_INFO, "Firmware upgrare completed, rebooting...");
+    }
+    return 0;
+}
+
 static int firmware__progress_report(firmware_upgrade_t *f, int percent)
 {
     if (f->progress_reporter)
@@ -103,6 +114,18 @@ static int firmware__progress_report_phase_action(firmware_upgrade_t *f, int per
     return 0;
 }
 
+static void firmware__error(firmware_upgrade_t *f, const char *fmt, ...)
+{
+    va_list ap;
+    va_start(ap, fmt);
+
+    char text[128];
+    vsnprintf(text, sizeof(text), fmt, ap);
+    f->progress_reporter->report_action(f->progress_reporter_data, -1, PROGRESS_LEVEL_ERROR, text);
+    ESP_LOGE(TAG,"%s", text);
+    va_end(ap);
+}
+
 static int firmware__validate_tar_header(firmware_upgrade_t *f)
 {
     int r = -1;
@@ -114,17 +137,16 @@ static int firmware__validate_tar_header(firmware_upgrade_t *f)
             (hdr->typeflag == CONTTYPE))  {
             r = 0;
         } else {
-            ESP_LOGE(TAG,"Invalid file type 0x%02x", hdr->typeflag);
-
+            firmware__error(f, "Invalid file type 0x%02x", hdr->typeflag);
         }
     } else {
-        ESP_LOGE(TAG,"Invalid TAR magic %02x%02x%02x%02x%02x%02x",
-                 hdr->magic[0],
-                 hdr->magic[1],
-                 hdr->magic[2],
-                 hdr->magic[3],
-                 hdr->magic[4],
-                 hdr->magic[5]);
+        firmware__error(f, "Invalid TAR magic %02x%02x%02x%02x%02x%02x",
+                        hdr->magic[0],
+                        hdr->magic[1],
+                        hdr->magic[2],
+                        hdr->magic[3],
+                        hdr->magic[4],
+                        hdr->magic[5]);
     }
     return r;
 }
@@ -136,7 +158,7 @@ static int firmware__read_block_target(firmware_upgrade_t *f, uint8_t *target)
     if (read==sizeof(struct tar_header))
         return 0;
 
-    ESP_LOGE(TAG,"Short read, requested %d got %d", sizeof(struct tar_header), read);
+    firmware__error(f, "Short read, requested %d got %d", sizeof(struct tar_header), read);
     return -1;
 }
 
@@ -164,7 +186,7 @@ static int firmware__read_manifest_hdr(firmware_upgrade_t *f)
     struct tar_header *hdr = (struct tar_header*)f->buffer;
 
     if (firmware__read_block_header(f)<0) {
-        ESP_LOGE(TAG, "Cannot read block header for manifest");
+        firmware__error(f, "Cannot read block header for manifest");
         return -1;
     }
 
@@ -174,11 +196,11 @@ static int firmware__read_manifest_hdr(firmware_upgrade_t *f)
         memcpy(size, hdr->size, 12);
         size[12] = '\0';
         if (strtoint_octal(size, &size_int)<0) {
-            ESP_LOGE(TAG,"Invalid size in TAR header");
+            firmware__error(f, "Invalid size in TAR header");
             return -1;
         }
         if (size_int > 4093) { // Limit size of manifest
-            ESP_LOGE(TAG,"Size too long for manifest: %d %s", size_int, size);
+            firmware__error(f, "Size too long for manifest: %d %s", size_int, size);
             return -1;
         }
         f->size = size_int;
@@ -186,7 +208,7 @@ static int firmware__read_manifest_hdr(firmware_upgrade_t *f)
         f->dynbuf = malloc(ALIGN((unsigned)size_int, 512));
         return 0;
     }
-    ESP_LOGE(TAG, "First file not manifest");
+    firmware__error(f, "First file is not a manifest");
     return -1;
 }
 
@@ -225,7 +247,6 @@ static int firmware__parse_type(const char *text, firmware_type_t *type)
     } else if (strcmp(text,"resources")==0) {
         *type = FIRMWARE_TYPE_RESOURCES;
     } else {
-        ESP_LOGE(TAG,"Unknown firmware type '%s'", text);
         return -1;
     }
     return 0;
@@ -238,7 +259,6 @@ static int firmware__parse_compress(const char *text, firmware_compress_t *compr
     } else if (strcmp(text,"rle")==0) {
         *compress = FIRMWARE_COMPRESS_RLE;
     } else {
-        ESP_LOGE(TAG,"Unknown compression type '%s'", text);
         return -1;
     }
     return 0;
@@ -291,7 +311,7 @@ static void firmware__print_sha(const uint8_t *sha, char *dest)
     }
 }
 
-static int firmware__check_compatibility(const char *compat)
+static int firmware__check_compatibility(firmware_upgrade_t *f, const char *compat)
 {
     char *toks[8];     // Up to 8 board revisions
 
@@ -315,7 +335,7 @@ static int firmware__check_compatibility(const char *compat)
         uint8_t minor, major;
 
         if (board__parseRevision(brev, &major, &minor)<0) {
-            ESP_LOGE(TAG,"Invalid board revision '%s'", toks[x]);
+            firmware__error(f, "Invalid board revision '%s'", toks[x]);
             return -1;
         }
 
@@ -323,8 +343,10 @@ static int firmware__check_compatibility(const char *compat)
             valid = true;
         }
     }
-    if (!valid)
+    if (!valid) {
+        firmware__error(f, "Incompatible board (compat %s)", compat);
         return -1;
+    }
     return 0;
 }
 
@@ -333,7 +355,7 @@ static int firmware__check_manifest(firmware_upgrade_t *f)
     cJSON *update = cJSON_GetObjectItemCaseSensitive(f->manifest, "update");
 
     if (NULL==update) {
-        ESP_LOGE(TAG,"Invalid JSON");
+        firmware__error(f, "Invalid JSON");
         return -1;
     }
     const char *version = json__get_string(update, "version");
@@ -344,14 +366,14 @@ static int firmware__check_manifest(firmware_upgrade_t *f)
     }
 
     if ((!version) || strcmp(version,"1.1")!=0) {
-        ESP_LOGE(TAG,"Invalid version '%s' in manifest", version);
+        firmware__error(f, "Invalid version '%s' in manifest", version);
         return -1;
     }
     // Build entry array to undestand which files have been processed.
 
     // Check compatibility
-    if (firmware__check_compatibility(compat)<0) {
-        ESP_LOGE(TAG,"Incompatible version");
+    if (firmware__check_compatibility(f, compat)<0) {
+        firmware__error(f, "Incompatible version");
         return -1;
     }
 
@@ -380,9 +402,11 @@ static int firmware__check_manifest(firmware_upgrade_t *f)
         }
         // TODO: parse type + compress
         if (firmware__parse_type(type, &f->fileinfo[i].type)<0) {
+            firmware__error(f, "Unknown firmware type '%s'", type);
             return -1;
         }
         if (firmware__parse_compress(compress, &f->fileinfo[i].compress)<0) {
+            firmware__error(f, "Unknown compression type '%s'", compress);
             return -1;
         }
         f->fileinfo[i].name = file;
@@ -393,11 +417,11 @@ static int firmware__check_manifest(firmware_upgrade_t *f)
         const char *sha = json__get_string(entry,"sha256");
         if (sha) {
             if (firmware__parse_sha(sha, &f->fileinfo[i].sha[0] )<0) {
-                ESP_LOGE(TAG,"Invalid SHA field");
+                firmware__error(f, "Invalid SHA field");
                 return -1;
             }
         } else {
-            ESP_LOGE(TAG,"Missing required SHA field");
+            firmware__error(f, "Missing required SHA field");
             return -1;
         }
 #ifdef ENABLE_COMPRESS_SHA
@@ -408,11 +432,11 @@ static int firmware__check_manifest(firmware_upgrade_t *f)
             const char *csha = json__get_string(entry,"compressed_sha256");
             if (csha) {
                 if (firmware__parse_sha(csha, &f->fileinfo[i].compressed_sha[0] )<0) {
-                    ESP_LOGE(TAG,"Invalid compressed SHA field");
+                    firmware__error(f, "Invalid compressed SHA field");
                     return -1;
                 }
             } else {
-                ESP_LOGE(TAG,"Missing required compressed SHA field");
+                firmware__error(f, "Missing required compressed SHA field");
                 return -1;
             }
         }
@@ -428,7 +452,7 @@ static int firmware__check_manifest(firmware_upgrade_t *f)
 static int firmware__read_manifest_content(firmware_upgrade_t *f)
 {
     if (firmware__read_file_contents(f)<0) {
-        ESP_LOGE(TAG,"Cannot read manifest content");
+        firmware__error(f, "Cannot read manifest content");
         return -1;
     }
 
@@ -470,12 +494,12 @@ static int firmware__stream_file(firmware_upgrade_t *f,
         while (size>0) {
             int read = stream__read(f->stream, f->buffer, 512);
             if (read<=0) {
-                ESP_LOGE(TAG,"Short read on stream file");
+                firmware__error(f, "Short read on stream file");
                 return -1;
             }
-            ESP_LOGI(TAG,"stream %d %d\n", read, size);
+            //ESP_LOGI(TAG,"stream %d %d\n", read, size);
             if (streamer(streamerdata, f->buffer, read > size ? size: read)<0) {
-                ESP_LOGE(TAG, "Error streaming firmware data");
+                firmware__error(f, "Error streaming firmware data");
                 return -1;
             }
             size-=read;
@@ -506,22 +530,25 @@ static int firmware__stream_file(firmware_upgrade_t *f,
     return 0;
 }
 
-static int firmware__chech_sha(struct manifest_file_info *info, uint8_t *shaResult)
+static int firmware__check_sha(struct manifest_file_info *info, uint8_t *shaResult)
 {
+#if 0
     char shatxt[65];
+#endif
     if (memcmp(info->sha, shaResult, 32)!=0) {
-        ESP_LOGE(TAG, "Invalid SHA result!");
-
+#if 0
+        firmware__error(f, "Invalid SHA result!");
         firmware__print_sha(info->sha, shatxt);
-        ESP_LOGE(TAG, " Expected: %s", shatxt);
-
+        firmware__error(f, " Expected: %s", shatxt);
         firmware__print_sha(shaResult, shatxt);
-        ESP_LOGE(TAG, " Computed: %s", shatxt);
-
+        firmware__error(f, " Computed: %s", shatxt);
+#endif
         return -1;
     }
+#if 0
     firmware__print_sha(info->sha, shatxt);
     ESP_LOGI(TAG, "SHA match: %s", shatxt);
+#endif
     return 0;
 }
 
@@ -536,11 +563,16 @@ static int firmware__flash_chunk_wrapper(struct flash_wrapper *wrap, const uint8
     wrap->info->processed_size += len;
 
     if (block4k != (wrap->info->processed_size >> 12)) {
+#ifdef FIRMWARE_DEBUG_MEM
+        firmware__progress_report_action( wrap->f, firmware__overall_progress_percent(wrap->f),
+                                         PROGRESS_LEVEL_DEBUG, "Flash resources, free=%d", xPortGetFreeHeapSize());
+#else
         firmware__progress_report( wrap->f, firmware__overall_progress_percent(wrap->f) );
+#endif
     }
 
     if (r==0) {
-        ESP_LOGI(TAG, "Program chunk %d",len);
+        //ESP_LOGI(TAG, "Program chunk %d",len);
         mbedtls_md_update(&wrap->f->shactx, data, len);
     } 
 
@@ -558,7 +590,7 @@ static int firmware__program_resources(firmware_upgrade_t *f, struct manifest_fi
                                        ESP_PARTITION_SUBTYPE_DATA_SPIFFS,
                                        "resources",
                                        f->size)<0) {
-        ESP_LOGE(TAG,"Cannot start ROM programming");
+        firmware__error(f, "Cannot start ROM programming");
         return -1;
     }
 
@@ -578,11 +610,13 @@ static int firmware__program_resources(firmware_upgrade_t *f, struct manifest_fi
 
     
     if (r==0) {
-        r = firmware__chech_sha(info, shaResult);
+        r = firmware__check_sha(info, shaResult);
         if (r<0) {
+            // Call flush even if we errored, but keep error result
+            firmware__error(f, "Invalid firmware SHA, aborting");
             flash_pgm__abort(&wrap.handle);
         } else {
-            // Call flush even if we errored, but keep error result
+
             r = flash_pgm__flush(&wrap.handle);
             if (r<0) {
                 flash_pgm__abort(&wrap.handle);
@@ -605,7 +639,12 @@ static int firmware__ota_chunk_wrapper(struct ota_wrapper *wrap, const uint8_t *
     wrap->info->processed_size += len;
 
     if (block4k != (wrap->info->processed_size >> 12)) {
+#ifdef FIRMWARE_DEBUG_MEM
+        firmware__progress_report_action( wrap->f, firmware__overall_progress_percent(wrap->f),
+                                         PROGRESS_LEVEL_DEBUG, "Flash OTA, free=%d", xPortGetFreeHeapSize());
+#else
         firmware__progress_report( wrap->f, firmware__overall_progress_percent(wrap->f) );
+#endif
     }
 
     if (r>=0) {
@@ -627,7 +666,7 @@ static int firmware__ota(firmware_upgrade_t *f, struct manifest_file_info *info)
         return -1;
 
     if (ota__start(&wrap.handle, f->size)<0) {
-        ESP_LOGE(TAG,"Cannot start OTA programming");
+        firmware__error(f, "Cannot start OTA programming");
         return -1;
     }
 
@@ -640,10 +679,11 @@ static int firmware__ota(firmware_upgrade_t *f, struct manifest_file_info *info)
     mbedtls_md_finish(&f->shactx, shaResult);
     mbedtls_md_free(&f->shactx);
     if (r==0) {
-        r = firmware__chech_sha(info, shaResult);
+        r = firmware__check_sha(info, shaResult);
         if (r==0) {
             r = ota__finish(&wrap.handle);
         } else {
+            firmware__error(f, "Invalid firmware SHA, aborting");
             ota__abort(&wrap.handle);
             r=-1;
         }
@@ -662,19 +702,19 @@ static int firmware__read_file_entry(firmware_upgrade_t *f)
     struct tar_header *hdr = (struct tar_header*)f->buffer;
 
     if (firmware__read_block_header(f)<0) {
-        ESP_LOGE(TAG, "Cannot read block header for file entry");
+        firmware__error(f, "Cannot read block header for file entry");
         return -1;
     }
 
     struct manifest_file_info *info = firmware__get_file_info(f, hdr->name);
 
     if (info==NULL) {
-        ESP_LOGE(TAG,"Cannot find firmware information for '%s'", hdr->name);
+        firmware__error(f, "Cannot find firmware information for '%s'", hdr->name);
         return -1;
     }
 
     if (info->completed) {
-        ESP_LOGE(TAG, "Firmware '%s' already programmed", hdr->name);
+        firmware__error(f, "Firmware '%s' already programmed", hdr->name);
         return -1;
     }
 
@@ -682,7 +722,7 @@ static int firmware__read_file_entry(firmware_upgrade_t *f)
     size[12] = '\0';
 
     if (strtoint_octal(size, &size_int)<0) {
-        ESP_LOGE(TAG,"Invalid size in TAR header");
+        firmware__error(f, "Invalid size in TAR header");
         return -1;
     }
 
@@ -844,11 +884,14 @@ int firmware__upgrade(firmware_upgrade_t *f)
             break;
         }
         if (r<0)  {
-            ESP_LOGE(TAG, "Error occurred, aborting firmware upgrade");
+            firmware__error(f, "Error occurred, aborting firmware upgrade");
             f->state = ERROR;
             break;
         }
     }
+
+    firmware__progress_end(f);
+
     return r;
 }
 

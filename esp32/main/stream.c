@@ -19,8 +19,9 @@ struct stream {
     union {
         int fd;
         httpd_req_t *http_req;
+        struct firmware_ws_context *ws_ctx;
     };
-    void (*notify_finished)(httpd_req_t*);
+    void (*notify_finished)(void*);
     uint8_t *buffer;
     unsigned buffer_low, buffer_high;
     bool nonblock;
@@ -122,9 +123,9 @@ static int httpd_read(struct stream *s, void *buf, size_t size)
 
 static int httpd_ws_read(struct stream *s, void *buf, size_t size)
 {
-    ESP_LOGI("WSREAD", "read %p", s->http_req);
+    //ESP_LOGI("WSREAD", "read %p", s->http_req);
 
-    return firmware_ws__read(s->http_req, buf, size, !s->nonblock);
+    return firmware_ws__read(s->ws_ctx, buf, size, !s->nonblock);
     //return -1;
 }
 
@@ -132,7 +133,7 @@ static int httpd_close(struct stream *s)
 {
     ESP_LOGI("STREAM", "HTTP read finished");
     if (s->notify_finished) {
-        s->notify_finished(s->http_req);
+        s->notify_finished(s->ws_ctx);
     }
     return 0;
 }
@@ -141,7 +142,7 @@ static int httpd_ws_close(struct stream *s)
 {
     ESP_LOGI("STREAM", "HTTP WS read finished");
     if (s->notify_finished) {
-        s->notify_finished(s->http_req);
+        s->notify_finished(s->ws_ctx);
     }
     return 0;
 }
@@ -191,22 +192,22 @@ struct stream *stream__alloc_httpd(httpd_req_t*req, void (*notify_finished)(http
         return s;
     s->ops = &httpd_stream_ops;
     s->http_req = req;
-    s->notify_finished = notify_finished;
+    s->notify_finished = (void(*)(void*))notify_finished;
     s->nonblock = true;
     return s;
 }
 
-struct stream *stream__alloc_websocket(httpd_req_t*req, void (*notify_finished)(httpd_req_t*))
+struct stream *stream__alloc_websocket(struct firmware_ws_context*ctx, void (*notify_finished)(struct firmware_ws_context*))
 {
     struct stream *s = stream__alloc();
     if (!s)
         return s;
     s->ops = &httpd_ws_stream_ops;
-    s->http_req = req;
+    s->ws_ctx = ctx;
 
-    ESP_LOGI("STREAM","req %p", req);
+    //ESP_LOGI("STREAM","req %p", req);
 
-    s->notify_finished = notify_finished;
+    s->notify_finished = (void(*)(void*))notify_finished;
     s->nonblock = true;
     return s;
 }
@@ -230,7 +231,7 @@ int stream__read_buffered(struct stream *s, void *buf, size_t size)
     uint8_t *target = (uint8_t *)buf;
     // First, copy data from internal buffer if we have data available.
     unsigned avail = s->buffer_high - s->buffer_low;
-    ESP_LOGI("STREAM","Stream buffered read %d buffered %d", size, avail);
+    //ESP_LOGI("STREAM","Stream buffered read %d buffered %d", size, avail);
     if (avail) {
         unsigned tocopy = avail > size ? size : avail;
         memcpy(target, &s->buffer[s->buffer_low], tocopy);
@@ -276,9 +277,9 @@ int stream__read_buffered(struct stream *s, void *buf, size_t size)
             target+=lr;
             s->buffer_high = 0;
             s->buffer_low = 0;
-            ESP_LOGI("STREAM", "Full block read");
+            //ESP_LOGI("STREAM", "Full block read");
         } else {
-            ESP_LOGI("STREAM", "Short block read");
+            //ESP_LOGI("STREAM", "Short block read");
             // Less than block size read.
             // We still may or may not be able to read the whole
             // size.
@@ -301,7 +302,7 @@ int stream__read_buffered(struct stream *s, void *buf, size_t size)
         }
     }
 #endif
-    ESP_LOGI("STREAM", "Ret %d",r);
+    //ESP_LOGI("STREAM", "Ret %d",r);
     return r;
 }
 

@@ -4,9 +4,12 @@
 
 struct stream;
 
+struct firmware_ws_context;
+
+
 struct stream *stream__alloc_system(int fd);
 struct stream *stream__alloc_httpd(httpd_req_t*, void(*notify_finish)(httpd_req_t*) );
-struct stream *stream__alloc_websocket(httpd_req_t*, void(*notify_finish)(httpd_req_t*) );
+struct stream *stream__alloc_websocket(struct firmware_ws_context*, void(*notify_finish)(struct firmware_ws_context*) );
 struct stream *stream__destroy(struct stream *);
 
 int stream__read(struct stream *, void *buf, size_t size);

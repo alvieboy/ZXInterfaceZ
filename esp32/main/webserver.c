@@ -15,7 +15,6 @@
 #include "esp_vfs.h"
 #include "esp_spiffs.h"
 #include "esp_log.h"
-#include "esp_http_server.h"
 #include "defs.h"
 #include <limits.h>
 #include "webserver.h"
@@ -24,8 +23,12 @@
 
 #define TAG "WEBSERVER"
 
+static httpd_handle_t server = NULL;
+
+#if 0
 size_t
 strlcpy(char *dst, const char *src, size_t siz);
+#endif
 
 #define IS_FILE_EXT(filename, ext) \
     (strcasecmp(&filename[strlen(filename) - sizeof(ext) + 1], ext) == 0)
@@ -273,7 +276,6 @@ int webserver__init(void)
             base_path,
             sizeof(server_data->base_path));
      */
-    httpd_handle_t server = NULL;
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
 
     config.max_open_sockets = 4;
@@ -316,7 +318,7 @@ int webserver__init(void)
         .uri       = "/ws/fwupgrade",   // Match all URIs of type /upload/path/to/file
         .method    = HTTP_GET,
         .handler   = &firmware_ws__firmware_upgrade,
-        .user_ctx  = NULL,    // Pass server data as context
+        .user_ctx  = NULL, 
         .is_websocket = true
     };
 
@@ -369,4 +371,9 @@ void webserver__decodeurl(char *src)
         }
     }
     *dst++ = '\0';
+}
+
+httpd_handle_t webserver__get_handle()
+{
+    return server;
 }
