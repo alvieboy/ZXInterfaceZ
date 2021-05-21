@@ -62,6 +62,15 @@ BaseType_t xTaskCreatePinnedToCore(TaskFunction_t pvTaskCode, const char *const 
     return r;
 }
 
+void periph_module_reset(uint32_t module)
+{
+}
+
+unsigned long xPortGetFreeHeapSize()
+{
+    return 0;
+}
+
 STATUS uart_rx_one_char(uint8_t *c)
 {
     if (read(0, c, 1)==1) {
