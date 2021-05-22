@@ -57,6 +57,16 @@ void keyboard__release(uint8_t key)
     keyboard__update();
 }
 
+/**
+ * \ingroup keyboard
+ * \brief Set all keys on keyboard.
+ */
+void keyboard__set(uint64_t k)
+{
+    keys = k;
+    keyboard__update();
+}
+
 static struct  {
     const char *name;
     uint8_t value;

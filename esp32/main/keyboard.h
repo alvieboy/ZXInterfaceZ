@@ -6,6 +6,7 @@
 void keyboard__init(void);
 void keyboard__press(uint8_t key);
 void keyboard__release(uint8_t key);
+void keyboard__set(uint64_t k);
 uint8_t keyboard__get_key_by_name(const char *name);
 const char *keyboard__get_name_by_key(const uint8_t key);
 
