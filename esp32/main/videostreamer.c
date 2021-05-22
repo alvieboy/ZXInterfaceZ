@@ -23,6 +23,7 @@
 #include "interfacez_tasks.h"
 #include "list.h"
 #include <netinet/in.h>
+#include "keyboard.h"
 
 #define TAG "VIDEOSTREAMER"
 
@@ -34,6 +35,7 @@ static uint32_t fb_prev[SPECTRUM_FRAME_SIZE/4];
 #define MAX_PACKET_SIZE   1080
 
 #define VIDEOSTREAMER_PACKET_LOGIN (0x00)
+#define VIDEOSTREAMER_PACKET_KEYBOARD (0x01)
 
 static dlist_t *clients = NULL;
 static int server_sock;
@@ -52,7 +54,8 @@ struct client_packet {
             uint8_t unused;
         } __attribute__((packed));
         struct {
-            uint8_t keys[7];
+            uint8_t keys[5];
+            uint8_t joy[2];
         } __attribute__((packed));
     };
 } __attribute__((packed));
@@ -205,6 +208,22 @@ static int videostreamer__handle_login(const struct sockaddr_in *sock, const str
 }
 
 
+static int videostreamer__handle_keyboard(const struct sockaddr_in *sock, const struct client_packet *packet)
+{
+    // Unpack keyboard data.
+    uint64_t keys =
+        ((uint64_t)packet->keys[0])<<0  |
+        ((uint64_t)packet->keys[1])<<8  |
+        ((uint64_t)packet->keys[2])<<16  |
+        ((uint64_t)packet->keys[3])<<24  |
+        ((uint64_t)packet->keys[4])<<32;
+#ifdef __linux__
+    ESP_LOGI(TAG,"Setting keyboard %016lx", keys);
+#endif
+    keyboard__set(keys);
+    return 0;
+}
+
 static void videostreamer__handle_packet()
 {
     struct sockaddr_in sock;
@@ -224,6 +243,9 @@ static void videostreamer__handle_packet()
     case VIDEOSTREAMER_PACKET_LOGIN:
         videostreamer__handle_login(&sock, &packet);
         break;
+    case VIDEOSTREAMER_PACKET_KEYBOARD:
+        videostreamer__handle_keyboard(&sock, &packet);
+        break;
     }
 }
 
@@ -234,7 +256,10 @@ static void videostreamer__process_socket_data()
     FD_ZERO(&rfs);
     FD_SET(server_sock, &rfs);
     struct timeval tv = {0,0};
-    switch (select(server_sock+1, &rfs, NULL, NULL, &tv)) {
+    int r;
+    r = select(server_sock+1, &rfs, NULL, NULL, &tv);
+    //ESP_LOGI(TAG,"Select %d\n", r);
+    switch (r) {
     case 0:
         break;
     case -1:
@@ -318,9 +343,10 @@ static void videostreamer__server_task(void *pvParameters)
             }
             // Re-enable
             fpga__ackinterrupt(intstatus);
-        } else {
-            videostreamer__process_socket_data();
         }
+        //else {
+        videostreamer__process_socket_data();
+        //}
     } while (1);
 }
 
