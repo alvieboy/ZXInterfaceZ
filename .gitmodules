@@ -7,3 +7,6 @@
 	path = esp32/host/QtGifImage
 	url = https://github.com/dbzhang800/QtGifImage.git
 	branch = master
+[submodule "udpviewer/qkeycode"]
+	path = udpviewer/qkeycode
+	url = https://github.com/nyanpasu64/qkeycode.git
