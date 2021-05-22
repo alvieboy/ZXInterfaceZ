@@ -39,6 +39,7 @@ void RenderArea::paintEvent(QPaintEvent *event)
         qDebug()<<"Video";
         QVideoWidget::paintEvent(event);
     } else {
+        qDebug()<<"Paint";
 #ifdef PIXELHACK
         QRect r(1,0,1+m_width*ZOOMMUL,m_height*ZOOMMUL);
         QRect sr(0,0,m_width*ZOOMMUL,m_height*ZOOMMUL);
@@ -84,7 +85,7 @@ void RenderArea::drawImage(int x, int y, QImage *i)
 void RenderArea::startFrame()
 {
     //if (!videomode)
-    image->fill(0x0);
+    //image->fill(0x0);
 }
 
 void RenderArea::finishFrame()

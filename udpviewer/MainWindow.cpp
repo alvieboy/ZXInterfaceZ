@@ -18,6 +18,11 @@
 #include <QApplication>
 #include "ProgressBar.h"
 #include "LineBuffer.h"
+#include <exception>
+#include <QHostInfo>
+#include <QKeyEvent>
+#include "keycapturer.h"
+#include "../esp32/main/usb_hid_keys.h"
 
 #define UDP_STREAM_PORT 8010
 
@@ -58,6 +63,10 @@ static const uint8_t bitRevTable[256] =
 };
 
 
+class InvalidHostAddress: public std::exception
+{
+};
+
 MainWindow::MainWindow(const char *host)
 {
     setWindowTitle("ZX Interface Z");
@@ -82,7 +91,18 @@ MainWindow::MainWindow(const char *host)
     connect(fileMenu->addAction("E&xit"), &QAction::triggered, this, &MainWindow::onExit);
     qDebug()<<"Using host"<<host;
     m_zxaddress = QHostAddress(host);//?host:"192.168.120.1");
-    //m_zxaddress = QHostAddress("127.0.0.1");
+    if (m_zxaddress.isNull()) {
+        // Look it up
+        QHostInfo info = QHostInfo::fromName(host);
+
+        if (!info.addresses().isEmpty()) {
+            m_zxaddress = info.addresses().first();
+        }
+    }
+
+    if (m_zxaddress.isNull()) {
+        throw InvalidHostAddress();
+    }
 
     m_renderer = new SpectrumRenderArea(mainWidget);
 
@@ -209,7 +229,7 @@ bool MainWindow::sendReceive(const QHostAddress &address,
 
     connect(m_cmdSocket, &QAbstractSocket::connected, this, &MainWindow::commandSocketConnected);
     connect(m_cmdSocket,
-            qOverload<QAbstractSocket::SocketError>(&QAbstractSocket::error),
+            &QAbstractSocket::errorOccurred,
             this,
             &MainWindow::commandSocketError
            );
@@ -603,3 +623,74 @@ void MainWindow::onStatusLineReceived(QString status)
 void MainWindow::onWideClicked()
 {
 }
+
+/*
+bool MainWindow::eventFilter(QObject *obj, QEvent *event)
+{
+    QKeyEvent *k = dynamic_cast<QKeyEvent*>(event);
+
+    if (!k)
+        return QMainWindow::eventFilter(obj, event);
+    qDebug()<<"k ev";
+    return false;
+}
+
+void MainWindow::keyPressEvent(QKeyEvent *event)
+{
+    quint32 scan = event->nativeScanCode();
+    qDebug()<<"Press"<<scan;
+    if (!m_keys.contains(scan)) {
+        m_keys[scan] = true;
+        sendUpdateKeys();
+    }
+}
+
+void MainWindow::keyReleaseEvent(QKeyEvent *event)
+{
+    quint32 scan = event->nativeScanCode();
+
+    QMap<unsigned,bool>::iterator i = m_keys.find(scan);
+
+    if (i!=m_keys.end()) {
+        m_keys.erase(i);
+        sendUpdateKeys();
+    }
+    }
+    */
+
+void MainWindow::onKeyChanged(uint64_t keys)
+{
+    sendUpdateKeys(keys);
+}
+
+void MainWindow::sendUpdateKeys(uint64_t keys)
+{
+    uint8_t datagram[8];
+    memset(datagram,0xFF,sizeof(datagram));
+    int i = 0;
+    datagram[i++] = 0x01; // Key events
+
+    // Keyboard is 8*5 keys, 40 keys total
+    // it fits in 5 bytes.
+    char tmp[128];
+    sprintf(tmp,"%016lx", keys);
+    qDebug()<<"Update keys"<<tmp;
+    for(;i<6;i++) {
+        // 5 bits per key, inverted
+        datagram[i] = ~keys;
+        keys>>=8;
+    }
+
+    m_udpsocket->writeDatagram((const char*)datagram,
+                               sizeof(datagram),
+                               m_zxaddress,
+                               8002);
+}
+
+/*void MainWindow::focusOutEvent(QFocusEvent *)
+{
+    // Clear all pressed keys
+    onKeyChanged(0);
+}
+
+  */

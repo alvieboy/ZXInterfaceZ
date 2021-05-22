@@ -24,8 +24,11 @@ void UDPListener::sendConnect()
     uint8_t datagram[8];
     memset(datagram,0,sizeof(datagram));
     // TBD: populate port and IP address
-    qDebug()<<"Send connect";
-    m_socket->writeDatagram((const char*)datagram, sizeof(datagram), m_address, m_port);
+    qDebug()<<"Send connect to "<<m_address<<"port"<<m_port;
+    m_socket->writeDatagram((const char*)datagram,
+                            sizeof(datagram),
+                            m_address,
+                            m_port);
 }
 
 
@@ -83,19 +86,21 @@ void UDPListener::process(QNetworkDatagram&datagram)
         emit frameReceived();
     }
 #endif
-    printf("Datagram len %d\n",data.length());
+   // printf("Datagram len %d\n",data.length());
     int len = data.length();
     const uint8_t *d = (const uint8_t*)data.constData();
 
     while (len>0) {
         const struct frame *f = (const struct frame*)d;
         unsigned fragsize = 1<<f->fragsize_bits;
+#if 0
         printf(">> Seq %d val %d frag %d fragsize_bits %d(%d)\n\n",
                f->seq,
                f->val,
                f->frag,
                f->fragsize_bits,
                fragsize);
+#endif
         if(f->val) {
             memcpy( &m_framedata[ f->frag * fragsize ],
                    f->payload,
@@ -105,17 +110,25 @@ void UDPListener::process(QNetworkDatagram&datagram)
                 m_render->startFrame();
                 m_render->renderSCR(m_framedata);
                 m_render->finishFrame();
+#if 0
                 for (int i=0;i<32;i++) {
                     printf("%02x ", m_framedata[i]);
                 }
                 printf("\n");
+#endif
                 m_fps++;
                 emit frameReceived();
             }
         } else {
             // Just FPS update
             if (f->frag>=6) {
+
+                m_render->startFrame();
+                m_render->renderSCR(m_framedata);
+                m_render->finishFrame();
+
                 m_fps++;
+                emit frameReceived();
             }
 
         }

@@ -7,6 +7,7 @@
 #include <QString>
 #include <QByteArray>
 #include <QHostAddress>
+#include <QMap>
 
 class QString;
 class QHostAddress;
@@ -17,6 +18,7 @@ class UDPListener;
 class QStatusBar;
 class ProgressBar;
 class LineBuffer;
+class KeyCapturer;
 
 class MainWindow: public QMainWindow
 {
@@ -43,6 +45,10 @@ public:
 
     void alert(const QString&);
 
+    //void keyPressEvent(QKeyEvent *) override;
+    //void keyReleaseEvent(QKeyEvent *) override;
+    //bool eventFilter(QObject *obj, QEvent *event) override;
+    //void focusOutEvent(QFocusEvent *) override;
 public slots:
     void commandSocketError(QAbstractSocket::SocketError socketError);
     void commandSocketConnected();
@@ -60,10 +66,12 @@ public slots:
     void onWideClicked();
     void onExit();
     void onStatusLineReceived(QString);
+    void onKeyChanged(uint64_t keys);
 protected:
     void processStatus(const QString &s);
     void reverseBits(QByteArray &b);
-
+    void sendUpdateKeys(uint64_t);
+    //void fillKeyboard(uint8_t *target, const QList<unsigned> &keycodes);
 private:
     QUdpSocket *m_udpsocket;
     UDPListener *m_listener;
@@ -80,6 +88,8 @@ private:
     QHostAddress m_zxaddress;
     ProgressBar *m_progress;
     LineBuffer *m_linebuffer;
+//    QMap<unsigned,bool> m_keys;
+
 };
 
 #endif
