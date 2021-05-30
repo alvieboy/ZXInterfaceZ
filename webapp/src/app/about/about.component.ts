@@ -3,6 +3,7 @@ import { HttpEventType, HttpResponse } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
 import { UploadService } from '../services/upload.service';
+import { FwUploadStatus, Level } from '../models/FwUploadStatus';
 
 @Component({
   selector: 'app-about',
@@ -11,32 +12,32 @@ import { UploadService } from '../services/upload.service';
 })
 export class AboutComponent implements OnInit {
 
-  fwFile: File;
-  progress = 0;
-  message = '';
+  fwFile = '';
+  status = {
+    action: '',
+    level: Level.Info,
+    percent: -1,
+    phase: '',
+  };
 
   constructor(private uploadService: UploadService) { }
 
   ngOnInit(): void {
   }
 
-
   firmwareInputChange(fileInputEvent: any) {
-    this.progress = 0;
 
     this.fwFile = fileInputEvent.target.files[0];
     this.uploadService.uploadFirmware(this.fwFile).subscribe(
-      event => {
-        if (event.type === HttpEventType.UploadProgress) {
-          this.progress = Math.round(100 * event.loaded / event.total);
-        } else if (event instanceof HttpResponse) {
-          this.message = event.body.message; // TODO Show snack-bar
-        }
-      },
-      err => {
-        this.progress = 0;
-        this.message = 'Could not upload the file!';
-        this.fwFile = undefined;
-      });
+      status => {
+        console.log(status);
+        this.status = status;
+      }
+    );
+    console.log(this.fwFile)
+  }
+
+  uploading(): Boolean {
+    return this.status != null && this.status.percent >= 0;
   }
 }
