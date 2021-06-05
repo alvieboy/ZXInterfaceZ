@@ -22,6 +22,7 @@ struct wsdata {
 struct firmware_ws_context {
     httpd_req_t *req;
     Semaphore sem;
+    bool valid;
     Queue queue; // Main message queue
 #ifdef WS_STATUS_ONLY_ON_REQUEST
     // We need to store status in a delta fashion.
@@ -48,20 +49,27 @@ static struct firmware_ws_context *firmware_ws__alloc_context(httpd_req_t*req)
 
     ctx->req = req;
     ctx->sem = semaphore__create_mutex();
-    ctx->queue  = queue__create(2, sizeof(struct wsdata));
-
-    ESP_LOGI(TAG,"Alloc context req %p\n", req);
+    ctx->queue = queue__create(2, sizeof(struct wsdata));
+    ctx->valid = true;
 
     return ctx;
 }
 
+static void firmware_ws__invalidate(struct firmware_ws_context *ctx)
+{
+    semaphore__take(ctx->sem, OS_MAX_DELAY);
+    ctx->req = NULL;
+    ctx->valid = false;
+    semaphore__give(ctx->sem);
+}
+
+
 static void firmware_ws__free_ctx(void *data)
 {
     struct firmware_ws_context *ctx = (struct firmware_ws_context*)data;
-    semaphore__take(ctx->sem, OS_MAX_DELAY);
-    ctx->req = NULL;
-    semaphore__give(ctx->sem);
+    firmware_ws__invalidate(ctx);
 }
+
 
 void firmware_ws__task(void *data)
 {
@@ -102,6 +110,8 @@ void firmware_ws__task(void *data)
     // Wait for 2 seconds so main uploader can fetch the report
     task__delay_ms(2000);
 
+    firmware_ws__invalidate(ctx);
+
     firmware__deinit(f);
 
     free(f);
@@ -110,7 +120,6 @@ void firmware_ws__task(void *data)
 
     // destroy queue. TBD proper order..
     queue__delete(ctx->queue);
-
     ctx->queue = NULL;
 
     if (r==0)
@@ -144,11 +153,9 @@ int firmware_ws__read(struct firmware_ws_context *ctx, void *buf, size_t size, b
     struct wsdata data;
     size_t bytes_read = 0;
 
-
-    //Queue data_queue = (Queue)req->sess_ctx;
     uint8_t *rptr = (uint8_t*)buf;
 
-    if (ctx->queue==NULL)
+    if (ctx->valid == false || ctx->queue==NULL)
         return -1;
 
     do {
@@ -205,11 +212,12 @@ int firmware_ws__read(struct firmware_ws_context *ctx, void *buf, size_t size, b
 
 #ifdef WS_STATUS_ONLY_ON_REQUEST
 
-static void firmware_ws__send_status(struct firmware_ws_context *ctx, httpd_req_t *req)
+static int firmware_ws__send_status(struct firmware_ws_context *ctx, httpd_req_t *req)
 {
     char str[256];
     char *ptr = str;
     bool delim = false;
+    int r = 0;
     // Prepare text to be sent.
     semaphore__take(ctx->sem, OS_MAX_DELAY);
 
@@ -221,6 +229,8 @@ static void firmware_ws__send_status(struct firmware_ws_context *ctx, httpd_req_
     if (ctx->action[0] && ctx->level!=PROGRESS_LEVEL_NONE) {
         if (delim) *ptr++=',';
         ptr+=sprintf(ptr,"\"level\":\"%s\",\"action\":\"%s\"", progress__level_to_text(ctx->level), ctx->action);
+        if (ctx->level==PROGRESS_LEVEL_ERROR)
+            r = -1;
         delim=true;
     }
 
@@ -236,9 +246,15 @@ static void firmware_ws__send_status(struct firmware_ws_context *ctx, httpd_req_
     ctx->level = PROGRESS_LEVEL_NONE;
     ctx->action[0] = '\0';
     ctx->phase[0] = '\0';
+
+    if (!ctx->valid)
+        r = -1;
+
     semaphore__give(ctx->sem);
 
     firmware_ws__send_text_frame(req, str, strlen(str));
+
+    return r;
 }
 
 #endif
@@ -250,6 +266,7 @@ esp_err_t firmware_ws__firmware_upgrade(httpd_req_t *req)
     httpd_ws_frame_t frame;
 
     static unsigned totalbytes = 0;
+    struct firmware_ws_context *ctx = (struct firmware_ws_context*)req->sess_ctx;
 
     memset(&frame,0,sizeof(frame));
 
@@ -267,7 +284,11 @@ esp_err_t firmware_ws__firmware_upgrade(httpd_req_t *req)
     switch (frame.type) {
     case HTTPD_WS_TYPE_TEXT:
         if (frame.len==5 && memcmp(frame.payload,"START",5)==0) {
-            r = firmware_ws__start_process(req);
+            if (ctx) {
+                r = -1;
+            } else {
+                r = firmware_ws__start_process(req);
+            }
             if (r==0) {
                 firmware_ws__send_text_frame(req, "OK", 2);
             } else {
@@ -277,11 +298,8 @@ esp_err_t firmware_ws__firmware_upgrade(httpd_req_t *req)
 
 #ifdef WS_STATUS_ONLY_ON_REQUEST
             if (frame.len==6 && memcmp(frame.payload,"STATUS",6)==0) {
-                struct firmware_ws_context *ctx = req->sess_ctx;
-
-                firmware_ws__send_status(ctx, req);
+                r = firmware_ws__send_status(ctx, req);
             }
-            r = 0;
         }
 #else
             r = -1;
@@ -290,18 +308,22 @@ esp_err_t firmware_ws__firmware_upgrade(httpd_req_t *req)
         break;
     case HTTPD_WS_TYPE_BINARY:
 
-        if (req->sess_ctx) {
+        if (ctx) {
             struct wsdata data;
-            struct firmware_ws_context *ctx = (struct firmware_ws_context*)req->sess_ctx;
 
-            data.len = frame.len;
-            data.data = malloc(data.len);
-            memcpy(data.data, payload, data.len);
-            ESP_LOGD(TAG,"Queueing WS data");
-            while (queue__send(ctx->queue, &data, 100)!=OS_TRUE) {
-                //ESP_LOGE(TAG,"Queue data delayed!!");
+            semaphore__take(ctx->sem, OS_MAX_DELAY);
+            if (ctx->valid) {
+                data.len = frame.len;
+                data.data = malloc(data.len);
+                memcpy(data.data, payload, data.len);
+                ESP_LOGD(TAG,"Queueing WS data");
+                while (queue__send(ctx->queue, &data, 100)!=OS_TRUE) {
+                    //ESP_LOGE(TAG,"Queue data delayed!!");
+                }
             }
             //ESP_LOGI(TAG,"Queued WS data successfully");
+            semaphore__give(ctx->sem);
+
         }
 
         break;
