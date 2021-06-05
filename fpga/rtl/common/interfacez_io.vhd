@@ -98,6 +98,7 @@ entity interfacez_io is
 
     trig_force_clearromcsonret_o  : out std_logic;
     disable_romcs_o       : out std_logic;
+    im_i                  : in std_logic_vector(1 downto 0); -- Detected interrupt mode
     dbg_o                 : out std_logic_vector(7 downto 0)
   );
 
@@ -301,8 +302,8 @@ begin
           when SPECT_PORT_MISCCTRL =>
             dataread_r <= miscctrl_i;--scratch1_r;
 
-          when SPECT_PORT_CMD_FIFO_STATUS => -- Command FIFO status read
-            dataread_r <= "0000000" & cmdfifo_full_i;
+          when SPECT_PORT_CMD_FIFO_STATUS => -- Command FIFO status / IM read
+            dataread_r <= "00000" & im_i & cmdfifo_full_i;
 
           when SPECT_PORT_RESOURCE_FIFO_STATUS => -- Resource FIFO status read
             dataread_r <= "0000000" & resfifo_empty_i;
