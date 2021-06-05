@@ -159,8 +159,14 @@ lone:
         OUT	(C), H  ; H'   ; Ram: 0x4023
         LD	C, A ; Restore C, so we don't mess with it.
         EXX
+        ; Save interrupt mode. this is available in the FIFO status register
+        IN	A, (PORT_CMD_FIFO_STATUS)
+        RRA
+        AND	$03
+        OUT	(C), A ; IMM   ; Ram: 0x4024
         
-        ; Enable interrupts so we can sync screen updates
+        ; Enable interrupts so we can sync screen updates. But do so in IM 1
+        IM	1
         EI
         
 ;        DEBUGSTR "Serving NMI\n"
@@ -169,15 +175,34 @@ lone:
 NMIRESTORE:
 
 	DI
-        ; Restore SP first, since we need to manipulate RAM 
-        ; in order to restore it
         LD	C, PORT_RAM_DATA	       ; Data port 
-        LD	A, $10		; LSB 
-        OUT	(PORT_RAM_ADDR_0), A 
+
         LD	A, $40          ; MSB
         OUT	(PORT_RAM_ADDR_1), A
         XOR	A
-        OUT	(PORT_RAM_ADDR_2), A   ; Address: 0x004010
+        OUT	(PORT_RAM_ADDR_2), A   ; Address: 0x0040xx
+
+	; Restore IM,
+        LD	A, $24		; LSB 
+        OUT	(PORT_RAM_ADDR_0), A   ; Address: 0x004024
+        IN	A, (C)	
+        ; Now, switch according to IM
+        CP	$02
+        JR	NZ, _noim2
+        IM	2
+        JR	_imend
+_noim2:	CP 	$00
+	JR	NZ, _noim0
+        IM	0
+        JR	_imend
+_noim0:	IM	1 ; Default
+        
+_imend:
+        ; Restore SP, since we need to manipulate RAM 
+        ; in order to restore it
+        LD	A, $10		; LSB 
+        OUT	(PORT_RAM_ADDR_0), A   ; Address: 0x004010
+        
         
         IN	L, (C)          ; Ram: 0x4010
         IN	H, (C)          ; Ram: 0x4011
@@ -577,7 +602,8 @@ _memread_rom_ram:
 	LD	C, A
 _WAITFIFO1:
         IN 	A, (PORT_CMD_FIFO_STATUS)
-        OR	A
+        ;OR	A
+        BIT	0, A
         JR	NZ, _WAITFIFO1
         ; Send resource ID
         LD	A, C
