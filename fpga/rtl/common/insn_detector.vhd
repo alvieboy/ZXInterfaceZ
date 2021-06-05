@@ -21,7 +21,8 @@ entity insn_detector is
     nmi_access_o: out std_logic;
     rst8_det_o  : out std_logic;
     retn_det_o  : out std_logic;  -- RETN detected
-    ret_det_o   : out std_logic   -- RET detected
+    ret_det_o   : out std_logic;  -- RET detected
+    im_o        : out std_logic_vector(1 downto 0)   -- Interrupt mode
   );
 end entity insn_detector;
 
@@ -31,6 +32,7 @@ architecture beh of insn_detector is
   signal ret_detected_r   :  std_logic;
   signal rst8_detected_r  :  std_logic;
   signal nmi_access_r     :  std_logic;
+  signal im_r             :  std_logic_vector(1 downto 0); -- Interrupt mode: 00, 01 or 10
 
   type decode_state_type is (
     NO_PREFIX,
@@ -97,7 +99,7 @@ begin
       pc_o            <= (others => 'X');
       rst8_detected_r <= '0';
       pc_valid_o      <= '0';
-
+      im_r            <= "00";
 
 
     elsif rising_edge(clk_i) then
@@ -116,6 +118,19 @@ begin
           if decode_state=PREFIX_ED and d_i=x"45" then
             retn_detected_r <= '1';
           end if;
+
+          if decode_state=PREFIX_ED and d_i=x"46" then
+            im_r <= "00";
+          end if;
+
+          if decode_state=PREFIX_ED and d_i=x"56" then
+            im_r <= "01";
+          end if;
+
+          if decode_state=PREFIX_ED and d_i=x"5E" then
+            im_r <= "10";
+          end if;
+
 
           if decode_state=NO_PREFIX and d_i=x"CF" then
             rst8_detected_r <= '1';
