@@ -67,6 +67,7 @@ struct stream;
 #define FPGA_FLAG_COMPRESS (1<<4)
 #define FPGA_FLAG_ENABLE_INTERRUPT (1<<5)
 #define FPGA_FLAG_CAPSYNCEN (1<<6)
+#define FPGA_FLAG_TAP_PAUSE (1<<7);
 
 #define FPGA_FLAG_ULAHACK (1<<8)
 #define FPGA_FLAG_TAPFIFO_RESET (1<<9)
