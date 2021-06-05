@@ -80,4 +80,6 @@ char *usbh__string_unicode8_to_char(const uint8_t  *src, unsigned len);
 
 void usbh__hub_port_connected(struct usb_hub *h, int port, usb_speed_t speed);
 
+void usb__trigger_interrupt(void);
+
 #endif
