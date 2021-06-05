@@ -410,6 +410,10 @@ architecture beh of zxinterface is
   signal nmi_was_romcs_r        : std_logic;
   signal tstatecpuclk_s         : std_logic;
   signal tstatecpu_en_s         : std_logic;
+
+  signal tap_pause_s            : std_logic;
+  signal tap_user_pause_s       : std_logic;
+
 begin
 
   rst48_inst: entity work.rstgen
@@ -760,6 +764,7 @@ begin
     tapfifo_full_i    => tapfifo_full_s,
     tapfifo_used_i    => tapfifo_used_s,
     tap_enable_o      => tap_enable_s,
+    tap_pause_o       => tap_user_pause_s,
 
     -- Command FIFO
 
@@ -906,6 +911,9 @@ begin
 
   -- TAP player.
 
+  tap_pause_s <= in_nmi_rom_r or nmi_r or tap_user_pause_s;
+
+
   tap_engine_inst: entity work.tap_engine
   port map (
     clk_i     => clk_i,
@@ -913,6 +921,7 @@ begin
 
     enable_i  => tap_enable_s,
     restart_i => tapfifo_reset_s,
+    pause_i   => tap_pause_s,
 
     --fclk_i    => clk_i,--SPI_SCK_i,
     fdata_i   => tapfifo_write_s,
