@@ -386,6 +386,7 @@ architecture beh of zxinterface is
 
   signal nmi_m1fall_q_r         : std_logic;
 
+  signal im_s                   : std_logic_vector(1 downto 0);
 
   signal hook_s                 : rom_hook_array_t;
   signal hook_range_romcs_s     : std_logic;
@@ -604,6 +605,7 @@ begin
 
       trig_force_clearromcsonret_o => trig_force_clearromcsonret_s,
       disable_romcs_o => disable_romcs_s,
+      im_i            => im_s,
       dbg_o           => io_dbg_s
   );
 
@@ -1014,7 +1016,8 @@ begin
       retn_det_o  => retn_det_s,
       ret_det_o   => ret_det_s,
       --divmmc_det_i => divmmc_det_s,
-      nmi_access_o=> nmi_access_s
+      nmi_access_o=> nmi_access_s,
+      im_o        => im_s
     );
 
   process(clk_i, arst_i)
