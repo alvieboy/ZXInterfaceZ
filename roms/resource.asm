@@ -15,7 +15,8 @@ WRITECMDFIFO:
 	LD	C, A
 WAITFIFO1:
         IN 	A, (PORT_CMD_FIFO_STATUS)
-        OR	A
+        ;OR	A
+        BIT	0, A
         JR	NZ, WAITFIFO1
         ; Send resource ID
         LD	A, C
