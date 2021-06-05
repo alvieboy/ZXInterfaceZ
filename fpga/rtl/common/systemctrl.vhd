@@ -58,7 +58,7 @@ entity systemctrl is
     tapfifo_full_i        : in std_logic;
     tapfifo_used_i        : in std_logic_vector(9 downto 0);
     tap_enable_o          : out std_logic;
-
+    tap_pause_o           : out std_logic;
     -- Command FIFO
 
     cmdfifo_reset_o       : out std_logic;
@@ -242,17 +242,6 @@ begin
           when "0010011" =>
             dat_out_s   <= micidle_i;
           when "0010100" => null;-- Write-only
-          -- CMD fifo.
-          --when "010101" =>
-          --  if cmdfifo_empty_i='1' then
-          --    dat_out_s <= x"FF";
-          --    do_read_fifo_r <= '0';
-          --  else
-          --    dat_out_s <= x"FE";
-          --    do_read_fifo_r <= '1';
-          --  end if;
-
-          --when "010110" =>
           when "0010101" =>
             cmdfifo_rd_o  <= not cmdfifo_empty_i;--'1';--do_read_fifo_r;
             dat_out_s     <= cmdfifo_read_i;
@@ -479,6 +468,7 @@ begin
 
   vidmode_o(0)          <= flags_r(11); --
   vidmode_o(1)          <= flags_r(12); --
+  tap_pause_o           <= flags_r(7);
 
   bit_from_cpu_o.bit_enable <= flags_r(14) when C_BIT_ENABLED else '0'; -- BIT enabled
   audio_enable_o        <= flags_r(15);                  
