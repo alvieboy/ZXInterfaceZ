@@ -21,7 +21,8 @@ _next:
         
         ; Send out ROM byte
 _w2:    IN 	A, (PORT_CMD_FIFO_STATUS)
-        OR	A
+        ;OR	A
+        BIT	0, A
         JR	NZ, _w2
         LD	A, D
         OUT	(PORT_CMD_FIFO_DATA), A
