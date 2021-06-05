@@ -9,6 +9,7 @@ entity tap_pulse is
     clk_i     : in std_logic;
     arst_i    : in std_logic;
     tstate_i  : in std_logic; -- '1' each 3.5Mhz
+    pause_i   : in std_logic; -- Pause signal.
 
     valid_i   : in std_logic;
     data_i    : in std_logic_vector(3 downto 0);
@@ -45,7 +46,7 @@ begin
     w := r;
     case r.state is
       when IDLE =>
-        busy_o <= '0';
+        --busy_o <= '0';
         if valid_i='1' then
         --  w.len   := len_i;
           if data_i=PULSE_SINGLE then
@@ -59,7 +60,7 @@ begin
         end if;
 
       when PULSE =>
-        busy_o  <= '1';
+        --busy_o  <= '1';
         if tstate_i='1' then
           if r.dly=0 then
             w.audio := not r.audio;
@@ -81,10 +82,13 @@ begin
       r.repeat  <= '0';
       r.audio   <= '0';
     elsif rising_edge(clk_i) then
-      r <= w;
+      if pause_i='0' then
+        r <= w;
+      end if;
     end if;
   end process;
 
   audio_o <= r.audio;
+  busy_o <= '1' when r.state=PULSE else pause_i;  
 
 end beh;

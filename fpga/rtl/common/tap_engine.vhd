@@ -9,6 +9,7 @@ entity tap_engine is
 
     enable_i  : in std_logic;
     restart_i : in std_logic;
+    pause_i   : in std_logic;
 
     --fclk_i    : in std_logic;
     fdata_i   : in std_logic_vector(8 downto 0);
@@ -89,6 +90,7 @@ begin
     tstate_i  => tstate_s,
     enable_i  => enable_i,
     restart_i => restart_i,
+    pause_i   => pause_i,
 
     valid_i   => ready_s,
     data_i    => data_s,

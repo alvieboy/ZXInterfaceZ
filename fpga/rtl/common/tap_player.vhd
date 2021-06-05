@@ -11,6 +11,7 @@ entity tap_player is
     tstate_i  : in std_logic; -- '1' each 3.5Mhz
     enable_i  : in std_logic;
     restart_i : in std_logic;
+    pause_i   : in std_logic;
 
     valid_i   : in std_logic;
     data_i    : in std_logic_vector(8 downto 0);
@@ -54,23 +55,28 @@ architecture beh of tap_player is
   signal pulse_data_s   : std_logic_vector(3 downto 0);
   signal pulse_len_s    : std_logic_vector(11 downto 0);
   signal tick_1ms_s     : std_logic;
-  signal tick_1ms_cnt   : natural range 0 to 96000-1;
+  --signal tick_1ms_cnt   : natural range 0 to 96000-1;
+  constant C_TICKS_PER_MS: natural := 3556;
+  signal tick_1ms_cnt   : natural range 0 to C_TICKS_PER_MS-1;
   signal r: regs_type;
 
 begin
 
+  -- T-state is roughly (here) 281.25ns.
   process(clk_i, arst_i)
   begin
     if arst_i='1' then
-      tick_1ms_cnt <= 96000-1;
+      tick_1ms_cnt <= C_TICKS_PER_MS-1;
       tick_1ms_s <= '0';
     elsif rising_edge(clk_i) then
       tick_1ms_s <= '0';
-      if tick_1ms_cnt=0 then
-        tick_1ms_s <= '1';
-        tick_1ms_cnt <= 96000-1;
-      else
-        tick_1ms_cnt <= tick_1ms_cnt -1;
+      if tstate_i='1' then
+        if tick_1ms_cnt=0 then
+          tick_1ms_s <= '1';
+          tick_1ms_cnt <= C_TICKS_PER_MS-1;
+        else
+          tick_1ms_cnt <= tick_1ms_cnt -1;
+        end if;
       end if;
     end if;
   end process;
@@ -80,6 +86,7 @@ begin
     clk_i     => clk_i,
     arst_i    => arst_i,
     tstate_i  => tstate_i,
+    pause_i   => pause_i,
 
     valid_i   => pulse_ready_s,
     data_i    => pulse_data_s,
@@ -208,7 +215,7 @@ begin
         when GAP =>
           if r.cnt=0 then
             w.state := IDLE;
-          elsif tick_1ms_s='1' then
+          elsif tick_1ms_s='1' and pause_i='0' then
             w.cnt := r.cnt - 1;
           end if;
 
