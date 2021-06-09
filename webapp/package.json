@@ -9,7 +9,7 @@
     "lint": "ng lint",
     "e2e": "ng e2e",
     "package": "gulp default && gulp install-into-spiffs",
-    "mock-backend": "json-server --watch req/db.json  --routes req/routes.json --no-cors=true"
+    "mock-backend": "json-server --watch mock-backend/db.json  --routes mock-backend/routes.json --no-cors=true"
   },
   "private": true,
   "dependencies": {
@@ -23,7 +23,6 @@
     "@angular/platform-browser": "~10.0.14",
     "@angular/platform-browser-dynamic": "~10.0.14",
     "@angular/router": "~10.0.14",
-    "json-server": "^0.16.2",
     "rxjs": "~6.5.5",
     "tslib": "^2.0.0",
     "zone.js": "~0.10.3"
@@ -48,6 +47,7 @@
     "inquirer-autocomplete-prompt": "^1.0.1",
     "jasmine-core": "~3.5.0",
     "jasmine-spec-reporter": "~5.0.0",
+    "json-server": "^0.16.2",
     "karma": "~5.0.0",
     "karma-chrome-launcher": "~3.1.0",
     "karma-coverage-istanbul-reporter": "~3.0.2",
