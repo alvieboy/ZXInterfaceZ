@@ -3,6 +3,7 @@ import { Request, Response } from 'express';
 import jsonServer from 'json-server';
 import ws from 'ws';
 import expressWs from 'express-ws';
+import { fwUpload } from './fw-upload';
 
 const {
   PORT = 3000,
@@ -29,11 +30,7 @@ server.get('/foo', (req: Request, res: Response) => {
   });
 });
 
-server.ws('/echo', (ws: ws, req: Request) => {
-  ws.on('message', (msg: any) => {
-    ws.send(msg);
-  });
-});
+server.ws('/echo', fwUpload);
 
 server.use(router);
 
