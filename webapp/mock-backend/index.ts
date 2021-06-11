@@ -1,13 +1,19 @@
-import * as express from 'express';
+import express from 'express';
 import { Request, Response } from 'express';
-import * as jsonServer from 'json-server';
+import jsonServer from 'json-server';
+import ws from 'ws';
+import expressWs from 'express-ws';
 
-const server = jsonServer.create();
+const {
+  PORT = 3000,
+} = process.env;
+
+const instance = expressWs(jsonServer.create());
+const server = instance.app;
 const router = jsonServer.router('db.json');
 const middlewares = jsonServer.defaults();
 
 server.use(jsonServer.bodyParser)
-
 server.use(jsonServer.rewriter({
   '/req/list\\?path=/': '/_sdcard_root',
   '/req/list\\?path=/a-b/SCRSHOT': '/_sdcard_a-b_SCRSHOT',
@@ -23,11 +29,13 @@ server.get('/foo', (req: Request, res: Response) => {
   });
 });
 
-server.use(router);
+server.ws('/echo', (ws: ws, req: Request) => {
+  ws.on('message', (msg: any) => {
+    ws.send(msg);
+  });
+});
 
-const {
-  PORT = 3000,
-} = process.env;
+server.use(router);
 
 server.listen(PORT, () => {
   console.log('JSON server started at http://localhost:'+PORT);
