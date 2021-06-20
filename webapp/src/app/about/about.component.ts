@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { HttpEventType, HttpResponse } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { WebSocketSubject } from 'rxjs/webSocket';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
 import { UploadService } from '../services/upload.service';
 import { FwUploadStatus, Level } from '../models/FwUploadStatus';
@@ -23,7 +24,10 @@ export class AboutComponent implements OnInit {
   };
   uploading = false;
 
-  constructor(private uploadService: UploadService) { }
+  constructor(
+    private uploadService: UploadService,
+    private snackBar: MatSnackBar,
+  ) { }
 
   ngOnInit(): void {
   }
@@ -33,11 +37,16 @@ export class AboutComponent implements OnInit {
     this.fwFile = fileInputEvent.target.files[0];
     this.socket = this.uploadService.uploadFirmware(this.fwFile)
     this.socket.subscribe(
-      status => {
+      (status) => {
         if (isStatusMessage(status)) {
           this.status = status;
+          if (this,status.percent >= 100) {
+            this.snackBar.open('Completed!');
+          }
         }
-      }
+      },
+      (err) => this.snackBar.open(err),
+      () => this.snackBar.open('Completed!')
     );
     this.uploading = true;
     console.log(this.fwFile)
