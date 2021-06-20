@@ -245,33 +245,33 @@
   },
   "_sdcard_c-d": {
     "path": "/c-d",
-    "success":  true,
-    "entries":  [
+    "success": true,
+    "entries": [
       {
-        "type":  "file",
-        "name":  "Cobble 2.tzx",
-        "size":  43
+        "type": "file",
+        "name": "Cobble 2.tzx",
+        "size": 43
       },
       {
-        "type":  "file",
-        "name":  "Chessfire.tap",
-        "size":  143
+        "type": "file",
+        "name": "Chessfire.tap",
+        "size": 143
       }
     ]
   },
   "_sdcard_e-f": {
     "path": "/e-f",
-    "success":  true,
-    "entries":  [
+    "success": true,
+    "entries": [
       {
-        "type":  "file",
-        "name":  "Enduro Racer.tzx",
-        "size":  434
+        "type": "file",
+        "name": "Enduro Racer.tzx",
+        "size": 434
       },
       {
-        "type":  "file",
-        "name":  "Fighter Bomper.sna",
-        "size":  243
+        "type": "file",
+        "name": "Fighter Bomper.sna",
+        "size": 243
       }
     ]
   }
