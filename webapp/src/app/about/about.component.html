@@ -1,15 +1,15 @@
 <h1 class="mat-headline">About</h1>
 
 <input #firmwareInput hidden="true" type="file" onclick="this.value=null" (change)="firmwareInputChange($event)" accept=".izf"/>
-<button mat-raised-button [disabled]="uploading()" (click)="firmwareInput.click()">Upload firmware...</button>
-<span class="spacer"></span> <!-- FIXME push down -->
+<button mat-raised-button [disabled]="uploading" (click)="firmwareInput.click()">Upload firmware...</button>
+<div class="spacer"></div>
 
-<div [hidden]="!uploading()">
+<div [hidden]="!uploading">
   <mat-card class="mat-elevation-z8">
     <div class="mat-typograhy">
       <h3>{{ status.phase }}</h3>
-      <p>{{ status.action }}</p>  <!-- FIXME: Set text color to warn if level != info -->
-      <mat-progress-bar mode="determinate" [value]="status.percent"></mat-progress-bar>
+      <p [class]="status.level">{{ status.action }}</p>
+      <mat-progress-bar color="accent" mode="determinate" [value]="status.percent"></mat-progress-bar>
     </div>
   </mat-card>
 </div>

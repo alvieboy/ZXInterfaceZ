@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { HttpEventType, HttpResponse } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { WebSocketSubject } from 'rxjs/webSocket';
 
 import { UploadService } from '../services/upload.service';
 import { FwUploadStatus, Level } from '../models/FwUploadStatus';
@@ -12,13 +13,15 @@ import { FwUploadStatus, Level } from '../models/FwUploadStatus';
 })
 export class AboutComponent implements OnInit {
 
-  fwFile = '';
+  private socket: WebSocketSubject<FwUploadStatus | string | ArrayBuffer>;
+  fwFile: File = null;
   status = {
     action: '',
     level: Level.Info,
     percent: -1,
     phase: '',
   };
+  uploading = false;
 
   constructor(private uploadService: UploadService) { }
 
@@ -28,16 +31,19 @@ export class AboutComponent implements OnInit {
   firmwareInputChange(fileInputEvent: any) {
 
     this.fwFile = fileInputEvent.target.files[0];
-    this.uploadService.uploadFirmware(this.fwFile).subscribe(
+    this.socket = this.uploadService.uploadFirmware(this.fwFile)
+    this.socket.subscribe(
       status => {
-        console.log(status);
-        this.status = status;
+        if (isStatusMessage(status)) {
+          this.status = status;
+        }
       }
     );
+    this.uploading = true;
     console.log(this.fwFile)
   }
+}
 
-  uploading(): Boolean {
-    return this.status != null && this.status.percent >= 0;
-  }
+function isStatusMessage(message: FwUploadStatus | string | ArrayBuffer): message is FwUploadStatus {
+  return (message as FwUploadStatus).level !== undefined;
 }

@@ -1,49 +1,72 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpEvent, HttpRequest, HttpHeaders } from '@angular/common/http';
-import { Observable } from 'rxjs';
-import { of, merge } from 'rxjs';
-import { mapTo, delay } from 'rxjs/operators';
+
+import { Observable, from, timer } from 'rxjs';
+import { takeWhile } from 'rxjs/operators';
+import { WebSocketSubject } from 'rxjs/webSocket';
 
 import { FwUploadStatus, Level } from '../models/FwUploadStatus';
 
 @Injectable()
 export class UploadService {
 
-  status1 = {
-    action: 'Uploading',
-    level: Level.Info,
-    percent: 10,
-    phase: 'Initializing',
-  };
-  status2 = {
-    action: 'Flashing sector 2',
-    level: Level.Warn,
-    percent: 30,
-    phase: 'Programming OTA executable',
-  };
-  status3 = {
-    action: 'Flashing sector 7',
-    level: Level.Error,
-    percent: 60,
-    phase: 'Programming OTA executable',
-  };
-  status4 = {
-    action: 'Finalizing',
-    level: Level.Info,
-    percent: 98,
-    phase: 'Validating',
-  };
+  private socket: WebSocketSubject<FwUploadStatus | string | ArrayBuffer>;
+  private uploading = false;
 
-  uploadFirmware(fwfile: File): Observable<FwUploadStatus> {
-    //emit one item
-    const example = of(null);
-    //delay output of each by an extra second
-    const message = merge(
-      example.pipe(mapTo(this.status1)),
-      example.pipe(mapTo(this.status2), delay(1000)),
-      example.pipe(mapTo(this.status3), delay(2000)),
-      example.pipe(mapTo(this.status4), delay(3000))
+  uploadFirmware(fwfile: File): WebSocketSubject<FwUploadStatus | string | ArrayBuffer> { // TODO remove string and ArrayBuffer
+    console.log("WS connecting");
+    this.uploading = true;
+    this.socket = new WebSocketSubject({
+      url: 'ws://localhost:3000/upload/fwupgrade',
+      serializer: serializer,
+      binaryType: 'arraybuffer'
+    }); // TODO
+
+    console.log("WS connected");
+
+    this.socket.subscribe(
+      (message) => {
+        console.log(message);
+        if (isStatusMessage(message)) {
+          this.uploading = message.percent < 100;
+        }
+
+      },
+      (err) => console.error(err),
+      () => console.warn('Completed!')
     );
-    return message;
+
+    var CHUNK_SIZE = 14;
+    // Send file
+    this.socket.next('START');
+    var f = from(fwfile.arrayBuffer());
+    f.subscribe(buf => {
+      var i;
+      for (i = 0; i < Math.ceil(buf.byteLength / CHUNK_SIZE); i++) {
+        this.socket.next(buf.slice(i*CHUNK_SIZE, (i+1)*CHUNK_SIZE));
+      }
+    });
+
+    timer(1, 1000).pipe(
+      takeWhile(_ => this.uploading)
+    ).subscribe(_ =>
+      this.socket.next('STATUS')
+    );
+
+    return this.socket;
   }
+}
+
+function serializer(value: FwUploadStatus | string | ArrayBuffer): string | ArrayBuffer {
+  if (isStatusMessage(value)) {
+    return JSON.stringify(value);
+  }
+  if (value instanceof ArrayBuffer) {
+    return value;
+  }
+  return value;
+}
+
+function isStatusMessage(message: FwUploadStatus | string | ArrayBuffer): message is FwUploadStatus {
+  return (message as FwUploadStatus).level !== undefined;
 }

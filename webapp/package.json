@@ -1,6 +1,8 @@
 {
   "name": "webapp",
   "version": "0.0.0",
+  "description": "Angular webapp for the ZX Interface Z",
+  "lincense": "GPL-3.0-only",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
