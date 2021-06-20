@@ -20,7 +20,7 @@ export class UploadService {
       url: 'ws://localhost:3000/upload/fwupgrade',
       serializer: serializer,
       binaryType: 'arraybuffer'
-    }); // TODO
+    });
 
     console.log("WS connected");
 
@@ -36,7 +36,7 @@ export class UploadService {
       () => console.warn('Completed!')
     );
 
-    var CHUNK_SIZE = 14;
+    var CHUNK_SIZE = 512;
     // Send file
     this.socket.next('START');
     var f = from(fwfile.arrayBuffer());
