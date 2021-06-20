@@ -3,7 +3,7 @@ import { Request, Response } from 'express';
 import jsonServer from 'json-server';
 import ws from 'ws';
 import expressWs from 'express-ws';
-import { fwUpload } from './fw-upload';
+import { fwUpload } from './src/fw-upload';
 
 const {
   PORT = 3000,
@@ -19,8 +19,7 @@ server.use(jsonServer.rewriter({
   '/req/list\\?path=/': '/_sdcard_root',
   '/req/list\\?path=/a-b/SCRSHOT': '/_sdcard_a-b_SCRSHOT',
   '/req/list\\?path=/:path': '/_sdcard_:path',
-  '/req/*': '/$1',
-  '/upload/*': '/$1'
+  '/req/*': '/$1'
 }));
 server.use(middlewares);
 
@@ -30,7 +29,7 @@ server.get('/foo', (req: Request, res: Response) => {
   });
 });
 
-server.ws('/echo', fwUpload);
+server.ws('/upload/fwupgrade', fwUpload);
 
 server.use(router);
 
