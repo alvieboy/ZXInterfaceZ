@@ -1,5 +1,4 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpEvent, HttpRequest, HttpHeaders } from '@angular/common/http';
 
 import { Observable, from, timer } from 'rxjs';
 import { takeWhile } from 'rxjs/operators';
@@ -14,10 +13,13 @@ export class UploadService {
   private uploading = false;
 
   uploadFirmware(fwfile: File): WebSocketSubject<FwUploadStatus | string | ArrayBuffer> { // TODO remove string and ArrayBuffer
-    console.log("WS connecting");
     this.uploading = true;
+    var protocol = window.location.protocol.replace('http', 'ws');
+    var url = `${protocol}//${window.location.host}/upload/fwupgrade`;
+    console.log(`WS connecting: ${url}`);
+
     this.socket = new WebSocketSubject({
-      url: 'ws://localhost:3000/upload/fwupgrade',
+      url: url,
       serializer: serializer,
       binaryType: 'arraybuffer'
     });

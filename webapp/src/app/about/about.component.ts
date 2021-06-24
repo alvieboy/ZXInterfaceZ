@@ -41,18 +41,23 @@ export class AboutComponent implements OnInit {
         if (isStatusMessage(status)) {
           this.status = status;
           if (this,status.percent >= 100) {
-            this.snackBar.open('Completed!');
+            this.completed();
           }
         }
       },
       (err) => this.snackBar.open(err),
-      () => this.snackBar.open('Completed!')
+      () => this.completed()
     );
     this.uploading = true;
-    console.log(this.fwFile)
+    console.log(this.fwFile);
+  }
+
+  completed() {
+    this.snackBar.open('Firmware upload completed!')
   }
 }
 
 function isStatusMessage(message: FwUploadStatus | string | ArrayBuffer): message is FwUploadStatus {
   return (message as FwUploadStatus).level !== undefined;
 }
+

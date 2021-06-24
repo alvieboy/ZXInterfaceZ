@@ -2,7 +2,8 @@
   "/req": {
     "target": "http://localhost:3000"
   },
-  "/upload": {
-    "target": "http://localhost:3000"
+  "/upload/fwupgrade": {
+    "target": "ws://localhost:3000",
+    "ws": true
   }
 }
