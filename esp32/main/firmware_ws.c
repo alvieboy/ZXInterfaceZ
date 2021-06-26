@@ -212,12 +212,21 @@ int firmware_ws__read(struct firmware_ws_context *ctx, void *buf, size_t size, b
 
 #ifdef WS_STATUS_ONLY_ON_REQUEST
 
+static const char *emptystatus = "{\"percent\":0,\"phase\":\"Not started\"}";
+
 static int firmware_ws__send_status(struct firmware_ws_context *ctx, httpd_req_t *req)
 {
     char str[256];
     char *ptr = str;
     bool delim = false;
     int r = 0;
+
+    // If process has not started, return a dummy status
+    if (!ctx) {
+        firmware_ws__send_text_frame(req, emptystatus, __builtin_strlen(emptystatus));
+        return 0;
+    }
+
     // Prepare text to be sent.
     semaphore__take(ctx->sem, OS_MAX_DELAY);
 
