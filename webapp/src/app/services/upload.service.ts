@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 
-import { Observable, from, timer } from 'rxjs';
-import { takeWhile } from 'rxjs/operators';
+import { Observable, from, timer, of } from 'rxjs';
+import { takeWhile, skipWhile, delay, concatMap } from 'rxjs/operators';
 import { WebSocketSubject } from 'rxjs/webSocket';
 
 import { FwUploadStatus, Level } from '../models/FwUploadStatus';
@@ -11,16 +11,17 @@ export class UploadService {
 
   private socket: WebSocketSubject<FwUploadStatus | string | ArrayBuffer>;
   private uploading = false;
+  private completed = false;
 
   uploadFirmware(fwfile: File): WebSocketSubject<FwUploadStatus | string | ArrayBuffer> { // TODO remove string and ArrayBuffer
-    this.uploading = true;
     var protocol = window.location.protocol.replace('http', 'ws');
-    var url = `${protocol}//${window.location.host}/upload/fwupgrade`;
+    var url = `${protocol}//${window.location.host}/ws/fwupgrade`;
     console.log(`WS connecting: ${url}`);
 
     this.socket = new WebSocketSubject({
       url: url,
       serializer: serializer,
+      deserializer: deserializer,
       binaryType: 'arraybuffer'
     });
 
@@ -29,8 +30,12 @@ export class UploadService {
     this.socket.subscribe(
       (message) => {
         console.log(message);
+        if (message == "OK") {
+          this.uploading = true;
+          this.sendFile(fwfile);
+        }
         if (isStatusMessage(message)) {
-          this.uploading = message.percent < 100;
+          this.completed = message.percent >= 100;
         }
 
       },
@@ -38,24 +43,47 @@ export class UploadService {
       () => console.warn('Completed!')
     );
 
-    var CHUNK_SIZE = 512;
-    // Send file
     this.socket.next('START');
-    var f = from(fwfile.arrayBuffer());
-    f.subscribe(buf => {
-      var i;
-      for (i = 0; i < Math.ceil(buf.byteLength / CHUNK_SIZE); i++) {
-        this.socket.next(buf.slice(i*CHUNK_SIZE, (i+1)*CHUNK_SIZE));
-      }
-    });
-
-    timer(1, 1000).pipe(
-      takeWhile(_ => this.uploading)
-    ).subscribe(_ =>
-      this.socket.next('STATUS')
-    );
 
     return this.socket;
+  }
+
+  sendFile(fwfile: File) {
+
+    timer(500, 1000).pipe(
+      takeWhile(_ => !this.completed)
+    ).subscribe(_ => {
+        console.log('Requesting status');
+        this.socket.next('STATUS');
+      }
+    );
+
+    console.log("here");
+    var i = 0;
+    this.readFile(fwfile).then(chunks => {
+      from(chunks).pipe(
+        concatMap(chunk => of(chunk).pipe(delay(5))) // 512 * 1000/5 => 100 kB/s
+      ).subscribe(
+        (chunk) => {
+          this.socket.next(chunk);
+          console.log(`Sent chunk ${i++}`);
+        },
+        () => this.uploading = false
+      )
+    });
+  }
+
+  readFile(fwfile: File): Promise<ArrayBuffer[]> {
+    var CHUNK_SIZE = 512;
+
+    return fwfile.arrayBuffer().then(f => {
+      var data: ArrayBuffer[] = [];
+      for (var i = 0; i < Math.ceil(f.byteLength / CHUNK_SIZE); i++) {
+        data[i] = f.slice(i*CHUNK_SIZE, (i+1)*CHUNK_SIZE);
+      };
+      console.log(data.length);
+      return data;
+    });
   }
 }
 
@@ -67,6 +95,14 @@ function serializer(value: FwUploadStatus | string | ArrayBuffer): string | Arra
     return value;
   }
   return value;
+}
+
+function deserializer(message: MessageEvent): FwUploadStatus | string | ArrayBuffer {
+  try {
+    return JSON.parse(message.data);
+  } catch(e) {
+    return message.data;
+  }
 }
 
 function isStatusMessage(message: FwUploadStatus | string | ArrayBuffer): message is FwUploadStatus {
