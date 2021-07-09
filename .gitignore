@@ -2,3 +2,6 @@ output_files/*.rbf
 *.o
 *~
 *.bak
+*.pcap
+.firebase/
+.firebaserc
