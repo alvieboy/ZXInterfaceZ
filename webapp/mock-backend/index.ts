@@ -29,7 +29,7 @@ server.get('/foo', (req: Request, res: Response) => {
   });
 });
 
-server.ws('/upload/fwupgrade', fwUpload);
+server.ws('/ws/fwupgrade', fwUpload);
 
 server.use(router);
 

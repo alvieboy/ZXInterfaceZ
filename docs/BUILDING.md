@@ -24,6 +24,21 @@ Launch Quartus and open the project file *interfacez.qpf* . Perform a full "Comp
 ```
 cd $INTERFACE_Z/fpga/r2.2
 make
+cp output_files/interfacez.rbf ../../esp32/fpga.bin
+```
+
+## Building the ZX Spectrum ROM
+
+### Prerequisites
+
+Pasmo
+
+TODO
+  
+```
+cd $INTERFACE_Z/rom/
+make
+cp intz.rom ../esp32/spiffs/intz.rom
 ```
 
 ## Building Angular Webapp

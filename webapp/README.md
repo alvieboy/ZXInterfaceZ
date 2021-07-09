@@ -62,8 +62,10 @@ npm run mock-backend
 
 ### Run the Development Server
 
-To start the auto reloading development server do:
+To start the auto reloading development using the _mock backend_ server do:
 
 ```
 ng serve -o
 ```
+
+To run towards the _host mode only emulator_ use the option `--proxy=proxy-emulator.conf.json`.

@@ -42,6 +42,7 @@ export function fwUpload(ws: ws, req: Request) {
   ws.on('message', (msg: any) => {
     console.log(msg);
     if (msg === 'START') {
+      ws.send('OK');
       console.log('Starting upload');
     } else if (msg === 'STATUS') {
       ws.send(JSON.stringify(status[i++ % status.length]));

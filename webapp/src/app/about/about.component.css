@@ -1,0 +1,15 @@
+.spacer {
+  margin: 25px 0;
+}
+
+p.info {
+  color: none;
+}
+
+p.warning{
+  color: orange;
+}
+
+p.error {
+  color: red;
+}
