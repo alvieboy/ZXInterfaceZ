@@ -3,8 +3,14 @@
 }
 
 .toolbar-icon {
-  padding: 0 14px;
   transition-duration: 0.4s;
+  /* border: 1px solid #fff; */
+}
+
+fa-icon {
+  /*Change this to adjust the icon to match Material Icons*/
+  position: relative;
+  top: -2px;
 }
 
 .toolbar-icon:hover {
@@ -12,6 +18,7 @@
 }
 
 .toolbar-button {
+  padding: 0 14px;
   color: inherit;
   background: transparent;
   border: none;

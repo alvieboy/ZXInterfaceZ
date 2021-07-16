@@ -22,14 +22,18 @@
     <button routerLink="/devices" mat-fab-button matTooltip="Devices" class="toolbar-button">
       <mat-icon class="toolbar-icon">usb</mat-icon>
     </button>
-    <button routerLink="/about" mat-fab-button matTooltip="About" class="toolbar-button">
-      <mat-icon class="toolbar-icon">announcement</mat-icon>
+    <button routerLink="/about" mat-icon-button matTooltip="About" class="toolbar-button">
+      <mat-icon class="toolbar-icon">
+        <fa-icon [icon]="faInfoCircle"></fa-icon>
+      </mat-icon>
     </button>
 
     <span class="toolbar-spacer"></span>
 
-    <a href="https://github.com/alvieboy/ZXInterfaceZ" mat-fab-button class="toolbar-button">
-      <mat-icon class="toolbar-icon">code</mat-icon>
+    <a href="https://github.com/alvieboy/ZXInterfaceZ" mat-icon-button matTooltip="Source code on Github" class="toolbar-button">
+      <mat-icon class="toolbar-icon">
+        <fa-icon [icon]="faGithub"></fa-icon>
+      </mat-icon>
     </a>
   </mat-toolbar>
 </p>
