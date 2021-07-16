@@ -42,7 +42,7 @@ gulp install-into-spiffs
 ### Prerequisites
 
 - [NodeJS](https://nodejs.org/en/) 12.x or later (including `npm`)
-- [Gulp](https://gulpjs.com/) `npm install --gloabal gulp-cli`
+- [Gulp](https://gulpjs.com/) `npm install --global gulp-cli`
 
 To install NodeJS on Debian/Ubuntu don't use the provided packages since they are for NodeJS  8.11.
 
