@@ -64,18 +64,7 @@ CFLAGS= -fpic -DPIC -Wall -Wextra -Wno-format -Wno-unused-variable -Wno-unused-p
        -I$(SRCPATH)/wsys/ \
        -I$(SRCPATH)/menus/ 
 
-FREERTOS_SRC := $(FREERTOSKERNEL)/list.c \
-		$(FREERTOSKERNEL)/portable/GCC/Linux/port.c \
-		$(FREERTOSKERNEL)/portable/MemMang/heap_3.c \
-		$(FREERTOSKERNEL)/croutine.c \
-		$(FREERTOSKERNEL)/queue.c \
-		$(FREERTOSKERNEL)/tasks.c \
-		$(FREERTOSKERNEL)/timers.c \
-		$(FREERTOSKERNEL)/event_groups.c
-
 CXXFLAGS=$(CFLAGS) -Wsuggest-override -Werror=suggest-override
-
-FREERTOS_OBJS= $(FREERTOS_SRC:.c=.o)
 
 SRCPATH:=../main
 
@@ -242,9 +231,6 @@ _CXXOBJ:=$(CXXSRC:.cpp=.o)
 
 COBJ:=$(patsubst %, $(SRCPATH)/%, $(_COBJ))
 CXXOBJ:=$(patsubst %, $(SRCPATH)/%, $(_CXXOBJ))
-
-
-#OBJS:=$(FREERTOS_OBJS) $(COBJ) $(CXXOBJ)
 
 OBJS:=$(COBJ) $(CXXOBJ) \
 	main.o \
