@@ -19,6 +19,7 @@ import { DeviceService } from './services/device.service';
 import { UploadService } from './services/upload.service';
 import { SdcardService } from './services/sdcard.service';
 import { WifiService } from './services/wifi.service';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 
 @NgModule({
   declarations: [
@@ -37,6 +38,7 @@ import { WifiService } from './services/wifi.service';
     BrowserAnimationsModule,
     MaterialModule,
     HttpClientModule,
+    FontAwesomeModule,
   ],
   providers: [
     VersionService,
