@@ -59,6 +59,7 @@ jobs:
 
 
   esp32:
+    needs: roms
     runs-on: ubuntu-latest
     container:
       image: espressif/idf:release-v4.2
