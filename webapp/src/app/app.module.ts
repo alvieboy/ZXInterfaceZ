@@ -10,7 +10,6 @@ import { StatusComponent } from './status/status.component';
 import { WifiComponent } from './wifi/wifi.component';
 import { SdcardComponent } from './sdcard/sdcard.component';
 import { DevicesComponent } from './devices/devices.component';
-import { AboutComponent } from './about/about.component';
 import { HomeComponent } from './home/home.component';
 import { NotfoundComponent } from './notfound/notfound.component';
 
@@ -28,7 +27,6 @@ import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
     WifiComponent,
     SdcardComponent,
     DevicesComponent,
-    AboutComponent,
     HomeComponent,
     NotfoundComponent,
   ],

@@ -1,3 +1,13 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
+.part {
+  margin-top: 10px;
+}
+
 .mat-column-key {
   word-wrap: break-word;
   white-space: unset;
