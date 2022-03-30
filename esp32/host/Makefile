@@ -268,7 +268,7 @@ OBJS:=$(COBJ) $(CXXOBJ) \
 	$(ESP_IDF)/components/esp_http_server/src/httpd_uri.o   \
 	$(ESP_IDF)/components/esp_http_server/src/httpd_main.o  \
 	$(ESP_IDF)/components/esp_http_server/src/util/ctrl_sock.o  \
-	$(ESP_IDF)/components/nghttp/nghttp2/third-party/http-parser/http_parser.o \
+	$(ESP_IDF)/components/nghttp/port/http_parser.o \
 	$(ESP_IDF)/components/mbedtls/mbedtls/library/md.o \
 	$(ESP_IDF)/components/mbedtls/mbedtls/library/md_wrap.o \
 	$(ESP_IDF)/components/mbedtls/mbedtls/library/sha256.o \
