@@ -1,5 +1,4 @@
-#ifndef __LAYOUT_H__
-#define __LAYOUT_H__
+#pragma once
 
 #include "multiwidget.h"
 #include <vector>
@@ -33,5 +32,3 @@ protected:
     uint8_t m_spacing;
     uint8_t m_border;
 };
-
-#endif

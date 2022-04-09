@@ -1,5 +1,4 @@
-#ifndef __WSYS_EDITBOX_H__
-#define __WSYS_EDITBOX_H__
+#pragma once
 
 #include "widget.h"
 #include <string>
@@ -22,6 +21,3 @@ private:
     bool m_editable;
     Signal<> m_enter;
 };
-
-
-#endif

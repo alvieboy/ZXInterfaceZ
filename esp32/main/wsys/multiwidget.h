@@ -1,5 +1,4 @@
-#ifndef __WSYS_MULTIWIDGET_H__
-#define __WSYS_MULTIWIDGET_H__
+#pragma once
 
 #include "widgetgroup.h"
 #include <vector>
@@ -44,5 +43,3 @@ protected:
 private:
     std::vector<Widget*> m_childs;
 };
-
-#endif

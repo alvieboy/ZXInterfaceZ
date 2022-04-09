@@ -1,5 +1,4 @@
-#ifndef __WSYS_WIDGETGROUP_H__
-#define __WSYS_WIDGETGROUP_H__
+#pragma once
 
 #include "widget.h"
 
@@ -15,6 +14,4 @@ public:
     virtual int availableHeight() const { return height(); }
 
 };
-
-
-#endif
+\

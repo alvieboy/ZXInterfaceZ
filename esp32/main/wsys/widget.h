@@ -1,5 +1,4 @@
-#ifndef __WSYS_WIDGET_H__
-#define __WSYS_WIDGET_H__
+#pragma once
 
 #include <inttypes.h>
 #include <stdlib.h>
@@ -106,5 +105,3 @@ protected:
     bool m_hasfocus;
     bool m_visible;
 };
-
-#endif

@@ -1,5 +1,4 @@
-#ifndef __WSYS_SLIDER_H__
-#define __WSYS_SLIDER_H__
+#pragma once
 
 #include "widget.h"
 #include <string>
@@ -133,5 +132,3 @@ private:
 
 
 typedef Slider<float> FloatSlider;
-
-#endif

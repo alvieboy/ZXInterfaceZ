@@ -1,5 +1,4 @@
-#ifndef __WSYS_INDEXEDMENU_H__
-#define __WSYS_INDEXEDMENU_H__
+#pragma once
 
 #include "menu.h"
 #include "object_signal.h"
@@ -15,5 +14,3 @@ protected:
     virtual void activateEntry(uint8_t entry) override;
     Signal<uint8_t> m_selected;
 };
-
-#endif

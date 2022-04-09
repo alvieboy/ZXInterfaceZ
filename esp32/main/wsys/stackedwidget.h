@@ -1,5 +1,4 @@
-#ifndef __WSYS_STACKEDWIDGET_H__
-#define __WSYS_STACKEDWIDGET_H__
+#pragma once
 
 #include "multiwidget.h"
 
@@ -22,5 +21,3 @@ public:
 protected:
     int8_t m_currentindex;
 };
-
-#endif

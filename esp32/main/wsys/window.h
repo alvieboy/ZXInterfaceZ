@@ -1,5 +1,4 @@
-#ifndef __WSYS_WINDOW_H__
-#define __WSYS_WINDOW_H__
+#pragma once
 
 #include "bin.h"
 #include "helpdisplayer.h"
@@ -60,5 +59,3 @@ protected:
     const char *m_statustext;
     Widget *m_focusWidget;
 };
-
-#endif

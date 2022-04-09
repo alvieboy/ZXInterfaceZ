@@ -1,5 +1,4 @@
-#ifndef __WSYS_FILE_FILTER_H__
-#define __WSYS_FILE_FILTER_H__
+#pragma once
 
 #include <string>
 #include <initializer_list>
@@ -29,5 +28,3 @@ private:
     int m_count; // -1 for no-match, 0 to all-match
     const char **m_ext;
 };
-
-#endif

@@ -1,5 +1,4 @@
-#ifndef __FIXEDLAYOUT_H__
-#define __FIXEDLAYOUT_H__
+#pragma once
 
 #include "multiwidget.h"
 
@@ -18,5 +17,3 @@ protected:
     uint8_t m_childw[MULTIWIDGET_MAX_CHILDS];
     uint8_t m_childh[MULTIWIDGET_MAX_CHILDS];
 };
-
-#endif

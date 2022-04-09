@@ -1,3 +1,5 @@
+#pragma once
+
 #include "window.h"
 #include "hlayout.h"
 #include "indexedmenu.h"

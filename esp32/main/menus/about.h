@@ -1,5 +1,4 @@
-#ifndef __ABOUT_H__
-#define __ABOUT_H__
+#pragma once
 
 #include "window.h"
 
@@ -21,5 +20,3 @@ private:
     Button *m_closebutton;
     Button *m_firmwarebutton;
 };
-
-#endif

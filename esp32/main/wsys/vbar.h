@@ -1,3 +1,5 @@
+#pragma once
+
 #include "widget.h"
 
 class VBar: public Widget

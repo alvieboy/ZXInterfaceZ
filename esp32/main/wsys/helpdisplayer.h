@@ -1,5 +1,4 @@
-#ifndef __HELPDISPLAYER_H__
-#define __HELPDISPLAYER_H__
+#pragma once
 
 class HelpDisplayer
 {
@@ -83,5 +82,3 @@ LOCAL int ICACHEFUN(textComputeLength)(const char *str, const textrendersettings
     return 0;
 }
 #endif // 0
-#endif
-

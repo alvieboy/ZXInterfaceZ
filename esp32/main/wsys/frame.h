@@ -1,5 +1,4 @@
-#ifndef __WSYS_FRAME_H__
-#define __WSYS_FRAME_H__
+#pragma once
 
 #include "bin.h"
 
@@ -22,5 +21,3 @@ protected:
     uint8_t m_border;
     bool m_drawbackground;
 };
-
-#endif

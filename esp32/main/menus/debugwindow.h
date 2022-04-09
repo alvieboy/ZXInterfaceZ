@@ -1,3 +1,5 @@
+#pragma once
+
 #include "window.h"
 #include "slider.h"
 #include "debugger.h"

@@ -1,5 +1,4 @@
-#ifndef __WSYS_DIALOG_H__
-#define __WSYS_DIALOG_H__
+#pragma once
 
 #include "window.h"
 
@@ -19,5 +18,3 @@ private:
     //void *m_cbdata;
 
 };
-
-#endif
