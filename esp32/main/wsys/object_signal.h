@@ -1,5 +1,4 @@
-#ifndef __WSYS_SIGNAL_H__
-#define __WSYS_SIGNAL_H__
+#pragma once
 
 #include <functional>
 
@@ -21,5 +20,3 @@ public:
 protected:
     std::function<void(Arg...)> m_function;
 };
-
-#endif

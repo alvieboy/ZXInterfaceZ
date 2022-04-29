@@ -1,3 +1,5 @@
+#pragma once
+
 #include "menu.h"
 
 class CallbackMenu: public Menu

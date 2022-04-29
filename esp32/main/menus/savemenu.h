@@ -1,6 +1,3 @@
-#ifndef __SAVEMENU_H__
-#define __SAVEMENU_H__
+#pragma once
 
 void savemenu__show(void);
-
-#endif

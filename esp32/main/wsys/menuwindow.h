@@ -1,3 +1,5 @@
+#pragma once
+
 #include "callbackmenu.h"
 #include "window.h"
 

@@ -1,5 +1,4 @@
-#ifndef __WSYS_REG16_H__
-#define __WSYS_REG16_H__
+#pragma once
 
 #include "widget.h"
 #include <string>
@@ -20,6 +19,3 @@ private:
     attr_t m_textcolor;
     attr_t m_valuecolor;
 };
-
-
-#endif

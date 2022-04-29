@@ -1,5 +1,4 @@
-#ifndef __WSYS_FILELISTMENU_H__
-#define __WSYS_FILELISTMENU_H__
+#pragma once
 
 #include "indexedmenu.h"
 #include "standardfilefilter.h"
@@ -31,5 +30,3 @@ private:
     const FileFilter *m_filter;
 
 };
-
-#endif

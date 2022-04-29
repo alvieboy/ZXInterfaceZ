@@ -1,5 +1,4 @@
-#ifndef __SCREEN_H__
-#define __SCREEN_H__
+#pragma once
 
 #include "core.h"
 #include "joystick.h"
@@ -22,6 +21,3 @@ void screen__releaseKeyboardFocus(Widget *d);
 void screen__windowLoop(Window *w);
 void screen__windowVisibilityChanged(Window *s, bool visible);
 void screen__do_cleanup();
-
-#endif
-

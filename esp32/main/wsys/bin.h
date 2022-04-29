@@ -1,5 +1,4 @@
-#ifndef __WSYS_BIN_H__
-#define __WSYS_BIN_H__
+#pragma once
 
 #include "widgetgroup.h"
 
@@ -20,7 +19,3 @@ protected:
 
     Widget *m_child;
 };
-
-
-
-#endif

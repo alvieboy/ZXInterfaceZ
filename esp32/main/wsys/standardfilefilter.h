@@ -1,5 +1,4 @@
-#ifndef __WSYS_STANDARD_FILE_FILTER_H__
-#define __WSYS_STANDARD_FILE_FILTER_H__
+#pragma once
 
 #include "filefilter.h"
 
@@ -13,5 +12,3 @@ namespace StandardFileFilter
     const FileFilter *TAPFileFilter();
     const FileFilter *TZXFileFilter();
 };
-
-#endif

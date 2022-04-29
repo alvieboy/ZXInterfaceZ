@@ -1,5 +1,4 @@
-#ifndef __WSYS_MENU_H__
-#define __WSYS_MENU_H__
+#pragma once
 
 #include "widget.h"
 #include <stdlib.h>
@@ -127,7 +126,3 @@ protected:
     //const char **m_helpstrings;
     std::function<const char *(uint8_t)> m_helpfun;
 };
-
-
-
-#endif

@@ -1,5 +1,4 @@
-#ifndef __FILEENTRY_H__
-#define __FILEENTRY_H__
+#pragma once
 
 #include <string>
 #include <vector>
@@ -16,5 +15,3 @@ public:
 };
 
 typedef std::vector<FileEntry> FileEntryList;
-
-#endif

@@ -1,3 +1,5 @@
+#pragma once
+
 #include "dialog.h"
 #include <string>
 #include <vector>

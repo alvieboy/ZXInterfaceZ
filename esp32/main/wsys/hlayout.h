@@ -1,5 +1,4 @@
-#ifndef __WSYS_HLAYOUT_H__
-#define __WSYS_HLAYOUT_H__
+#pragma once
 
 #include "layout.h"
 
@@ -9,5 +8,3 @@ public:
     HLayout(Widget *parent=NULL);
     virtual void resizeEvent() override;
 };
-
-#endif

@@ -1,5 +1,4 @@
-#ifndef __WSYS_CORE_H__
-#define __WSYS_CORE_H__
+#pragma once
 
 #include <inttypes.h>
 #include <stdlib.h>
@@ -325,6 +324,3 @@ template<typename T>
 
 void wsys__unsubscribesystemevent(int index);
 void wsys__propagatesystemevent(const systemevent_t &event);
-
-#endif
-

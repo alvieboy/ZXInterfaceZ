@@ -1,5 +1,4 @@
-#ifndef __WSYS_DISASM_H__
-#define __WSYS_DISASM_H__
+#pragma once
 
 #include "widget.h"
 #include <string>
@@ -29,6 +28,3 @@ private:
 
     std::vector<disasm_entry> m_entries;
 };
-
-
-#endif

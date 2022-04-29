@@ -1,5 +1,4 @@
-#ifndef __WSYS_MENUWINDOWINDEXED_H__
-#define __WSYS_MENUWINDOWINDEXED_H__
+#pragma once
 
 #include "indexedmenu.h"
 #include "window.h"
@@ -23,5 +22,3 @@ public:
 private:
     IndexedMenu *m_menu;
 };
-
-#endif

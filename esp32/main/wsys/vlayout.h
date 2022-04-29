@@ -1,5 +1,4 @@
-#ifndef __WSYS_VLAYOUT_H__
-#define __WSYS_VLAYOUT_H__
+#pragma once
 
 #include "layout.h"
 
@@ -10,5 +9,3 @@ public:
     virtual void resizeEvent() override;
 protected:
 };
-
-#endif

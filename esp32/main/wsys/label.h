@@ -1,5 +1,4 @@
-#ifndef __WSYS_LABEL_H__
-#define __WSYS_LABEL_H__
+#pragma once
 
 #include "widget.h"
 #include <string>
@@ -23,6 +22,3 @@ private:
     uint8_t m_spacing;
     uint8_t m_newlines;
 };
-
-
-#endif

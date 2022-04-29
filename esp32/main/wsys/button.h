@@ -1,5 +1,4 @@
-#ifndef __WSYS_BUTTON_H__
-#define __WSYS_BUTTON_H__
+#pragma once
 
 #include "widget.h"
 #include <string.h>
@@ -26,6 +25,3 @@ private:
     int m_accel;
     Signal<> m_clicked;
 };
-
-
-#endif
